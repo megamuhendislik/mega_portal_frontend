@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+# .env.production - Railway için bu dosyayı commit ediyoruz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

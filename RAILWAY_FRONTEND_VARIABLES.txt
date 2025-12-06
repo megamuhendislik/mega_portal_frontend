@@ -1,0 +1,17 @@
+# ============================================
+# RAILWAY FRONTEND (web) SERVİSİ VARIABLES
+# ============================================
+# Frontend servisinde Variables sekmesine gidin
+# "New Variable" butonuna tıklayın ve şunu ekleyin:
+
+Name: VITE_API_URL
+Value: https://[BACKEND-URL].up.railway.app/api
+
+# BACKEND URL'İNİZİ BULMAK İÇİN:
+# 1. Railway Dashboard'da backend servisini seçin
+# 2. Settings → Domains → URL'i kopyalayın
+# 3. URL'in sonuna /api ekleyin
+# 4. Buraya yapıştırın
+
+# ÖRNEKsanız:
+# VITE_API_URL=https://mega-portal-backend-production-abc123.up.railway.app/api
