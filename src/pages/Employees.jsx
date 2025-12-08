@@ -29,8 +29,7 @@ const Employees = () => {
         emergency_contact_phone: '',
         remote_work_days: [],
         is_exempt_from_attendance: false,
-        daily_work_hours: 9,
-        tolerance_minutes: 15
+        attendance_tolerance_minutes: 15
     });
 
     const days = [
@@ -43,10 +42,30 @@ const Employees = () => {
         { key: 'SUN', label: 'Paz' }
     ];
 
+    const [workSchedules, setWorkSchedules] = useState([]);
+
     useEffect(() => {
         fetchEmployees();
         fetchDepartments();
+        fetchWorkSchedules();
     }, []);
+
+    const fetchWorkSchedules = async () => {
+        try {
+            const response = await api.get('/work-schedules/');
+            // Handle pagination if needed
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setWorkSchedules(data);
+            } else if (data.results && Array.isArray(data.results)) {
+                setWorkSchedules(data.results);
+            } else {
+                setWorkSchedules([]);
+            }
+        } catch (error) {
+            console.error('Error fetching work schedules:', error);
+        }
+    };
 
     const fetchEmployees = async () => {
         try {
@@ -103,8 +122,8 @@ const Employees = () => {
                 emergency_contact_phone: '',
                 remote_work_days: [],
                 is_exempt_from_attendance: false,
-                daily_work_hours: 9,
-                tolerance_minutes: 15
+                attendance_tolerance_minutes: 15,
+                work_schedule: ''
             });
             setCurrentStep(1);
         } catch (error) {
@@ -160,7 +179,7 @@ const Employees = () => {
             {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${currentStep === step ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 ring-4 ring-blue-100' :
-                            currentStep > step ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
+                        currentStep > step ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
                         }`}>
                         {currentStep > step ? '✓' : step}
                     </div>
@@ -207,22 +226,25 @@ const Employees = () => {
                     <div className="space-y-6 animate-fade-in">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Günlük Çalışma Saati</label>
-                                <input
-                                    type="number"
-                                    name="daily_work_hours"
-                                    value={formData.daily_work_hours}
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Çalışma Takvimi</label>
+                                <select
+                                    name="work_schedule"
+                                    value={formData.work_schedule || ''}
                                     onChange={handleInputChange}
                                     className="input-field"
-                                    placeholder="Örn: 9"
-                                />
+                                >
+                                    <option value="">Varsayılan</option>
+                                    {workSchedules.map(sch => (
+                                        <option key={sch.id} value={sch.id}>{sch.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">Tolerans (Dakika)</label>
                                 <input
                                     type="number"
-                                    name="tolerance_minutes"
-                                    value={formData.tolerance_minutes}
+                                    name="attendance_tolerance_minutes"
+                                    value={formData.attendance_tolerance_minutes}
                                     onChange={handleInputChange}
                                     className="input-field"
                                     placeholder="Örn: 15"

@@ -31,7 +31,16 @@ const WorkSchedules = () => {
     const fetchSchedules = async () => {
         try {
             const response = await api.get('/work-schedules/');
-            setSchedules(response.data);
+            // Handle both array and paginated response
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setSchedules(data);
+            } else if (data.results && Array.isArray(data.results)) {
+                setSchedules(data.results);
+            } else {
+                setSchedules([]);
+                console.error('Unexpected API response format:', data);
+            }
         } catch (error) {
             console.error('Error fetching schedules:', error);
         } finally {
