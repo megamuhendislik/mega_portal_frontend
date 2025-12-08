@@ -10,7 +10,6 @@ import EmployeeDetail from './pages/EmployeeDetail';
 import OrganizationChart from './pages/OrganizationChart';
 import Projects from './pages/Projects';
 import Requests from './pages/Requests';
-import Requests from './pages/Requests';
 import Attendance from './pages/Attendance';
 import CalendarPage from './pages/CalendarPage';
 
