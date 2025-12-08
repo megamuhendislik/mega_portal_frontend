@@ -156,7 +156,8 @@ const CalendarPage = () => {
                                                     {evt.type === 'SHIFT' ? 'Mesai' :
                                                         evt.type === 'OFF' ? 'İzinli' :
                                                             evt.type === 'LEAVE' ? 'İzin Talebi' :
-                                                                evt.type === 'ABSENT' ? 'Devamsız' : 'Diğer'}
+                                                                evt.type === 'ABSENT' ? 'Devamsız' :
+                                                                    evt.type === 'HOLIDAY' ? 'Resmi Tatil' : 'Diğer'}
                                                 </div>
                                             </div>
                                         </div>

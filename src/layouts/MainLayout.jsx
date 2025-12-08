@@ -13,10 +13,10 @@ import {
     Search,
     Bell,
     Network,
-
     Clock,
     Calendar,
-    CalendarRange
+    CalendarRange,
+    Flag
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -36,12 +36,8 @@ const MainLayout = () => {
 
     const checkShiftStatus = async () => {
         try {
-            // We need to import api here. Assuming it's available or need to import it.
-            // Since I cannot see imports in this chunk, I will assume I need to add import if not present.
-            // But wait, I can't add import in this chunk easily if it's far up.
-            // I will use window.api if available or I should have added import in previous step.
-            // Let's assume I'll fix import in next step.
-            const response = await import('../services/api').then(module => module.default.get('/attendance/current_status/'));
+            const api = (await import('../services/api')).default;
+            const response = await api.get('/attendance/current_status/');
             setIsShiftActive(response.data.is_active);
         } catch (error) {
             console.error('Shift status check failed:', error);
@@ -75,6 +71,7 @@ const MainLayout = () => {
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock },
         { path: '/calendar', label: 'Takvim', icon: Calendar },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange },
+        { path: '/public-holidays', label: 'Resmi Tatiller', icon: Flag },
         { path: '/requests', label: 'Talepler', icon: FileText },
     ];
 
