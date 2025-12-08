@@ -13,7 +13,7 @@ import {
     Search,
     Bell,
     Network,
-    Network,
+
     Clock,
     Calendar
 } from 'lucide-react';
