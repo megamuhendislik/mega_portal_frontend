@@ -13,6 +13,7 @@ import Requests from './pages/Requests';
 import Attendance from './pages/Attendance';
 import CalendarPage from './pages/CalendarPage';
 import WorkSchedules from './pages/WorkSchedules';
+import PublicHolidays from './pages/PublicHolidays';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
