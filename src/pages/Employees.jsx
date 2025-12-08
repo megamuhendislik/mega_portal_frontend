@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Search, Filter, MoreVertical, Mail, Phone, MapPin, User, Settings } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Mail, Phone, MapPin, User, Settings, Trash2, Power, ShieldAlert } from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import WeeklyScheduleSelector from '../components/WeeklyScheduleSelector';
@@ -13,6 +13,7 @@ const Employees = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDept, setSelectedDept] = useState('');
+    const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, PASSIVE
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
         first_name: '',
@@ -26,7 +27,10 @@ const Employees = () => {
         remote_work_days: [],
         weekly_schedule: {},
         attendance_tolerance_minutes: 0,
-        is_exempt_from_attendance: false
+        weekly_schedule: {},
+        attendance_tolerance_minutes: 0,
+        is_exempt_from_attendance: false,
+        requires_approval: true
     });
 
     // Stepper State
@@ -92,6 +96,36 @@ const Employees = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (window.confirm('Bu kullanıcıyı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
+            try {
+                await api.delete(`/employees/${id}/hard-delete/`);
+                fetchData();
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                alert('Silme işlemi başarısız oldu.');
+            }
+        }
+    };
+
+    const handleToggleStatus = async (emp) => {
+        const newStatus = emp.employment_status === 'PASSIVE' ? 'ACTIVE' : 'PASSIVE';
+        const isActive = newStatus === 'ACTIVE';
+
+        if (window.confirm(`Kullanıcı durumunu ${newStatus === 'PASSIVE' ? 'PASİF' : 'AKTİF'} yapmak istediğinize emin misiniz?`)) {
+            try {
+                await api.patch(`/employees/${emp.id}/`, {
+                    employment_status: newStatus,
+                    is_active: isActive
+                });
+                fetchData();
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('Durum güncelleme başarısız oldu.');
+            }
+        }
+    };
+
     const filteredEmployees = Array.isArray(employees) ? employees.filter(emp => {
         const firstName = emp?.first_name || '';
         const lastName = emp?.last_name || '';
@@ -99,8 +133,14 @@ const Employees = () => {
 
         const matchesSearch = (firstName + ' ' + lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
             email.toLowerCase().includes(searchTerm.toLowerCase());
+        email.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesDept = selectedDept ? emp.department === parseInt(selectedDept) : true;
-        return matchesSearch && matchesDept;
+
+        let matchesStatus = true;
+        if (filterStatus === 'ACTIVE') matchesStatus = emp.is_active;
+        if (filterStatus === 'PASSIVE') matchesStatus = !emp.is_active || emp.employment_status === 'PASSIVE';
+
+        return matchesSearch && matchesDept && matchesStatus;
     }) : [];
 
     const getDepartmentName = (id) => departments.find(d => d.id === id)?.name || '-';
@@ -411,6 +451,15 @@ const Employees = () => {
                             <option key={dept.id} value={dept.id}>{dept.name}</option>
                         ))}
                     </select>
+                    <select
+                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                    >
+                        <option value="ALL">Tüm Durumlar</option>
+                        <option value="ACTIVE">Aktif</option>
+                        <option value="PASSIVE">Pasif</option>
+                    </select>
                 </div>
             </div>
 
@@ -456,6 +505,27 @@ const Employees = () => {
                             <Settings size={16} />
                             Yönet
                         </button>
+
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                onClick={() => handleToggleStatus(emp)}
+                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${emp.is_active
+                                        ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                                        : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                    }`}
+                                title={emp.is_active ? "Pasife Al" : "Aktif Et"}
+                            >
+                                <Power size={16} />
+                                {emp.is_active ? 'Pasif' : 'Aktif'}
+                            </button>
+                            <button
+                                onClick={() => handleDelete(emp.id)}
+                                className="py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                                title="Kalıcı Olarak Sil"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>

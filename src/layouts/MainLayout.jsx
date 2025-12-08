@@ -13,7 +13,9 @@ import {
     Search,
     Bell,
     Network,
-    Clock
+    Network,
+    Clock,
+    Calendar
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -70,6 +72,7 @@ const MainLayout = () => {
         { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network },
         { path: '/projects', label: 'Projeler', icon: Briefcase },
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock },
+        { path: '/calendar', label: 'Takvim', icon: Calendar },
         { path: '/requests', label: 'Talepler', icon: FileText },
     ];
 

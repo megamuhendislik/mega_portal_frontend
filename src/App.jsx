@@ -10,7 +10,9 @@ import EmployeeDetail from './pages/EmployeeDetail';
 import OrganizationChart from './pages/OrganizationChart';
 import Projects from './pages/Projects';
 import Requests from './pages/Requests';
+import Requests from './pages/Requests';
 import Attendance from './pages/Attendance';
+import CalendarPage from './pages/CalendarPage';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -45,6 +47,7 @@ function App() {
             <Route path="organization-chart" element={<OrganizationChart />} />
             <Route path="projects" element={<Projects />} />
             <Route path="attendance" element={<Attendance />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="requests" element={<Requests />} />
           </Route>
         </Routes>
