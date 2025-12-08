@@ -14,6 +14,7 @@ import Attendance from './pages/Attendance';
 import CalendarPage from './pages/CalendarPage';
 import WorkSchedules from './pages/WorkSchedules';
 import PublicHolidays from './pages/PublicHolidays';
+import AttendanceTracking from './pages/AttendanceTracking';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -51,6 +52,7 @@ function App() {
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="work-schedules" element={<WorkSchedules />} />
             <Route path="public-holidays" element={<PublicHolidays />} />
+            <Route path="attendance-tracking" element={<AttendanceTracking />} />
             <Route path="requests" element={<Requests />} />
           </Route>
         </Routes>
