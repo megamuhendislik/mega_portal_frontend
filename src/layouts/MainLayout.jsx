@@ -15,7 +15,8 @@ import {
     Network,
 
     Clock,
-    Calendar
+    Calendar,
+    CalendarRange
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -73,6 +74,7 @@ const MainLayout = () => {
         { path: '/projects', label: 'Projeler', icon: Briefcase },
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock },
         { path: '/calendar', label: 'Takvim', icon: Calendar },
+        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange },
         { path: '/requests', label: 'Talepler', icon: FileText },
     ];
 
