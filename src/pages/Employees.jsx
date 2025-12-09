@@ -70,9 +70,17 @@ const Employees = () => {
     const fetchEmployees = async () => {
         try {
             const response = await api.get('/employees/');
-            setEmployees(response.data);
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setEmployees(data);
+            } else if (data.results && Array.isArray(data.results)) {
+                setEmployees(data.results);
+            } else {
+                setEmployees([]);
+            }
         } catch (error) {
             console.error('Error fetching employees:', error);
+            setEmployees([]);
         } finally {
             setLoading(false);
         }
