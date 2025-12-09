@@ -83,7 +83,20 @@ const OrganizationChart = () => {
         const fetchHierarchy = async () => {
             try {
                 const response = await api.get('/departments/hierarchy/');
-                setTreeData(response.data);
+                let data = response.data;
+
+                // If multiple roots, wrap them in a virtual company node
+                if (Array.isArray(data) && data.length > 1) {
+                    data = [{
+                        id: 'root-company',
+                        name: 'Mega Portal',
+                        code: 'COMPANY',
+                        employees: [],
+                        children: data
+                    }];
+                }
+
+                setTreeData(data);
             } catch (err) {
                 console.error('Error fetching hierarchy:', err);
                 setError('Organizasyon şemasını görüntüleme yetkiniz yok veya bir hata oluştu.');
@@ -116,8 +129,8 @@ const OrganizationChart = () => {
                 </div>
             </div>
 
-            <div className="card p-8 overflow-auto bg-slate-50/50 flex-1 min-h-[600px]">
-                <div className="tree min-w-fit mx-auto">
+            <div className="card p-8 overflow-auto bg-slate-50/50 flex-1 min-h-[600px] flex justify-center">
+                <div className="tree">
                     <ul>
                         {treeData.map(node => (
                             <TreeNode key={node.id} node={node} />
@@ -152,7 +165,7 @@ const OrganizationChart = () => {
                     position: absolute; 
                     top: 0; 
                     right: 50%;
-                    border-top: 1px solid #ccc;
+                    border-top: 1px solid #94a3b8;
                     width: 50%; 
                     height: 20px;
                 }
@@ -160,7 +173,7 @@ const OrganizationChart = () => {
                 .tree li::after {
                     right: auto; 
                     left: 50%;
-                    border-left: 1px solid #ccc;
+                    border-left: 1px solid #94a3b8;
                 }
 
                 /* We need to remove left-right connectors from elements without 
@@ -182,7 +195,7 @@ const OrganizationChart = () => {
 
                 /* Adding back the vertical connector to the last nodes */
                 .tree li:last-child::before{
-                    border-right: 1px solid #ccc;
+                    border-right: 1px solid #94a3b8;
                     border-radius: 0 5px 0 0;
                 }
                 .tree li:first-child::after{
@@ -195,7 +208,7 @@ const OrganizationChart = () => {
                     position: absolute; 
                     top: 0; 
                     left: 50%;
-                    border-left: 1px solid #ccc;
+                    border-left: 1px solid #94a3b8;
                     width: 0; 
                     height: 20px;
                 }
