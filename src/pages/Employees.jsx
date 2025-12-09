@@ -30,7 +30,8 @@ const Employees = () => {
         remote_work_days: [],
         is_exempt_from_attendance: false,
         attendance_tolerance_minutes: 15,
-        roles: []
+        roles: [],
+        direct_permissions: []
     });
 
     const days = [
@@ -45,13 +46,24 @@ const Employees = () => {
 
     const [workSchedules, setWorkSchedules] = useState([]);
     const [roles, setRoles] = useState([]);
+    const [permissions, setPermissions] = useState([]);
 
     useEffect(() => {
         fetchEmployees();
         fetchDepartments();
         fetchWorkSchedules();
         fetchRoles();
+        fetchPermissions();
     }, []);
+
+    const fetchPermissions = async () => {
+        try {
+            const response = await api.get('/permissions/');
+            setPermissions(response.data.results || response.data);
+        } catch (error) {
+            console.error('Error fetching permissions:', error);
+        }
+    };
 
     const fetchRoles = async () => {
         try {
@@ -152,7 +164,8 @@ const Employees = () => {
                 is_exempt_from_attendance: false,
                 attendance_tolerance_minutes: 15,
                 work_schedule: '',
-                roles: []
+                roles: [],
+                direct_permissions: []
             });
             setCurrentStep(1);
         } catch (error) {
@@ -265,6 +278,30 @@ const Employees = () => {
                                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <span className="text-sm text-slate-700">{role.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Direkt Yetkiler (Opsiyonel)</label>
+                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-lg">
+                                {permissions.map(perm => (
+                                    <label key={perm.id} className="flex items-center space-x-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.direct_permissions.includes(perm.id)}
+                                            onChange={(e) => {
+                                                const newPerms = e.target.checked
+                                                    ? [...formData.direct_permissions, perm.id]
+                                                    : formData.direct_permissions.filter(id => id !== perm.id);
+                                                setFormData({ ...formData, direct_permissions: newPerms });
+                                            }}
+                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-slate-700">{perm.name}</span>
+                                            <span className="text-xs text-slate-500">{perm.description}</span>
+                                        </div>
                                     </label>
                                 ))}
                             </div>

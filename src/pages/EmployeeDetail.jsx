@@ -15,6 +15,7 @@ const EmployeeDetail = () => {
     const [team, setTeam] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
     const [allRoles, setAllRoles] = useState([]);
+    const [allPermissions, setAllPermissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [assignManagerModal, setAssignManagerModal] = useState(false);
     const [selectedManager, setSelectedManager] = useState('');
@@ -40,6 +41,10 @@ const EmployeeDetail = () => {
             // Fetch all roles
             const rolesRes = await api.get('/roles/');
             setAllRoles(rolesRes.data.results || rolesRes.data);
+
+            // Fetch all permissions
+            const permsRes = await api.get('/permissions/');
+            setAllPermissions(permsRes.data.results || permsRes.data);
         } catch (error) {
             console.error('Error fetching employee details:', error);
         } finally {
@@ -76,14 +81,33 @@ const EmployeeDetail = () => {
         setEmployee({ ...employee, roles: updatedRolesList });
     };
 
+    const handlePermissionToggle = (permId) => {
+        const currentPerms = employee.direct_permissions.map(p => p.id);
+        let newPerms;
+        if (currentPerms.includes(permId)) {
+            newPerms = currentPerms.filter(id => id !== permId);
+        } else {
+            newPerms = [...currentPerms, permId];
+        }
+
+        // Optimistic update for UI
+        const updatedPermsList = allPermissions.filter(p => newPerms.includes(p.id));
+        setEmployee({ ...employee, direct_permissions: updatedPermsList });
+    };
+
     const handleSaveRoles = async () => {
         try {
             const roleIds = employee.roles.map(r => r.id);
-            await api.patch(`/employees/${id}/`, { roles: roleIds });
-            alert('Roller başarıyla güncellendi.');
+            const permIds = employee.direct_permissions.map(p => p.id);
+
+            await api.patch(`/employees/${id}/`, {
+                roles: roleIds,
+                direct_permissions: permIds
+            });
+            alert('Yetkiler ve Roller başarıyla güncellendi.');
         } catch (error) {
-            console.error('Error updating roles:', error);
-            alert('Roller güncellenirken bir hata oluştu. Yetkiniz olmayabilir.');
+            console.error('Error updating permissions:', error);
+            alert('Güncelleme sırasında bir hata oluştu.');
             fetchEmployeeData(); // Revert changes on error
         }
     };
@@ -263,8 +287,8 @@ const EmployeeDetail = () => {
                                         <div key={role.id}
                                             onClick={() => handleRoleToggle(role.id)}
                                             className={`p-4 rounded-xl border cursor-pointer transition-all ${isAssigned
-                                                    ? 'bg-blue-50 border-blue-200 shadow-sm'
-                                                    : 'bg-white border-slate-200 hover:border-blue-300'
+                                                ? 'bg-blue-50 border-blue-200 shadow-sm'
+                                                : 'bg-white border-slate-200 hover:border-blue-300'
                                                 }`}
                                         >
                                             <div className="flex items-start gap-3">
@@ -284,11 +308,42 @@ const EmployeeDetail = () => {
                                 })}
                             </div>
 
+                            <div className="mt-8">
+                                <h4 className="text-md font-bold text-slate-700 mb-3">Direkt Yetkiler</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {allPermissions.map(perm => {
+                                        const isAssigned = employee.direct_permissions.some(p => p.id === perm.id);
+                                        return (
+                                            <div key={perm.id}
+                                                onClick={() => handlePermissionToggle(perm.id)}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-all ${isAssigned
+                                                        ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                                                        : 'bg-white border-slate-200 hover:border-emerald-300'
+                                                    }`}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors ${isAssigned ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
+                                                        }`}>
+                                                        {isAssigned && <span className="text-white text-xs">✓</span>}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className={`font-bold text-sm ${isAssigned ? 'text-emerald-800' : 'text-slate-700'}`}>
+                                                            {perm.name}
+                                                        </h4>
+                                                        <p className="text-xs text-slate-500 mt-1">{perm.description}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-3">
                                 <Shield size={20} className="shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-bold">Dikkat</p>
-                                    <p className="mt-1">Rol değişiklikleri kullanıcının sisteme bir sonraki girişinde veya sayfa yenilemesinde aktif olacaktır.</p>
+                                    <p className="mt-1">Rol ve yetki değişiklikleri kullanıcının sisteme bir sonraki girişinde veya sayfa yenilemesinde aktif olacaktır.</p>
                                 </div>
                             </div>
                         </div>
