@@ -14,7 +14,6 @@ const EmployeeDetail = () => {
     const [managers, setManagers] = useState({ primary_managers: [], cross_managers: [] });
     const [team, setTeam] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
-    const [allRoles, setAllRoles] = useState([]);
     const [allPermissions, setAllPermissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [assignManagerModal, setAssignManagerModal] = useState(false);
@@ -37,10 +36,6 @@ const EmployeeDetail = () => {
             setManagers(managersRes.data);
             setTeam(teamRes.data);
             setAllEmployees(allEmpRes.data.results || allEmpRes.data);
-
-            // Fetch all roles
-            const rolesRes = await api.get('/roles/');
-            setAllRoles(rolesRes.data.results || rolesRes.data);
 
             // Fetch all permissions
             const permsRes = await api.get('/permissions/');
@@ -67,20 +62,6 @@ const EmployeeDetail = () => {
         }
     };
 
-    const handleRoleToggle = (roleId) => {
-        const currentRoles = employee.roles.map(r => r.id);
-        let newRoles;
-        if (currentRoles.includes(roleId)) {
-            newRoles = currentRoles.filter(id => id !== roleId);
-        } else {
-            newRoles = [...currentRoles, roleId];
-        }
-
-        // Optimistic update for UI
-        const updatedRolesList = allRoles.filter(r => newRoles.includes(r.id));
-        setEmployee({ ...employee, roles: updatedRolesList });
-    };
-
     const handlePermissionToggle = (permId) => {
         const currentPerms = employee.direct_permissions.map(p => p.id);
         let newPerms;
@@ -97,14 +78,13 @@ const EmployeeDetail = () => {
 
     const handleSaveRoles = async () => {
         try {
-            const roleIds = employee.roles.map(r => r.id);
+            // Only save direct permissions
             const permIds = employee.direct_permissions.map(p => p.id);
 
             await api.patch(`/employees/${id}/`, {
-                roles: roleIds,
                 direct_permissions: permIds
             });
-            alert('Yetkiler ve Roller başarıyla güncellendi.');
+            alert('Yetkiler başarıyla güncellendi.');
         } catch (error) {
             console.error('Error updating permissions:', error);
             alert('Güncelleme sırasında bir hata oluştu.');
@@ -270,7 +250,7 @@ const EmployeeDetail = () => {
                     {activeTab === 'settings' && (
                         <div className="card p-6">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-bold text-slate-800">Yetkiler ve Roller</h3>
+                                <h3 className="text-lg font-bold text-slate-800">Yetki Yönetimi</h3>
                                 <button
                                     onClick={handleSaveRoles}
                                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
@@ -280,70 +260,64 @@ const EmployeeDetail = () => {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {allRoles.map(role => {
-                                    const isAssigned = employee.roles.some(r => r.id === role.id);
+                            <div className="space-y-6">
+                                {['Employee Management', 'Attendance & Time', 'Organization & Settings'].map(category => {
+                                    const categoryPerms = allPermissions.filter(p => {
+                                        if (category === 'Employee Management') return p.code.startsWith('EMPLOYEE_');
+                                        if (category === 'Attendance & Time') return p.code.startsWith('ATTENDANCE_') || p.code.startsWith('LEAVE_');
+                                        if (category === 'Organization & Settings') return p.code.startsWith('ORG_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('SYSTEM_');
+                                        return false;
+                                    });
+
+                                    if (categoryPerms.length === 0) return null;
+
                                     return (
-                                        <div key={role.id}
-                                            onClick={() => handleRoleToggle(role.id)}
-                                            className={`p-4 rounded-xl border cursor-pointer transition-all ${isAssigned
-                                                ? 'bg-blue-50 border-blue-200 shadow-sm'
-                                                : 'bg-white border-slate-200 hover:border-blue-300'
-                                                }`}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors ${isAssigned ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
-                                                    }`}>
-                                                    {isAssigned && <span className="text-white text-xs">✓</span>}
-                                                </div>
-                                                <div>
-                                                    <h4 className={`font-bold text-sm ${isAssigned ? 'text-blue-800' : 'text-slate-700'}`}>
-                                                        {role.name}
-                                                    </h4>
-                                                    <p className="text-xs text-slate-500 mt-1">{role.description}</p>
-                                                </div>
+                                        <div key={category} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                            <h5 className="text-sm font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-2 flex items-center gap-2">
+                                                {category === 'Employee Management' && <Users size={16} />}
+                                                {category === 'Attendance & Time' && <Calendar size={16} />}
+                                                {category === 'Organization & Settings' && <Settings size={16} />}
+                                                {category === 'Employee Management' ? 'Çalışan Yönetimi' :
+                                                    category === 'Attendance & Time' ? 'Mesai ve İzin' :
+                                                        'Organizasyon ve Ayarlar'}
+                                            </h5>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {categoryPerms.map(perm => {
+                                                    const isAssigned = employee.direct_permissions.some(p => p.id === perm.id);
+                                                    return (
+                                                        <div key={perm.id}
+                                                            onClick={() => handlePermissionToggle(perm.id)}
+                                                            className={`p-3 rounded-lg border cursor-pointer transition-all ${isAssigned
+                                                                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                                                                    : 'bg-white border-slate-200 hover:border-blue-300'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors shrink-0 ${isAssigned ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                                                                    }`}>
+                                                                    {isAssigned && <span className="text-white text-xs">✓</span>}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className={`font-bold text-sm ${isAssigned ? 'text-blue-800' : 'text-slate-700'}`}>
+                                                                        {perm.name}
+                                                                    </h4>
+                                                                    <p className="text-xs text-slate-500 mt-1 leading-snug">{perm.description}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            <div className="mt-8">
-                                <h4 className="text-md font-bold text-slate-700 mb-3">Direkt Yetkiler</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {allPermissions.map(perm => {
-                                        const isAssigned = employee.direct_permissions.some(p => p.id === perm.id);
-                                        return (
-                                            <div key={perm.id}
-                                                onClick={() => handlePermissionToggle(perm.id)}
-                                                className={`p-3 rounded-lg border cursor-pointer transition-all ${isAssigned
-                                                        ? 'bg-emerald-50 border-emerald-200 shadow-sm'
-                                                        : 'bg-white border-slate-200 hover:border-emerald-300'
-                                                    }`}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors ${isAssigned ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
-                                                        }`}>
-                                                        {isAssigned && <span className="text-white text-xs">✓</span>}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className={`font-bold text-sm ${isAssigned ? 'text-emerald-800' : 'text-slate-700'}`}>
-                                                            {perm.name}
-                                                        </h4>
-                                                        <p className="text-xs text-slate-500 mt-1">{perm.description}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
                             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-3">
                                 <Shield size={20} className="shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-bold">Dikkat</p>
-                                    <p className="mt-1">Rol ve yetki değişiklikleri kullanıcının sisteme bir sonraki girişinde veya sayfa yenilemesinde aktif olacaktır.</p>
+                                    <p className="mt-1">Yetki değişiklikleri kullanıcının sisteme bir sonraki girişinde veya sayfa yenilemesinde aktif olacaktır.</p>
                                 </div>
                             </div>
                         </div>

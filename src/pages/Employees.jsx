@@ -30,7 +30,6 @@ const Employees = () => {
         remote_work_days: [],
         is_exempt_from_attendance: false,
         attendance_tolerance_minutes: 15,
-        roles: [],
         direct_permissions: []
     });
 
@@ -45,14 +44,12 @@ const Employees = () => {
     ];
 
     const [workSchedules, setWorkSchedules] = useState([]);
-    const [roles, setRoles] = useState([]);
     const [permissions, setPermissions] = useState([]);
 
     useEffect(() => {
         fetchEmployees();
         fetchDepartments();
         fetchWorkSchedules();
-        fetchRoles();
         fetchPermissions();
     }, []);
 
@@ -65,14 +62,7 @@ const Employees = () => {
         }
     };
 
-    const fetchRoles = async () => {
-        try {
-            const response = await api.get('/roles/');
-            setRoles(response.data.results || response.data);
-        } catch (error) {
-            console.error('Error fetching roles:', error);
-        }
-    };
+
 
     const fetchWorkSchedules = async () => {
         try {
@@ -164,7 +154,6 @@ const Employees = () => {
                 is_exempt_from_attendance: false,
                 attendance_tolerance_minutes: 15,
                 work_schedule: '',
-                roles: [],
                 direct_permissions: []
             });
             setCurrentStep(1);
@@ -262,48 +251,50 @@ const Employees = () => {
                             </select>
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Roller</label>
-                            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-200 rounded-lg">
-                                {roles.map(role => (
-                                    <label key={role.id} className="flex items-center space-x-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.roles.includes(role.id)}
-                                            onChange={(e) => {
-                                                const newRoles = e.target.checked
-                                                    ? [...formData.roles, role.id]
-                                                    : formData.roles.filter(id => id !== role.id);
-                                                setFormData({ ...formData, roles: newRoles });
-                                            }}
-                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm text-slate-700">{role.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Direkt Yetkiler (Opsiyonel)</label>
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-lg">
-                                {permissions.map(perm => (
-                                    <label key={perm.id} className="flex items-center space-x-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.direct_permissions.includes(perm.id)}
-                                            onChange={(e) => {
-                                                const newPerms = e.target.checked
-                                                    ? [...formData.direct_permissions, perm.id]
-                                                    : formData.direct_permissions.filter(id => id !== perm.id);
-                                                setFormData({ ...formData, direct_permissions: newPerms });
-                                            }}
-                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-slate-700">{perm.name}</span>
-                                            <span className="text-xs text-slate-500">{perm.description}</span>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Yetkiler</label>
+                            <div className="space-y-4 max-h-96 overflow-y-auto p-2 border border-slate-200 rounded-lg">
+                                {['Employee Management', 'Attendance & Time', 'Organization & Settings'].map(category => {
+                                    // Filter permissions based on code prefix or manual mapping
+                                    const categoryPerms = permissions.filter(p => {
+                                        if (category === 'Employee Management') return p.code.startsWith('EMPLOYEE_');
+                                        if (category === 'Attendance & Time') return p.code.startsWith('ATTENDANCE_') || p.code.startsWith('LEAVE_');
+                                        if (category === 'Organization & Settings') return p.code.startsWith('ORG_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('SYSTEM_');
+                                        return false;
+                                    });
+
+                                    if (categoryPerms.length === 0) return null;
+
+                                    return (
+                                        <div key={category} className="bg-slate-50 rounded-lg p-3">
+                                            <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-200 pb-1">
+                                                {category === 'Employee Management' ? 'Çalışan Yönetimi' :
+                                                    category === 'Attendance & Time' ? 'Mesai ve İzin' :
+                                                        'Organizasyon ve Ayarlar'}
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {categoryPerms.map(perm => (
+                                                    <label key={perm.id} className="flex items-start space-x-2 p-1 hover:bg-white rounded cursor-pointer transition-colors">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData.direct_permissions.includes(perm.id)}
+                                                            onChange={(e) => {
+                                                                const newPerms = e.target.checked
+                                                                    ? [...formData.direct_permissions, perm.id]
+                                                                    : formData.direct_permissions.filter(id => id !== perm.id);
+                                                                setFormData({ ...formData, direct_permissions: newPerms });
+                                                            }}
+                                                            className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium text-slate-700">{perm.name}</span>
+                                                            <span className="text-xs text-slate-500 leading-tight">{perm.description}</span>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </label>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
