@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Save, X, Check, Calendar, List } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
+import { useAuth } from '../context/AuthContext';
 import 'moment/locale/tr';
 
 const DAYS = [
@@ -241,6 +242,7 @@ const WorkSchedules = () => {
                     schedules={schedules}
                     holidays={holidays}
                     initialSchedule={selectedScheduleForView}
+                    onRefresh={fetchData}
                 />
             )}
 
@@ -349,11 +351,48 @@ const WorkSchedules = () => {
 
 export default WorkSchedules;
 
-const AnnualCalendar = ({ year, schedules, holidays, initialSchedule }) => {
+const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh }) => {
     const [selectedScheduleId, setSelectedScheduleId] = useState(initialSchedule?.id || (schedules[0]?.id));
+    const { user } = useAuth();
 
     const selectedSchedule = schedules.find(s => s.id === parseInt(selectedScheduleId));
     const months = moment.months();
+
+    // Permission Check
+    const canManageHolidays = user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
+
+    const handleDayClick = async (date, currentHoliday) => {
+        if (!canManageHolidays) return;
+
+        const dateStr = date.format('YYYY-MM-DD');
+
+        if (currentHoliday) {
+            if (window.confirm(`${dateStr} tarihli "${currentHoliday.name}" tatilini silmek istiyor musunuz?`)) {
+                try {
+                    await api.delete(`/public-holidays/${currentHoliday.id}/`);
+                    if (onRefresh) onRefresh();
+                } catch (error) {
+                    console.error('Error deleting holiday:', error);
+                    alert('Silme işlemi başarısız.');
+                }
+            }
+        } else {
+            const name = window.prompt(`${dateStr} için tatil adı giriniz:`);
+            if (name) {
+                try {
+                    await api.post('/public-holidays/', {
+                        name,
+                        date: dateStr,
+                        type: 'FULL_DAY'
+                    });
+                    if (onRefresh) onRefresh();
+                } catch (error) {
+                    console.error('Error creating holiday:', error);
+                    alert('Oluşturma işlemi başarısız.');
+                }
+            }
+        }
+    };
 
     const getDayStatus = (date) => {
         const dateStr = date.format('YYYY-MM-DD');
@@ -361,18 +400,13 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule }) => {
         // Check Public Holiday
         const holiday = holidays.find(h => h.date === dateStr);
         if (holiday) {
-            return { type: 'HOLIDAY', label: holiday.name, color: 'bg-red-100 text-red-700 border-red-200' };
+            return { type: 'HOLIDAY', label: holiday.name, color: 'bg-red-100 text-red-700 border-red-200', holiday };
         }
 
         // Check Schedule
         if (!selectedSchedule) return { type: 'UNKNOWN', label: '-', color: 'bg-slate-50' };
 
-        const dayKey = date.format('ddd').toUpperCase(); // MON, TUE...
-        // Moment returns Mon, Tue... we need to match with our keys
-        // Our keys: MON, TUE, WED, THU, FRI, SAT, SUN
-        // Moment 'ddd' returns: Mon, Tue, Wed, Thu, Fri, Sat, Sun
-        // So toUpperCase() works.
-
+        const dayKey = date.format('ddd').toUpperCase();
         const rule = selectedSchedule.schedule[dayKey];
 
         if (!rule || rule.is_off) {
@@ -384,19 +418,21 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule }) => {
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="mb-6 flex items-center gap-4">
-                <label className="text-sm font-medium text-slate-700">Görüntülenen Takvim:</label>
-                <select
-                    value={selectedScheduleId}
-                    onChange={(e) => setSelectedScheduleId(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[200px]"
-                >
-                    {schedules.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                </select>
+            <div className="mb-6 flex flex-col md:flex-row items-center gap-4 justify-between">
+                <div className="flex items-center gap-4">
+                    <label className="text-sm font-medium text-slate-700">Görüntülenen Takvim:</label>
+                    <select
+                        value={selectedScheduleId}
+                        onChange={(e) => setSelectedScheduleId(e.target.value)}
+                        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[200px]"
+                    >
+                        {schedules.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
+                </div>
 
-                <div className="flex gap-4 ml-auto text-xs">
+                <div className="flex gap-4 text-xs">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
                         <span>Çalışma</span>
@@ -412,15 +448,22 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule }) => {
                 </div>
             </div>
 
+            {canManageHolidays && (
+                <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-2">
+                    <Check size={16} />
+                    <span>Yönetici Modu: Tatil eklemek veya çıkarmak için günlerin üzerine tıklayabilirsiniz.</span>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {months.map((monthName, index) => {
                     const monthStart = moment(`${year}-${index + 1}-01`, 'YYYY-M-DD');
                     const daysInMonth = monthStart.daysInMonth();
-                    const startDayOfWeek = (monthStart.day() + 6) % 7; // Adjust for Monday start (0=Mon, 6=Sun)
+                    const startDayOfWeek = (monthStart.day() + 6) % 7;
 
                     return (
                         <div key={monthName} className="border border-slate-100 rounded-lg p-4">
-                            <h4 className="font-bold text-slate-800 mb-3 text-center">{monthName}</h4>
+                            <h4 className="font-bold text-slate-800 mb-3 text-center capitalize">{monthName}</h4>
 
                             <div className="grid grid-cols-7 gap-1 mb-2">
                                 {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => (
@@ -440,7 +483,8 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule }) => {
                                     return (
                                         <div
                                             key={i}
-                                            className={`h-8 flex items-center justify-center text-xs rounded cursor-help transition-colors ${status.color}`}
+                                            onClick={() => handleDayClick(date, status.holiday)}
+                                            className={`h-8 flex items-center justify-center text-xs rounded transition-colors ${status.color} ${canManageHolidays ? 'cursor-pointer hover:opacity-80 ring-inset hover:ring-2 ring-blue-300' : 'cursor-help'}`}
                                             title={`${date.format('DD MMMM YYYY')}\n${status.label}`}
                                         >
                                             {i + 1}
