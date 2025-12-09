@@ -71,7 +71,6 @@ const MainLayout = () => {
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock },
         { path: '/calendar', label: 'Takvim', icon: Calendar },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange },
-        { path: '/public-holidays', label: 'Resmi Tatiller', icon: Flag },
         { path: '/requests', label: 'Talepler', icon: FileText },
     ];
 

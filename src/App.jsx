@@ -51,7 +51,8 @@ function App() {
             <Route path="attendance" element={<Attendance />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="work-schedules" element={<WorkSchedules />} />
-            <Route path="public-holidays" element={<PublicHolidays />} />
+            <Route path="work-schedules" element={<WorkSchedules />} />
+            <Route path="attendance-tracking" element={<AttendanceTracking />} />
             <Route path="attendance-tracking" element={<AttendanceTracking />} />
             <Route path="requests" element={<Requests />} />
           </Route>
