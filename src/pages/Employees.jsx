@@ -29,7 +29,8 @@ const Employees = () => {
         emergency_contact_phone: '',
         remote_work_days: [],
         is_exempt_from_attendance: false,
-        attendance_tolerance_minutes: 15
+        attendance_tolerance_minutes: 15,
+        roles: []
     });
 
     const days = [
@@ -43,12 +44,23 @@ const Employees = () => {
     ];
 
     const [workSchedules, setWorkSchedules] = useState([]);
+    const [roles, setRoles] = useState([]);
 
     useEffect(() => {
         fetchEmployees();
         fetchDepartments();
         fetchWorkSchedules();
+        fetchRoles();
     }, []);
+
+    const fetchRoles = async () => {
+        try {
+            const response = await api.get('/roles/');
+            setRoles(response.data.results || response.data);
+        } catch (error) {
+            console.error('Error fetching roles:', error);
+        }
+    };
 
     const fetchWorkSchedules = async () => {
         try {
@@ -139,7 +151,8 @@ const Employees = () => {
                 remote_work_days: [],
                 is_exempt_from_attendance: false,
                 attendance_tolerance_minutes: 15,
-                work_schedule: ''
+                work_schedule: '',
+                roles: []
             });
             setCurrentStep(1);
         } catch (error) {
@@ -234,6 +247,27 @@ const Employees = () => {
                                     <option key={dept.id} value={dept.id}>{dept.name}</option>
                                 ))}
                             </select>
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Roller</label>
+                            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-200 rounded-lg">
+                                {roles.map(role => (
+                                    <label key={role.id} className="flex items-center space-x-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.roles.includes(role.id)}
+                                            onChange={(e) => {
+                                                const newRoles = e.target.checked
+                                                    ? [...formData.roles, role.id]
+                                                    : formData.roles.filter(id => id !== role.id);
+                                                setFormData({ ...formData, roles: newRoles });
+                                            }}
+                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm text-slate-700">{role.name}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 );

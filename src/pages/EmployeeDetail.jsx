@@ -14,6 +14,7 @@ const EmployeeDetail = () => {
     const [managers, setManagers] = useState({ primary_managers: [], cross_managers: [] });
     const [team, setTeam] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
+    const [allRoles, setAllRoles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [assignManagerModal, setAssignManagerModal] = useState(false);
     const [selectedManager, setSelectedManager] = useState('');
@@ -35,6 +36,10 @@ const EmployeeDetail = () => {
             setManagers(managersRes.data);
             setTeam(teamRes.data);
             setAllEmployees(allEmpRes.data.results || allEmpRes.data);
+
+            // Fetch all roles
+            const rolesRes = await api.get('/roles/');
+            setAllRoles(rolesRes.data.results || rolesRes.data);
         } catch (error) {
             console.error('Error fetching employee details:', error);
         } finally {
@@ -54,6 +59,32 @@ const EmployeeDetail = () => {
         } catch (error) {
             console.error('Error assigning manager:', error);
             alert('Yönetici atanırken bir hata oluştu.');
+        }
+    };
+
+    const handleRoleToggle = (roleId) => {
+        const currentRoles = employee.roles.map(r => r.id);
+        let newRoles;
+        if (currentRoles.includes(roleId)) {
+            newRoles = currentRoles.filter(id => id !== roleId);
+        } else {
+            newRoles = [...currentRoles, roleId];
+        }
+
+        // Optimistic update for UI
+        const updatedRolesList = allRoles.filter(r => newRoles.includes(r.id));
+        setEmployee({ ...employee, roles: updatedRolesList });
+    };
+
+    const handleSaveRoles = async () => {
+        try {
+            const roleIds = employee.roles.map(r => r.id);
+            await api.patch(`/employees/${id}/`, { roles: roleIds });
+            alert('Roller başarıyla güncellendi.');
+        } catch (error) {
+            console.error('Error updating roles:', error);
+            alert('Roller güncellenirken bir hata oluştu. Yetkiniz olmayabilir.');
+            fetchEmployeeData(); // Revert changes on error
         }
     };
 
@@ -214,12 +245,50 @@ const EmployeeDetail = () => {
 
                     {activeTab === 'settings' && (
                         <div className="card p-6">
-                            <h3 className="text-lg font-bold text-slate-800 mb-4">Yetkiler ve Roller</h3>
-                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-3">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold text-slate-800">Yetkiler ve Roller</h3>
+                                <button
+                                    onClick={handleSaveRoles}
+                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
+                                >
+                                    <Save size={16} />
+                                    Değişiklikleri Kaydet
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {allRoles.map(role => {
+                                    const isAssigned = employee.roles.some(r => r.id === role.id);
+                                    return (
+                                        <div key={role.id}
+                                            onClick={() => handleRoleToggle(role.id)}
+                                            className={`p-4 rounded-xl border cursor-pointer transition-all ${isAssigned
+                                                    ? 'bg-blue-50 border-blue-200 shadow-sm'
+                                                    : 'bg-white border-slate-200 hover:border-blue-300'
+                                                }`}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors ${isAssigned ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                                                    }`}>
+                                                    {isAssigned && <span className="text-white text-xs">✓</span>}
+                                                </div>
+                                                <div>
+                                                    <h4 className={`font-bold text-sm ${isAssigned ? 'text-blue-800' : 'text-slate-700'}`}>
+                                                        {role.name}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 mt-1">{role.description}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-3">
                                 <Shield size={20} className="shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-bold">Gelişmiş Yetki Yönetimi</p>
-                                    <p className="mt-1">Bu özellik şu anda geliştirme aşamasındadır. Yakında buradan özel roller ve izinler tanımlayabileceksiniz.</p>
+                                    <p className="font-bold">Dikkat</p>
+                                    <p className="mt-1">Rol değişiklikleri kullanıcının sisteme bir sonraki girişinde veya sayfa yenilemesinde aktif olacaktır.</p>
                                 </div>
                             </div>
                         </div>
