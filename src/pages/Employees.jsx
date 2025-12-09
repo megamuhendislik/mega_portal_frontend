@@ -89,9 +89,17 @@ const Employees = () => {
     const fetchDepartments = async () => {
         try {
             const response = await api.get('/departments/');
-            setDepartments(response.data);
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setDepartments(data);
+            } else if (data.results && Array.isArray(data.results)) {
+                setDepartments(data.results);
+            } else {
+                setDepartments([]);
+            }
         } catch (error) {
             console.error('Error fetching departments:', error);
+            setDepartments([]);
         }
     };
 
