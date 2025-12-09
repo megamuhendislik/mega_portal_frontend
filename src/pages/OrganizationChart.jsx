@@ -83,7 +83,9 @@ const OrganizationChart = () => {
         const fetchHierarchy = async () => {
             try {
                 const response = await api.get('/departments/hierarchy/');
+                console.log('Organization Chart API Response:', response);
                 let data = response.data;
+                console.log('Organization Chart Data:', data);
 
                 // If multiple roots, wrap them in a virtual company node
                 if (Array.isArray(data) && data.length > 1) {
