@@ -35,8 +35,8 @@ const Requests = () => {
             const [reqRes, typesRes, overtimeRes, mealRes, incomingRes] = await Promise.all([
                 api.get('/leave/requests/'),
                 api.get('/leave/types/'),
-                api.get('/attendance/overtime-requests/'),
-                api.get('/attendance/meal-requests/'),
+                api.get('/overtime-requests/'),
+                api.get('/meal-requests/'),
                 api.get('/leave/requests/pending_approvals/')
             ]);
             setRequests(reqRes.data.results || reqRes.data);
@@ -70,7 +70,7 @@ const Requests = () => {
     const handleEditOvertimeSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.patch(`/attendance/overtime-requests/${editOvertimeForm.id}/`, {
+            await api.patch(`/overtime-requests/${editOvertimeForm.id}/`, {
                 start_time: editOvertimeForm.start_time,
                 end_time: editOvertimeForm.end_time,
                 reason: editOvertimeForm.reason
@@ -90,9 +90,9 @@ const Requests = () => {
             if (type === 'LEAVE') {
                 await api.delete(`/leave/requests/${req.id}/`);
             } else if (type === 'OVERTIME') {
-                await api.delete(`/attendance/overtime-requests/${req.id}/`);
+                await api.delete(`/overtime-requests/${req.id}/`);
             } else if (type === 'MEAL') {
-                await api.delete(`/attendance/meal-requests/${req.id}/`);
+                await api.delete(`/meal-requests/${req.id}/`);
             }
             fetchData();
         } catch (error) {

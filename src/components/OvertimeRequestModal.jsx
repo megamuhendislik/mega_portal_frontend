@@ -15,7 +15,7 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
         setError(null);
 
         try {
-            await api.post('/attendance/overtime-requests/create_from_attendance/', {
+            await api.post('/overtime-requests/create_from_attendance/', {
                 attendance_id: attendanceData.id,
                 reason: reason
             });

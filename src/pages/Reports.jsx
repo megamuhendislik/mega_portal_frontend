@@ -10,7 +10,7 @@ const Reports = () => {
     const handleDownload = async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/attendance/monthly-reports/export_excel/`, {
+            const response = await api.get(`/monthly-reports/export_excel/`, {
                 params: { year, month },
                 responseType: 'blob', // Important for file download
             });

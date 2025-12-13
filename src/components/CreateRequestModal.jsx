@@ -56,9 +56,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
             if (selectedType === 'LEAVE') {
                 await api.post('/leave/requests/', leaveForm);
             } else if (selectedType === 'OVERTIME') {
-                await api.post('/attendance/overtime-requests/', overtimeForm);
+                await api.post('/overtime-requests/', overtimeForm);
             } else if (selectedType === 'MEAL') {
-                await api.post('/attendance/meal-requests/', mealForm);
+                await api.post('/meal-requests/', mealForm);
             }
 
             onSuccess();

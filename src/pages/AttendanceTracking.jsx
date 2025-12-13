@@ -21,7 +21,7 @@ const AttendanceTracking = () => {
             const params = { year, month };
             if (selectedDept) params.department_id = selectedDept;
 
-            const res = await api.get('/attendance/stats/team_matrix/', { params });
+            const res = await api.get('/stats/team_matrix/', { params });
             setMatrixData(res.data);
         } catch (error) {
             console.error('Error fetching matrix:', error);
