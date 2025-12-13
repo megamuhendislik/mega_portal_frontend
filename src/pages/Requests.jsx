@@ -11,6 +11,8 @@ const Requests = () => {
     const [overtimeRequests, setOvertimeRequests] = useState([]);
     const [mealRequests, setMealRequests] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
+    const [incomingHistory, setIncomingHistory] = useState([]); // New state for history
+    const [incomingFilter, setIncomingFilter] = useState('PENDING'); // 'PENDING' or 'HISTORY'
     const [requestTypes, setRequestTypes] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -30,6 +32,13 @@ const Requests = () => {
         fetchData();
     }, []);
 
+    // Fetch history when filter changes to HISTORY
+    useEffect(() => {
+        if (activeTab === 'incoming' && incomingFilter === 'HISTORY' && incomingHistory.length === 0) {
+            fetchIncomingHistory();
+        }
+    }, [activeTab, incomingFilter]);
+
     const fetchData = async () => {
         try {
             const [reqRes, typesRes, overtimeRes, mealRes, incomingRes] = await Promise.all([
@@ -48,6 +57,15 @@ const Requests = () => {
             console.error('Error fetching requests:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchIncomingHistory = async () => {
+        try {
+            const res = await api.get('/leave/requests/recently_processed/');
+            setIncomingHistory(res.data.results || res.data);
+        } catch (error) {
+            console.error('Error fetching history:', error);
         }
     };
 
@@ -101,22 +119,25 @@ const Requests = () => {
         }
     };
 
-    const handleApprove = async (req) => {
-        if (!window.confirm('Bu talebi onaylamak istediğinize emin misiniz?')) return;
+    const handleApprove = async (id, notes = '') => {
+        // if (!window.confirm('Bu talebi onaylamak istediğinize emin misiniz?')) return;
         try {
-            await api.post(`/leave/requests/${req.id}/approve_reject/`, {
+            await api.post(`/leave/requests/${id}/approve_reject/`, {
                 action: 'approve',
-                notes: 'Onaylandı'
+                notes: notes || 'Onaylandı'
             });
+            // Refresh lists
             fetchData();
+            if (incomingFilter === 'HISTORY') fetchIncomingHistory();
+            // alert('Talep onaylandı.');
         } catch (error) {
             console.error('Error approving request:', error);
             alert('Onaylama işlemi başarısız oldu.');
         }
     };
 
-    const handleReject = async (req) => {
-        const reason = window.prompt('Lütfen red sebebini giriniz:');
+    const handleReject = async (id, reason) => {
+        // const reason = window.prompt('Lütfen red sebebini giriniz:');
         if (reason === null) return; // Cancelled
         if (!reason) {
             alert('Red sebebi girmelisiniz.');
@@ -124,11 +145,14 @@ const Requests = () => {
         }
 
         try {
-            await api.post(`/leave/requests/${req.id}/approve_reject/`, {
+            await api.post(`/leave/requests/${id}/approve_reject/`, {
                 action: 'reject',
                 reason: reason
             });
+            // Refresh lists
             fetchData();
+            if (incomingFilter === 'HISTORY') fetchIncomingHistory();
+            // alert('Talep reddedildi.');
         } catch (error) {
             console.error('Error rejecting request:', error);
             alert('Reddetme işlemi başarısız oldu.');
@@ -165,7 +189,7 @@ const Requests = () => {
         if (activeTab === 'my_requests') {
             if (requests.length === 0) return <EmptyState title="İzin Talebi Yok" desc="Henüz oluşturulmuş bir izin talebiniz bulunmuyor." />;
             content = (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {requests.map(req => (
                         <RequestCard
                             key={req.id}
@@ -180,7 +204,7 @@ const Requests = () => {
         } else if (activeTab === 'overtime_requests') {
             if (overtimeRequests.length === 0) return <EmptyState title="Fazla Mesai Yok" desc="Henüz oluşturulmuş bir fazla mesai talebiniz bulunmuyor." />;
             content = (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {overtimeRequests.map(req => (
                         <RequestCard
                             key={req.id}
@@ -196,7 +220,7 @@ const Requests = () => {
         } else if (activeTab === 'meal_requests') {
             if (mealRequests.length === 0) return <EmptyState title="Yemek Talebi Yok" desc="Henüz oluşturulmuş bir yemek talebiniz bulunmuyor." />;
             content = (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {mealRequests.map(req => (
                         <RequestCard
                             key={req.id}
@@ -209,23 +233,52 @@ const Requests = () => {
                 </div>
             );
         } else if (activeTab === 'incoming') {
-            if (incomingRequests.length === 0) return <EmptyState title="Bekleyen Talep Yok" desc="Onayınızı bekleyen herhangi bir talep bulunmuyor." />;
+            const list = incomingFilter === 'PENDING' ? incomingRequests : incomingHistory;
+
             content = (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {incomingRequests.map(req => (
-                        <RequestCard
-                            key={req.id}
-                            request={{
-                                ...req,
-                                leave_type_name: req.request_type_detail?.name,
-                                employee_name: req.employee_detail?.full_name
-                            }}
-                            type="LEAVE" // Currently only leave requests are in pending_approvals
-                            statusBadge={getStatusBadge}
-                            onApprove={handleApprove}
-                            onReject={handleReject}
-                        />
-                    ))}
+                <div className="space-y-6">
+                    {/* Filter Toggle */}
+                    <div className="flex justify-end">
+                        <div className="bg-slate-100 p-1 rounded-lg inline-flex">
+                            <button
+                                onClick={() => setIncomingFilter('PENDING')}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${incomingFilter === 'PENDING' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Bekleyenler
+                            </button>
+                            <button
+                                onClick={() => setIncomingFilter('HISTORY')}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${incomingFilter === 'HISTORY' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Geçmiş İşlemler
+                            </button>
+                        </div>
+                    </div>
+
+                    {list.length === 0 ? (
+                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            <p className="text-slate-500">
+                                {incomingFilter === 'PENDING' ? 'Onay bekleyen talep bulunmuyor.' : 'Geçmiş işlem bulunamadı.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                            {list.map(req => (
+                                <RequestCard
+                                    key={req.id}
+                                    request={{
+                                        ...req,
+                                        leave_type_name: req.request_type_detail?.name,
+                                        employee_name: req.employee_detail?.full_name
+                                    }}
+                                    isIncoming={true}
+                                    statusBadge={getStatusBadge}
+                                    onApprove={handleApprove}
+                                    onReject={handleReject}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         }
