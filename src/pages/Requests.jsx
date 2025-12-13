@@ -11,22 +11,18 @@ const Requests = () => {
     const [loading, setLoading] = useState(true);
 
     // Modals
-    const [showLeaveModal, setShowLeaveModal] = useState(false);
-    const [showMealModal, setShowMealModal] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
 
     // Forms
-    const [leaveForm, setLeaveForm] = useState({
-        request_type: '',
+    const [createForm, setCreateForm] = useState({
+        request_type: '', // ID of leave type or 'MEAL'
         start_date: '',
         end_date: '',
         reason: '',
         destination: '',
-        contact_phone: ''
-    });
-
-    const [mealForm, setMealForm] = useState({
-        description: ''
+        contact_phone: '',
+        meal_description: '' // For meal requests
     });
 
     const [editOvertimeForm, setEditOvertimeForm] = useState({
@@ -61,36 +57,42 @@ const Requests = () => {
 
     // --- Handlers ---
 
-    const handleLeaveSubmit = async (e) => {
+    const handleCreateSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/leave/requests/', leaveForm);
-            setShowLeaveModal(false);
+            if (createForm.request_type === 'MEAL') {
+                // Submit Meal Request
+                await api.post('/attendance/meal-requests/', {
+                    description: createForm.meal_description
+                });
+            } else {
+                // Submit Leave Request
+                await api.post('/leave/requests/', {
+                    request_type: createForm.request_type,
+                    start_date: createForm.start_date,
+                    end_date: createForm.end_date,
+                    reason: createForm.reason,
+                    destination: createForm.destination,
+                    contact_phone: createForm.contact_phone
+                });
+            }
+
+            setShowCreateModal(false);
             fetchData();
-            setLeaveForm({
+            // Reset form
+            setCreateForm({
                 request_type: '',
                 start_date: '',
                 end_date: '',
                 reason: '',
                 destination: '',
-                contact_phone: ''
+                contact_phone: '',
+                meal_description: ''
             });
         } catch (error) {
-            console.error('Error creating leave request:', error);
-            alert('Talep oluşturulurken hata oluştu.');
-        }
-    };
-
-    const handleMealSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/attendance/meal-requests/', mealForm);
-            setShowMealModal(false);
-            fetchData();
-            setMealForm({ description: '' });
-        } catch (error) {
-            console.error('Error creating meal request:', error);
-            alert(error.response?.data?.detail || error.response?.data?.[0] || 'Yemek talebi oluşturulurken hata oluştu.');
+            console.error('Error creating request:', error);
+            const msg = error.response?.data?.detail || error.response?.data?.[0] || 'Talep oluşturulurken hata oluştu.';
+            alert(msg);
         }
     };
 
@@ -142,22 +144,13 @@ const Requests = () => {
                     <h2 className="text-2xl font-bold text-slate-800">Talepler</h2>
                     <p className="text-slate-500 mt-1">İzin, fazla mesai ve yemek talepleri yönetimi</p>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setShowMealModal(true)}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-orange-500/30"
-                    >
-                        <Utensils size={18} className="mr-2" />
-                        Yemek İste
-                    </button>
-                    <button
-                        onClick={() => setShowLeaveModal(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
-                    >
-                        <Plus size={18} className="mr-2" />
-                        Yeni İzin Talebi
-                    </button>
-                </div>
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
+                >
+                    <Plus size={18} className="mr-2" />
+                    Yeni Talep Oluştur
+                </button>
             </div>
 
             {/* Tabs */}
@@ -337,76 +330,87 @@ const Requests = () => {
                 </div>
             </div>
 
-            {/* LEAVE REQUEST MODAL */}
-            {showLeaveModal && (
+            {/* UNIFIED CREATE REQUEST MODAL */}
+            {showCreateModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-xl font-bold text-slate-800">Yeni İzin Talebi</h3>
-                            <button onClick={() => setShowLeaveModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                            <h3 className="text-xl font-bold text-slate-800">Yeni Talep Oluştur</h3>
+                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
                                 <Plus size={24} className="rotate-45" />
                             </button>
                         </div>
-                        <form onSubmit={handleLeaveSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Talep Türü</label>
-                                <select required value={leaveForm.request_type} onChange={e => setLeaveForm({ ...leaveForm, request_type: e.target.value })} className="input-field">
+                                <select
+                                    required
+                                    value={createForm.request_type}
+                                    onChange={e => setCreateForm({ ...createForm, request_type: e.target.value })}
+                                    className="input-field"
+                                >
                                     <option value="">Seçiniz</option>
-                                    {requestTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <optgroup label="İzin ve Görev">
+                                        {requestTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    </optgroup>
+                                    <optgroup label="Diğer">
+                                        <option value="MEAL">Yemek Talebi</option>
+                                    </optgroup>
                                 </select>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
-                                    <input required type="date" value={leaveForm.start_date} onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value })} className="input-field" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
-                                    <input required type="date" value={leaveForm.end_date} onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })} className="input-field" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
-                                <textarea required rows="3" value={leaveForm.reason} onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })} className="input-field"></textarea>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Gidilecek Yer (Dış Görev)</label>
-                                <input value={leaveForm.destination} onChange={e => setLeaveForm({ ...leaveForm, destination: e.target.value })} className="input-field" placeholder="Opsiyonel" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">İletişim Telefonu</label>
-                                <input value={leaveForm.contact_phone} onChange={e => setLeaveForm({ ...leaveForm, contact_phone: e.target.value })} className="input-field" placeholder="Opsiyonel" />
-                            </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setShowLeaveModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Gönder</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
-            {/* MEAL REQUEST MODAL */}
-            {showMealModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-xl font-bold text-slate-800">Yemek Talebi Oluştur</h3>
-                            <button onClick={() => setShowMealModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                <Plus size={24} className="rotate-45" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleMealSubmit} className="p-6 space-y-4">
-                            <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-700">
-                                <p>Yemek talebi sadece <strong>bugün</strong> için oluşturulabilir.</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Yemek Tercihi / Açıklama</label>
-                                <textarea required rows="3" value={mealForm.description} onChange={e => setMealForm({ ...mealForm, description: e.target.value })} className="input-field" placeholder="Örn: Tavuklu Salata, İçecek..."></textarea>
-                            </div>
+                            {/* MEAL REQUEST FIELDS */}
+                            {createForm.request_type === 'MEAL' && (
+                                <div className="animate-fadeIn">
+                                    <div className="bg-orange-50 p-4 rounded-lg text-sm text-orange-700 mb-4 flex items-start">
+                                        <Utensils size={16} className="mt-0.5 mr-2 flex-shrink-0" />
+                                        <p>Yemek talebi sadece <strong>bugün</strong> için oluşturulabilir.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Yemek Tercihi / Açıklama</label>
+                                        <textarea
+                                            required
+                                            rows="3"
+                                            value={createForm.meal_description}
+                                            onChange={e => setCreateForm({ ...createForm, meal_description: e.target.value })}
+                                            className="input-field"
+                                            placeholder="Örn: Tavuklu Salata, İçecek..."
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* LEAVE REQUEST FIELDS */}
+                            {createForm.request_type && createForm.request_type !== 'MEAL' && (
+                                <div className="space-y-4 animate-fadeIn">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
+                                            <input required type="date" value={createForm.start_date} onChange={e => setCreateForm({ ...createForm, start_date: e.target.value })} className="input-field" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
+                                            <input required type="date" value={createForm.end_date} onChange={e => setCreateForm({ ...createForm, end_date: e.target.value })} className="input-field" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                                        <textarea required rows="3" value={createForm.reason} onChange={e => setCreateForm({ ...createForm, reason: e.target.value })} className="input-field"></textarea>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Gidilecek Yer (Dış Görev)</label>
+                                        <input value={createForm.destination} onChange={e => setCreateForm({ ...createForm, destination: e.target.value })} className="input-field" placeholder="Opsiyonel" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">İletişim Telefonu</label>
+                                        <input value={createForm.contact_phone} onChange={e => setCreateForm({ ...createForm, contact_phone: e.target.value })} className="input-field" placeholder="Opsiyonel" />
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setShowMealModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                <button type="submit" className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium shadow-lg shadow-orange-500/30 transition-all">Talep Et</button>
+                                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Gönder</button>
                             </div>
                         </form>
                     </div>
