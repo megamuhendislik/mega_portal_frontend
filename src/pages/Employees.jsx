@@ -13,6 +13,7 @@ const Employees = () => {
     const [selectedDept, setSelectedDept] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, PASSIVE
     const [showModal, setShowModal] = useState(false);
+    const [openMenuId, setOpenMenuId] = useState(null);
 
     // Form States
     const [currentStep, setCurrentStep] = useState(1);
@@ -477,9 +478,47 @@ const Employees = () => {
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
                                 {emp.first_name?.[0]}{emp.last_name?.[0]}
                             </div>
-                            <button className="text-slate-400 hover:text-blue-600 transition-colors">
-                                <MoreVertical size={20} />
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(openMenuId === emp.id ? null : emp.id);
+                                    }}
+                                    className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-slate-100"
+                                >
+                                    <MoreVertical size={20} />
+                                </button>
+
+                                {openMenuId === emp.id && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setOpenMenuId(null)}
+                                        ></div>
+                                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 z-20 py-1 animate-fade-in">
+                                            <button
+                                                onClick={() => navigate(`/employees/${emp.id}`)}
+                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                            >
+                                                <Settings size={14} /> Detaylar
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleStatus(emp)}
+                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                            >
+                                                <Power size={14} /> {emp.is_active ? 'Pasife Al' : 'Aktif Et'}
+                                            </button>
+                                            <div className="h-px bg-slate-100 my-1"></div>
+                                            <button
+                                                onClick={() => handleDelete(emp.id)}
+                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                            >
+                                                <Trash2 size={14} /> Sil
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
                         <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
