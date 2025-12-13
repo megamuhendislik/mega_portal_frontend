@@ -204,6 +204,8 @@ const AttendanceTracking = () => {
                                         <th className="p-4">Personel</th>
                                         <th className="p-4">Departman</th>
                                         <th className="p-4 text-right">Toplam Çalışma</th>
+                                        <th className="p-4 text-right text-orange-600">Geç Kalma</th>
+                                        <th className="p-4 text-right text-orange-600">Erken Çıkma</th>
                                         <th className="p-4 text-right text-green-600">Fazla Mesai</th>
                                         <th className="p-4 text-right text-red-600">Eksik Mesai</th>
                                         <th className="p-4 text-right">Net Durum</th>
@@ -212,15 +214,21 @@ const AttendanceTracking = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading ? (
-                                        <tr><td colSpan="7" className="p-8 text-center">Yükleniyor...</td></tr>
+                                        <tr><td colSpan="9" className="p-8 text-center">Yükleniyor...</td></tr>
                                     ) : stats.length === 0 ? (
-                                        <tr><td colSpan="7" className="p-8 text-center text-slate-400">Veri bulunamadı.</td></tr>
+                                        <tr><td colSpan="9" className="p-8 text-center text-slate-400">Veri bulunamadı.</td></tr>
                                     ) : (
                                         stats.map(item => (
                                             <tr key={item.employee_id} className="hover:bg-slate-50 transition-colors group">
                                                 <td className="p-4 font-medium text-slate-800">{item.employee_name}</td>
                                                 <td className="p-4 text-slate-500 text-sm">{item.department}</td>
                                                 <td className="p-4 text-right text-slate-600 font-mono text-sm">{formatMinutes(item.total_worked)}</td>
+                                                <td className="p-4 text-right text-orange-600 font-mono text-sm font-medium">
+                                                    {item.total_late > 0 ? formatMinutes(item.total_late) : '-'}
+                                                </td>
+                                                <td className="p-4 text-right text-orange-600 font-mono text-sm font-medium">
+                                                    {item.total_early_leave > 0 ? formatMinutes(item.total_early_leave) : '-'}
+                                                </td>
                                                 <td className="p-4 text-right text-green-600 font-mono text-sm font-medium">
                                                     {item.total_overtime > 0 ? `+${formatMinutes(item.total_overtime)}` : '-'}
                                                 </td>
