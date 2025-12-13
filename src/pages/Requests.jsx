@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Clock, FileText, CheckCircle, XCircle, AlertCircle, Filter, Utensils, Edit2 } from 'lucide-react';
+import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils } from 'lucide-react';
 import api from '../services/api';
+import RequestCard from '../components/RequestCard';
+import CreateRequestModal from '../components/CreateRequestModal';
 
 const Requests = () => {
     const [activeTab, setActiveTab] = useState('my_requests');
@@ -14,17 +16,7 @@ const Requests = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
 
-    // Forms
-    const [createForm, setCreateForm] = useState({
-        request_type: '', // ID of leave type or 'MEAL'
-        start_date: '',
-        end_date: '',
-        reason: '',
-        destination: '',
-        contact_phone: '',
-        meal_description: '' // For meal requests
-    });
-
+    // Edit Form
     const [editOvertimeForm, setEditOvertimeForm] = useState({
         id: null,
         start_time: '',
@@ -57,43 +49,9 @@ const Requests = () => {
 
     // --- Handlers ---
 
-    const handleCreateSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            if (createForm.request_type === 'MEAL') {
-                // Submit Meal Request
-                await api.post('/attendance/meal-requests/', {
-                    description: createForm.meal_description
-                });
-            } else {
-                // Submit Leave Request
-                await api.post('/leave/requests/', {
-                    request_type: createForm.request_type,
-                    start_date: createForm.start_date,
-                    end_date: createForm.end_date,
-                    reason: createForm.reason,
-                    destination: createForm.destination,
-                    contact_phone: createForm.contact_phone
-                });
-            }
-
-            setShowCreateModal(false);
-            fetchData();
-            // Reset form
-            setCreateForm({
-                request_type: '',
-                start_date: '',
-                end_date: '',
-                reason: '',
-                destination: '',
-                contact_phone: '',
-                meal_description: ''
-            });
-        } catch (error) {
-            console.error('Error creating request:', error);
-            const msg = error.response?.data?.detail || error.response?.data?.[0] || 'Talep oluşturulurken hata oluştu.';
-            alert(msg);
-        }
+    const handleCreateSuccess = () => {
+        fetchData();
+        // Optional: Show success toast
     };
 
     const handleEditOvertimeClick = (req) => {
@@ -122,304 +80,213 @@ const Requests = () => {
         }
     };
 
+    const handleDeleteRequest = async (req, type) => {
+        if (!window.confirm('Bu talebi silmek istediğinize emin misiniz?')) return;
+
+        try {
+            if (type === 'LEAVE') {
+                await api.delete(`/leave/requests/${req.id}/`);
+            } else if (type === 'OVERTIME') {
+                await api.delete(`/attendance/overtime-requests/${req.id}/`);
+            } else if (type === 'MEAL') {
+                // Assuming meal requests can be deleted
+                await api.delete(`/attendance/meal-requests/${req.id}/`);
+            }
+            fetchData();
+        } catch (error) {
+            console.error('Error deleting request:', error);
+            alert('Silme işlemi başarısız oldu.');
+        }
+    };
+
     // --- UI Helpers ---
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'APPROVED': return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-medium flex items-center"><CheckCircle size={12} className="mr-1" /> Onaylandı</span>;
-            case 'REJECTED': return <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium flex items-center"><XCircle size={12} className="mr-1" /> Reddedildi</span>;
-            case 'PENDING': return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium flex items-center"><Clock size={12} className="mr-1" /> Bekliyor</span>;
-            case 'DELIVERED': return <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium flex items-center"><CheckCircle size={12} className="mr-1" /> Teslim Edildi</span>;
-            default: return <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium">{status}</span>;
+            case 'APPROVED': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">Onaylandı</span>;
+            case 'REJECTED': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">Reddedildi</span>;
+            case 'PENDING': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">Bekliyor</span>;
+            case 'DELIVERED': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Teslim Edildi</span>;
+            default: return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">{status}</span>;
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
+    // --- Render Content ---
+
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="h-48 bg-slate-100 rounded-2xl"></div>
+                    ))}
+                </div>
+            );
+        }
+
+        let content = null;
+
+        if (activeTab === 'my_requests') {
+            if (requests.length === 0) return <EmptyState title="İzin Talebi Yok" desc="Henüz oluşturulmuş bir izin talebiniz bulunmuyor." />;
+            content = (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {requests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={{ ...req, leave_type_name: requestTypes.find(t => t.id === req.request_type)?.name }}
+                            type="LEAVE"
+                            statusBadge={getStatusBadge}
+                            onDelete={(r) => handleDeleteRequest(r, 'LEAVE')}
+                        />
+                    ))}
+                </div>
+            );
+        } else if (activeTab === 'overtime_requests') {
+            if (overtimeRequests.length === 0) return <EmptyState title="Fazla Mesai Yok" desc="Henüz oluşturulmuş bir fazla mesai talebiniz bulunmuyor." />;
+            content = (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {overtimeRequests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={req}
+                            type="OVERTIME"
+                            statusBadge={getStatusBadge}
+                            onEdit={handleEditOvertimeClick}
+                            onDelete={(r) => handleDeleteRequest(r, 'OVERTIME')}
+                        />
+                    ))}
+                </div>
+            );
+        } else if (activeTab === 'meal_requests') {
+            if (mealRequests.length === 0) return <EmptyState title="Yemek Talebi Yok" desc="Henüz oluşturulmuş bir yemek talebiniz bulunmuyor." />;
+            content = (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {mealRequests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={req}
+                            type="MEAL"
+                            statusBadge={getStatusBadge}
+                            onDelete={(r) => handleDeleteRequest(r, 'MEAL')}
+                        />
+                    ))}
+                </div>
+            );
+        } else if (activeTab === 'incoming') {
+            return (
+                <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
+                        <ArrowDownLeft size={32} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-800">Gelen Talepler</h3>
+                    <p className="text-slate-500 max-w-md mt-2">
+                        Yönetici onay ekranı için lütfen "Onaylar" menüsünü kullanın. Bu alan yakında güncellenecektir.
+                    </p>
+                </div>
+            );
+        }
+
+        return content;
+    };
+
+    const EmptyState = ({ title, desc }) => (
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
+                <Search size={40} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+            <p className="text-slate-500 max-w-xs mt-2">{desc}</p>
+            <button
+                onClick={() => setShowCreateModal(true)}
+                className="mt-6 text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2 hover:underline"
+            >
+                <Plus size={16} />
+                Yeni Talep Oluştur
+            </button>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Talepler</h2>
-                    <p className="text-slate-500 mt-1">İzin, fazla mesai ve yemek talepleri yönetimi</p>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Taleplerim</h1>
+                    <p className="text-slate-500 mt-2 text-lg">İzin, mesai ve yemek taleplerinizi buradan yönetebilirsiniz.</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
+                    className="group bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all flex items-center gap-2 active:scale-95"
                 >
-                    <Plus size={18} className="mr-2" />
+                    <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
                     Yeni Talep Oluştur
                 </button>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-slate-200">
-                <div className="flex space-x-8 overflow-x-auto">
-                    <button
-                        onClick={() => setActiveTab('my_requests')}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'my_requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        İzin Taleplerim
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('overtime_requests')}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'overtime_requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Fazla Mesai Taleplerim
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('meal_requests')}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'meal_requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Yemek Taleplerim
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('incoming')}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'incoming' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Gelen Talepler (Yönetici)
-                    </button>
+            {/* Summary Cards (Optional - using static/calculated data for visual appeal) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Calendar size={64} /></div>
+                    <p className="text-blue-100 text-sm font-medium mb-1">Toplam İzin Talebi</p>
+                    <h3 className="text-3xl font-bold">{requests.length}</h3>
+                </div>
+                <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Clock size={64} /></div>
+                    <p className="text-amber-100 text-sm font-medium mb-1">Fazla Mesai Talebi</p>
+                    <h3 className="text-3xl font-bold">{overtimeRequests.length}</h3>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Utensils size={64} /></div>
+                    <p className="text-emerald-100 text-sm font-medium mb-1">Yemek Talebi</p>
+                    <h3 className="text-3xl font-bold">{mealRequests.length}</h3>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="card overflow-hidden">
-                <div className="overflow-x-auto">
-                    {/* LEAVE REQUESTS TABLE */}
-                    {activeTab === 'my_requests' && (
-                        <table className="w-full text-left text-sm text-slate-600">
-                            <thead className="bg-slate-50 text-slate-700 font-semibold uppercase text-xs">
-                                <tr>
-                                    <th className="px-6 py-4">Talep Türü</th>
-                                    <th className="px-6 py-4">Tarihler</th>
-                                    <th className="px-6 py-4">Süre</th>
-                                    <th className="px-6 py-4">Açıklama</th>
-                                    <th className="px-6 py-4">Durum</th>
-                                    <th className="px-6 py-4">Oluşturulma</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {requests.length > 0 ? (
-                                    requests.map(req => (
-                                        <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-slate-800">
-                                                {requestTypes.find(t => t.id === req.request_type)?.name || '-'}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center">
-                                                    <Calendar size={14} className="mr-2 text-slate-400" />
-                                                    {req.start_date} - {req.end_date}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">{req.total_days} Gün</td>
-                                            <td className="px-6 py-4 max-w-xs truncate" title={req.reason}>{req.reason}</td>
-                                            <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
-                                            <td className="px-6 py-4 text-slate-400">{new Date(req.created_at).toLocaleDateString('tr-TR')}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
-                                            Henüz izin talebi bulunmuyor.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    )}
-
-                    {/* OVERTIME REQUESTS TABLE */}
-                    {activeTab === 'overtime_requests' && (
-                        <table className="w-full text-left text-sm text-slate-600">
-                            <thead className="bg-slate-50 text-slate-700 font-semibold uppercase text-xs">
-                                <tr>
-                                    <th className="px-6 py-4">Tarih</th>
-                                    <th className="px-6 py-4">Saatler</th>
-                                    <th className="px-6 py-4">Süre</th>
-                                    <th className="px-6 py-4">Açıklama</th>
-                                    <th className="px-6 py-4">Durum</th>
-                                    <th className="px-6 py-4">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {overtimeRequests.length > 0 ? (
-                                    overtimeRequests.map(req => (
-                                        <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-slate-800">
-                                                <div className="flex items-center">
-                                                    <Calendar size={14} className="mr-2 text-slate-400" />
-                                                    {req.date}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center">
-                                                    <Clock size={14} className="mr-2 text-slate-400" />
-                                                    {req.start_time.substring(0, 5)} - {req.end_time.substring(0, 5)}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">{req.duration_minutes} Dk</td>
-                                            <td className="px-6 py-4 max-w-xs truncate" title={req.reason}>{req.reason}</td>
-                                            <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
-                                            <td className="px-6 py-4">
-                                                {req.status === 'PENDING' && (
-                                                    <button
-                                                        onClick={() => handleEditOvertimeClick(req)}
-                                                        className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                                                        title="Düzenle"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
-                                            Henüz fazla mesai talebi bulunmuyor.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    )}
-
-                    {/* MEAL REQUESTS TABLE */}
-                    {activeTab === 'meal_requests' && (
-                        <table className="w-full text-left text-sm text-slate-600">
-                            <thead className="bg-slate-50 text-slate-700 font-semibold uppercase text-xs">
-                                <tr>
-                                    <th className="px-6 py-4">Tarih</th>
-                                    <th className="px-6 py-4">Açıklama / Tercih</th>
-                                    <th className="px-6 py-4">Durum</th>
-                                    <th className="px-6 py-4">Oluşturulma</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {mealRequests.length > 0 ? (
-                                    mealRequests.map(req => (
-                                        <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-slate-800">
-                                                <div className="flex items-center">
-                                                    <Calendar size={14} className="mr-2 text-slate-400" />
-                                                    {req.date}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">{req.description}</td>
-                                            <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
-                                            <td className="px-6 py-4 text-slate-400">{new Date(req.created_at).toLocaleDateString('tr-TR')} {new Date(req.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="4" className="px-6 py-8 text-center text-slate-400">
-                                            Henüz yemek talebi bulunmuyor.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    )}
-
-                    {activeTab === 'incoming' && (
-                        <div className="p-8 text-center text-slate-500">
-                            Yönetici onay ekranı henüz bu sayfaya taşınmadı. Lütfen "Onaylar" menüsünü kullanın.
-                        </div>
-                    )}
+            {/* Tabs & Filters */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto">
+                    {[
+                        { id: 'my_requests', label: 'İzin Taleplerim' },
+                        { id: 'overtime_requests', label: 'Fazla Mesai' },
+                        { id: 'meal_requests', label: 'Yemek' },
+                        { id: 'incoming', label: 'Gelen Talepler' }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                                ${activeTab === tab.id
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
+
+                {/* Filter Button (Visual only for now) */}
+                <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
+                    <SlidersHorizontal size={20} />
+                </button>
             </div>
 
-            {/* UNIFIED CREATE REQUEST MODAL */}
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-xl font-bold text-slate-800">Yeni Talep Oluştur</h3>
-                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                <Plus size={24} className="rotate-45" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Talep Türü</label>
-                                <select
-                                    required
-                                    value={createForm.request_type}
-                                    onChange={e => setCreateForm({ ...createForm, request_type: e.target.value })}
-                                    className="input-field"
-                                >
-                                    <option value="">Seçiniz</option>
-                                    <optgroup label="İzin ve Görev">
-                                        {requestTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                    </optgroup>
-                                    <optgroup label="Diğer">
-                                        <option value="MEAL">Yemek Talebi</option>
-                                    </optgroup>
-                                </select>
-                            </div>
+            {/* Content Area */}
+            <div className="min-h-[300px]">
+                {renderContent()}
+            </div>
 
-                            {/* MEAL REQUEST FIELDS */}
-                            {createForm.request_type === 'MEAL' && (
-                                <div className="animate-fadeIn">
-                                    <div className="bg-orange-50 p-4 rounded-lg text-sm text-orange-700 mb-4 flex items-start">
-                                        <Utensils size={16} className="mt-0.5 mr-2 flex-shrink-0" />
-                                        <p>Yemek talebi sadece <strong>bugün</strong> için oluşturulabilir.</p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Yemek Tercihi / Açıklama</label>
-                                        <textarea
-                                            required
-                                            rows="3"
-                                            value={createForm.meal_description}
-                                            onChange={e => setCreateForm({ ...createForm, meal_description: e.target.value })}
-                                            className="input-field"
-                                            placeholder="Örn: Tavuklu Salata, İçecek..."
-                                        ></textarea>
-                                    </div>
-                                </div>
-                            )}
+            {/* Modals */}
+            <CreateRequestModal
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSuccess={handleCreateSuccess}
+                requestTypes={requestTypes}
+            />
 
-                            {/* LEAVE REQUEST FIELDS */}
-                            {createForm.request_type && createForm.request_type !== 'MEAL' && (
-                                <div className="space-y-4 animate-fadeIn">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
-                                            <input required type="date" value={createForm.start_date} onChange={e => setCreateForm({ ...createForm, start_date: e.target.value })} className="input-field" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
-                                            <input required type="date" value={createForm.end_date} onChange={e => setCreateForm({ ...createForm, end_date: e.target.value })} className="input-field" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
-                                        <textarea required rows="3" value={createForm.reason} onChange={e => setCreateForm({ ...createForm, reason: e.target.value })} className="input-field"></textarea>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Gidilecek Yer (Dış Görev)</label>
-                                        <input value={createForm.destination} onChange={e => setCreateForm({ ...createForm, destination: e.target.value })} className="input-field" placeholder="Opsiyonel" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">İletişim Telefonu</label>
-                                        <input value={createForm.contact_phone} onChange={e => setCreateForm({ ...createForm, contact_phone: e.target.value })} className="input-field" placeholder="Opsiyonel" />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Gönder</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* EDIT OVERTIME MODAL */}
+            {/* Edit Overtime Modal (Inlined for simplicity as it's small) */}
             {showEditOvertimeModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-xl font-bold text-slate-800">Mesai Talebini Düzenle</h3>
