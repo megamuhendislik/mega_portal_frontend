@@ -76,16 +76,24 @@ const MainLayout = () => {
     };
 
     const navItems = [
-        { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-        { path: '/employees', label: 'Çalışanlar', icon: Users },
-        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network },
-        { path: '/projects', label: 'Projeler', icon: Briefcase },
-        { path: '/attendance', label: 'Mesai Takibi', icon: Clock },
-        { path: '/calendar', label: 'Takvim', icon: Calendar },
-        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange },
-        { path: '/requests', label: 'Talepler', icon: FileText },
-        { path: '/reports', label: 'Raporlar', icon: Flag },
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard, permission: 'VIEW_SECTION_DASHBOARD' },
+        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'VIEW_SECTION_EMPLOYEES' },
+        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'VIEW_SECTION_ORG_CHART' },
+        { path: '/projects', label: 'Projeler', icon: Briefcase, permission: 'VIEW_SECTION_PROJECTS' },
+        { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: 'VIEW_SECTION_ATTENDANCE' },
+        { path: '/calendar', label: 'Takvim', icon: Calendar, permission: 'VIEW_SECTION_CALENDAR' },
+        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'VIEW_SECTION_WORK_SCHEDULES' },
+        { path: '/requests', label: 'Talepler', icon: FileText, permission: 'VIEW_SECTION_REQUESTS' },
+        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'VIEW_SECTION_REPORTS' },
     ];
+
+    const filteredNavItems = navItems.filter(item => {
+        if (!user) return false;
+        if (user.is_superuser) return true;
+        // If no permission defined, show it (or hide it, depending on policy. Let's show public items if any)
+        if (!item.permission) return true;
+        return user.all_permissions?.includes(item.permission);
+    });
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans">
@@ -123,7 +131,7 @@ const MainLayout = () => {
 
                 {/* Navigation */}
                 <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
                             <Link

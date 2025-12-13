@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    User, Mail, Phone, MapPin, Briefcase, Calendar,
-    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText
+    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -359,7 +358,8 @@ const EmployeeDetail = () => {
                                     'Overtime Management',
                                     'Project Management',
                                     'Reporting',
-                                    'Organization & Settings'
+                                    'Organization & Settings',
+                                    'Section Access'
                                 ].map(category => {
                                     const categoryPerms = allPermissions.filter(p => {
                                         if (category === 'Employee Management') return p.code.startsWith('EMPLOYEE_');
@@ -368,6 +368,7 @@ const EmployeeDetail = () => {
                                         if (category === 'Project Management') return p.code.startsWith('PROJECT_');
                                         if (category === 'Reporting') return p.code.startsWith('REPORT_');
                                         if (category === 'Organization & Settings') return p.code.startsWith('ORG_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('SYSTEM_');
+                                        if (category === 'Section Access') return p.code.startsWith('VIEW_SECTION_');
                                         return false;
                                     });
 
@@ -402,13 +403,15 @@ const EmployeeDetail = () => {
                                                     {category === 'Project Management' && <Briefcase size={16} />}
                                                     {category === 'Reporting' && <FileText size={16} />}
                                                     {category === 'Organization & Settings' && <Settings size={16} />}
+                                                    {category === 'Section Access' && <LayoutDashboard size={16} />}
 
                                                     {category === 'Employee Management' ? 'Çalışan Yönetimi' :
                                                         category === 'Attendance & Time' ? 'Mesai ve İzin' :
                                                             category === 'Overtime Management' ? 'Fazla Mesai Yönetimi' :
                                                                 category === 'Project Management' ? 'Proje Yönetimi' :
                                                                     category === 'Reporting' ? 'Raporlama (Kapsamlı)' :
-                                                                        'Organizasyon ve Ayarlar'}
+                                                                        category === 'Organization & Settings' ? 'Organizasyon ve Ayarlar' :
+                                                                            'Bölüm Erişimi (Menü)'}
                                                 </h5>
                                                 {!isSuperUser && (
                                                     <button
