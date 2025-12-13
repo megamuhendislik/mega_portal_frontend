@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
@@ -344,8 +345,8 @@ const Requests = () => {
             />
 
             {/* Edit Overtime Modal */}
-            {showEditOvertimeModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+            {showEditOvertimeModal && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-xl font-bold text-slate-800">Mesai Talebini Düzenle</h3>
@@ -374,7 +375,8 @@ const Requests = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

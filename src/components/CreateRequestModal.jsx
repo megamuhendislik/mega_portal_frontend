@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft } from 'lucide-react';
 import api from '../services/api';
 
@@ -268,8 +269,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
         </div>
     );
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    return ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -352,7 +353,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
