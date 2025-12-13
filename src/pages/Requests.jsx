@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils } from 'lucide-react';
+import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
@@ -9,6 +9,7 @@ const Requests = () => {
     const [requests, setRequests] = useState([]);
     const [overtimeRequests, setOvertimeRequests] = useState([]);
     const [mealRequests, setMealRequests] = useState([]);
+    const [incomingRequests, setIncomingRequests] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -30,16 +31,18 @@ const Requests = () => {
 
     const fetchData = async () => {
         try {
-            const [reqRes, typesRes, overtimeRes, mealRes] = await Promise.all([
+            const [reqRes, typesRes, overtimeRes, mealRes, incomingRes] = await Promise.all([
                 api.get('/leave/requests/'),
                 api.get('/leave/types/'),
                 api.get('/attendance/overtime-requests/'),
-                api.get('/attendance/meal-requests/')
+                api.get('/attendance/meal-requests/'),
+                api.get('/leave/requests/pending_approvals/')
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);
             setOvertimeRequests(overtimeRes.data.results || overtimeRes.data);
             setMealRequests(mealRes.data.results || mealRes.data);
+            setIncomingRequests(incomingRes.data.results || incomingRes.data);
         } catch (error) {
             console.error('Error fetching requests:', error);
         } finally {
@@ -51,7 +54,6 @@ const Requests = () => {
 
     const handleCreateSuccess = () => {
         fetchData();
-        // Optional: Show success toast
     };
 
     const handleEditOvertimeClick = (req) => {
@@ -89,7 +91,6 @@ const Requests = () => {
             } else if (type === 'OVERTIME') {
                 await api.delete(`/attendance/overtime-requests/${req.id}/`);
             } else if (type === 'MEAL') {
-                // Assuming meal requests can be deleted
                 await api.delete(`/attendance/meal-requests/${req.id}/`);
             }
             fetchData();
@@ -99,15 +100,49 @@ const Requests = () => {
         }
     };
 
+    const handleApprove = async (req) => {
+        if (!window.confirm('Bu talebi onaylamak istediğinize emin misiniz?')) return;
+        try {
+            await api.post(`/leave/requests/${req.id}/approve_reject/`, {
+                action: 'approve',
+                notes: 'Onaylandı'
+            });
+            fetchData();
+        } catch (error) {
+            console.error('Error approving request:', error);
+            alert('Onaylama işlemi başarısız oldu.');
+        }
+    };
+
+    const handleReject = async (req) => {
+        const reason = window.prompt('Lütfen red sebebini giriniz:');
+        if (reason === null) return; // Cancelled
+        if (!reason) {
+            alert('Red sebebi girmelisiniz.');
+            return;
+        }
+
+        try {
+            await api.post(`/leave/requests/${req.id}/approve_reject/`, {
+                action: 'reject',
+                reason: reason
+            });
+            fetchData();
+        } catch (error) {
+            console.error('Error rejecting request:', error);
+            alert('Reddetme işlemi başarısız oldu.');
+        }
+    };
+
     // --- UI Helpers ---
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'APPROVED': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">Onaylandı</span>;
-            case 'REJECTED': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">Reddedildi</span>;
-            case 'PENDING': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">Bekliyor</span>;
-            case 'DELIVERED': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Teslim Edildi</span>;
-            default: return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">{status}</span>;
+            case 'APPROVED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 gap-1"><CheckCircle2 size={12} /> Onaylandı</span>;
+            case 'REJECTED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-700 border border-red-200 gap-1"><XCircle size={12} /> Reddedildi</span>;
+            case 'PENDING': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200 gap-1"><Clock size={12} /> Bekliyor</span>;
+            case 'DELIVERED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 gap-1"><CheckCircle2 size={12} /> Teslim Edildi</span>;
+            default: return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">{status}</span>;
         }
     };
 
@@ -173,15 +208,23 @@ const Requests = () => {
                 </div>
             );
         } else if (activeTab === 'incoming') {
-            return (
-                <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
-                        <ArrowDownLeft size={32} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-800">Gelen Talepler</h3>
-                    <p className="text-slate-500 max-w-md mt-2">
-                        Yönetici onay ekranı için lütfen "Onaylar" menüsünü kullanın. Bu alan yakında güncellenecektir.
-                    </p>
+            if (incomingRequests.length === 0) return <EmptyState title="Bekleyen Talep Yok" desc="Onayınızı bekleyen herhangi bir talep bulunmuyor." />;
+            content = (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {incomingRequests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={{
+                                ...req,
+                                leave_type_name: req.request_type_detail?.name,
+                                employee_name: req.employee_detail?.full_name
+                            }}
+                            type="LEAVE" // Currently only leave requests are in pending_approvals
+                            statusBadge={getStatusBadge}
+                            onApprove={handleApprove}
+                            onReject={handleReject}
+                        />
+                    ))}
                 </div>
             );
         }
@@ -196,18 +239,20 @@ const Requests = () => {
             </div>
             <h3 className="text-lg font-bold text-slate-800">{title}</h3>
             <p className="text-slate-500 max-w-xs mt-2">{desc}</p>
-            <button
-                onClick={() => setShowCreateModal(true)}
-                className="mt-6 text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2 hover:underline"
-            >
-                <Plus size={16} />
-                Yeni Talep Oluştur
-            </button>
+            {activeTab !== 'incoming' && (
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="mt-6 text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2 hover:underline"
+                >
+                    <Plus size={16} />
+                    Yeni Talep Oluştur
+                </button>
+            )}
         </div>
     );
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500 pb-10">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
@@ -223,49 +268,63 @@ const Requests = () => {
                 </button>
             </div>
 
-            {/* Summary Cards (Optional - using static/calculated data for visual appeal) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10"><Calendar size={64} /></div>
-                    <p className="text-blue-100 text-sm font-medium mb-1">Toplam İzin Talebi</p>
-                    <h3 className="text-3xl font-bold">{requests.length}</h3>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Calendar size={64} className="text-blue-600" /></div>
+                    <p className="text-slate-500 text-sm font-medium mb-1">Toplam İzin Talebi</p>
+                    <h3 className="text-3xl font-bold text-slate-800">{requests.length}</h3>
+                    <div className="mt-2 h-1 w-12 bg-blue-500 rounded-full"></div>
                 </div>
-                <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10"><Clock size={64} /></div>
-                    <p className="text-amber-100 text-sm font-medium mb-1">Fazla Mesai Talebi</p>
-                    <h3 className="text-3xl font-bold">{overtimeRequests.length}</h3>
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Clock size={64} className="text-amber-500" /></div>
+                    <p className="text-slate-500 text-sm font-medium mb-1">Fazla Mesai Talebi</p>
+                    <h3 className="text-3xl font-bold text-slate-800">{overtimeRequests.length}</h3>
+                    <div className="mt-2 h-1 w-12 bg-amber-500 rounded-full"></div>
                 </div>
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10"><Utensils size={64} /></div>
-                    <p className="text-emerald-100 text-sm font-medium mb-1">Yemek Talebi</p>
-                    <h3 className="text-3xl font-bold">{mealRequests.length}</h3>
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Utensils size={64} className="text-emerald-500" /></div>
+                    <p className="text-slate-500 text-sm font-medium mb-1">Yemek Talebi</p>
+                    <h3 className="text-3xl font-bold text-slate-800">{mealRequests.length}</h3>
+                    <div className="mt-2 h-1 w-12 bg-emerald-500 rounded-full"></div>
+                </div>
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white shadow-lg shadow-slate-500/20 relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><ArrowDownLeft size={64} /></div>
+                    <p className="text-slate-400 text-sm font-medium mb-1">Bekleyen Onaylar</p>
+                    <h3 className="text-3xl font-bold">{incomingRequests.length}</h3>
+                    <div className="mt-2 h-1 w-12 bg-blue-400 rounded-full"></div>
                 </div>
             </div>
 
             {/* Tabs & Filters */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm sticky top-4 z-30 backdrop-blur-xl bg-white/80 supports-[backdrop-filter]:bg-white/60">
+                <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
                     {[
                         { id: 'my_requests', label: 'İzin Taleplerim' },
                         { id: 'overtime_requests', label: 'Fazla Mesai' },
                         { id: 'meal_requests', label: 'Yemek' },
-                        { id: 'incoming', label: 'Gelen Talepler' }
+                        { id: 'incoming', label: 'Gelen Talepler', badge: incomingRequests.length }
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2
                                 ${activeTab === tab.id
                                     ? 'bg-white text-slate-900 shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                                 }`}
                         >
                             {tab.label}
+                            {tab.badge > 0 && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === tab.id ? 'bg-slate-100 text-slate-900' : 'bg-slate-200 text-slate-600'}`}>
+                                    {tab.badge}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
 
-                {/* Filter Button (Visual only for now) */}
+                {/* Filter Button */}
                 <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
                     <SlidersHorizontal size={20} />
                 </button>
@@ -284,7 +343,7 @@ const Requests = () => {
                 requestTypes={requestTypes}
             />
 
-            {/* Edit Overtime Modal (Inlined for simplicity as it's small) */}
+            {/* Edit Overtime Modal */}
             {showEditOvertimeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
