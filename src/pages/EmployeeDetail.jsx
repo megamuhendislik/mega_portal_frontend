@@ -331,32 +331,62 @@ const EmployeeDetail = () => {
 
                                     if (categoryPerms.length === 0) return null;
 
+                                    const isSuperUser = employee.user?.is_superuser;
+                                    const allCategoryIds = categoryPerms.map(p => p.id);
+                                    const assignedCategoryIds = categoryPerms.filter(p => employee.direct_permissions.some(dp => dp.id === p.id)).map(p => p.id);
+                                    const isAllSelected = assignedCategoryIds.length === allCategoryIds.length;
+
+                                    const handleSelectAll = () => {
+                                        if (isSuperUser) return;
+
+                                        let newPermissions = [...employee.direct_permissions];
+                                        if (isAllSelected) {
+                                            // Deselect all in this category
+                                            newPermissions = newPermissions.filter(p => !allCategoryIds.includes(p.id));
+                                        } else {
+                                            // Select all in this category
+                                            const missingPerms = categoryPerms.filter(p => !newPermissions.some(dp => dp.id === p.id));
+                                            newPermissions = [...newPermissions, ...missingPerms];
+                                        }
+                                        setEmployee({ ...employee, direct_permissions: newPermissions });
+                                    };
+
                                     return (
                                         <div key={category} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                            <h5 className="text-sm font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-2 flex items-center gap-2">
-                                                {category === 'Employee Management' && <Users size={16} />}
-                                                {(category === 'Attendance & Time' || category === 'Overtime Management') && <Calendar size={16} />}
-                                                {category === 'Project Management' && <Briefcase size={16} />}
-                                                {category === 'Reporting' && <FileText size={16} />}
-                                                {category === 'Organization & Settings' && <Settings size={16} />}
+                                            <div className="flex justify-between items-center mb-3 border-b border-slate-200 pb-2">
+                                                <h5 className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                                                    {category === 'Employee Management' && <Users size={16} />}
+                                                    {(category === 'Attendance & Time' || category === 'Overtime Management') && <Calendar size={16} />}
+                                                    {category === 'Project Management' && <Briefcase size={16} />}
+                                                    {category === 'Reporting' && <FileText size={16} />}
+                                                    {category === 'Organization & Settings' && <Settings size={16} />}
 
-                                                {category === 'Employee Management' ? 'Çalışan Yönetimi' :
-                                                    category === 'Attendance & Time' ? 'Mesai ve İzin' :
-                                                        category === 'Overtime Management' ? 'Fazla Mesai Yönetimi' :
-                                                            category === 'Project Management' ? 'Proje Yönetimi' :
-                                                                category === 'Reporting' ? 'Raporlama (Kapsamlı)' :
-                                                                    'Organizasyon ve Ayarlar'}
-                                            </h5>
+                                                    {category === 'Employee Management' ? 'Çalışan Yönetimi' :
+                                                        category === 'Attendance & Time' ? 'Mesai ve İzin' :
+                                                            category === 'Overtime Management' ? 'Fazla Mesai Yönetimi' :
+                                                                category === 'Project Management' ? 'Proje Yönetimi' :
+                                                                    category === 'Reporting' ? 'Raporlama (Kapsamlı)' :
+                                                                        'Organizasyon ve Ayarlar'}
+                                                </h5>
+                                                {!isSuperUser && (
+                                                    <button
+                                                        onClick={handleSelectAll}
+                                                        className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                                    >
+                                                        {isAllSelected ? 'Tümünü Kaldır' : 'Tümünü Seç'}
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 {categoryPerms.map(perm => {
-                                                    const isAssigned = employee.direct_permissions.some(p => p.id === perm.id);
+                                                    const isAssigned = isSuperUser || employee.direct_permissions.some(p => p.id === perm.id);
                                                     return (
                                                         <div key={perm.id}
-                                                            onClick={() => handlePermissionToggle(perm.id)}
+                                                            onClick={() => !isSuperUser && handlePermissionToggle(perm.id)}
                                                             className={`p-3 rounded-lg border cursor-pointer transition-all ${isAssigned
                                                                 ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
                                                                 : 'bg-white border-slate-200 hover:border-blue-300'
-                                                                }`}
+                                                                } ${isSuperUser ? 'opacity-75 cursor-not-allowed' : ''}`}
                                                         >
                                                             <div className="flex items-start gap-3">
                                                                 <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors shrink-0 ${isAssigned ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
@@ -391,7 +421,7 @@ const EmployeeDetail = () => {
                 </div>
 
                 {/* Right Column - Summary Card */}
-                < div className="lg:col-span-1" >
+                <div className="lg:col-span-1">
                     <div className="card p-6 sticky top-6">
                         <div className="flex flex-col items-center text-center mb-6">
                             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4">
@@ -415,50 +445,48 @@ const EmployeeDetail = () => {
                             </div>
                         </div>
                     </div>
-                </div >
-            </div >
+                </div>
+            </div>
 
             {/* Assign Manager Modal */}
-            {
-                assignManagerModal && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
-                                <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <form onSubmit={handleAssignManager} className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
-                                    <select
-                                        required
-                                        className="input-field"
-                                        value={selectedManager}
-                                        onChange={(e) => setSelectedManager(e.target.value)}
-                                    >
-                                        <option value="">Seçiniz</option>
-                                        {allEmployees
-                                            .filter(e => e.id !== employee.id) // Can't manage self
-                                            .map(e => (
-                                                <option key={e.id} value={e.id}>
-                                                    {e.first_name} {e.last_name} ({e.job_position_detail?.name})
-                                                </option>
-                                            ))
-                                        }
-                                    </select>
-                                </div>
-                                <div className="pt-4 flex justify-end gap-3">
-                                    <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                    <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
-                                </div>
-                            </form>
+            {assignManagerModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
+                            <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                <X size={20} />
+                            </button>
                         </div>
+                        <form onSubmit={handleAssignManager} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
+                                <select
+                                    required
+                                    className="input-field"
+                                    value={selectedManager}
+                                    onChange={(e) => setSelectedManager(e.target.value)}
+                                >
+                                    <option value="">Seçiniz</option>
+                                    {allEmployees
+                                        .filter(e => e.id !== employee.id) // Can't manage self
+                                        .map(e => (
+                                            <option key={e.id} value={e.id}>
+                                                {e.first_name} {e.last_name} ({e.job_position_detail?.name})
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                            <div className="pt-4 flex justify-end gap-3">
+                                <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
+                            </div>
+                        </form>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 
