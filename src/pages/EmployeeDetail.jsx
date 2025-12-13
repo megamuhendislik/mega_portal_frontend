@@ -88,6 +88,8 @@ const EmployeeDetail = () => {
             const payload = {
                 direct_permissions: permIds,
                 work_schedule: employee.work_schedule?.id || null,
+                shift_start: employee.shift_start || null,
+                shift_end: employee.shift_end || null,
                 attendance_tolerance_minutes: employee.attendance_tolerance_minutes
             };
 
@@ -278,15 +280,31 @@ const EmployeeDetail = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
                                         <select
-                                            value={employee.work_schedule?.id || ''}
+                                            value={employee.work_schedule?.id || (employee.shift_start && employee.shift_end ? 'custom' : '')}
                                             onChange={(e) => {
-                                                const selectedId = e.target.value ? parseInt(e.target.value) : null;
-                                                const selectedSchedule = workSchedules.find(ws => ws.id === selectedId);
-                                                setEmployee({ ...employee, work_schedule: selectedSchedule || null });
+                                                const val = e.target.value;
+                                                if (val === 'custom') {
+                                                    setEmployee({
+                                                        ...employee,
+                                                        work_schedule: null,
+                                                        shift_start: employee.shift_start || '09:00',
+                                                        shift_end: employee.shift_end || '18:00'
+                                                    });
+                                                } else {
+                                                    const selectedId = val ? parseInt(val) : null;
+                                                    const selectedSchedule = workSchedules.find(ws => ws.id === selectedId);
+                                                    setEmployee({
+                                                        ...employee,
+                                                        work_schedule: selectedSchedule || null,
+                                                        shift_start: null,
+                                                        shift_end: null
+                                                    });
+                                                }
                                             }}
                                             className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                         >
                                             <option value="">Varsayılan / Yok</option>
+                                            <option value="custom">Özel (Custom)</option>
                                             {workSchedules.map(ws => (
                                                 <option key={ws.id} value={ws.id}>{ws.name}</option>
                                             ))}
@@ -294,6 +312,30 @@ const EmployeeDetail = () => {
                                         <p className="text-xs text-slate-500 mt-1">
                                             Kullanıcının haftalık çalışma saatlerini belirler.
                                         </p>
+
+                                        {/* Custom Time Inputs */}
+                                        {!employee.work_schedule && employee.shift_start && (
+                                            <div className="mt-3 grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
+                                                <div>
+                                                    <label className="text-xs font-medium text-slate-500">Başlangıç</label>
+                                                    <input
+                                                        type="time"
+                                                        value={employee.shift_start}
+                                                        onChange={(e) => setEmployee({ ...employee, shift_start: e.target.value })}
+                                                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-medium text-slate-500">Bitiş</label>
+                                                    <input
+                                                        type="time"
+                                                        value={employee.shift_end}
+                                                        onChange={(e) => setEmployee({ ...employee, shift_end: e.target.value })}
+                                                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dakika)</label>

@@ -5,6 +5,7 @@ import api from '../services/api';
 const Requests = () => {
     const [activeTab, setActiveTab] = useState('my_requests');
     const [requests, setRequests] = useState([]);
+    const [overtimeRequests, setOvertimeRequests] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -23,12 +24,14 @@ const Requests = () => {
 
     const fetchData = async () => {
         try {
-            const [reqRes, typesRes] = await Promise.all([
+            const [reqRes, typesRes, overtimeRes] = await Promise.all([
                 api.get('/leave/requests/'),
-                api.get('/leave/types/')
+                api.get('/leave/types/'),
+                api.get('/attendance/overtime-requests/')
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);
+            setOvertimeRequests(overtimeRes.data.results || overtimeRes.data);
         } catch (error) {
             console.error('Error fetching requests:', error);
         } finally {
@@ -78,14 +81,14 @@ const Requests = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Talepler</h2>
-                    <p className="text-slate-500 mt-1">İzin ve görev talepleri yönetimi</p>
+                    <p className="text-slate-500 mt-1">İzin ve fazla mesai talepleri yönetimi</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
                 >
                     <Plus size={18} className="mr-2" />
-                    Yeni Talep Oluştur
+                    Yeni İzin Talebi
                 </button>
             </div>
 
@@ -96,7 +99,13 @@ const Requests = () => {
                         onClick={() => setActiveTab('my_requests')}
                         className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'my_requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
-                        Taleplerim
+                        İzin Taleplerim
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('overtime_requests')}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'overtime_requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Fazla Mesai Taleplerim
                     </button>
                     <button
                         onClick={() => setActiveTab('incoming')}
@@ -110,45 +119,98 @@ const Requests = () => {
             {/* Content */}
             <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-600">
-                        <thead className="bg-slate-50 text-slate-700 font-semibold uppercase text-xs">
-                            <tr>
-                                <th className="px-6 py-4">Talep Türü</th>
-                                <th className="px-6 py-4">Tarihler</th>
-                                <th className="px-6 py-4">Süre</th>
-                                <th className="px-6 py-4">Açıklama</th>
-                                <th className="px-6 py-4">Durum</th>
-                                <th className="px-6 py-4">Oluşturulma</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {requests.length > 0 ? (
-                                requests.map(req => (
-                                    <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-800">
-                                            {requestTypes.find(t => t.id === req.request_type)?.name || '-'}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center">
-                                                <Calendar size={14} className="mr-2 text-slate-400" />
-                                                {req.start_date} - {req.end_date}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">{req.total_days} Gün</td>
-                                        <td className="px-6 py-4 max-w-xs truncate" title={req.reason}>{req.reason}</td>
-                                        <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
-                                        <td className="px-6 py-4 text-slate-400">{new Date(req.created_at).toLocaleDateString('tr-TR')}</td>
-                                    </tr>
-                                ))
-                            ) : (
+                    {activeTab === 'my_requests' && (
+                        <table className="w-full text-left text-sm text-slate-600">
+                            <thead className="bg-slate-50 text-slate-700 font-semibold uppercase text-xs">
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
-                                        Henüz talep bulunmuyor.
-                                    </td>
+                                    <th className="px-6 py-4">Talep Türü</th>
+                                    <th className="px-6 py-4">Tarihler</th>
+                                    <th className="px-6 py-4">Süre</th>
+                                    <th className="px-6 py-4">Açıklama</th>
+                                    <th className="px-6 py-4">Durum</th>
+                                    <th className="px-6 py-4">Oluşturulma</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {requests.length > 0 ? (
+                                    requests.map(req => (
+                                        <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-slate-800">
+                                                {requestTypes.find(t => t.id === req.request_type)?.name || '-'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center">
+                                                    <Calendar size={14} className="mr-2 text-slate-400" />
+                                                    {req.start_date} - {req.end_date}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">{req.total_days} Gün</td>
+                                            <td className="px-6 py-4 max-w-xs truncate" title={req.reason}>{req.reason}</td>
+                                            <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
+                                            <td className="px-6 py-4 text-slate-400">{new Date(req.created_at).toLocaleDateString('tr-TR')}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
+                                            Henüz izin talebi bulunmuyor.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+
+                    {activeTab === 'overtime_requests' && (
+                        <table className="w-full text-left text-sm text-slate-600">
+                            <thead className="bg-slate-50 text-slate-700 font-semibold uppercase text-xs">
+                                <tr>
+                                    <th className="px-6 py-4">Tarih</th>
+                                    <th className="px-6 py-4">Saatler</th>
+                                    <th className="px-6 py-4">Süre</th>
+                                    <th className="px-6 py-4">Açıklama</th>
+                                    <th className="px-6 py-4">Durum</th>
+                                    <th className="px-6 py-4">Oluşturulma</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {overtimeRequests.length > 0 ? (
+                                    overtimeRequests.map(req => (
+                                        <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-slate-800">
+                                                <div className="flex items-center">
+                                                    <Calendar size={14} className="mr-2 text-slate-400" />
+                                                    {req.date}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center">
+                                                    <Clock size={14} className="mr-2 text-slate-400" />
+                                                    {req.start_time.substring(0, 5)} - {req.end_time.substring(0, 5)}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">{req.duration_minutes} Dk</td>
+                                            <td className="px-6 py-4 max-w-xs truncate" title={req.reason}>{req.reason}</td>
+                                            <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
+                                            <td className="px-6 py-4 text-slate-400">{new Date(req.created_at).toLocaleDateString('tr-TR')}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
+                                            Henüz fazla mesai talebi bulunmuyor.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+
+                    {activeTab === 'incoming' && (
+                        <div className="p-8 text-center text-slate-500">
+                            Yönetici onay ekranı henüz bu sayfaya taşınmadı. Lütfen "Onaylar" menüsünü kullanın.
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -157,7 +219,7 @@ const Requests = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-xl font-bold text-slate-800">Yeni Talep Oluştur</h3>
+                            <h3 className="text-xl font-bold text-slate-800">Yeni İzin Talebi Oluştur</h3>
                             <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
                                 <Plus size={24} className="rotate-45" />
                             </button>

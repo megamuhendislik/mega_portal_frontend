@@ -21,6 +21,7 @@ import {
 import clsx from 'clsx';
 
 import OvertimeRequestModal from '../components/OvertimeRequestModal';
+import NotificationBell from '../components/NotificationBell';
 
 const MainLayout = () => {
     const { user, logout } = useAuth();
@@ -210,10 +211,7 @@ const MainLayout = () => {
                         </button>
 
                         {/* Notifications */}
-                        <button className="relative p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50">
-                            <Bell size={20} />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
+                        <NotificationBell />
 
                         {/* User Profile */}
                         <div className="h-8 w-px bg-slate-200 mx-2"></div>
