@@ -473,7 +473,7 @@ const Employees = () => {
             {/* Employee Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredEmployees.map(emp => (
-                    <div key={emp.id} className="card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group">
+                    <div key={emp.id} className={`card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group relative ${openMenuId === emp.id ? 'z-30' : 'z-0'}`}>
                         <div className="flex items-start justify-between mb-4">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
                                 {emp.first_name?.[0]}{emp.last_name?.[0]}
@@ -491,10 +491,6 @@ const Employees = () => {
 
                                 {openMenuId === emp.id && (
                                     <>
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() => setOpenMenuId(null)}
-                                        ></div>
                                         <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 z-20 py-1 animate-fade-in">
                                             <button
                                                 onClick={() => navigate(`/employees/${emp.id}`)}
@@ -645,7 +641,17 @@ const Employees = () => {
                 </div>,
                 document.body
             )}
-        </div>
+
+            {/* Global Backdrop for Dropdowns */}
+            {
+                openMenuId && (
+                    <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setOpenMenuId(null)}
+                    ></div>
+                )
+            }
+        </div >
     );
 };
 
