@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
+import OvertimeRequestModal from '../components/OvertimeRequestModal';
+
 const MainLayout = () => {
     const { user, logout } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -28,6 +30,10 @@ const MainLayout = () => {
     // Shift State
     const [isShiftActive, setIsShiftActive] = useState(false);
     const [shiftLoading, setShiftLoading] = useState(false);
+
+    // Overtime Modal State
+    const [isOvertimeModalOpen, setIsOvertimeModalOpen] = useState(false);
+    const [lastAttendanceData, setLastAttendanceData] = useState(null);
 
     // Check status on mount
     React.useEffect(() => {
@@ -54,6 +60,11 @@ const MainLayout = () => {
                 setIsShiftActive(true);
             } else {
                 setIsShiftActive(false);
+                // Check for overtime
+                if (response.data.overtime_detected) {
+                    setLastAttendanceData(response.data.data);
+                    setIsOvertimeModalOpen(true);
+                }
             }
         } catch (error) {
             console.error('Shift toggle failed:', error);
@@ -76,6 +87,17 @@ const MainLayout = () => {
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans">
+            {/* Overtime Modal */}
+            <OvertimeRequestModal
+                isOpen={isOvertimeModalOpen}
+                onClose={() => setIsOvertimeModalOpen(false)}
+                attendanceData={lastAttendanceData}
+                onSuccess={() => {
+                    // Optional: Show success toast
+                    alert('Fazla mesai talebiniz oluşturuldu.');
+                }}
+            />
+
             {/* Sidebar */}
             <aside
                 className={clsx(

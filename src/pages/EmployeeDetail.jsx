@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     User, Mail, Phone, MapPin, Briefcase, Calendar,
-    ChevronLeft, Users, Settings, Shield, Save, Plus, X
+    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -19,23 +19,27 @@ const EmployeeDetail = () => {
     const [assignManagerModal, setAssignManagerModal] = useState(false);
     const [selectedManager, setSelectedManager] = useState('');
 
+    const [workSchedules, setWorkSchedules] = useState([]);
+
     useEffect(() => {
         fetchEmployeeData();
     }, [id]);
 
     const fetchEmployeeData = async () => {
         try {
-            const [empRes, managersRes, teamRes, allEmpRes] = await Promise.all([
+            const [empRes, managersRes, teamRes, allEmpRes, schedulesRes] = await Promise.all([
                 api.get(`/employees/${id}/`),
                 api.get(`/employees/${id}/managers/`),
                 api.get(`/employees/${id}/team/`),
-                api.get('/employees/') // For selection dropdowns
+                api.get('/employees/'), // For selection dropdowns
+                api.get('/work-schedules/')
             ]);
 
             setEmployee(empRes.data);
             setManagers(managersRes.data);
             setTeam(teamRes.data);
             setAllEmployees(allEmpRes.data.results || allEmpRes.data);
+            setWorkSchedules(schedulesRes.data.results || schedulesRes.data);
 
             // Fetch all permissions
             const permsRes = await api.get('/permissions/');
@@ -81,12 +85,16 @@ const EmployeeDetail = () => {
             // Only save direct permissions
             const permIds = employee.direct_permissions.map(p => p.id);
 
-            await api.patch(`/employees/${id}/`, {
-                direct_permissions: permIds
-            });
-            alert('Yetkiler başarıyla güncellendi.');
+            const payload = {
+                direct_permissions: permIds,
+                work_schedule: employee.work_schedule?.id || null,
+                attendance_tolerance_minutes: employee.attendance_tolerance_minutes
+            };
+
+            await api.patch(`/employees/${id}/`, payload);
+            alert('Ayarlar başarıyla güncellendi.');
         } catch (error) {
-            console.error('Error updating permissions:', error);
+            console.error('Error updating settings:', error);
             alert('Güncelleme sırasında bir hata oluştu.');
             fetchEmployeeData(); // Revert changes on error
         }
@@ -250,7 +258,7 @@ const EmployeeDetail = () => {
                     {activeTab === 'settings' && (
                         <div className="card p-6">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-bold text-slate-800">Yetki Yönetimi</h3>
+                                <h3 className="text-lg font-bold text-slate-800">Yetki ve Takvim Yönetimi</h3>
                                 <button
                                     onClick={handleSaveRoles}
                                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
@@ -260,11 +268,63 @@ const EmployeeDetail = () => {
                                 </button>
                             </div>
 
+                            {/* Work Schedule Section */}
+                            <div className="mb-8 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                <h5 className="text-sm font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-2 flex items-center gap-2">
+                                    <CalendarRange size={16} />
+                                    Çalışma Takvimi
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
+                                        <select
+                                            value={employee.work_schedule?.id || ''}
+                                            onChange={(e) => {
+                                                const selectedId = e.target.value ? parseInt(e.target.value) : null;
+                                                const selectedSchedule = workSchedules.find(ws => ws.id === selectedId);
+                                                setEmployee({ ...employee, work_schedule: selectedSchedule || null });
+                                            }}
+                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            <option value="">Varsayılan / Yok</option>
+                                            {workSchedules.map(ws => (
+                                                <option key={ws.id} value={ws.id}>{ws.name}</option>
+                                            ))}
+                                        </select>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Kullanıcının haftalık çalışma saatlerini belirler.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dakika)</label>
+                                        <input
+                                            type="number"
+                                            value={employee.attendance_tolerance_minutes || 0}
+                                            onChange={(e) => setEmployee({ ...employee, attendance_tolerance_minutes: parseInt(e.target.value) || 0 })}
+                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Geç kalma/erken çıkma için tolerans süresi.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="space-y-6">
-                                {['Employee Management', 'Attendance & Time', 'Organization & Settings'].map(category => {
+                                {[
+                                    'Employee Management',
+                                    'Attendance & Time',
+                                    'Overtime Management',
+                                    'Project Management',
+                                    'Reporting',
+                                    'Organization & Settings'
+                                ].map(category => {
                                     const categoryPerms = allPermissions.filter(p => {
                                         if (category === 'Employee Management') return p.code.startsWith('EMPLOYEE_');
                                         if (category === 'Attendance & Time') return p.code.startsWith('ATTENDANCE_') || p.code.startsWith('LEAVE_');
+                                        if (category === 'Overtime Management') return p.code.startsWith('OVERTIME_');
+                                        if (category === 'Project Management') return p.code.startsWith('PROJECT_');
+                                        if (category === 'Reporting') return p.code.startsWith('REPORT_');
                                         if (category === 'Organization & Settings') return p.code.startsWith('ORG_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('SYSTEM_');
                                         return false;
                                     });
@@ -275,11 +335,17 @@ const EmployeeDetail = () => {
                                         <div key={category} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                                             <h5 className="text-sm font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-2 flex items-center gap-2">
                                                 {category === 'Employee Management' && <Users size={16} />}
-                                                {category === 'Attendance & Time' && <Calendar size={16} />}
+                                                {(category === 'Attendance & Time' || category === 'Overtime Management') && <Calendar size={16} />}
+                                                {category === 'Project Management' && <Briefcase size={16} />}
+                                                {category === 'Reporting' && <FileText size={16} />}
                                                 {category === 'Organization & Settings' && <Settings size={16} />}
+
                                                 {category === 'Employee Management' ? 'Çalışan Yönetimi' :
                                                     category === 'Attendance & Time' ? 'Mesai ve İzin' :
-                                                        'Organizasyon ve Ayarlar'}
+                                                        category === 'Overtime Management' ? 'Fazla Mesai Yönetimi' :
+                                                            category === 'Project Management' ? 'Proje Yönetimi' :
+                                                                category === 'Reporting' ? 'Raporlama' :
+                                                                    'Organizasyon ve Ayarlar'}
                                             </h5>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 {categoryPerms.map(perm => {
@@ -288,8 +354,8 @@ const EmployeeDetail = () => {
                                                         <div key={perm.id}
                                                             onClick={() => handlePermissionToggle(perm.id)}
                                                             className={`p-3 rounded-lg border cursor-pointer transition-all ${isAssigned
-                                                                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
-                                                                    : 'bg-white border-slate-200 hover:border-blue-300'
+                                                                ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                                                                : 'bg-white border-slate-200 hover:border-blue-300'
                                                                 }`}
                                                         >
                                                             <div className="flex items-start gap-3">
@@ -325,7 +391,7 @@ const EmployeeDetail = () => {
                 </div>
 
                 {/* Right Column - Summary Card */}
-                <div className="lg:col-span-1">
+                < div className="lg:col-span-1" >
                     <div className="card p-6 sticky top-6">
                         <div className="flex flex-col items-center text-center mb-6">
                             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4">
@@ -349,48 +415,50 @@ const EmployeeDetail = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Assign Manager Modal */}
-            {assignManagerModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
-                            <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                <X size={20} />
-                            </button>
+            {
+                assignManagerModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
+                                <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleAssignManager} className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
+                                    <select
+                                        required
+                                        className="input-field"
+                                        value={selectedManager}
+                                        onChange={(e) => setSelectedManager(e.target.value)}
+                                    >
+                                        <option value="">Seçiniz</option>
+                                        {allEmployees
+                                            .filter(e => e.id !== employee.id) // Can't manage self
+                                            .map(e => (
+                                                <option key={e.id} value={e.id}>
+                                                    {e.first_name} {e.last_name} ({e.job_position_detail?.name})
+                                                </option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+                                <div className="pt-4 flex justify-end gap-3">
+                                    <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleAssignManager} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
-                                <select
-                                    required
-                                    className="input-field"
-                                    value={selectedManager}
-                                    onChange={(e) => setSelectedManager(e.target.value)}
-                                >
-                                    <option value="">Seçiniz</option>
-                                    {allEmployees
-                                        .filter(e => e.id !== employee.id) // Can't manage self
-                                        .map(e => (
-                                            <option key={e.id} value={e.id}>
-                                                {e.first_name} {e.last_name} ({e.job_position_detail?.name})
-                                            </option>
-                                        ))
-                                    }
-                                </select>
-                            </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
