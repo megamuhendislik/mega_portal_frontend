@@ -151,13 +151,23 @@ const AttendanceTracking = () => {
             {viewMode === 'LIST' ? (
                 <>
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                            <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-slate-500 font-medium">Normal Mesai</p>
+                                <h3 className="text-2xl font-bold text-slate-800">{formatMinutes(totalWorked)}</h3>
+                            </div>
+                        </div>
+
                         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
                             <div className="p-3 bg-green-100 text-green-600 rounded-lg">
                                 <Clock size={24} />
                             </div>
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Toplam Fazla Mesai</p>
+                                <p className="text-sm text-slate-500 font-medium">Fazla Mesai</p>
                                 <h3 className="text-2xl font-bold text-slate-800">{formatMinutes(totalOvertime)}</h3>
                             </div>
                         </div>
@@ -167,18 +177,18 @@ const AttendanceTracking = () => {
                                 <AlertCircle size={24} />
                             </div>
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Toplam Eksik Mesai</p>
+                                <p className="text-sm text-slate-500 font-medium">Eksik Mesai</p>
                                 <h3 className="text-2xl font-bold text-slate-800">{formatMinutes(totalMissing)}</h3>
                             </div>
                         </div>
 
                         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                            <div className={`p-3 rounded-lg ${netBalance >= 0 ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                            <div className={`p-3 rounded-lg ${netBalance >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
                                 <CheckCircle size={24} />
                             </div>
                             <div>
                                 <p className="text-sm text-slate-500 font-medium">Net Bakiye</p>
-                                <h3 className={`text-2xl font-bold ${netBalance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                                <h3 className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-orange-600'}`}>
                                     {netBalance > 0 ? '+' : ''}{formatMinutes(netBalance)}
                                 </h3>
                             </div>

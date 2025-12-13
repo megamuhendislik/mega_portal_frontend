@@ -84,6 +84,7 @@ const MainLayout = () => {
         { path: '/calendar', label: 'Takvim', icon: Calendar },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange },
         { path: '/requests', label: 'Talepler', icon: FileText },
+        { path: '/reports', label: 'Raporlar', icon: Flag },
     ];
 
     return (
