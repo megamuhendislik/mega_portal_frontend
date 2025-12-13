@@ -344,7 +344,7 @@ const EmployeeDetail = () => {
                                                     category === 'Attendance & Time' ? 'Mesai ve İzin' :
                                                         category === 'Overtime Management' ? 'Fazla Mesai Yönetimi' :
                                                             category === 'Project Management' ? 'Proje Yönetimi' :
-                                                                category === 'Reporting' ? 'Raporlama' :
+                                                                category === 'Reporting' ? 'Raporlama (Kapsamlı)' :
                                                                     'Organizasyon ve Ayarlar'}
                                             </h5>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
