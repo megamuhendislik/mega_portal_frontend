@@ -30,6 +30,10 @@ const WorkSchedules = () => {
     const [formData, setFormData] = useState({
         name: '',
         is_default: false,
+        lunch_start: '12:30',
+        lunch_end: '13:30',
+        daily_break_allowance: 30,
+        late_tolerance_minutes: 15,
         schedule: {}
     });
 
@@ -83,6 +87,10 @@ const WorkSchedules = () => {
         setFormData({
             name: '',
             is_default: false,
+            lunch_start: '12:30',
+            lunch_end: '13:30',
+            daily_break_allowance: 30,
+            late_tolerance_minutes: 15,
             schedule: defaultSchedule
         });
         setEditingId(null);
@@ -93,6 +101,10 @@ const WorkSchedules = () => {
         setFormData({
             name: sch.name,
             is_default: sch.is_default,
+            lunch_start: sch.lunch_start || '12:30',
+            lunch_end: sch.lunch_end || '13:30',
+            daily_break_allowance: sch.daily_break_allowance || 30,
+            late_tolerance_minutes: sch.late_tolerance_minutes || 15,
             schedule: sch.schedule
         });
         setEditingId(sch.id);
@@ -271,6 +283,47 @@ const WorkSchedules = () => {
                                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                         placeholder="Örn: Standart Mesai"
                                     />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="time"
+                                                value={formData.lunch_start}
+                                                onChange={(e) => setFormData({ ...formData, lunch_start: e.target.value })}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                            />
+                                            <span className="text-slate-400">-</span>
+                                            <input
+                                                type="time"
+                                                value={formData.lunch_end}
+                                                onChange={(e) => setFormData({ ...formData, lunch_end: e.target.value })}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (dk)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.daily_break_allowance}
+                                                onChange={(e) => setFormData({ ...formData, daily_break_allowance: parseInt(e.target.value) })}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (dk)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.late_tolerance_minutes}
+                                                onChange={(e) => setFormData({ ...formData, late_tolerance_minutes: parseInt(e.target.value) })}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex items-end pb-2">
                                     <label className="flex items-center cursor-pointer">

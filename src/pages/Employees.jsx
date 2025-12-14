@@ -31,6 +31,9 @@ const Employees = () => {
         remote_work_days: [],
         is_exempt_from_attendance: false,
         attendance_tolerance_minutes: 15,
+        lunch_start: '12:30',
+        lunch_end: '13:30',
+        daily_break_allowance: 30,
         direct_permissions: []
     });
 
@@ -154,6 +157,9 @@ const Employees = () => {
                 remote_work_days: [],
                 is_exempt_from_attendance: false,
                 attendance_tolerance_minutes: 15,
+                lunch_start: '12:30',
+                lunch_end: '13:30',
+                daily_break_allowance: 30,
                 work_schedule: '',
                 direct_permissions: []
             });

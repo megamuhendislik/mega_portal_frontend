@@ -89,7 +89,10 @@ const EmployeeDetail = () => {
                 work_schedule: employee.work_schedule?.id || null,
                 shift_start: employee.shift_start || null,
                 shift_end: employee.shift_end || null,
-                attendance_tolerance_minutes: employee.attendance_tolerance_minutes
+                attendance_tolerance_minutes: employee.attendance_tolerance_minutes,
+                lunch_start: employee.lunch_start,
+                lunch_end: employee.lunch_end,
+                daily_break_allowance: employee.daily_break_allowance
             };
 
             await api.patch(`/employees/${id}/`, payload);
@@ -336,6 +339,7 @@ const EmployeeDetail = () => {
                                             </div>
                                         )}
                                     </div>
+
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dakika)</label>
                                         <input
@@ -347,6 +351,35 @@ const EmployeeDetail = () => {
                                         <p className="text-xs text-slate-500 mt-1">
                                             Geç kalma/erken çıkma için tolerans süresi.
                                         </p>
+                                    </div>
+
+                                    {/* New Config Fields */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="time"
+                                                value={employee.lunch_start || '12:30'}
+                                                onChange={(e) => setEmployee({ ...employee, lunch_start: e.target.value })}
+                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
+                                            />
+                                            <span className="text-slate-400">-</span>
+                                            <input
+                                                type="time"
+                                                value={employee.lunch_end || '13:30'}
+                                                onChange={(e) => setEmployee({ ...employee, lunch_end: e.target.value })}
+                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (dk)</label>
+                                        <input
+                                            type="number"
+                                            value={employee.daily_break_allowance || 0}
+                                            onChange={(e) => setEmployee({ ...employee, daily_break_allowance: parseInt(e.target.value) || 0 })}
+                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -494,44 +527,46 @@ const EmployeeDetail = () => {
             </div>
 
             {/* Assign Manager Modal */}
-            {assignManagerModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
-                            <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                <X size={20} />
-                            </button>
+            {
+                assignManagerModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
+                                <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleAssignManager} className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
+                                    <select
+                                        required
+                                        className="input-field"
+                                        value={selectedManager}
+                                        onChange={(e) => setSelectedManager(e.target.value)}
+                                    >
+                                        <option value="">Seçiniz</option>
+                                        {allEmployees
+                                            .filter(e => e.id !== employee.id) // Can't manage self
+                                            .map(e => (
+                                                <option key={e.id} value={e.id}>
+                                                    {e.first_name} {e.last_name} ({e.job_position_detail?.name})
+                                                </option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+                                <div className="pt-4 flex justify-end gap-3">
+                                    <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleAssignManager} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
-                                <select
-                                    required
-                                    className="input-field"
-                                    value={selectedManager}
-                                    onChange={(e) => setSelectedManager(e.target.value)}
-                                >
-                                    <option value="">Seçiniz</option>
-                                    {allEmployees
-                                        .filter(e => e.id !== employee.id) // Can't manage self
-                                        .map(e => (
-                                            <option key={e.id} value={e.id}>
-                                                {e.first_name} {e.last_name} ({e.job_position_detail?.name})
-                                            </option>
-                                        ))
-                                    }
-                                </select>
-                            </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
