@@ -168,6 +168,7 @@ const Attendance = () => {
                                 <th className="p-4">Giriş</th>
                                 <th className="p-4">Çıkış</th>
                                 <th className="p-4">Süre (Dk)</th>
+                                <th className="p-4">Mola (Dk)</th>
                                 <th className="p-4">Normal / Fazla</th>
                                 <th className="p-4">Durum</th>
                             </tr>
@@ -185,6 +186,11 @@ const Attendance = () => {
                                     <td className="p-4 font-mono text-slate-600">{formatTime(log.check_out)}</td>
                                     <td className="p-4 font-bold text-slate-800">
                                         {log.total_minutes ? `${Math.floor(log.total_minutes / 60)}s ${log.total_minutes % 60}dk` : '-'}
+                                    </td>
+                                    <td className="p-4 text-slate-600">
+                                        {log.break_minutes > 0 ? (
+                                            <span className="text-emerald-600 font-medium">+{log.break_minutes} dk</span>
+                                        ) : '-'}
                                     </td>
                                     <td className="p-4">
                                         <div className="flex flex-col text-xs">
