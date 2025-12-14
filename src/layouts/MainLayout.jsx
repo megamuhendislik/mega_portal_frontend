@@ -89,7 +89,8 @@ const MainLayout = () => {
 
     const filteredNavItems = navItems.filter(item => {
         if (!user) return false;
-        if (user.is_superuser) return true;
+        // Check if user is superuser (user object is nested in employee response)
+        if (user.user?.is_superuser) return true;
         // If no permission defined, show it (or hide it, depending on policy. Let's show public items if any)
         if (!item.permission) return true;
         return user.all_permissions?.includes(item.permission);
