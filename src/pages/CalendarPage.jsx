@@ -96,14 +96,21 @@ const CalendarPage = () => {
         });
 
         // Find current user's summary from backend response
+        console.log('DEBUG: Summary Data from API:', summaryData);
+        console.log('DEBUG: Current User Context:', user);
+
         let myStats = {};
         if (summaryData && summaryData.length > 0) {
             if (user?.employee?.id) {
                 myStats = summaryData.find(s => s.employee_id === user.employee.id) || {};
+                console.log('DEBUG: Found My Stats by ID:', myStats);
             } else {
                 // Fallback: If no specific employee ID (e.g. superuser without employee profile?), take first or empty
                 myStats = summaryData[0] || {};
+                console.log('DEBUG: Fallback Stats (First Item):', myStats);
             }
+        } else {
+            console.log('DEBUG: No summary data available from API');
         }
         const requiredMinutes = myStats.monthly_required || 0;
         const netBalanceMinutes = myStats.monthly_net_balance || 0;
