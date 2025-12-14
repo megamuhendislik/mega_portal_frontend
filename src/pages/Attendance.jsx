@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import DailySummaryCard from '../components/DailySummaryCard';
 
 const Attendance = () => {
     const { user } = useAuth();
@@ -13,9 +14,21 @@ const Attendance = () => {
         missingDays: 0
     });
 
+    const [todaySummary, setTodaySummary] = useState(null);
+
     useEffect(() => {
         fetchAttendance();
+        fetchTodaySummary();
     }, []);
+
+    const fetchTodaySummary = async () => {
+        try {
+            const response = await api.get('/attendance/today_summary/');
+            setTodaySummary(response.data);
+        } catch (error) {
+            console.error('Error fetching today summary:', error);
+        }
+    };
 
     const fetchAttendance = async () => {
         try {
@@ -126,6 +139,10 @@ const Attendance = () => {
                 </div>
             </div>
 
+
+            {/* Today's Summary Card */}
+            <DailySummaryCard summary={todaySummary} loading={loading} />
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="card p-6 flex items-center space-x-4 border-l-4 border-blue-500">
@@ -216,7 +233,7 @@ const Attendance = () => {
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

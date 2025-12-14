@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/tr';
@@ -24,6 +24,8 @@ const CalendarPage = () => {
         missingDays: 0,
         leaveDays: 0
     });
+
+    const [dailyStats, setDailyStats] = useState({});
 
     useEffect(() => {
         fetchData();
@@ -74,6 +76,9 @@ const CalendarPage = () => {
             const payrollPeriod = getPayrollPeriod(currentDate);
             calculateMonthlySummary(attendanceLogs, calendarEvents, payrollPeriod.start, payrollPeriod.end);
 
+            // Calculate Daily Stats for the view
+            calculateDailyStats(attendanceLogs);
+
         } catch (error) {
             console.error('Error fetching calendar data:', error);
         } finally {
@@ -91,6 +96,20 @@ const CalendarPage = () => {
         const end = moment(date).date(25).format('YYYY-MM-DD');
 
         return { start, end };
+    };
+
+    const calculateDailyStats = (logs) => {
+        const stats = {};
+        logs.forEach(log => {
+            const dateStr = moment(log.work_date).format('YYYY-MM-DD');
+            if (!stats[dateStr]) {
+                stats[dateStr] = { normal: 0, overtime: 0, missing: 0 };
+            }
+            stats[dateStr].normal += (log.normal_minutes || 0);
+            stats[dateStr].overtime += (log.overtime_minutes || 0);
+            stats[dateStr].missing += (log.missing_minutes || 0);
+        });
+        setDailyStats(stats);
     };
 
     const calculateMonthlySummary = (logs, calEvents, start, end) => {
@@ -176,6 +195,40 @@ const CalendarPage = () => {
 
         return { style };
     };
+
+    const components = useMemo(() => ({
+        month: {
+            dateHeader: ({ date, label }) => {
+                const dateStr = moment(date).format('YYYY-MM-DD');
+                const stats = dailyStats[dateStr];
+
+                return (
+                    <div className="flex justify-between items-start px-1">
+                        <span className="rbc-date-cell-label font-semibold text-slate-700">{label}</span>
+                        {stats && (
+                            <div className="flex flex-col items-end text-[10px] leading-tight gap-0.5 mt-0.5">
+                                {stats.normal > 0 && (
+                                    <span className="text-blue-600 font-bold bg-blue-50 px-1 rounded">
+                                        {Math.floor(stats.normal / 60)}s {stats.normal % 60 > 0 ? `${stats.normal % 60}dk` : ''}
+                                    </span>
+                                )}
+                                {stats.overtime > 0 && (
+                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">
+                                        +{Math.floor(stats.overtime / 60)}s {stats.overtime % 60 > 0 ? `${stats.overtime % 60}dk` : ''}
+                                    </span>
+                                )}
+                                {stats.missing > 0 && (
+                                    <span className="text-red-600 font-bold bg-red-50 px-1 rounded">
+                                        -{Math.floor(stats.missing / 60)}s
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+        }
+    }), [dailyStats]);
 
     if (loading && events.length === 0) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
@@ -272,6 +325,7 @@ const CalendarPage = () => {
                     onNavigate={handleNavigate}
                     selectable={true}
                     culture='tr'
+                    components={components}
                     messages={{
                         next: "İleri",
                         previous: "Geri",
