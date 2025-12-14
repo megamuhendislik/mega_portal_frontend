@@ -4,7 +4,7 @@ import moment from 'moment';
 import 'moment/locale/tr';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
-import { X, Clock, Calendar as CalendarIcon, Info, CheckCircle2, AlertCircle, Briefcase, Timer } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, Info, CheckCircle2, AlertCircle, Briefcase, Timer, Activity } from 'lucide-react';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
