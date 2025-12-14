@@ -68,38 +68,9 @@ const CalendarPage = () => {
                 });
             });
 
-            // 2. Map Attendance Logs to Events (Shifts & Overtime)
-            attendanceLogs.forEach(log => {
-                const logDate = new Date(log.work_date);
-
-                // Shift Event
-                if (log.check_in && log.check_out) {
-                    processedEvents.push({
-                        id: `shift-${log.id}`,
-                        title: `Mesai: ${log.total_minutes ? Math.floor(log.total_minutes / 60) + 's' : ''}`,
-                        start: new Date(`${log.work_date}T${log.check_in}`),
-                        end: new Date(`${log.work_date}T${log.check_out}`),
-                        color: '#3b82f6', // Blue
-                        type: 'SHIFT',
-                        details: log,
-                        allDay: false
-                    });
-                }
-
-                // Overtime Event
-                if (log.overtime_minutes > 0) {
-                    processedEvents.push({
-                        id: `overtime-${log.id}`,
-                        title: `Fazla Mesai: ${Math.floor(log.overtime_minutes / 60)}s ${log.overtime_minutes % 60}dk`,
-                        start: logDate,
-                        end: logDate,
-                        color: '#10b981', // Emerald
-                        type: 'OVERTIME',
-                        details: log,
-                        allDay: true
-                    });
-                }
-            });
+            // REMOVED: Redundant mapping of attendanceLogs to events. 
+            // The backend /calendar/ endpoint already provides SHIFT and OVERTIME events.
+            // attendanceLogs are now ONLY used for calculateMonthlySummary below.
 
             setEvents(processedEvents);
             calculateMonthlySummary(attendanceLogs, calendarEvents, startOfMonth, endOfMonth);
@@ -289,6 +260,7 @@ const CalendarPage = () => {
                     onSelectSlot={handleSelectSlot}
                     onNavigate={handleNavigate}
                     selectable={true}
+                    culture='tr'
                     messages={{
                         next: "İleri",
                         previous: "Geri",
