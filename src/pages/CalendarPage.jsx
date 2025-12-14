@@ -22,7 +22,9 @@ const CalendarPage = () => {
         totalWorkHours: 0,
         totalOvertime: 0,
         missingDays: 0,
-        leaveDays: 0
+        leaveDays: 0,
+        monthlyRequired: 0,
+        netBalance: 0
     });
 
     const [dailyStats, setDailyStats] = useState({});
@@ -35,52 +37,6 @@ const CalendarPage = () => {
         setLoading(true);
         try {
             const startOfMonth = moment(currentDate).startOf('month').format('YYYY-MM-DD');
-            const endOfMonth = moment(currentDate).endOf('month').format('YYYY-MM-DD');
-
-            // Fetch wider range for calendar view (prev/next month visibility)
-            const viewStart = moment(currentDate).subtract(1, 'month').startOf('month').format('YYYY-MM-DD');
-            const viewEnd = moment(currentDate).add(1, 'month').endOf('month').format('YYYY-MM-DD');
-
-            const [calendarRes, attendanceRes] = await Promise.all([
-                api.get(`/calendar/?start=${viewStart}&end=${viewEnd}`),
-                api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}`) // Assuming attendance endpoint supports filtering or returns all
-            ]);
-
-            const calendarEvents = calendarRes.data || [];
-            const attendanceLogs = attendanceRes.data.results || attendanceRes.data || [];
-
-            // Process Events
-            let processedEvents = [];
-
-            // 1. Map Standard Calendar Events (Holidays, Leaves, etc.)
-            calendarEvents.forEach(evt => {
-                // Filter out ABSENT on Weekends (Saturday=6, Sunday=0)
-                const evtDate = moment(evt.start);
-                const isWeekend = evtDate.day() === 0 || evtDate.day() === 6;
-
-                if (evt.type === 'ABSENT' && isWeekend) {
-                    return; // Skip weekend absences
-                }
-
-                processedEvents.push({
-                    ...evt,
-                    start: new Date(evt.start),
-                    end: new Date(evt.end),
-                    source: 'CALENDAR'
-                });
-            });
-
-            setEvents(processedEvents);
-
-            // Calculate Summary based on Payroll Period (26th to 25th)
-            const payrollPeriod = getPayrollPeriod(currentDate);
-            calculateMonthlySummary(attendanceLogs, calendarEvents, payrollPeriod.start, payrollPeriod.end);
-
-            // Calculate Daily Stats for the view
-            calculateDailyStats(attendanceLogs);
-
-        } catch (error) {
-            console.error('Error fetching calendar data:', error);
         } finally {
             setLoading(false);
         }
@@ -112,7 +68,7 @@ const CalendarPage = () => {
         setDailyStats(stats);
     };
 
-    const calculateMonthlySummary = (logs, calEvents, start, end) => {
+    const calculateMonthlySummary = (logs, calEvents, start, end, summaryData) => {
         let totalMinutes = 0;
         let overtimeMinutes = 0;
         let leaveCount = 0;
@@ -137,11 +93,21 @@ const CalendarPage = () => {
             }
         });
 
+        // Find current user's summary from backend response
+        // Assuming the first one is the current user if filtered by self, or we need to find by ID
+        // Since we are likely viewing "my calendar", we can take the first one or find by user ID if available
+        // For now, let's assume the backend returns the current user's stats if no specific user filter is applied
+        const myStats = summaryData && summaryData.length > 0 ? summaryData[0] : {};
+        const requiredMinutes = myStats.monthly_required || 0;
+        const netBalanceMinutes = myStats.monthly_net_balance || 0;
+
         setMonthlySummary({
             totalWorkHours: (totalMinutes / 60).toFixed(1),
             totalOvertime: (overtimeMinutes / 60).toFixed(1),
             missingDays: missingCount,
-            leaveDays: leaveCount
+            leaveDays: leaveCount,
+            monthlyRequired: (requiredMinutes / 60).toFixed(1),
+            netBalance: (netBalanceMinutes / 60).toFixed(1)
         });
     };
 
@@ -267,6 +233,30 @@ const CalendarPage = () => {
                             </div>
                             <div className="text-2xl font-bold text-slate-800 ml-1">
                                 {monthlySummary.totalOvertime} <span className="text-sm font-normal text-slate-500">Saat</span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                                    <Briefcase size={18} />
+                                </div>
+                                <span className="text-sm font-medium text-indigo-900">Gereken Çalışma</span>
+                            </div>
+                            <div className="text-2xl font-bold text-slate-800 ml-1">
+                                {monthlySummary.monthlyRequired} <span className="text-sm font-normal text-slate-500">Saat</span>
+                            </div>
+                        </div>
+
+                        <div className={`p-4 rounded-xl border ${parseFloat(monthlySummary.netBalance) >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className={`p-2 rounded-lg ${parseFloat(monthlySummary.netBalance) >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                    <Activity size={18} />
+                                </div>
+                                <span className={`text-sm font-medium ${parseFloat(monthlySummary.netBalance) >= 0 ? 'text-emerald-900' : 'text-red-900'}`}>Net Fark</span>
+                            </div>
+                            <div className="text-2xl font-bold text-slate-800 ml-1">
+                                {monthlySummary.netBalance > 0 ? '+' : ''}{monthlySummary.netBalance} <span className="text-sm font-normal text-slate-500">Saat</span>
                             </div>
                         </div>
 
