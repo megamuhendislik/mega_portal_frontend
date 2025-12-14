@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
+import 'moment/locale/tr';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
-import { X, Clock, Calendar as CalendarIcon, User, Info, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, Info, CheckCircle2, AlertCircle, Briefcase, Timer } from 'lucide-react';
 
+moment.locale('tr');
 const localizer = momentLocalizer(moment);
 
 const CalendarPage = () => {
@@ -14,62 +16,136 @@ const CalendarPage = () => {
     const [selectedEvents, setSelectedEvents] = useState([]);
     const [showModal, setShowModal] = useState(false);
 
-    // Summary State
-    const [summaryStats, setSummaryStats] = useState(null);
+    // Monthly Summary State
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [monthlySummary, setMonthlySummary] = useState({
+        totalWorkHours: 0,
+        totalOvertime: 0,
+        missingDays: 0,
+        leaveDays: 0
+    });
 
     useEffect(() => {
-        fetchEvents();
-        fetchSummary();
-    }, [currentDate]);
+        fetchData();
+    }, [currentDate]); // Refetch when month changes
 
-    const fetchEvents = async () => {
+    const fetchData = async () => {
+        setLoading(true);
         try {
-            // Fetch for current month view
-            const s = moment(currentDate).startOf('month').subtract(1, 'week').format('YYYY-MM-DD');
-            const e = moment(currentDate).endOf('month').add(1, 'week').format('YYYY-MM-DD');
+            const startOfMonth = moment(currentDate).startOf('month').format('YYYY-MM-DD');
+            const endOfMonth = moment(currentDate).endOf('month').format('YYYY-MM-DD');
 
-            const response = await api.get(`/calendar/?start=${s}&end=${e}`);
+            // Fetch wider range for calendar view (prev/next month visibility)
+            const viewStart = moment(currentDate).subtract(1, 'month').startOf('month').format('YYYY-MM-DD');
+            const viewEnd = moment(currentDate).add(1, 'month').endOf('month').format('YYYY-MM-DD');
 
-            const formattedEvents = response.data.map(evt => ({
-                ...evt,
-                start: new Date(evt.start),
-                end: new Date(evt.end),
-            }));
+            const [calendarRes, attendanceRes] = await Promise.all([
+                api.get(`/calendar/events/?start=${viewStart}&end=${viewEnd}`),
+                api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}`) // Assuming attendance endpoint supports filtering or returns all
+            ]);
 
-            setEvents(formattedEvents);
+            const calendarEvents = calendarRes.data || [];
+            const attendanceLogs = attendanceRes.data.results || attendanceRes.data || [];
+
+            // Process Events
+            let processedEvents = [];
+
+            // 1. Map Standard Calendar Events (Holidays, Leaves, etc.)
+            calendarEvents.forEach(evt => {
+                // Filter out ABSENT on Weekends (Saturday=6, Sunday=0)
+                const evtDate = moment(evt.start);
+                const isWeekend = evtDate.day() === 0 || evtDate.day() === 6;
+
+                if (evt.type === 'ABSENT' && isWeekend) {
+                    return; // Skip weekend absences
+                }
+
+                processedEvents.push({
+                    ...evt,
+                    start: new Date(evt.start),
+                    end: new Date(evt.end),
+                    source: 'CALENDAR'
+                });
+            });
+
+            // 2. Map Attendance Logs to Events (Shifts & Overtime)
+            attendanceLogs.forEach(log => {
+                const logDate = new Date(log.work_date);
+
+                // Shift Event
+                if (log.check_in && log.check_out) {
+                    processedEvents.push({
+                        id: `shift-${log.id}`,
+                        title: `Mesai: ${log.total_minutes ? Math.floor(log.total_minutes / 60) + 's' : ''}`,
+                        start: new Date(`${log.work_date}T${log.check_in}`),
+                        end: new Date(`${log.work_date}T${log.check_out}`),
+                        color: '#3b82f6', // Blue
+                        type: 'SHIFT',
+                        details: log,
+                        allDay: false
+                    });
+                }
+
+                // Overtime Event
+                if (log.overtime_minutes > 0) {
+                    processedEvents.push({
+                        id: `overtime-${log.id}`,
+                        title: `Fazla Mesai: ${Math.floor(log.overtime_minutes / 60)}s ${log.overtime_minutes % 60}dk`,
+                        start: logDate,
+                        end: logDate,
+                        color: '#10b981', // Emerald
+                        type: 'OVERTIME',
+                        details: log,
+                        allDay: true
+                    });
+                }
+            });
+
+            setEvents(processedEvents);
+            calculateMonthlySummary(attendanceLogs, calendarEvents, startOfMonth, endOfMonth);
+
         } catch (error) {
-            console.error('Error fetching calendar events:', error);
+            console.error('Error fetching calendar data:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchSummary = async () => {
-        try {
-            const year = moment(currentDate).year();
-            const month = moment(currentDate).month() + 1;
-            const response = await api.get(`/attendance/stats/summary/?year=${year}&month=${month}`);
+    const calculateMonthlySummary = (logs, calEvents, start, end) => {
+        let totalMinutes = 0;
+        let overtimeMinutes = 0;
+        let leaveCount = 0;
+        let missingCount = 0;
 
-            // Assuming response is a list, get the first item (current user)
-            // Or if we want team summary, we might need to aggregate
-            // For now, let's show the first record which should be the user if not admin viewing all
-            if (response.data && response.data.length > 0) {
-                // If multiple, maybe sum them up? Or just show "Team Summary"
-                // Let's assume for now we show the user's own stats or the first one
-                // Better: Aggregate if multiple
-                const total = response.data.reduce((acc, curr) => ({
-                    total_worked: acc.total_worked + curr.total_worked,
-                    total_overtime: acc.total_overtime + curr.total_overtime,
-                    total_missing: acc.total_missing + curr.total_missing,
-                    total_late: acc.total_late + curr.total_late
-                }), { total_worked: 0, total_overtime: 0, total_missing: 0, total_late: 0 });
+        // Filter logs for current month
+        const monthLogs = logs.filter(log => moment(log.work_date).isBetween(start, end, 'day', '[]'));
 
-                setSummaryStats(total);
+        monthLogs.forEach(log => {
+            totalMinutes += log.total_minutes || 0;
+            overtimeMinutes += log.overtime_minutes || 0;
+        });
+
+        // Filter calendar events for current month
+        const monthEvents = calEvents.filter(evt => moment(evt.start).isBetween(start, end, 'day', '[]'));
+
+        monthEvents.forEach(evt => {
+            if (evt.type === 'LEAVE') leaveCount++;
+            if (evt.type === 'ABSENT') {
+                const day = moment(evt.start).day();
+                if (day !== 0 && day !== 6) missingCount++; // Only count weekdays
             }
-        } catch (error) {
-            console.error('Error fetching summary:', error);
-        }
+        });
+
+        setMonthlySummary({
+            totalWorkHours: (totalMinutes / 60).toFixed(1),
+            totalOvertime: (overtimeMinutes / 60).toFixed(1),
+            missingDays: missingCount,
+            leaveDays: leaveCount
+        });
+    };
+
+    const handleNavigate = (date) => {
+        setCurrentDate(date);
     };
 
     const handleSelectEvent = (event) => {
@@ -90,123 +166,149 @@ const CalendarPage = () => {
         setShowModal(true);
     };
 
-    const handleNavigate = (date) => {
-        setCurrentDate(date);
-    };
-
     const eventStyleGetter = (event) => {
         let style = {
-            backgroundColor: event.color,
+            backgroundColor: event.color || '#64748b',
             borderRadius: '6px',
             opacity: 0.9,
             color: 'white',
             border: '0px',
             display: 'block',
-            fontSize: '0.85rem',
-            padding: '2px 5px'
+            fontSize: '0.75rem',
+            padding: '2px 6px',
+            marginBottom: '2px'
         };
 
         if (event.type === 'OVERTIME') {
-            style.backgroundColor = '#f59e0b'; // Amber
-            style.border = '1px solid #d97706';
+            style.backgroundColor = '#10b981'; // Emerald 500
+            style.fontWeight = 'bold';
+        } else if (event.type === 'SHIFT') {
+            style.backgroundColor = '#3b82f6'; // Blue 500
+        } else if (event.type === 'ABSENT') {
+            style.backgroundColor = '#ef4444'; // Red 500
+        } else if (event.type === 'LEAVE') {
+            style.backgroundColor = '#f59e0b'; // Amber 500
+        } else if (event.type === 'HOLIDAY') {
+            style.backgroundColor = '#8b5cf6'; // Violet 500
         }
 
         return { style };
     };
 
-    if (loading) return <div className="p-8 text-center">Yükleniyor...</div>;
+    if (loading && events.length === 0) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
     return (
-        <div className="h-screen p-6 bg-slate-50 flex gap-6">
-            {/* Main Calendar Area */}
-            <div className="flex-1 flex flex-col">
-                <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                    <CalendarIcon className="text-blue-600" />
-                    Takvim
-                </h2>
-                <div className="bg-white p-6 rounded-xl shadow-lg flex-1 min-h-0">
-                    <Calendar
-                        localizer={localizer}
-                        events={events}
-                        startAccessor="start"
-                        endAccessor="end"
-                        style={{ height: '100%' }}
-                        eventPropGetter={eventStyleGetter}
-                        onSelectEvent={handleSelectEvent}
-                        onSelectSlot={handleSelectSlot}
-                        onNavigate={handleNavigate}
-                        selectable={true}
-                        messages={{
-                            next: "İleri",
-                            previous: "Geri",
-                            today: "Bugün",
-                            month: "Ay",
-                            week: "Hafta",
-                            day: "Gün",
-                            agenda: "Ajanda",
-                            date: "Tarih",
-                            time: "Saat",
-                            event: "Olay",
-                            noEventsInRange: "Bu aralıkta olay yok."
-                        }}
-                        tooltipAccessor={event => `${event.title}`}
-                    />
-                </div>
-            </div>
-
-            {/* Right Sidebar - Monthly Summary */}
-            <div className="w-80 shrink-0 flex flex-col gap-6 pt-14">
-                <div className="bg-white rounded-xl shadow-lg p-6 border border-slate-100">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <TrendingUp size={20} className="text-blue-600" />
-                        Aylık Özet
-                    </h3>
-                    <p className="text-sm text-slate-500 mb-6">
-                        {moment(currentDate).format('MMMM YYYY')} verileri
+        <div className="h-screen p-6 bg-slate-50 flex flex-col md:flex-row gap-6">
+            {/* Sidebar / Summary */}
+            <div className="w-full md:w-80 flex flex-col gap-6 shrink-0">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <CalendarIcon className="text-blue-600" />
+                        Takvim
+                    </h2>
+                    <p className="text-slate-500 text-sm mb-6">
+                        {moment(currentDate).format('MMMM YYYY')} ayı için çalışma özetiniz.
                     </p>
 
                     <div className="space-y-4">
-                        <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                            <div className="text-sm text-emerald-600 font-medium mb-1">Toplam Çalışma</div>
-                            <div className="text-2xl font-bold text-emerald-800">
-                                {summaryStats ? Math.round(summaryStats.total_worked / 60) : 0} <span className="text-sm font-normal">saat</span>
+                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                                    <Briefcase size={18} />
+                                </div>
+                                <span className="text-sm font-medium text-blue-900">Toplam Çalışma</span>
+                            </div>
+                            <div className="text-2xl font-bold text-slate-800 ml-1">
+                                {monthlySummary.totalWorkHours} <span className="text-sm font-normal text-slate-500">Saat</span>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
-                            <div className="text-sm text-amber-600 font-medium mb-1">Toplam Fazla Mesai</div>
-                            <div className="text-2xl font-bold text-amber-800">
-                                {summaryStats ? Math.round(summaryStats.total_overtime / 60) : 0} <span className="text-sm font-normal">saat</span>
+                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                                    <Timer size={18} />
+                                </div>
+                                <span className="text-sm font-medium text-emerald-900">Toplam Fazla Mesai</span>
+                            </div>
+                            <div className="text-2xl font-bold text-slate-800 ml-1">
+                                {monthlySummary.totalOvertime} <span className="text-sm font-normal text-slate-500">Saat</span>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-                            <div className="text-sm text-red-600 font-medium mb-1">Eksik Çalışma</div>
-                            <div className="text-2xl font-bold text-red-800">
-                                {summaryStats ? Math.round(summaryStats.total_missing / 60) : 0} <span className="text-sm font-normal">saat</span>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-center">
+                                <span className="block text-xs font-medium text-amber-900 mb-1">İzinli Gün</span>
+                                <span className="text-xl font-bold text-slate-800">{monthlySummary.leaveDays}</span>
                             </div>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                            <div className="text-sm text-slate-600 font-medium mb-1">Geç Kalma</div>
-                            <div className="text-2xl font-bold text-slate-800">
-                                {summaryStats ? summaryStats.total_late : 0} <span className="text-sm font-normal">dk</span>
+                            <div className="p-3 bg-red-50 rounded-xl border border-red-100 text-center">
+                                <span className="block text-xs font-medium text-red-900 mb-1">Eksik Gün</span>
+                                <span className="text-xl font-bold text-slate-800">{monthlySummary.missingDays}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-blue-600 rounded-xl shadow-lg p-6 text-white">
-                    <h4 className="font-bold text-lg mb-2">İpucu</h4>
-                    <p className="text-blue-100 text-sm leading-relaxed">
-                        Takvim üzerindeki günlere tıklayarak detaylı vardiya ve mola bilgilerini görüntüleyebilirsiniz.
-                    </p>
+                {/* Legend */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 className="text-sm font-semibold text-slate-800 mb-3">Renk Kodları</h3>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                            <span className="text-slate-600">Normal Mesai</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span className="text-slate-600">Fazla Mesai</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <span className="text-slate-600">İzinli</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                            <span className="text-slate-600">Devamsız / Eksik</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-violet-500"></div>
+                            <span className="text-slate-600">Resmi Tatil</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            {/* Main Calendar */}
+            <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-[calc(100vh-3rem)] md:h-auto overflow-hidden">
+                <Calendar
+                    localizer={localizer}
+                    events={events}
+                    startAccessor="start"
+                    endAccessor="end"
+                    style={{ height: '100%' }}
+                    eventPropGetter={eventStyleGetter}
+                    onSelectEvent={handleSelectEvent}
+                    onSelectSlot={handleSelectSlot}
+                    onNavigate={handleNavigate}
+                    selectable={true}
+                    messages={{
+                        next: "İleri",
+                        previous: "Geri",
+                        today: "Bugün",
+                        month: "Ay",
+                        week: "Hafta",
+                        day: "Gün",
+                        agenda: "Ajanda",
+                        date: "Tarih",
+                        time: "Saat",
+                        event: "Olay",
+                        noEventsInRange: "Bu aralıkta olay yok."
+                    }}
+                    tooltipAccessor={event => `${event.title}`}
+                />
             </div>
 
             {/* Day Details Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
                         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
                             <div>
@@ -225,40 +327,52 @@ const CalendarPage = () => {
                             </button>
                         </div>
 
-                        <div className="overflow-y-auto p-5 space-y-3">
+                        <div className="overflow-y-auto p-5 space-y-3 custom-scrollbar">
                             {selectedEvents.length > 0 ? (
                                 selectedEvents.map((evt, idx) => (
-                                    <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow flex items-start gap-3">
+                                    <div key={idx} className={`p-4 rounded-xl border bg-white shadow-sm flex items-start gap-3 transition-all hover:shadow-md
+                                        ${evt.type === 'OVERTIME' ? 'border-emerald-100 bg-emerald-50/30' :
+                                            evt.type === 'ABSENT' ? 'border-red-100 bg-red-50/30' : 'border-slate-100'}
+                                    `}>
                                         <div
-                                            className="w-3 h-3 rounded-full mt-1.5 shrink-0"
+                                            className="w-3 h-3 rounded-full mt-1.5 shrink-0 shadow-sm"
                                             style={{ backgroundColor: evt.color }}
                                         />
                                         <div className="flex-1">
-                                            <div className="font-semibold text-slate-800 text-sm">
+                                            <div className="font-bold text-slate-800 text-sm flex justify-between">
                                                 {evt.title}
+                                                {evt.type === 'OVERTIME' && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Ekstra</span>}
                                             </div>
-                                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                                                {evt.type !== 'OFF' && evt.type !== 'LEAVE' && evt.type !== 'HOLIDAY' && (
-                                                    <div className="flex items-center gap-1">
+
+                                            <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-500">
+                                                {evt.start && evt.end && !evt.allDay && (
+                                                    <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md">
                                                         <Clock size={12} />
                                                         {moment(evt.start).format('HH:mm')} - {moment(evt.end).format('HH:mm')}
                                                     </div>
                                                 )}
                                                 <div className="flex items-center gap-1">
                                                     <Info size={12} />
-                                                    {evt.type === 'SHIFT' ? 'Mesai' :
+                                                    {evt.type === 'SHIFT' ? 'Normal Mesai' :
                                                         evt.type === 'OVERTIME' ? 'Fazla Mesai' :
-                                                            evt.type === 'OFF' ? 'İzinli' :
-                                                                evt.type === 'LEAVE' ? 'İzin Talebi' :
-                                                                    evt.type === 'ABSENT' ? 'Devamsız' :
+                                                            evt.type === 'OFF' ? 'Hafta Tatili' :
+                                                                evt.type === 'LEAVE' ? 'İzin' :
+                                                                    evt.type === 'ABSENT' ? 'Devamsızlık' :
                                                                         evt.type === 'HOLIDAY' ? 'Resmi Tatil' : 'Diğer'}
                                                 </div>
                                             </div>
+
+                                            {/* Additional Details from Logs */}
+                                            {evt.details && evt.details.description && (
+                                                <p className="mt-2 text-xs text-slate-600 italic border-t border-slate-100 pt-2">
+                                                    "{evt.details.description}"
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-8 text-slate-400">
+                                <div className="text-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                                     <CalendarIcon size={48} className="mx-auto mb-3 opacity-20" />
                                     <p>Bu tarihte herhangi bir kayıt bulunmamaktadır.</p>
                                 </div>
@@ -268,7 +382,7 @@ const CalendarPage = () => {
                         <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-right">
                             <button
                                 onClick={() => setShowModal(false)}
-                                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition-colors"
+                                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-slate-500/20"
                             >
                                 Kapat
                             </button>
