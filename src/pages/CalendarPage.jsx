@@ -29,7 +29,7 @@ const CalendarPage = () => {
             const s = moment(currentDate).startOf('month').subtract(1, 'week').format('YYYY-MM-DD');
             const e = moment(currentDate).endOf('month').add(1, 'week').format('YYYY-MM-DD');
 
-            const response = await api.get(`/calendar/events/?start=${s}&end=${e}`);
+            const response = await api.get(`/calendar/?start=${s}&end=${e}`);
 
             const formattedEvents = response.data.map(evt => ({
                 ...evt,
