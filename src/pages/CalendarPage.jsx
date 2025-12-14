@@ -5,11 +5,13 @@ import 'moment/locale/tr';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
 import { X, Clock, Calendar as CalendarIcon, Info, CheckCircle2, AlertCircle, Briefcase, Timer, Activity } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
 
 const CalendarPage = () => {
+    const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState(null);
@@ -94,10 +96,15 @@ const CalendarPage = () => {
         });
 
         // Find current user's summary from backend response
-        // Assuming the first one is the current user if filtered by self, or we need to find by ID
-        // Since we are likely viewing "my calendar", we can take the first one or find by user ID if available
-        // For now, let's assume the backend returns the current user's stats if no specific user filter is applied
-        const myStats = summaryData && summaryData.length > 0 ? summaryData[0] : {};
+        let myStats = {};
+        if (summaryData && summaryData.length > 0) {
+            if (user?.employee?.id) {
+                myStats = summaryData.find(s => s.employee_id === user.employee.id) || {};
+            } else {
+                // Fallback: If no specific employee ID (e.g. superuser without employee profile?), take first or empty
+                myStats = summaryData[0] || {};
+            }
+        }
         const requiredMinutes = myStats.monthly_required || 0;
         const netBalanceMinutes = myStats.monthly_net_balance || 0;
 
