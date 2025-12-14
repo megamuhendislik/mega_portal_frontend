@@ -40,7 +40,7 @@ const CalendarPage = () => {
             const viewEnd = moment(currentDate).add(1, 'month').endOf('month').format('YYYY-MM-DD');
 
             const [calendarRes, attendanceRes] = await Promise.all([
-                api.get(`/calendar/events/?start=${viewStart}&end=${viewEnd}`),
+                api.get(`/calendar/?start=${viewStart}&end=${viewEnd}`),
                 api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}`) // Assuming attendance endpoint supports filtering or returns all
             ]);
 
