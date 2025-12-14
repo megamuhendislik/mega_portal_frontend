@@ -68,18 +68,29 @@ const CalendarPage = () => {
                 });
             });
 
-            // REMOVED: Redundant mapping of attendanceLogs to events. 
-            // The backend /calendar/ endpoint already provides SHIFT and OVERTIME events.
-            // attendanceLogs are now ONLY used for calculateMonthlySummary below.
-
             setEvents(processedEvents);
-            calculateMonthlySummary(attendanceLogs, calendarEvents, startOfMonth, endOfMonth);
+
+            // Calculate Summary based on Payroll Period (26th to 25th)
+            const payrollPeriod = getPayrollPeriod(currentDate);
+            calculateMonthlySummary(attendanceLogs, calendarEvents, payrollPeriod.start, payrollPeriod.end);
 
         } catch (error) {
             console.error('Error fetching calendar data:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Helper to determine payroll period (26th of prev month to 25th of current month)
+    const getPayrollPeriod = (date) => {
+        const current = moment(date);
+        // If we are looking at Dec 2025.
+        // Payroll period: Nov 26, 2025 to Dec 25, 2025.
+
+        const start = moment(date).subtract(1, 'month').date(26).format('YYYY-MM-DD');
+        const end = moment(date).date(25).format('YYYY-MM-DD');
+
+        return { start, end };
     };
 
     const calculateMonthlySummary = (logs, calEvents, start, end) => {
@@ -178,7 +189,7 @@ const CalendarPage = () => {
                         Takvim
                     </h2>
                     <p className="text-slate-500 text-sm mb-6">
-                        {moment(currentDate).format('MMMM YYYY')} ayı için çalışma özetiniz.
+                        {moment(currentDate).subtract(1, 'month').date(26).format('D MMMM')} - {moment(currentDate).date(25).format('D MMMM YYYY')} dönemi verileri.
                     </p>
 
                     <div className="space-y-4">
