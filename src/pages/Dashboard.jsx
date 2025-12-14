@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Briefcase, Clock, TrendingUp, Activity, Calendar } from 'lucide-react';
 import api from '../services/api';
+import DailySummaryCard from '../components/DailySummaryCard';
 
 const Dashboard = () => {
     const [statsData, setStatsData] = useState({
@@ -96,9 +97,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            import DailySummaryCard from '../components/DailySummaryCard';
 
-            // ... inside Dashboard component ...
 
             {/* Today's Summary Section */}
             <DailySummaryCard summary={todaySummary} loading={loading} />
