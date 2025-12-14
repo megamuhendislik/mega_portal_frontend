@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Attendance = () => {
+    const { user } = useAuth();
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [summary, setSummary] = useState({
@@ -46,6 +48,24 @@ const Attendance = () => {
             totalOvertime: (overtimeMinutes / 60).toFixed(1),
             missingDays: 0 // Logic for missing days would require comparing against expected work days
         });
+    };
+
+    const handleResetAll = async () => {
+        if (!window.confirm('DİKKAT! Tüm mesai kayıtları silinecek. Bu işlem geri alınamaz. Emin misiniz?')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await api.post('/attendance/reset_all/');
+            alert('Tüm kayıtlar başarıyla silindi.');
+            fetchAttendance(); // Refresh list
+        } catch (error) {
+            console.error('Error resetting attendance:', error);
+            alert('Bir hata oluştu: ' + (error.response?.data?.error || error.message));
+        } finally {
+            setLoading(false);
+        }
     };
 
     const formatTime = (isoString) => {
@@ -92,6 +112,16 @@ const Attendance = () => {
                     <p className="text-slate-500 mt-1">Giriş-çıkış kayıtlarınız ve çalışma süreleriniz</p>
                 </div>
                 <div className="flex gap-3">
+                    {/* Admin Reset Button */}
+                    {user?.user?.is_superuser && (
+                        <button
+                            onClick={handleResetAll}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors font-medium text-sm"
+                        >
+                            <Trash2 size={16} />
+                            Tüm Mesaileri Sıfırla
+                        </button>
+                    )}
                     {/* Future: Date Range Picker */}
                 </div>
             </div>
