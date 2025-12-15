@@ -11,6 +11,7 @@ moment.locale('tr');
 const localizer = momentLocalizer(moment);
 
 const CalendarPage = () => {
+    console.log('DEBUG: CalendarPage Component Mounting...');
     const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -36,6 +37,7 @@ const CalendarPage = () => {
     }, [currentDate]); // Refetch when month changes
 
     const fetchData = async () => {
+        console.log('DEBUG: fetchData called');
         setLoading(true);
         try {
             const startOfMonth = moment(currentDate).startOf('month').format('YYYY-MM-DD');
