@@ -41,6 +41,45 @@ const CalendarPage = () => {
         setLoading(true);
         try {
             const startOfMonth = moment(currentDate).startOf('month').format('YYYY-MM-DD');
+            const endOfMonth = moment(currentDate).endOf('month').format('YYYY-MM-DD');
+
+            // Fetch wider range for calendar view (prev/next month visibility)
+            const viewStart = moment(currentDate).subtract(1, 'month').startOf('month').format('YYYY-MM-DD');
+            const viewEnd = moment(currentDate).add(1, 'month').endOf('month').format('YYYY-MM-DD');
+
+            console.log(`DEBUG: Fetching data for range ${viewStart} to ${viewEnd}`);
+
+            const [calendarRes, attendanceRes, summaryRes] = await Promise.all([
+                api.get(`/calendar/?start=${viewStart}&end=${viewEnd}`),
+                api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}`),
+                api.get(`/stats/summary/?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`)
+            ]);
+
+            console.log('DEBUG: API Responses received');
+            console.log('DEBUG: Summary Response:', summaryRes.data);
+
+            const calEvents = calendarRes.data;
+            const attendanceLogs = attendanceRes.data;
+            const summaryData = summaryRes.data;
+
+            // Process events
+            const processedEvents = calEvents.map(evt => ({
+                ...evt,
+                start: new Date(evt.start),
+                end: new Date(evt.end),
+                title: evt.title || evt.type
+            }));
+
+            setEvents(processedEvents);
+            calculateDailyStats(attendanceLogs);
+
+            // Calculate Monthly Summary (Payroll Period)
+            const { start: payrollStart, end: payrollEnd } = getPayrollPeriod(currentDate);
+            calculateMonthlySummary(attendanceLogs, calEvents, payrollStart, payrollEnd, summaryData);
+
+        } catch (error) {
+            console.error('Error fetching calendar data:', error);
+            console.log('DEBUG: Error details:', error.response || error.message);
         } finally {
             setLoading(false);
         }
