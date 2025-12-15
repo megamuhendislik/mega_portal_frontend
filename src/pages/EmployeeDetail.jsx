@@ -17,6 +17,7 @@ const EmployeeDetail = () => {
     const [loading, setLoading] = useState(true);
     const [assignManagerModal, setAssignManagerModal] = useState(false);
     const [selectedManager, setSelectedManager] = useState('');
+    const [customScheduleMode, setCustomScheduleMode] = useState(false);
 
     const [workSchedules, setWorkSchedules] = useState([]);
 
@@ -35,6 +36,7 @@ const EmployeeDetail = () => {
             ]);
 
             setEmployee(empRes.data);
+            setCustomScheduleMode(!empRes.data.work_schedule && !!empRes.data.shift_start);
             setManagers(managersRes.data);
             setTeam(teamRes.data);
             setAllEmployees(allEmpRes.data.results || allEmpRes.data);
@@ -282,17 +284,27 @@ const EmployeeDetail = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
                                         <select
-                                            value={employee.work_schedule?.id || (employee.shift_start && employee.shift_end ? 'custom' : '')}
+                                            value={employee.work_schedule?.id || (customScheduleMode ? 'custom' : '')}
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 if (val === 'custom') {
+                                                    setCustomScheduleMode(true);
                                                     setEmployee({
                                                         ...employee,
                                                         work_schedule: null,
                                                         shift_start: employee.shift_start || '09:00',
                                                         shift_end: employee.shift_end || '18:00'
                                                     });
+                                                } else if (val === '') {
+                                                    setCustomScheduleMode(false);
+                                                    setEmployee({
+                                                        ...employee,
+                                                        work_schedule: null,
+                                                        shift_start: null,
+                                                        shift_end: null
+                                                    });
                                                 } else {
+                                                    setCustomScheduleMode(false);
                                                     const selectedId = val ? parseInt(val) : null;
                                                     const selectedSchedule = workSchedules.find(ws => ws.id === selectedId);
                                                     setEmployee({
@@ -316,13 +328,13 @@ const EmployeeDetail = () => {
                                         </p>
 
                                         {/* Custom Time Inputs */}
-                                        {!employee.work_schedule && employee.shift_start && (
+                                        {customScheduleMode && (
                                             <div className="mt-3 grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
                                                 <div>
                                                     <label className="text-xs font-medium text-slate-500">Başlangıç</label>
                                                     <input
                                                         type="time"
-                                                        value={employee.shift_start}
+                                                        value={employee.shift_start || ''}
                                                         onChange={(e) => setEmployee({ ...employee, shift_start: e.target.value })}
                                                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
                                                     />
@@ -331,7 +343,7 @@ const EmployeeDetail = () => {
                                                     <label className="text-xs font-medium text-slate-500">Bitiş</label>
                                                     <input
                                                         type="time"
-                                                        value={employee.shift_end}
+                                                        value={employee.shift_end || ''}
                                                         onChange={(e) => setEmployee({ ...employee, shift_end: e.target.value })}
                                                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
                                                     />

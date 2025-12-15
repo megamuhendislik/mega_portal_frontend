@@ -31,6 +31,8 @@ const Employees = () => {
         remote_work_days: [],
         is_exempt_from_attendance: false,
         attendance_tolerance_minutes: 15,
+        shift_start: '',
+        shift_end: '',
         lunch_start: '12:30',
         lunch_end: '13:30',
         daily_break_allowance: 30,
@@ -157,6 +159,8 @@ const Employees = () => {
                 remote_work_days: [],
                 is_exempt_from_attendance: false,
                 attendance_tolerance_minutes: 15,
+                shift_start: '',
+                shift_end: '',
                 lunch_start: '12:30',
                 lunch_end: '13:30',
                 daily_break_allowance: 30,
@@ -335,6 +339,34 @@ const Employees = () => {
                                     placeholder="Örn: 15"
                                 />
                                 <p className="text-xs text-slate-500 mt-1">Giriş/çıkış saatlerindeki kabul edilebilir sapma süresi.</p>
+                            </div>
+                        </div>
+
+                        {/* Custom Shift Times */}
+                        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                            <h4 className="text-sm font-bold text-blue-800 mb-3">Özel Çalışma Saatleri (Opsiyonel)</h4>
+                            <p className="text-xs text-blue-600 mb-4">Eğer bir çalışma takvimi seçmezseniz, hafta içi günleri için bu saatler geçerli olacaktır.</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Mesai Başlangıç</label>
+                                    <input
+                                        type="time"
+                                        name="shift_start"
+                                        value={formData.shift_start || ''}
+                                        onChange={handleInputChange}
+                                        className="input-field"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Mesai Bitiş</label>
+                                    <input
+                                        type="time"
+                                        name="shift_end"
+                                        value={formData.shift_end || ''}
+                                        onChange={handleInputChange}
+                                        className="input-field"
+                                    />
+                                </div>
                             </div>
                         </div>
 

@@ -7,6 +7,24 @@ const AttendanceTracking = () => {
     const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
     const [matrixData, setMatrixData] = useState(null);
 
+    // Missing State
+    const [year, setYear] = useState(moment().year());
+    const [month, setMonth] = useState(moment().month() + 1);
+    const [selectedDept, setSelectedDept] = useState('');
+    const [stats, setStats] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [departments, setDepartments] = useState([]);
+
+    // Summary State
+    const [totalWorked, setTotalWorked] = useState(0);
+    const [totalOvertime, setTotalOvertime] = useState(0);
+    const [totalMissing, setTotalMissing] = useState(0);
+    const [netBalance, setNetBalance] = useState(0);
+
+    useEffect(() => {
+        fetchDepartments();
+    }, []);
+
     useEffect(() => {
         if (viewMode === 'GRID') {
             fetchTeamMatrix();
@@ -14,6 +32,50 @@ const AttendanceTracking = () => {
             fetchStats();
         }
     }, [viewMode, year, month, selectedDept]);
+
+    const fetchDepartments = async () => {
+        try {
+            const res = await api.get('/departments/');
+            setDepartments(res.data);
+        } catch (error) {
+            console.error('Error fetching departments:', error);
+        }
+    };
+
+    const fetchStats = async () => {
+        setLoading(true);
+        try {
+            const params = { year, month };
+            if (selectedDept) params.department_id = selectedDept;
+
+            const res = await api.get('/stats/summary/', { params });
+            const data = res.data;
+            setStats(data);
+
+            // Calculate Totals
+            const worked = data.reduce((acc, curr) => acc + (curr.total_minutes || 0), 0);
+            const overtime = data.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
+            const missing = data.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
+            const balance = data.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
+
+            setTotalWorked(worked);
+            setTotalOvertime(overtime);
+            setTotalMissing(missing);
+            setNetBalance(balance);
+
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatMinutes = (minutes) => {
+        if (!minutes) return '0s 0dk';
+        const hours = Math.floor(Math.abs(minutes) / 60);
+        const mins = Math.abs(minutes) % 60;
+        return `${hours}s ${mins}dk`;
+    };
 
     const fetchTeamMatrix = async () => {
         setLoading(true);
