@@ -58,24 +58,33 @@ const CalendarPage = () => {
             console.log('DEBUG: API Responses received');
             console.log('DEBUG: Summary Response:', summaryRes.data);
 
-            const calEvents = calendarRes.data;
-            const attendanceLogs = attendanceRes.data;
+            let calEvents = calendarRes.data;
+            if (calEvents.results) calEvents = calEvents.results;
+
+            let attendanceLogs = attendanceRes.data;
+            if (attendanceLogs.results) attendanceLogs = attendanceLogs.results;
+
             const summaryData = summaryRes.data;
 
             // Process events
-            const processedEvents = calEvents.map(evt => ({
+            const processedEvents = Array.isArray(calEvents) ? calEvents.map(evt => ({
                 ...evt,
                 start: new Date(evt.start),
                 end: new Date(evt.end),
                 title: evt.title || evt.type
-            }));
+            })) : [];
 
             setEvents(processedEvents);
-            calculateDailyStats(attendanceLogs);
 
-            // Calculate Monthly Summary (Payroll Period)
-            const { start: payrollStart, end: payrollEnd } = getPayrollPeriod(currentDate);
-            calculateMonthlySummary(attendanceLogs, calEvents, payrollStart, payrollEnd, summaryData);
+            if (Array.isArray(attendanceLogs)) {
+                calculateDailyStats(attendanceLogs);
+
+                // Calculate Monthly Summary (Payroll Period)
+                const { start: payrollStart, end: payrollEnd } = getPayrollPeriod(currentDate);
+                calculateMonthlySummary(attendanceLogs, processedEvents, payrollStart, payrollEnd, summaryData);
+            } else {
+                console.error('DEBUG: attendanceLogs is not an array', attendanceLogs);
+            }
 
         } catch (error) {
             console.error('Error fetching calendar data:', error);
