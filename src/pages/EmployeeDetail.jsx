@@ -14,6 +14,7 @@ const EmployeeDetail = () => {
     const [team, setTeam] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
     const [allPermissions, setAllPermissions] = useState([]);
+    const [allRoles, setAllRoles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [assignManagerModal, setAssignManagerModal] = useState(false);
     const [selectedManager, setSelectedManager] = useState('');
@@ -42,9 +43,11 @@ const EmployeeDetail = () => {
             setAllEmployees(allEmpRes.data.results || allEmpRes.data);
             setWorkSchedules(schedulesRes.data.results || schedulesRes.data);
 
-            // Fetch all permissions
+            // Fetch all permissions and roles
             const permsRes = await api.get('/permissions/');
+            const rolesRes = await api.get('/roles/');
             setAllPermissions(permsRes.data.results || permsRes.data);
+            setAllRoles(rolesRes.data.results || rolesRes.data);
         } catch (error) {
             console.error('Error fetching employee details:', error);
         } finally {
@@ -81,14 +84,31 @@ const EmployeeDetail = () => {
         setEmployee({ ...employee, direct_permissions: updatedPermsList });
     };
 
+    const handleRoleToggle = (roleId) => {
+        const currentRoles = employee.roles.map(r => r.id);
+        let newRoles;
+        if (currentRoles.includes(roleId)) {
+            newRoles = currentRoles.filter(id => id !== roleId);
+        } else {
+            newRoles = [...currentRoles, roleId];
+        }
+
+        // Optimistic update
+        const updatedRolesList = allRoles.filter(r => newRoles.includes(r.id));
+        setEmployee({ ...employee, roles: updatedRolesList });
+    };
+
     const handleSaveRoles = async () => {
         try {
-            // Only save direct permissions
+            // Only save direct permissions and roles
             const permIds = employee.direct_permissions.map(p => p.id);
+            const roleIds = employee.roles.map(r => r.id);
 
             const payload = {
+                roles: roleIds,
                 direct_permissions: permIds,
                 work_schedule: employee.work_schedule?.id || null,
+                card_uid: employee.card_uid,
                 shift_start: employee.shift_start || null,
                 shift_end: employee.shift_end || null,
                 attendance_tolerance_minutes: employee.attendance_tolerance_minutes,
@@ -327,6 +347,17 @@ const EmployeeDetail = () => {
                                             Kullanıcının haftalık çalışma saatlerini belirler.
                                         </p>
 
+                                        <div className="mt-4">
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
+                                            <input
+                                                type="text"
+                                                value={employee.card_uid || ''}
+                                                onChange={(e) => setEmployee({ ...employee, card_uid: e.target.value })}
+                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                placeholder="Kart okutunuz veya giriniz"
+                                            />
+                                        </div>
+
                                         {/* Custom Time Inputs */}
                                         {customScheduleMode && (
                                             <div className="mt-3 grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
@@ -393,6 +424,32 @@ const EmployeeDetail = () => {
                                             className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                         />
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Roles Section */}
+                            <div className="mb-8">
+                                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                    <Shield size={18} className="text-blue-500" /> Roller
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {allRoles.map(role => {
+                                        const isAssigned = employee.roles.some(r => r.id === role.id);
+                                        return (
+                                            <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isAssigned ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isAssigned}
+                                                    onChange={() => handleRoleToggle(role.id)}
+                                                    className="mt-1 rounded text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <div>
+                                                    <div className="font-medium text-sm text-slate-800">{role.name}</div>
+                                                    <div className="text-xs text-slate-500">{role.description}</div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

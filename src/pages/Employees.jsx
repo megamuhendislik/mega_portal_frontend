@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Search, Filter, MoreVertical, Mail, Phone, MapPin, User, Settings, Trash2, Power, ShieldAlert, CheckCircle, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Mail, Phone, MapPin, User, Settings, Trash2, Power, ShieldAlert, CheckCircle, X, Clock, Key, Users } from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,24 +10,42 @@ const Employees = () => {
     const [departments, setDepartments] = useState([]);
     const [jobPositions, setJobPositions] = useState([]);
     const [roles, setRoles] = useState([]);
+    const [permissions, setPermissions] = useState([]);
+    const [workSchedules, setWorkSchedules] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDept, setSelectedDept] = useState('');
-    const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, PASSIVE
+    const [filterStatus, setFilterStatus] = useState('ALL');
 
-    // Missing state restored
     const [showModal, setShowModal] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [openMenuId, setOpenMenuId] = useState(null);
+
+    // Form Data State
     const [formData, setFormData] = useState({
+        // Identity
         first_name: '', last_name: '', email: '', phone: '',
-        department: '', job_position: '', role: '',
+        tc_no: '', birth_date: '',
+
+        // Corporate
+        department: '', job_position: '',
         hired_date: '', employee_code: '',
-        tc_no: '', birth_date: '', address: '',
-        emergency_contact_name: '', emergency_contact_phone: ''
+        primary_manager_ids: [], cross_manager_ids: [],
+
+        // Work Schedule
+        work_schedule: '', card_uid: '',
+        attendance_tolerance_minutes: 0, daily_break_allowance: 0,
+        shift_start: '', shift_end: '',
+
+        // Permissions
+        roles: [], direct_permissions: [],
+
+        // Other
+        address: '', emergency_contact_name: '', emergency_contact_phone: ''
     });
 
-    const totalSteps = 4;
+    const totalSteps = 5;
 
     useEffect(() => {
         fetchInitialData();
@@ -36,16 +54,20 @@ const Employees = () => {
     const fetchInitialData = async () => {
         try {
             setLoading(true);
-            const [empRes, deptRes, posRes, rolesRes] = await Promise.all([
+            const [empRes, deptRes, posRes, rolesRes, permsRes, schedRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
-                api.get('/roles/')
+                api.get('/roles/'),
+                api.get('/permissions/'),
+                api.get('/work-schedules/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
             setJobPositions(posRes.data.results || posRes.data);
             setRoles(rolesRes.data.results || rolesRes.data);
+            setPermissions(permsRes.data.results || permsRes.data);
+            setWorkSchedules(schedRes.data.results || schedRes.data);
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -75,12 +97,12 @@ const Employees = () => {
     };
 
     const getJobPositionName = (id) => {
-        const pos = jobPositions.find(p => p.id === id);
+        const pos = jobPositions.find(p => p.id === parseInt(id));
         return pos ? pos.name : '-';
     };
 
     const getDepartmentName = (id) => {
-        const dept = departments.find(d => d.id === id);
+        const dept = departments.find(d => d.id === parseInt(id));
         return dept ? dept.name : '-';
     };
 
@@ -98,6 +120,37 @@ const Employees = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Auto-fill roles when Job Position changes
+        if (name === 'job_position') {
+            const selectedPos = jobPositions.find(p => p.id === parseInt(value));
+            if (selectedPos && selectedPos.default_roles) {
+                const defaultRoleIds = selectedPos.default_roles.map(r => r.id);
+                setFormData(prev => ({ ...prev, [name]: value, roles: defaultRoleIds }));
+            }
+        }
+    };
+
+    const handleMultiSelectChange = (e, field) => {
+        const options = e.target.options;
+        const values = [];
+        for (let i = 0, l = options.length; i < l; i++) {
+            if (options[i].selected) {
+                values.push(parseInt(options[i].value));
+            }
+        }
+        setFormData(prev => ({ ...prev, [field]: values }));
+    };
+
+    const toggleArrayItem = (field, id) => {
+        setFormData(prev => {
+            const current = prev[field] || [];
+            if (current.includes(id)) {
+                return { ...prev, [field]: current.filter(item => item !== id) };
+            } else {
+                return { ...prev, [field]: [...current, id] };
+            }
+        });
     };
 
     const nextStep = () => {
@@ -116,8 +169,13 @@ const Employees = () => {
             setShowModal(false);
             setFormData({
                 first_name: '', last_name: '', email: '', phone: '',
-                department: '', job_position: '', role: '',
+                department: '', job_position: '',
                 hired_date: '', employee_code: '',
+                primary_manager_ids: [], cross_manager_ids: [],
+                work_schedule: '', card_uid: '',
+                attendance_tolerance_minutes: 0, daily_break_allowance: 0,
+                shift_start: '', shift_end: '',
+                roles: [], direct_permissions: [],
                 tc_no: '', birth_date: '', address: '',
                 emergency_contact_name: '', emergency_contact_phone: ''
             });
@@ -132,7 +190,7 @@ const Employees = () => {
     const renderStepIndicator = () => (
         <div className="flex items-center justify-between mb-8 relative">
             <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-slate-100 -z-10"></div>
-            {[1, 2, 3, 4].map(step => (
+            {[1, 2, 3, 4, 5].map(step => (
                 <div key={step} className={`flex flex-col items-center gap-2 bg-white px-2`}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${step === currentStep ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' :
                             step < currentStep ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
@@ -140,7 +198,7 @@ const Employees = () => {
                         {step < currentStep ? '✓' : step}
                     </div>
                     <span className={`text-xs font-medium ${step === currentStep ? 'text-blue-600' : 'text-slate-400'}`}>
-                        {step === 1 ? 'Kimlik' : step === 2 ? 'Kurumsal' : step === 3 ? 'Diğer' : 'Özet'}
+                        {step === 1 ? 'Kimlik' : step === 2 ? 'Kurumsal' : step === 3 ? 'Mesai' : step === 4 ? 'Yetki' : 'Özet'}
                     </span>
                 </div>
             ))}
@@ -149,7 +207,7 @@ const Employees = () => {
 
     const renderStepContent = () => {
         switch (currentStep) {
-            case 1:
+            case 1: // Identity
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
                         <div>
@@ -176,9 +234,21 @@ const Employees = () => {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
                             <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
+                            <textarea name="address" rows="2" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Kişisi</label>
+                            <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Telefonu</label>
+                            <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
                     </div>
                 );
-            case 2:
+            case 2: // Corporate
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
                         <div>
@@ -203,40 +273,153 @@ const Employees = () => {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Sicil No</label>
                             <input type="text" name="employee_code" value={formData.employee_code} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
+
+                        {/* Managers */}
+                        <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                <Users size={18} className="text-blue-500" /> Yönetici Atamaları
+                            </h4>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Primary)</label>
+                            <div className="h-32 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                                {employees.map(emp => (
+                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.primary_manager_ids.includes(emp.id)}
+                                            onChange={() => toggleArrayItem('primary_manager_ids', emp.id)}
+                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
+                            <div className="h-32 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                                {employees.map(emp => (
+                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.cross_manager_ids.includes(emp.id)}
+                                            onChange={() => toggleArrayItem('cross_manager_ids', emp.id)}
+                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
+                        </div>
                     </div>
                 );
-            case 3:
+            case 3: // Work Schedule
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
-                            <textarea name="address" rows="3" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                <Clock size={18} className="text-blue-500" /> Çalışma Takvimi & Mesai
+                            </h4>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Kişisi</label>
-                            <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Çalışma Takvimi</label>
+                            <select name="work_schedule" value={formData.work_schedule} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="">Varsayılan</option>
+                                {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                            </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Telefonu</label>
-                            <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
+                            <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Kart okutunuz veya giriniz" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Geç Kalma Toleransı (Dk)</label>
+                            <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Günlük Mola Hakkı (Dk)</label>
+                            <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Başlangıç (Opsiyonel)</label>
+                            <input type="time" name="shift_start" value={formData.shift_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Bitiş (Opsiyonel)</label>
+                            <input type="time" name="shift_end" value={formData.shift_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                     </div>
                 );
-            case 4:
+            case 4: // Permissions
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                        <div>
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                <Key size={18} className="text-blue-500" /> Roller
+                            </h4>
+                            <p className="text-sm text-slate-500 mb-2">Pozisyona göre otomatik seçilir, manuel değiştirebilirsiniz.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {roles.map(role => (
+                                    <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.roles.includes(role.id)}
+                                            onChange={() => toggleArrayItem('roles', role.id)}
+                                            className="mt-1 rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <div>
+                                            <div className="font-medium text-sm text-slate-800">{role.name}</div>
+                                            <div className="text-xs text-slate-500">{role.description}</div>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-6">
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                <ShieldAlert size={18} className="text-orange-500" /> Ekstra Yetkiler (Direct Permissions)
+                            </h4>
+                            <p className="text-sm text-slate-500 mb-2">Role bakılmaksızın verilecek özel yetkiler.</p>
+                            <div className="h-48 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {permissions.map(perm => (
+                                    <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.direct_permissions.includes(perm.id)}
+                                            onChange={() => toggleArrayItem('direct_permissions', perm.id)}
+                                            className="rounded text-orange-600 focus:ring-orange-500"
+                                        />
+                                        <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 5: // Summary
                 return (
                     <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <h4 className="font-bold text-slate-800 mb-2">Özet Bilgiler</h4>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div><span className="text-slate-500">Ad Soyad:</span> {formData.first_name} {formData.last_name}</div>
-                                <div><span className="text-slate-500">E-posta:</span> {formData.email}</div>
-                                <div><span className="text-slate-500">Departman:</span> {getDepartmentName(parseInt(formData.department))}</div>
-                                <div><span className="text-slate-500">Pozisyon:</span> {getJobPositionName(parseInt(formData.job_position))}</div>
+                            <h4 className="font-bold text-slate-800 mb-4 border-b pb-2">Özet Bilgiler</h4>
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+                                <div><span className="text-slate-500 block">Ad Soyad:</span> {formData.first_name} {formData.last_name}</div>
+                                <div><span className="text-slate-500 block">E-posta:</span> {formData.email}</div>
+                                <div><span className="text-slate-500 block">Departman:</span> {getDepartmentName(formData.department)}</div>
+                                <div><span className="text-slate-500 block">Pozisyon:</span> {getJobPositionName(formData.job_position)}</div>
+                                <div><span className="text-slate-500 block">Ana Yöneticiler:</span> {formData.primary_manager_ids.length} Kişi</div>
+                                <div><span className="text-slate-500 block">Çapraz Yöneticiler:</span> {formData.cross_manager_ids.length} Kişi</div>
+                                <div><span className="text-slate-500 block">Çalışma Takvimi:</span> {workSchedules.find(w => w.id === parseInt(formData.work_schedule))?.name || 'Varsayılan'}</div>
+                                <div><span className="text-slate-500 block">Roller:</span> {formData.roles.length} Adet Seçili</div>
                             </div>
                         </div>
-                        <p className="text-sm text-slate-500 text-center">
-                            Bilgilerin doğruluğunu kontrol ettikten sonra "Kaydı Tamamla" butonuna tıklayınız.
-                        </p>
+                        <div className="flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-lg">
+                            <CheckCircle size={20} />
+                            <span className="font-medium">Tüm bilgiler hazır. Kaydı tamamlayabilirsiniz.</span>
+                        </div>
                     </div>
                 );
             default:
