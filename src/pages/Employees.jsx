@@ -24,11 +24,10 @@ const Employees = () => {
         department: '', job_position: '', role: '',
         hired_date: '', employee_code: '',
         tc_no: '', birth_date: '', address: '',
-        salary: '', iban: '',
         emergency_contact_name: '', emergency_contact_phone: ''
     });
 
-    const totalSteps = 5;
+    const totalSteps = 4;
 
     useEffect(() => {
         fetchInitialData();
@@ -120,7 +119,6 @@ const Employees = () => {
                 department: '', job_position: '', role: '',
                 hired_date: '', employee_code: '',
                 tc_no: '', birth_date: '', address: '',
-                salary: '', iban: '',
                 emergency_contact_name: '', emergency_contact_phone: ''
             });
             setCurrentStep(1);
@@ -134,7 +132,7 @@ const Employees = () => {
     const renderStepIndicator = () => (
         <div className="flex items-center justify-between mb-8 relative">
             <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-slate-100 -z-10"></div>
-            {[1, 2, 3, 4, 5].map(step => (
+            {[1, 2, 3, 4].map(step => (
                 <div key={step} className={`flex flex-col items-center gap-2 bg-white px-2`}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${step === currentStep ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' :
                             step < currentStep ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
@@ -142,7 +140,7 @@ const Employees = () => {
                         {step < currentStep ? '✓' : step}
                     </div>
                     <span className={`text-xs font-medium ${step === currentStep ? 'text-blue-600' : 'text-slate-400'}`}>
-                        {step === 1 ? 'Kimlik' : step === 2 ? 'Kurumsal' : step === 3 ? 'Finansal' : step === 4 ? 'Diğer' : 'Özet'}
+                        {step === 1 ? 'Kimlik' : step === 2 ? 'Kurumsal' : step === 3 ? 'Diğer' : 'Özet'}
                     </span>
                 </div>
             ))}
@@ -210,19 +208,6 @@ const Employees = () => {
             case 3:
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Maaş</label>
-                            <input type="number" name="salary" value={formData.salary} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">IBAN</label>
-                            <input type="text" name="iban" value={formData.iban} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                    </div>
-                );
-            case 4:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
                             <textarea name="address" rows="3" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
@@ -237,7 +222,7 @@ const Employees = () => {
                         </div>
                     </div>
                 );
-            case 5:
+            case 4:
                 return (
                     <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
