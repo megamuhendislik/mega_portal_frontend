@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft } from 'lucide-react';
+import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft, Briefcase } from 'lucide-react';
 import api from '../services/api';
 
 const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
@@ -28,6 +28,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
 
     const [mealForm, setMealForm] = useState({
         description: ''
+    });
+
+    const [externalDutyForm, setExternalDutyForm] = useState({
+        date: new Date().toISOString().split('T')[0],
+        start_time: '',
+        end_time: '',
+        reason: '',
+        destination: ''
     });
 
     useEffect(() => {
@@ -59,6 +67,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                 await api.post('/overtime-requests/', overtimeForm);
             } else if (selectedType === 'MEAL') {
                 await api.post('/meal-requests/', mealForm);
+            } else if (selectedType === 'EXTERNAL_DUTY') {
+                // Find the request type ID for External Duty
+                const typeObj = requestTypes.find(t => t.category === 'EXTERNAL_DUTY');
+                if (!typeObj) throw new Error('Dış Görev talep türü bulunamadı.');
+
+                // Format description to include time details
+                const timeDescription = `Saat: ${externalDutyForm.start_time} - ${externalDutyForm.end_time}`;
+                const fullReason = `${externalDutyForm.reason}\n\n(${timeDescription})`;
+
+                await api.post('/leave/requests/', {
+                    request_type: typeObj.id,
+                    start_date: externalDutyForm.date,
+                    end_date: externalDutyForm.date, // Single day assumption for now
+                    reason: fullReason,
+                    destination: externalDutyForm.destination
+                });
             }
 
             onSuccess();
@@ -101,6 +125,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                     <p className="text-sm text-slate-500">Planlanan veya gerçekleşen fazla mesai.</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <ChevronRight size={18} />
+                </div>
+            </button>
+
+            <button
+                onClick={() => handleTypeSelect('EXTERNAL_DUTY')}
+                className="group relative p-5 bg-white border border-slate-200 rounded-2xl hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/10 transition-all text-left flex items-center gap-5"
+            >
+                <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform shrink-0">
+                    <Briefcase size={28} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-0.5">Şirket Dışı Görev</h3>
+                    <p className="text-sm text-slate-500">Müşteri ziyareti, eğitim veya dış görevlendirme.</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
                     <ChevronRight size={18} />
                 </div>
             </button>
@@ -259,12 +299,68 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Yemek Tercihi / Açıklama <span className="text-red-500">*</span></label>
                 <textarea
                     required
-                    rows="3"
-                    value={mealForm.description}
-                    onChange={e => setMealForm({ ...mealForm, description: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none font-medium text-slate-700"
-                    placeholder="Örn: Standart menü, Vejetaryen, İçecek..."
                 ></textarea>
+            </div>
+        </div>
+    );
+
+    const renderExternalDutyForm = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
+                <input
+                    required
+                    type="date"
+                    value={externalDutyForm.date}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, date: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
+                    <input
+                        required
+                        type="time"
+                        value={externalDutyForm.start_time}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, start_time: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
+                    <input
+                        required
+                        type="time"
+                        value={externalDutyForm.end_time}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, end_time: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
+                <textarea
+                    required
+                    rows="3"
+                    value={externalDutyForm.reason}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, reason: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    placeholder="Şirket dışı görevin gerekçesini belirtiniz..."
+                ></textarea>
+            </div>
+
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer <span className="text-red-500">*</span></label>
+                <input
+                    required
+                    value={externalDutyForm.destination}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, destination: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    placeholder="Örn: Müşteri ziyareti, Eğitim..."
+                />
             </div>
         </div>
     );
@@ -287,7 +383,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                             <h2 className="text-xl font-bold text-slate-800">
                                 {step === 1 ? 'Yeni Talep Oluştur' :
                                     selectedType === 'LEAVE' ? 'İzin Talebi' :
-                                        selectedType === 'OVERTIME' ? 'Fazla Mesai Talebi' : 'Yemek Talebi'}
+                                        selectedType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
+                                            selectedType === 'MEAL' ? 'Yemek Talebi' : 'Şirket Dışı Görev'}
                             </h2>
                             <p className="text-slate-500 text-xs mt-0.5 font-medium">
                                 {step === 1 ? 'Talep türünü seçiniz' : 'Bilgileri doldurunuz'}
@@ -318,6 +415,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                             {selectedType === 'LEAVE' && renderLeaveForm()}
                             {selectedType === 'OVERTIME' && renderOvertimeForm()}
                             {selectedType === 'MEAL' && renderMealForm()}
+                            {selectedType === 'EXTERNAL_DUTY' && renderExternalDutyForm()}
                         </form>
                     )}
                 </div>
@@ -339,7 +437,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-amber-500 hover:bg-amber-600' :
-                                        'bg-emerald-600 hover:bg-emerald-700'}
+                                        selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
+                                            'bg-emerald-600 hover:bg-emerald-700'}
                                 ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
                             `}
                         >
