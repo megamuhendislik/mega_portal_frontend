@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Plus, Search, Filter, MoreVertical, Mail, Phone, MapPin, User, Settings, Trash2, Power, ShieldAlert, CheckCircle, X, Clock, Key, Users } from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 
 const Employees = () => {
     const navigate = useNavigate();
@@ -37,6 +38,7 @@ const Employees = () => {
         work_schedule: '', card_uid: '',
         attendance_tolerance_minutes: 0, daily_break_allowance: 0,
         shift_start: '', shift_end: '',
+        weekly_schedule: {}, is_custom_schedule: false,
 
         // Permissions
         roles: [], direct_permissions: [],
@@ -193,7 +195,7 @@ const Employees = () => {
             {[1, 2, 3, 4, 5].map(step => (
                 <div key={step} className={`flex flex-col items-center gap-2 bg-white px-2`}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${step === currentStep ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' :
-                            step < currentStep ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
+                        step < currentStep ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
                         }`}>
                         {step < currentStep ? '✓' : step}
                     </div>
@@ -324,13 +326,38 @@ const Employees = () => {
                                 <Clock size={18} className="text-blue-500" /> Çalışma Takvimi & Mesai
                             </h4>
                         </div>
-                        <div>
+                        <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Çalışma Takvimi</label>
-                            <select name="work_schedule" value={formData.work_schedule} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            <select
+                                name="work_schedule"
+                                value={formData.work_schedule || (formData.is_custom_schedule ? 'custom' : '')}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'custom') {
+                                        setFormData(prev => ({ ...prev, work_schedule: '', is_custom_schedule: true }));
+                                    } else {
+                                        setFormData(prev => ({ ...prev, work_schedule: val, is_custom_schedule: false }));
+                                    }
+                                }}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
                                 <option value="">Varsayılan</option>
+                                <option value="custom">Özel Takvim Oluştur (Custom)</option>
                                 {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
                             </select>
                         </div>
+
+                        {/* Custom Weekly Schedule Editor */}
+                        {formData.is_custom_schedule && (
+                            <div className="md:col-span-2 animate-in fade-in slide-in-from-top-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Haftalık Çalışma Planı</label>
+                                <WeeklyScheduleEditor
+                                    value={formData.weekly_schedule}
+                                    onChange={(newSchedule) => setFormData(prev => ({ ...prev, weekly_schedule: newSchedule }))}
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
                             <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Kart okutunuz veya giriniz" />
@@ -342,14 +369,6 @@ const Employees = () => {
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Günlük Mola Hakkı (Dk)</label>
                             <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Başlangıç (Opsiyonel)</label>
-                            <input type="time" name="shift_start" value={formData.shift_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Bitiş (Opsiyonel)</label>
-                            <input type="time" name="shift_end" value={formData.shift_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                     </div>
                 );

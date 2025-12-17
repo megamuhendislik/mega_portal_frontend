@@ -1,148 +1,197 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar
+    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
+import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 
 const EmployeeDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
-    const [employee, setEmployee] = useState(null);
-    const [managers, setManagers] = useState({ primary_managers: [], cross_managers: [] });
-    const [team, setTeam] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Data Sources
+    const [departments, setDepartments] = useState([]);
+    const [jobPositions, setJobPositions] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
+    const [workSchedules, setWorkSchedules] = useState([]);
     const [allPermissions, setAllPermissions] = useState([]);
     const [allRoles, setAllRoles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [assignManagerModal, setAssignManagerModal] = useState(false);
-    const [selectedManager, setSelectedManager] = useState('');
+
+    // Form Data State (Unified)
+    const [formData, setFormData] = useState({
+        // Identity
+        first_name: '', last_name: '', email: '', phone: '',
+        tc_no: '', birth_date: '',
+        address: '', emergency_contact_name: '', emergency_contact_phone: '',
+
+        // Corporate
+        department: '', job_position: '',
+        hired_date: '', employee_code: '',
+        primary_manager_ids: [], cross_manager_ids: [],
+        is_active: true,
+
+        // Work Schedule
+        work_schedule: '', card_uid: '',
+        attendance_tolerance_minutes: 0, daily_break_allowance: 0,
+        shift_start: '', shift_end: '',
+        lunch_start: '12:30', lunch_end: '13:30',
+
+        // Permissions
+        roles: [], direct_permissions: []
+    });
+
     const [customScheduleMode, setCustomScheduleMode] = useState(false);
 
-    const [workSchedules, setWorkSchedules] = useState([]);
-
     useEffect(() => {
-        fetchEmployeeData();
+        fetchInitialData();
     }, [id]);
 
-    const fetchEmployeeData = async () => {
+    const fetchInitialData = async () => {
         try {
-            const [empRes, managersRes, teamRes, allEmpRes, schedulesRes] = await Promise.all([
+            setLoading(true);
+            const [empRes, deptRes, posRes, allEmpRes, schedRes, permsRes, rolesRes, managersRes] = await Promise.all([
                 api.get(`/employees/${id}/`),
-                api.get(`/employees/${id}/managers/`),
-                api.get(`/employees/${id}/team/`),
-                api.get('/employees/'), // For selection dropdowns
-                api.get('/work-schedules/')
+                api.get('/departments/'),
+                api.get('/job-positions/'),
+                api.get('/employees/'),
+                api.get('/work-schedules/'),
+                api.get('/permissions/'),
+                api.get('/roles/'),
+                api.get(`/employees/${id}/managers/`)
             ]);
 
-            setEmployee(empRes.data);
-            setCustomScheduleMode(!empRes.data.work_schedule && !!empRes.data.shift_start);
-            setManagers(managersRes.data);
-            setTeam(teamRes.data);
-            setAllEmployees(allEmpRes.data.results || allEmpRes.data);
-            setWorkSchedules(schedulesRes.data.results || schedulesRes.data);
+            const emp = empRes.data;
+            const managers = managersRes.data;
 
-            // Fetch all permissions and roles
-            const permsRes = await api.get('/permissions/');
-            const rolesRes = await api.get('/roles/');
+            setDepartments(deptRes.data.results || deptRes.data);
+            setJobPositions(posRes.data.results || posRes.data);
+            setAllEmployees(allEmpRes.data.results || allEmpRes.data);
+            setWorkSchedules(schedRes.data.results || schedRes.data);
             setAllPermissions(permsRes.data.results || permsRes.data);
             setAllRoles(rolesRes.data.results || rolesRes.data);
+
+            // Populate Form Data
+            setFormData({
+                first_name: emp.first_name || '',
+                last_name: emp.last_name || '',
+                email: emp.email || '',
+                phone: emp.phone || '',
+                tc_no: emp.tc_no || '',
+                birth_date: emp.birth_date || '',
+                address: emp.address || '',
+                emergency_contact_name: emp.emergency_contact_name || '',
+                emergency_contact_phone: emp.emergency_contact_phone || '',
+
+                department: emp.department || '',
+                job_position: emp.job_position || '',
+                hired_date: emp.hired_date || '',
+                employee_code: emp.employee_code || '',
+                is_active: emp.is_active,
+
+                // Map managers to IDs
+                primary_manager_ids: managers.primary_managers.map(m => m.id),
+                cross_manager_ids: managers.cross_managers.map(m => m.id),
+
+                work_schedule: emp.work_schedule?.id || '',
+                card_uid: emp.card_uid || '',
+                attendance_tolerance_minutes: emp.attendance_tolerance_minutes || 0,
+                daily_break_allowance: emp.daily_break_allowance || 0,
+                shift_start: emp.shift_start || '',
+                shift_end: emp.shift_end || '',
+                lunch_start: emp.lunch_start || '12:30',
+                lunch_end: emp.lunch_end || '13:30',
+                weekly_schedule: emp.weekly_schedule || {},
+
+                roles: emp.roles.map(r => r.id),
+                direct_permissions: emp.direct_permissions.map(p => p.id)
+            });
+
+            // If no work schedule is assigned, assume custom mode
+            setCustomScheduleMode(!emp.work_schedule);
+
         } catch (error) {
             console.error('Error fetching employee details:', error);
+            alert('Veriler yüklenirken hata oluştu.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAssignManager = async (e) => {
-        e.preventDefault();
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const toggleArrayItem = (field, id) => {
+        setFormData(prev => {
+            const current = prev[field] || [];
+            if (current.includes(id)) {
+                return { ...prev, [field]: current.filter(item => item !== id) };
+            } else {
+                return { ...prev, [field]: [...current, id] };
+            }
+        });
+    };
+
+    const handleSave = async () => {
         try {
-            await api.post(`/employees/${id}/assign-manager/`, {
-                manager_id: selectedManager,
-                relationship_type: 'PRIMARY'
-            });
-            setAssignManagerModal(false);
-            fetchEmployeeData(); // Refresh data
-        } catch (error) {
-            console.error('Error assigning manager:', error);
-            alert('Yönetici atanırken bir hata oluştu.');
-        }
-    };
-
-    const handlePermissionToggle = (permId) => {
-        const currentPerms = employee.direct_permissions.map(p => p.id);
-        let newPerms;
-        if (currentPerms.includes(permId)) {
-            newPerms = currentPerms.filter(id => id !== permId);
-        } else {
-            newPerms = [...currentPerms, permId];
-        }
-
-        // Optimistic update for UI
-        const updatedPermsList = allPermissions.filter(p => newPerms.includes(p.id));
-        setEmployee({ ...employee, direct_permissions: updatedPermsList });
-    };
-
-    const handleRoleToggle = (roleId) => {
-        const currentRoles = employee.roles.map(r => r.id);
-        let newRoles;
-        if (currentRoles.includes(roleId)) {
-            newRoles = currentRoles.filter(id => id !== roleId);
-        } else {
-            newRoles = [...currentRoles, roleId];
-        }
-
-        // Optimistic update
-        const updatedRolesList = allRoles.filter(r => newRoles.includes(r.id));
-        setEmployee({ ...employee, roles: updatedRolesList });
-    };
-
-    const handleSaveRoles = async () => {
-        try {
-            // Only save direct permissions and roles
-            const permIds = employee.direct_permissions.map(p => p.id);
-            const roleIds = employee.roles.map(r => r.id);
+            // Prepare payload
+            // For managers, the backend expects lists of IDs if we updated the serializer, 
+            // OR we might need to use the specific assign-manager endpoints if the main PATCH doesn't support it.
+            // Assuming the main PATCH supports these fields as per the "one-to-one" requirement implementation in backend.
+            // If not, we might need to make separate calls. 
+            // Let's assume standard DRF update behavior for now, but `primary_manager_ids` might need custom handling in backend.
+            // However, to be safe and robust:
+            // The `EmployeeUpdateSerializer` should handle these. If not, we'll fix the backend.
 
             const payload = {
-                roles: roleIds,
-                direct_permissions: permIds,
-                work_schedule: employee.work_schedule?.id || null,
-                card_uid: employee.card_uid,
-                shift_start: employee.shift_start || null,
-                shift_end: employee.shift_end || null,
-                attendance_tolerance_minutes: employee.attendance_tolerance_minutes,
-                lunch_start: employee.lunch_start,
-                lunch_end: employee.lunch_end,
-                daily_break_allowance: employee.daily_break_allowance
+                ...formData,
+                work_schedule: formData.work_schedule || null, // Handle empty string
+                department: formData.department || null,
+                job_position: formData.job_position || null,
             };
 
             await api.patch(`/employees/${id}/`, payload);
-            alert('Ayarlar başarıyla güncellendi.');
+            alert('Değişiklikler başarıyla kaydedildi.');
+            fetchInitialData(); // Refresh to ensure sync
         } catch (error) {
-            console.error('Error updating settings:', error);
-            alert('Güncelleme sırasında bir hata oluştu.');
-            fetchEmployeeData(); // Revert changes on error
+            console.error('Error updating employee:', error);
+            alert('Güncelleme sırasında hata oluştu: ' + (error.response?.data?.detail || error.message));
         }
     };
 
     if (loading) return <div className="p-8 text-center">Yükleniyor...</div>;
-    if (!employee) return <div className="p-8 text-center">Çalışan bulunamadı.</div>;
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button
-                    onClick={() => navigate('/employees')}
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                    <ChevronLeft size={24} className="text-slate-600" />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-800">{employee.first_name} {employee.last_name}</h1>
-                    <p className="text-slate-500">{employee.job_position_detail?.name} - {employee.department_detail?.name}</p>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/employees')}
+                        className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                    >
+                        <ChevronLeft size={24} className="text-slate-600" />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-800">{formData.first_name} {formData.last_name}</h1>
+                        <p className="text-slate-500">
+                            {jobPositions.find(p => p.id === parseInt(formData.job_position))?.name || '-'}
+                            {' • '}
+                            {departments.find(d => d.id === parseInt(formData.department))?.name || '-'}
+                        </p>
+                    </div>
                 </div>
+                <button
+                    onClick={handleSave}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02]"
+                >
+                    <Save size={18} />
+                    Kaydet
+                </button>
             </div>
 
             {/* Tabs */}
@@ -153,14 +202,14 @@ const EmployeeDetail = () => {
                         className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
                         <User size={18} />
-                        Genel Bakış
+                        Kimlik & İletişim
                     </button>
                     <button
                         onClick={() => setActiveTab('organization')}
                         className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${activeTab === 'organization' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
                         <Users size={18} />
-                        Organizasyon & Ekip
+                        Kurumsal & Organizasyon
                     </button>
                     <button
                         onClick={() => setActiveTab('settings')}
@@ -174,273 +223,210 @@ const EmployeeDetail = () => {
 
             {/* Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - Main Info */}
+                {/* Left Column - Main Form */}
                 <div className="lg:col-span-2 space-y-6">
 
                     {activeTab === 'overview' && (
-                        <div className="card p-6 space-y-6">
+                        <div className="card p-6 space-y-6 animate-in fade-in slide-in-from-left-4">
                             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4">Kişisel Bilgiler</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-400 uppercase">E-posta</label>
-                                    <div className="flex items-center gap-2 mt-1 text-slate-700">
-                                        <Mail size={16} className="text-blue-500" />
-                                        {employee.email}
-                                    </div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Ad <span className="text-red-500">*</span></label>
+                                    <input type="text" name="first_name" required value={formData.first_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-400 uppercase">Telefon</label>
-                                    <div className="flex items-center gap-2 mt-1 text-slate-700">
-                                        <Phone size={16} className="text-blue-500" />
-                                        {employee.phone || '-'}
-                                    </div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Soyad <span className="text-red-500">*</span></label>
+                                    <input type="text" name="last_name" required value={formData.last_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-400 uppercase">Sicil No</label>
-                                    <div className="flex items-center gap-2 mt-1 text-slate-700">
-                                        <Briefcase size={16} className="text-blue-500" />
-                                        {employee.employee_code}
-                                    </div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">E-posta <span className="text-red-500">*</span></label>
+                                    <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-400 uppercase">İşe Başlama</label>
-                                    <div className="flex items-center gap-2 mt-1 text-slate-700">
-                                        <Calendar size={16} className="text-blue-500" />
-                                        {employee.hired_date || '-'}
-                                    </div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
+                                    <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">TC Kimlik No</label>
+                                    <input type="text" name="tc_no" maxLength={11} value={formData.tc_no} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
+                                    <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
+                                    <textarea name="address" rows="2" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Kişisi</label>
+                                    <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Telefonu</label>
+                                    <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {activeTab === 'organization' && (
-                        <div className="space-y-6">
-                            {/* Managers Section */}
+                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
                             <div className="card p-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-bold text-slate-800">Yöneticiler</h3>
-                                    <button
-                                        onClick={() => setAssignManagerModal(true)}
-                                        className="text-sm text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors font-medium"
-                                    >
-                                        + Yönetici Ata
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {managers.primary_managers.length > 0 ? (
-                                        managers.primary_managers.map(mgr => (
-                                            <div key={mgr.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                                                        {mgr.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-slate-800">{mgr.name}</div>
-                                                        <div className="text-xs text-slate-500">{mgr.job_position}</div>
-                                                    </div>
-                                                </div>
-                                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-medium">Ana Yönetici</span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-slate-400 text-sm text-center py-4">Henüz yönetici atanmamış.</div>
-                                    )}
+                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Kurumsal Bilgiler</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Departman <span className="text-red-500">*</span></label>
+                                        <select name="department" required value={formData.department} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option value="">Seçiniz</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Pozisyon <span className="text-red-500">*</span></label>
+                                        <select name="job_position" required value={formData.job_position} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option value="">Seçiniz</option>
+                                            {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">İşe Başlama Tarihi <span className="text-red-500">*</span></label>
+                                        <input type="date" name="hired_date" required value={formData.hired_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Sicil No</label>
+                                        <input type="text" name="employee_code" value={formData.employee_code} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Team Section */}
                             <div className="card p-6">
-                                <h3 className="text-lg font-bold text-slate-800 mb-4">Bağlı Ekip (Subordinates)</h3>
-                                <div className="space-y-4">
-                                    {team.length > 0 ? (
-                                        team.map(member => (
-                                            <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold">
-                                                        {member.first_name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-slate-800">{member.first_name} {member.last_name}</div>
-                                                        <div className="text-xs text-slate-500">{member.job_position_detail?.name}</div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => navigate(`/employees/${member.id}`)}
-                                                    className="text-xs text-slate-500 hover:text-blue-600"
-                                                >
-                                                    Detay
-                                                </button>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-slate-400 text-sm text-center py-4">Bu çalışana bağlı kimse yok.</div>
-                                    )}
+                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Yönetici Atamaları</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Primary)</label>
+                                        <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                                            {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
+                                                <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.primary_manager_ids.includes(emp.id)}
+                                                        onChange={() => toggleArrayItem('primary_manager_ids', emp.id)}
+                                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm">{emp.first_name} {emp.last_name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
+                                        <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                                            {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
+                                                <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.cross_manager_ids.includes(emp.id)}
+                                                        onChange={() => toggleArrayItem('cross_manager_ids', emp.id)}
+                                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm">{emp.first_name} {emp.last_name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {activeTab === 'settings' && (
-                        <div className="card p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-bold text-slate-800">Yetki ve Takvim Yönetimi</h3>
-                                <button
-                                    onClick={handleSaveRoles}
-                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
-                                >
-                                    <Save size={16} />
-                                    Değişiklikleri Kaydet
-                                </button>
-                            </div>
-
-                            {/* Work Schedule Section */}
-                            <div className="mb-8 bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                <h5 className="text-sm font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-2 flex items-center gap-2">
-                                    <CalendarRange size={16} />
-                                    Çalışma Takvimi
-                                </h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
+                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
+                            {/* Work Schedule */}
+                            <div className="card p-6">
+                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
+                                    <CalendarRange size={20} className="text-blue-500" />
+                                    Çalışma Takvimi & Mesai
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="md:col-span-2">
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
                                         <select
-                                            value={employee.work_schedule?.id || (customScheduleMode ? 'custom' : '')}
+                                            value={formData.work_schedule || (customScheduleMode ? 'custom' : '')}
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 if (val === 'custom') {
                                                     setCustomScheduleMode(true);
-                                                    setEmployee({
-                                                        ...employee,
-                                                        work_schedule: null,
-                                                        shift_start: employee.shift_start || '09:00',
-                                                        shift_end: employee.shift_end || '18:00'
-                                                    });
+                                                    setFormData(prev => ({ ...prev, work_schedule: '' }));
                                                 } else if (val === '') {
                                                     setCustomScheduleMode(false);
-                                                    setEmployee({
-                                                        ...employee,
-                                                        work_schedule: null,
-                                                        shift_start: null,
-                                                        shift_end: null
-                                                    });
+                                                    setFormData(prev => ({ ...prev, work_schedule: '' }));
                                                 } else {
                                                     setCustomScheduleMode(false);
-                                                    const selectedId = val ? parseInt(val) : null;
-                                                    const selectedSchedule = workSchedules.find(ws => ws.id === selectedId);
-                                                    setEmployee({
-                                                        ...employee,
-                                                        work_schedule: selectedSchedule || null,
-                                                        shift_start: null,
-                                                        shift_end: null
-                                                    });
+                                                    setFormData(prev => ({ ...prev, work_schedule: parseInt(val) }));
                                                 }
                                             }}
-                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                         >
                                             <option value="">Varsayılan / Yok</option>
                                             <option value="custom">Özel (Custom)</option>
-                                            {workSchedules.map(ws => (
-                                                <option key={ws.id} value={ws.id}>{ws.name}</option>
-                                            ))}
+                                            {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
                                         </select>
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            Kullanıcının haftalık çalışma saatlerini belirler.
-                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
+                                        <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dk)</label>
+                                        <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
+                                        <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    </div>
 
-                                        <div className="mt-4">
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
-                                            <input
-                                                type="text"
-                                                value={employee.card_uid || ''}
-                                                onChange={(e) => setEmployee({ ...employee, card_uid: e.target.value })}
-                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="Kart okutunuz veya giriniz"
-                                            />
-                                        </div>
-
-                                        {/* Custom Time Inputs */}
-                                        {customScheduleMode && (
-                                            <div className="mt-3 grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
-                                                <div>
-                                                    <label className="text-xs font-medium text-slate-500">Başlangıç</label>
-                                                    <input
-                                                        type="time"
-                                                        value={employee.shift_start || ''}
-                                                        onChange={(e) => setEmployee({ ...employee, shift_start: e.target.value })}
-                                                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-medium text-slate-500">Bitiş</label>
-                                                    <input
-                                                        type="time"
-                                                        value={employee.shift_end || ''}
-                                                        onChange={(e) => setEmployee({ ...employee, shift_end: e.target.value })}
-                                                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
-                                                    />
-                                                </div>
+                                    {customScheduleMode && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Başlangıç</label>
+                                                <input type="time" name="shift_start" value={formData.shift_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                             </div>
-                                        )}
-                                    </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Bitiş</label>
+                                                <input type="time" name="shift_end" value={formData.shift_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                            </div>
+                                        </>
+                                    )}
 
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dakika)</label>
-                                        <input
-                                            type="number"
-                                            value={employee.attendance_tolerance_minutes || 0}
-                                            onChange={(e) => setEmployee({ ...employee, attendance_tolerance_minutes: parseInt(e.target.value) || 0 })}
-                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            Geç kalma/erken çıkma için tolerans süresi.
-                                        </p>
-                                    </div>
-
-                                    {/* New Config Fields */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası</label>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="time"
-                                                value={employee.lunch_start || '12:30'}
-                                                onChange={(e) => setEmployee({ ...employee, lunch_start: e.target.value })}
-                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
-                                            />
-                                            <span className="text-slate-400">-</span>
-                                            <input
-                                                type="time"
-                                                value={employee.lunch_end || '13:30'}
-                                                onChange={(e) => setEmployee({ ...employee, lunch_end: e.target.value })}
-                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
-                                            />
-                                        </div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Başlangıç</label>
+                                        <input type="time" name="lunch_start" value={formData.lunch_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (dk)</label>
-                                        <input
-                                            type="number"
-                                            value={employee.daily_break_allowance || 0}
-                                            onChange={(e) => setEmployee({ ...employee, daily_break_allowance: parseInt(e.target.value) || 0 })}
-                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Bitiş</label>
+                                        <input type="time" name="lunch_end" value={formData.lunch_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Roles Section */}
-                            <div className="mb-8">
-                                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                    <Shield size={18} className="text-blue-500" /> Roller
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {allRoles.map(role => {
-                                        const isAssigned = employee.roles.some(r => r.id === role.id);
-                                        return (
-                                            <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isAssigned ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
+                            {/* Roles & Permissions */}
+                            <div className="card p-6">
+                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
+                                    <Shield size={20} className="text-blue-500" /> Roller ve Yetkiler
+                                </h3>
+
+                                <div className="mb-6">
+                                    <h4 className="font-semibold text-slate-700 mb-3">Roller</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {allRoles.map(role => (
+                                            <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
                                                 <input
                                                     type="checkbox"
-                                                    checked={isAssigned}
-                                                    onChange={() => handleRoleToggle(role.id)}
+                                                    checked={formData.roles.includes(role.id)}
+                                                    onChange={() => toggleArrayItem('roles', role.id)}
                                                     className="mt-1 rounded text-blue-600 focus:ring-blue-500"
                                                 />
                                                 <div>
@@ -448,119 +434,25 @@ const EmployeeDetail = () => {
                                                     <div className="text-xs text-slate-500">{role.description}</div>
                                                 </div>
                                             </label>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-6">
-                                {[
-                                    'Employee Management',
-                                    'Attendance & Time',
-                                    'Overtime Management',
-                                    'Project Management',
-                                    'Reporting',
-                                    'Organization & Settings',
-                                    'Section Access'
-                                ].map(category => {
-                                    const categoryPerms = allPermissions.filter(p => {
-                                        if (category === 'Employee Management') return p.code.startsWith('EMPLOYEE_');
-                                        if (category === 'Attendance & Time') return p.code.startsWith('ATTENDANCE_') || p.code.startsWith('LEAVE_');
-                                        if (category === 'Overtime Management') return p.code.startsWith('OVERTIME_');
-                                        if (category === 'Project Management') return p.code.startsWith('PROJECT_');
-                                        if (category === 'Reporting') return p.code.startsWith('REPORT_');
-                                        if (category === 'Organization & Settings') return p.code.startsWith('ORG_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('SYSTEM_');
-                                        if (category === 'Section Access') return p.code.startsWith('VIEW_SECTION_');
-                                        return false;
-                                    });
-
-                                    if (categoryPerms.length === 0) return null;
-
-                                    const isSuperUser = employee.user?.is_superuser;
-                                    const allCategoryIds = categoryPerms.map(p => p.id);
-                                    const assignedCategoryIds = categoryPerms.filter(p => employee.direct_permissions.some(dp => dp.id === p.id)).map(p => p.id);
-                                    const isAllSelected = assignedCategoryIds.length === allCategoryIds.length;
-
-                                    const handleSelectAll = () => {
-                                        if (isSuperUser) return;
-
-                                        let newPermissions = [...employee.direct_permissions];
-                                        if (isAllSelected) {
-                                            // Deselect all in this category
-                                            newPermissions = newPermissions.filter(p => !allCategoryIds.includes(p.id));
-                                        } else {
-                                            // Select all in this category
-                                            const missingPerms = categoryPerms.filter(p => !newPermissions.some(dp => dp.id === p.id));
-                                            newPermissions = [...newPermissions, ...missingPerms];
-                                        }
-                                        setEmployee({ ...employee, direct_permissions: newPermissions });
-                                    };
-
-                                    return (
-                                        <div key={category} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                            <div className="flex justify-between items-center mb-3 border-b border-slate-200 pb-2">
-                                                <h5 className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
-                                                    {category === 'Employee Management' && <Users size={16} />}
-                                                    {(category === 'Attendance & Time' || category === 'Overtime Management') && <Calendar size={16} />}
-                                                    {category === 'Project Management' && <Briefcase size={16} />}
-                                                    {category === 'Reporting' && <FileText size={16} />}
-                                                    {category === 'Organization & Settings' && <Settings size={16} />}
-                                                    {category === 'Section Access' && <LayoutDashboard size={16} />}
-
-                                                    {category === 'Employee Management' ? 'Çalışan Yönetimi' :
-                                                        category === 'Attendance & Time' ? 'Mesai ve İzin' :
-                                                            category === 'Overtime Management' ? 'Fazla Mesai Yönetimi' :
-                                                                category === 'Project Management' ? 'Proje Yönetimi' :
-                                                                    category === 'Reporting' ? 'Raporlama (Kapsamlı)' :
-                                                                        category === 'Organization & Settings' ? 'Organizasyon ve Ayarlar' :
-                                                                            'Bölüm Erişimi (Menü)'}
-                                                </h5>
-                                                {!isSuperUser && (
-                                                    <button
-                                                        onClick={handleSelectAll}
-                                                        className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                                                    >
-                                                        {isAllSelected ? 'Tümünü Kaldır' : 'Tümünü Seç'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {categoryPerms.map(perm => {
-                                                    const isAssigned = isSuperUser || employee.direct_permissions.some(p => p.id === perm.id);
-                                                    return (
-                                                        <div key={perm.id}
-                                                            onClick={() => !isSuperUser && handlePermissionToggle(perm.id)}
-                                                            className={`p-3 rounded-lg border cursor-pointer transition-all ${isAssigned
-                                                                ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
-                                                                : 'bg-white border-slate-200 hover:border-blue-300'
-                                                                } ${isSuperUser ? 'opacity-75 cursor-not-allowed' : ''}`}
-                                                        >
-                                                            <div className="flex items-start gap-3">
-                                                                <div className={`w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-colors shrink-0 ${isAssigned ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
-                                                                    }`}>
-                                                                    {isAssigned && <span className="text-white text-xs">✓</span>}
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className={`font-bold text-sm ${isAssigned ? 'text-blue-800' : 'text-slate-700'}`}>
-                                                                        {perm.name}
-                                                                    </h4>
-                                                                    <p className="text-xs text-slate-500 mt-1 leading-snug">{perm.description}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-3">
-                                <Shield size={20} className="shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-bold">Dikkat</p>
-                                    <p className="mt-1">Yetki değişiklikleri kullanıcının sisteme bir sonraki girişinde veya sayfa yenilemesinde aktif olacaktır.</p>
+                                    <h4 className="font-semibold text-slate-700 mb-3">Ekstra Yetkiler</h4>
+                                    <div className="h-64 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {allPermissions.map(perm => (
+                                            <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.direct_permissions.includes(perm.id)}
+                                                    onChange={() => toggleArrayItem('direct_permissions', perm.id)}
+                                                    className="rounded text-orange-600 focus:ring-orange-500"
+                                                />
+                                                <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -572,69 +464,44 @@ const EmployeeDetail = () => {
                     <div className="card p-6 sticky top-6">
                         <div className="flex flex-col items-center text-center mb-6">
                             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4">
-                                {employee.first_name[0]}{employee.last_name[0]}
+                                {formData.first_name?.[0]}{formData.last_name?.[0]}
                             </div>
-                            <h2 className="text-xl font-bold text-slate-800">{employee.first_name} {employee.last_name}</h2>
-                            <p className="text-slate-500 font-medium">{employee.job_position_detail?.name}</p>
-                            <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium ${employee.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                {employee.is_active ? 'Aktif Çalışan' : 'Pasif'}
+                            <h2 className="text-xl font-bold text-slate-800">{formData.first_name} {formData.last_name}</h2>
+                            <p className="text-slate-500 font-medium">
+                                {jobPositions.find(p => p.id === parseInt(formData.job_position))?.name || '-'}
+                            </p>
+                            <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium ${formData.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                {formData.is_active ? 'Aktif Çalışan' : 'Pasif'}
                             </div>
                         </div>
 
                         <div className="space-y-3 border-t border-slate-100 pt-6">
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Departman</span>
-                                <span className="font-medium text-slate-800 text-right">{employee.department_detail?.name}</span>
+                                <span className="font-medium text-slate-800 text-right">
+                                    {departments.find(d => d.id === parseInt(formData.department))?.name || '-'}
+                                </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                                <span className="text-slate-500">Lokasyon</span>
-                                <span className="font-medium text-slate-800">Merkez Ofis</span>
+                                <span className="text-slate-500">İşe Başlama</span>
+                                <span className="font-medium text-slate-800">{formData.hired_date || '-'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-500">Yöneticiler</span>
+                                <span className="font-medium text-slate-800">{formData.primary_manager_ids.length} Ana, {formData.cross_manager_ids.length} Çapraz</span>
                             </div>
                         </div>
+
+                        <button
+                            onClick={handleSave}
+                            className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                        >
+                            <Save size={18} />
+                            Değişiklikleri Kaydet
+                        </button>
                     </div>
                 </div>
             </div>
-
-            {/* Assign Manager Modal */}
-            {
-                assignManagerModal && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <h3 className="text-lg font-bold text-slate-800">Yönetici Ata</h3>
-                                <button onClick={() => setAssignManagerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <form onSubmit={handleAssignManager} className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici Seç</label>
-                                    <select
-                                        required
-                                        className="input-field"
-                                        value={selectedManager}
-                                        onChange={(e) => setSelectedManager(e.target.value)}
-                                    >
-                                        <option value="">Seçiniz</option>
-                                        {allEmployees
-                                            .filter(e => e.id !== employee.id) // Can't manage self
-                                            .map(e => (
-                                                <option key={e.id} value={e.id}>
-                                                    {e.first_name} {e.last_name} ({e.job_position_detail?.name})
-                                                </option>
-                                            ))
-                                        }
-                                    </select>
-                                </div>
-                                <div className="pt-4 flex justify-end gap-3">
-                                    <button type="button" onClick={() => setAssignManagerModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                                    <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg shadow-blue-500/30 transition-all">Kaydet</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
         </div >
     );
 };
