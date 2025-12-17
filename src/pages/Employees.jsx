@@ -586,6 +586,18 @@ const Employees = () => {
         }
     };
 
+    const handleResetData = async () => {
+        if (!window.confirm('⚠️ DİKKAT! Admin hariç TÜM çalışanlar ve kullanıcılar silinecek.\n\nBu işlem geri alınamaz.\n\nOnaylıyor musunuz?')) return;
+        try {
+            const res = await api.post('/employees/reset-data/');
+            alert(res.data.status);
+            window.location.reload();
+        } catch (error) {
+            console.error('Reset error:', error);
+            alert('Sıfırlama başarısız: ' + (error.response?.data?.error || error.message));
+        }
+    };
+
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
@@ -594,13 +606,21 @@ const Employees = () => {
                     <h2 className="text-2xl font-bold text-slate-800">Çalışanlar</h2>
                     <p className="text-slate-500 mt-1">Personel listesi ve yönetimi</p>
                 </div>
-                <button
-                    onClick={() => { setShowModal(true); setCurrentStep(1); }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
-                >
-                    <Plus size={18} className="mr-2" />
-                    Yeni Çalışan Ekle
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleResetData}
+                        className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors border border-red-200"
+                    >
+                        <Trash2 size={18} className="mr-2" /> Verileri Sıfırla
+                    </button>
+                    <button
+                        onClick={() => { setShowModal(true); setCurrentStep(1); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
+                    >
+                        <Plus size={18} className="mr-2" />
+                        Yeni Çalışan Ekle
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
