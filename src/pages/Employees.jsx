@@ -31,7 +31,7 @@ const Employees = () => {
         tc_no: '', birth_date: '',
 
         // Corporate
-        department: '', job_position: '',
+        department: '', job_position: '', secondary_job_positions: [],
         hired_date: '', employee_code: '',
         primary_manager_ids: [], cross_manager_ids: [],
 
@@ -123,33 +123,83 @@ const Employees = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-        // Auto-fill roles and permissions when Job Position changes
-        if (name === 'job_position') {
-            const selectedPos = jobPositions.find(p => p.id === parseInt(value));
-            if (selectedPos && selectedPos.default_roles) {
-                // Extract all permissions from default roles
-                const allPerms = [];
-                selectedPos.default_roles.forEach(role => {
-                    if (role.permissions) {
-                        role.permissions.forEach(p => allPerms.push(p.id));
-                    }
-                });
+    // Auto-fill permissions when Job Positions change
+    useEffect(() => {
+        // Validation: wait for reference data
+        if (jobPositions.length === 0 || roles.length === 0) return;
 
-                // Unique permissions
-                const uniquePerms = [...new Set(allPerms)];
+        if (!formData.job_position && (!formData.secondary_job_positions || formData.secondary_job_positions.length === 0)) {
+            // If no position selected, maybe clear? But let's verify if we want to clear everything.
+            // For now, if no position, we typically don't auto-fill anything.
+            return;
+        }
 
-                setFormData(prev => ({
-                    ...prev,
-                    [name]: value,
-                    // Pre-select these as direct permissions so they appear "checked"
-                    direct_permissions: uniquePerms,
-                    // We still track roles conceptually if needed, but UI focuses on permissions
-                    roles: selectedPos.default_roles.map(r => r.id)
-                }));
+        const allSelectedRoleIds = new Set();
+
+        // 1. Get roles from Primary Position
+        if (formData.job_position) {
+            const posId = parseInt(formData.job_position);
+            const primaryPos = jobPositions.find(p => p.id === posId);
+            if (primaryPos && primaryPos.default_roles) {
+                primaryPos.default_roles.forEach(r => allSelectedRoleIds.add(r.id));
             }
         }
-    };
+
+        // 2. Get roles from Secondary Positions
+        if (formData.secondary_job_positions && formData.secondary_job_positions.length > 0) {
+            formData.secondary_job_positions.forEach(posId => {
+                const secPos = jobPositions.find(p => p.id === parseInt(posId));
+                if (secPos && secPos.default_roles) {
+                    secPos.default_roles.forEach(r => allSelectedRoleIds.add(r.id));
+                }
+            });
+        }
+
+        // 3. Collect permissions recursively (handling inheritance)
+        const collectedPermissions = new Set();
+        const visitedRoles = new Set(); // Prevent infinite loops
+
+        const collectFromRole = (roleId) => {
+            if (visitedRoles.has(roleId)) return;
+            visitedRoles.add(roleId);
+
+            const role = roles.find(r => r.id === roleId);
+            if (!role) return;
+
+            // Add direct permissions of this role
+            // Check if 'permissions' is list of objects (from serializer) or IDs
+            if (role.permissions) {
+                role.permissions.forEach(p => {
+                    // Handle both object and ID cases just to be safe
+                    const pId = typeof p === 'object' ? p.id : p;
+                    collectedPermissions.add(pId);
+                });
+            }
+
+            // Recurse for inherited roles
+            if (role.inherits_from && role.inherits_from.length > 0) {
+                role.inherits_from.forEach(inheritedId => {
+                    // inherits_from is typically list of IDs
+                    const iId = typeof inheritedId === 'object' ? inheritedId.id : inheritedId;
+                    collectFromRole(iId);
+                });
+            }
+        };
+
+        allSelectedRoleIds.forEach(roleId => collectFromRole(roleId));
+
+        // Update FormData
+        // We overwrite direct_permissions with the auto-calculated set.
+        // This is standard "Preset" behavior.
+        setFormData(prev => ({
+            ...prev,
+            roles: Array.from(allSelectedRoleIds),
+            direct_permissions: Array.from(collectedPermissions)
+        }));
+
+    }, [formData.job_position, formData.secondary_job_positions, jobPositions, roles]);
 
     const handleMultiSelectChange = (e, field) => {
         const options = e.target.options;
@@ -198,6 +248,7 @@ const Employees = () => {
                 weekly_schedule: formData.weekly_schedule || {},
                 roles: formData.roles || [],
                 direct_permissions: formData.direct_permissions || [],
+                secondary_job_positions: formData.secondary_job_positions || [],
             };
 
             const response = await api.post('/employees/', payload);
@@ -304,12 +355,32 @@ const Employees = () => {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Pozisyon <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Pozisyon (Primary) <span className="text-red-500">*</span></label>
                             <select name="job_position" required value={formData.job_position} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                                 <option value="">Seçiniz</option>
                                 {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                         </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Ek Pozisyonlar (Secondary)</label>
+                            <div className="flex flex-wrap gap-2">
+                                {jobPositions.filter(p => p.id !== parseInt(formData.job_position)).map(p => (
+                                    <label key={p.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-colors ${(formData.secondary_job_positions || []).includes(p.id) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                        }`}>
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={(formData.secondary_job_positions || []).includes(p.id)}
+                                            onChange={() => toggleArrayItem('secondary_job_positions', p.id)}
+                                        />
+                                        <span>{p.name}</span>
+                                        {(formData.secondary_job_positions || []).includes(p.id) && <CheckCircle size={14} />}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">İşe Başlama Tarihi <span className="text-red-500">*</span></label>
                             <input type="date" name="hired_date" required value={formData.hired_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -325,25 +396,32 @@ const Employees = () => {
                                 <Users size={18} className="text-blue-500" /> Yönetici Atamaları
                             </h4>
                         </div>
+
+                        {/* Primary Manager - Single Select */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Primary)</label>
-                            <div className="h-32 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Doğrudan Amir (Direct Manager)</label>
+                            <select
+                                value={formData.primary_manager_ids[0] || ''}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        primary_manager_ids: val ? [parseInt(val)] : []
+                                    }));
+                                }}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="">Departman Yöneticisine Bağla (Varsayılan)</option>
                                 {employees.map(emp => (
-                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.primary_manager_ids.includes(emp.id)}
-                                            onChange={() => toggleArrayItem('primary_manager_ids', emp.id)}
-                                            className="rounded text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
-                                    </label>
+                                    <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name} ({getJobPositionName(emp.job_position)})</option>
                                 ))}
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                            </select>
+                            <p className="text-xs text-slate-500 mt-1">Seçilmezse, hiyerarşide departman yöneticisine bağlanır.</p>
                         </div>
+
+                        {/* Cross Managers - Multi Select */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Matrix)</label>
                             <div className="h-32 overflow-y-auto border rounded-lg p-2 bg-slate-50">
                                 {employees.map(emp => (
                                     <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
@@ -357,7 +435,7 @@ const Employees = () => {
                                     </label>
                                 ))}
                             </div>
-                            <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
+                            <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen, ek yöneticiler.</p>
                         </div>
                     </div>
                 );
@@ -440,8 +518,8 @@ const Employees = () => {
                                         <label
                                             key={perm.id}
                                             className={`flex items-start gap-2 p-2 rounded border cursor-pointer transition-all ${isChecked
-                                                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
-                                                    : 'bg-slate-100 border-transparent hover:bg-white hover:border-slate-300'
+                                                ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                                                : 'bg-slate-100 border-transparent hover:bg-white hover:border-slate-300'
                                                 }`}
                                         >
                                             <input
