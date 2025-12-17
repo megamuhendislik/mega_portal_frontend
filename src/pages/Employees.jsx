@@ -26,6 +26,7 @@ const Employees = () => {
     // Form Data State
     const [formData, setFormData] = useState({
         // Identity
+        username: '', password: '',
         first_name: '', last_name: '', email: '', phone: '',
         tc_no: '', birth_date: '',
 
@@ -166,10 +167,27 @@ const Employees = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.post('/employees/', formData);
+            // Clean payload
+            const payload = {
+                ...formData,
+                shift_start: formData.shift_start || null,
+                shift_end: formData.shift_end || null,
+                birth_date: formData.birth_date || null,
+                hired_date: formData.hired_date || null,
+                lunch_start: formData.lunch_start || null,
+                lunch_end: formData.lunch_end || null,
+                card_uid: formData.card_uid || null,
+                // Ensure Arrays
+                weekly_schedule: formData.weekly_schedule || {},
+                roles: formData.roles || [],
+                direct_permissions: formData.direct_permissions || [],
+            };
+
+            const response = await api.post('/employees/', payload);
             setEmployees([...employees, response.data]);
             setShowModal(false);
             setFormData({
+                username: '', password: '',
                 first_name: '', last_name: '', email: '', phone: '',
                 department: '', job_position: '',
                 hired_date: '', employee_code: '',
@@ -185,7 +203,7 @@ const Employees = () => {
             alert('Çalışan başarıyla eklendi.');
         } catch (error) {
             console.error('Error creating employee:', error);
-            alert('Çalışan eklenirken hata oluştu: ' + (error.response?.data?.detail || error.message));
+            alert('Çalışan eklenirken hata oluştu: ' + (error.response?.data?.detail || JSON.stringify(error.response?.data) || error.message));
         }
     };
 
@@ -223,6 +241,14 @@ const Employees = () => {
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">E-posta <span className="text-red-500">*</span></label>
                             <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Adı <span className="text-red-500">*</span></label>
+                            <input type="text" name="username" required value={formData.username} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Şifre <span className="text-red-500">*</span></label>
+                            <input type="password" name="password" required value={formData.password} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
@@ -432,6 +458,7 @@ const Employees = () => {
                                 <div><span className="text-slate-500 block">Ana Yöneticiler:</span> {formData.primary_manager_ids.length} Kişi</div>
                                 <div><span className="text-slate-500 block">Çapraz Yöneticiler:</span> {formData.cross_manager_ids.length} Kişi</div>
                                 <div><span className="text-slate-500 block">Çalışma Takvimi:</span> {workSchedules.find(w => w.id === parseInt(formData.work_schedule))?.name || 'Varsayılan'}</div>
+                                <div><span className="text-slate-500 block">Kullanıcı Adı:</span> {formData.username}</div>
                                 <div><span className="text-slate-500 block">Roller:</span> {formData.roles.length} Adet Seçili</div>
                             </div>
                         </div>
