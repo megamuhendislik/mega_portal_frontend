@@ -124,12 +124,29 @@ const Employees = () => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
 
-        // Auto-fill roles when Job Position changes
+        // Auto-fill roles and permissions when Job Position changes
         if (name === 'job_position') {
             const selectedPos = jobPositions.find(p => p.id === parseInt(value));
             if (selectedPos && selectedPos.default_roles) {
-                const defaultRoleIds = selectedPos.default_roles.map(r => r.id);
-                setFormData(prev => ({ ...prev, [name]: value, roles: defaultRoleIds }));
+                // Extract all permissions from default roles
+                const allPerms = [];
+                selectedPos.default_roles.forEach(role => {
+                    if (role.permissions) {
+                        role.permissions.forEach(p => allPerms.push(p.id));
+                    }
+                });
+
+                // Unique permissions
+                const uniquePerms = [...new Set(allPerms)];
+
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: value,
+                    // Pre-select these as direct permissions so they appear "checked"
+                    direct_permissions: uniquePerms,
+                    // We still track roles conceptually if needed, but UI focuses on permissions
+                    roles: selectedPos.default_roles.map(r => r.id)
+                }));
             }
         }
     };
@@ -401,46 +418,50 @@ const Employees = () => {
             case 4: // Permissions
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                        <div>
-                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                <Key size={18} className="text-blue-500" /> Roller
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <h4 className="font-semibold text-blue-800 flex items-center gap-2 mb-2">
+                                <ShieldAlert size={18} /> Yetkilendirme
                             </h4>
-                            <p className="text-sm text-slate-500 mb-2">Pozisyona göre otomatik seçilir, manuel değiştirebilirsiniz.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {roles.map(role => (
-                                    <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.roles.includes(role.id)}
-                                            onChange={() => toggleArrayItem('roles', role.id)}
-                                            className="mt-1 rounded text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <div>
-                                            <div className="font-medium text-sm text-slate-800">{role.name}</div>
-                                            <div className="text-xs text-slate-500">{role.description}</div>
-                                        </div>
-                                    </label>
-                                ))}
-                            </div>
+                            <p className="text-sm text-blue-700">
+                                Seçilen pozisyona göre yetkiler otomatik işaretlenmiştir. İsterseniz düzenleyebilirsiniz.
+                            </p>
                         </div>
 
-                        <div className="border-t border-slate-100 pt-6">
-                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                <ShieldAlert size={18} className="text-orange-500" /> Ekstra Yetkiler (Direct Permissions)
-                            </h4>
-                            <p className="text-sm text-slate-500 mb-2">Role bakılmaksızın verilecek özel yetkiler.</p>
-                            <div className="h-48 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {permissions.map(perm => (
-                                    <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.direct_permissions.includes(perm.id)}
-                                            onChange={() => toggleArrayItem('direct_permissions', perm.id)}
-                                            className="rounded text-orange-600 focus:ring-orange-500"
-                                        />
-                                        <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>
-                                    </label>
-                                ))}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-slate-700">Tüm Yetkiler</label>
+                                <span className="text-xs text-slate-500">{permissions.length} yetki tanımlı</span>
+                            </div>
+
+                            <div className="h-[400px] overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {permissions.map(perm => {
+                                    const isChecked = formData.direct_permissions.includes(perm.id);
+                                    return (
+                                        <label
+                                            key={perm.id}
+                                            className={`flex items-start gap-2 p-2 rounded border cursor-pointer transition-all ${isChecked
+                                                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                                                    : 'bg-slate-100 border-transparent hover:bg-white hover:border-slate-300'
+                                                }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => toggleArrayItem('direct_permissions', perm.id)}
+                                                className="mt-1 rounded text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1">
+                                                <div className={`font-medium text-sm ${isChecked ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                    {perm.name}
+                                                </div>
+                                                <div className="text-xs text-slate-400 font-mono mt-0.5">{perm.code}</div>
+                                                {perm.description && (
+                                                    <div className="text-xs text-slate-500 mt-1 leading-snug">{perm.description}</div>
+                                                )}
+                                            </div>
+                                        </label>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -459,7 +480,8 @@ const Employees = () => {
                                 <div><span className="text-slate-500 block">Çapraz Yöneticiler:</span> {formData.cross_manager_ids.length} Kişi</div>
                                 <div><span className="text-slate-500 block">Çalışma Takvimi:</span> {workSchedules.find(w => w.id === parseInt(formData.work_schedule))?.name || 'Varsayılan'}</div>
                                 <div><span className="text-slate-500 block">Kullanıcı Adı:</span> {formData.username}</div>
-                                <div><span className="text-slate-500 block">Roller:</span> {formData.roles.length} Adet Seçili</div>
+                                <div><span className="text-slate-500 block">Kullanıcı Adı:</span> {formData.username}</div>
+                                <div><span className="text-slate-500 block">Yetkiler:</span> {formData.direct_permissions.length} Adet Seçili</div>
                             </div>
                         </div>
                         <div className="flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-lg">
