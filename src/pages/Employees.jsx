@@ -271,7 +271,20 @@ const Employees = () => {
             alert('Çalışan başarıyla eklendi.');
         } catch (error) {
             console.error('Error creating employee:', error);
-            alert('Çalışan eklenirken hata oluştu: ' + (error.response?.data?.detail || JSON.stringify(error.response?.data) || error.message));
+            let errorMsg = 'Çalışan eklenirken hata oluştu.';
+            if (error.response?.data) {
+                // If data is object with keys (validation errors)
+                if (typeof error.response.data === 'object') {
+                    errorMsg += '\n' + Object.entries(error.response.data)
+                        .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+                        .join('\n');
+                } else {
+                    errorMsg += ' ' + (error.response.data.detail || JSON.stringify(error.response.data));
+                }
+            } else {
+                errorMsg += ' ' + error.message;
+            }
+            alert(errorMsg);
         }
     };
 
