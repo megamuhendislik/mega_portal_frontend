@@ -85,6 +85,17 @@ const Requests = () => {
         setShowEditOvertimeModal(true);
     };
 
+    // Initial Data State for Resubmission
+    const [createModalInitialData, setCreateModalInitialData] = useState(null);
+
+    const handleResubmitOvertime = (req) => {
+        setCreateModalInitialData({
+            type: 'OVERTIME',
+            data: req
+        });
+        setShowCreateModal(true);
+    };
+
     const handleEditOvertimeSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -208,7 +219,7 @@ const Requests = () => {
                     {overtimeRequests.map(req => (
                         <RequestCard
                             key={req.id}
-                            request={req}
+                            request={{ ...req, onResubmit: () => handleResubmitOvertime(req) }}
                             type="OVERTIME"
                             statusBadge={getStatusBadge}
                             onEdit={handleEditOvertimeClick}
@@ -392,9 +403,10 @@ const Requests = () => {
             {/* Modals */}
             <CreateRequestModal
                 isOpen={showCreateModal}
-                onClose={() => setShowCreateModal(false)}
+                onClose={() => { setShowCreateModal(false); setCreateModalInitialData(null); }}
                 onSuccess={handleCreateSuccess}
                 requestTypes={requestTypes}
+                initialData={createModalInitialData}
             />
 
             {/* Edit Overtime Modal */}

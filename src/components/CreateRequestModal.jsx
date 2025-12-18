@@ -3,9 +3,27 @@ import ReactDOM from 'react-dom';
 import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft, Briefcase } from 'lucide-react';
 import api from '../services/api';
 
-const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
+const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData }) => {
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
+
+    useEffect(() => {
+        if (isOpen && initialData) {
+            if (initialData.type === 'OVERTIME') {
+                handleTypeSelect('OVERTIME');
+                // Wait a tick for state update if strictly needed, but here we can set form directly
+                setOvertimeForm(prev => ({
+                    ...prev,
+                    date: initialData.data.date,
+                    start_time: initialData.data.start_time ? initialData.data.start_time.substring(0, 5) : '',
+                    end_time: initialData.data.end_time ? initialData.data.end_time.substring(0, 5) : '',
+                    reason: initialData.data.reason || '',
+                    attendance: initialData.data.attendance || null
+                }));
+            }
+        }
+    }, [isOpen, initialData]);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [unclaimedOvertime, setUnclaimedOvertime] = useState([]);

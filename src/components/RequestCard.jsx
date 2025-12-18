@@ -103,24 +103,38 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
             {/* Actions Footer */}
             <div className="mt-auto pt-4 border-t border-slate-100 flex justify-end gap-2">
                 {/* Owner Actions */}
-                {request.status === 'PENDING' && !isIncoming && (onEdit || onDelete) && (
+                {!isIncoming && (
                     <>
-                        {onEdit && (
+                        {request.status === 'PENDING' && (
+                            <>
+                                {onEdit && (
+                                    <button
+                                        onClick={() => onEdit(request)}
+                                        className="px-3 py-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                                    >
+                                        <Edit2 size={14} />
+                                        Düzenle
+                                    </button>
+                                )}
+                                {onDelete && (
+                                    <button
+                                        onClick={() => onDelete(request)}
+                                        className="px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                                    >
+                                        <Trash2 size={14} />
+                                        İptal
+                                    </button>
+                                )}
+                            </>
+                        )}
+                        {/* Resubmit for Rejected Requests */}
+                        {request.status === 'REJECTED' && (request.onResubmit || onEdit) && (
                             <button
-                                onClick={() => onEdit(request)}
-                                className="px-3 py-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                                onClick={() => (request.onResubmit ? request.onResubmit(request) : onEdit(request))} // Reuse onEdit for simplicity if onResubmit passed via parent prop
+                                className="px-3 py-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors text-sm font-bold flex items-center gap-1.5 border border-amber-200"
                             >
                                 <Edit2 size={14} />
-                                Düzenle
-                            </button>
-                        )}
-                        {onDelete && (
-                            <button
-                                onClick={() => onDelete(request)}
-                                className="px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
-                            >
-                                <Trash2 size={14} />
-                                İptal
+                                Tekrar Talep Et
                             </button>
                         )}
                     </>
