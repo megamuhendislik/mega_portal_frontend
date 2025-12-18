@@ -283,49 +283,92 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     const renderOvertimeForm = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            {/* Unclaimed Overtime Selection (Radio Buttons) */}
             {unclaimedOvertime.length > 0 && (
-                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 mb-4">
-                    <label className="block text-sm font-bold text-amber-800 mb-1.5 flex items-center gap-2">
-                        <Clock size={16} />
-                        Tespit Edilen Fazla Mesai (Opsiyonel)
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
+                    <label className="block text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <Clock size={16} className="text-amber-500" />
+                        Tespit Edilen Mesailer
                     </label>
-                    <select
-                        onChange={(e) => {
-                            const attId = e.target.value;
-                            if (!attId) {
-                                setOvertimeForm(prev => ({ ...prev, attendance: null }));
-                                return;
-                            }
-                            const att = unclaimedOvertime.find(a => a.id.toString() === attId);
-                            if (att) {
-                                // Simple Time Calculation logic
-                                let st = '';
-                                let et = '';
-                                if (att.check_out) {
-                                    const d = new Date(att.check_out);
-                                    const s = new Date(d.getTime() - att.overtime_minutes * 60000);
-                                    const fmt = (date) => date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                                    st = fmt(s);
-                                    et = fmt(d);
-                                }
-                                setOvertimeForm({
-                                    attendance: att.id,
-                                    date: att.work_date,
-                                    start_time: st,
-                                    end_time: et,
-                                    reason: ''
-                                });
-                            }
-                        }}
-                        className="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-amber-500 outline-none"
-                    >
-                        <option value="">-- Seçiniz --</option>
-                        {unclaimedOvertime.map(u => (
-                            <option key={u.id} value={u.id}>
-                                {u.work_date} - {u.overtime_minutes} dakika ({u.check_in ? new Date(u.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'} - {u.check_out ? new Date(u.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'})
-                            </option>
-                        ))}
-                    </select>
+                    <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                        {/* Manual Entry Option */}
+                        <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${!overtimeForm.attendance ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'bg-transparent border-slate-200 hover:bg-white hover:border-slate-300'}`}>
+                            <div className="pt-0.5">
+                                <input
+                                    type="radio"
+                                    name="overtime_selection"
+                                    value=""
+                                    checked={!overtimeForm.attendance}
+                                    onChange={() => {
+                                        setOvertimeForm(prev => ({
+                                            ...prev,
+                                            attendance: null,
+                                            date: new Date().toISOString().split('T')[0],
+                                            start_time: '',
+                                            end_time: '',
+                                            reason: ''
+                                        }));
+                                    }}
+                                    className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <span className="block text-sm font-bold text-slate-700">Manuel Giriş</span>
+                                <span className="block text-xs text-slate-500 mt-0.5">Kendi belirlediğiniz tarih ve saat için talep oluşturun.</span>
+                            </div>
+                        </label>
+
+                        {/* Unclaimed Options */}
+                        {unclaimedOvertime.map(u => {
+                            const isSelected = overtimeForm.attendance === u.id;
+                            return (
+                                <label key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-amber-50 border-amber-500 shadow-sm ring-1 ring-amber-500/20' : 'bg-white border-slate-200 hover:border-amber-300'}`}>
+                                    <div className="pt-0.5">
+                                        <input
+                                            type="radio"
+                                            name="overtime_selection"
+                                            value={u.id}
+                                            checked={isSelected}
+                                            onChange={() => {
+                                                // Calculate times
+                                                let st = '';
+                                                let et = '';
+                                                if (u.check_out) {
+                                                    const d = new Date(u.check_out);
+                                                    const s = new Date(d.getTime() - u.overtime_minutes * 60000);
+                                                    const fmt = (date) => date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                                                    st = fmt(s);
+                                                    et = fmt(d);
+                                                }
+                                                setOvertimeForm({
+                                                    attendance: u.id,
+                                                    date: u.work_date,
+                                                    start_time: st,
+                                                    end_time: et,
+                                                    reason: ''
+                                                });
+                                            }}
+                                            className="w-4 h-4 text-amber-600 border-slate-300 focus:ring-amber-500"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center mb-0.5">
+                                            <span className="text-sm font-bold text-slate-700">
+                                                {new Date(u.work_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                            </span>
+                                            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                                                {u.overtime_minutes} dk
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                                            <Clock size={12} />
+                                            {u.check_in ? new Date(u.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'} - {u.check_out ? new Date(u.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'}
+                                        </div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 

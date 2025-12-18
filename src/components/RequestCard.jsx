@@ -61,8 +61,8 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${type === 'LEAVE' ? 'bg-blue-50' : type === 'OVERTIME' ? 'bg-amber-50' : 'bg-emerald-50'}`}>
                         {getIcon()}
                     </div>
-                    <div>
-                        <h4 className="font-bold text-slate-800 text-lg leading-tight">{getTitle()}</h4>
+                    <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-slate-800 text-lg leading-tight truncate pr-2">{getTitle()}</h4>
                         <p className="text-xs text-slate-400 font-medium mt-1">
                             {new Date(request.created_at).toLocaleDateString('tr-TR')}
                         </p>
@@ -74,8 +74,8 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
             {/* Employee Info (For Incoming Requests) */}
             {request.employee_name && (
                 <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <User size={16} className="text-slate-400" />
-                    {request.employee_name}
+                    <User size={16} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{request.employee_name}</span>
                 </div>
             )}
 

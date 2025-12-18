@@ -363,7 +363,7 @@ const Requests = () => {
 
             {/* Tabs & Filters */}
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm sticky top-4 z-30 backdrop-blur-xl bg-white/80 supports-[backdrop-filter]:bg-white/60">
-                <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
+                <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {[
                         { id: 'my_requests', label: 'İzin Taleplerim' },
                         { id: 'overtime_requests', label: 'Fazla Mesai' },
@@ -373,7 +373,7 @@ const Requests = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2
+                            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-2
                                 ${activeTab === tab.id
                                     ? 'bg-white text-slate-900 shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
