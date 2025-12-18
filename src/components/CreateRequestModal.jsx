@@ -8,6 +8,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [unclaimedOvertime, setUnclaimedOvertime] = useState([]);
 
     // Form States
     const [leaveForm, setLeaveForm] = useState({
@@ -20,6 +21,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
+        attendance: null,
         date: new Date().toISOString().split('T')[0],
         start_time: '',
         end_time: '',
@@ -43,9 +45,32 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
             setStep(1);
             setSelectedType(null);
             setError(null);
-            // Reset forms if needed
+            setUnclaimedOvertime([]);
+            // Reset forms
+            setOvertimeForm({
+                attendance: null,
+                date: new Date().toISOString().split('T')[0],
+                start_time: '',
+                end_time: '',
+                reason: ''
+            });
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (selectedType === 'OVERTIME') {
+            fetchUnclaimedOvertime();
+        }
+    }, [selectedType]);
+
+    const fetchUnclaimedOvertime = async () => {
+        try {
+            const res = await api.get('/attendance/overtime_requests/unclaimed/'); // Note: ensure URL matches backend ViewSet path
+            setUnclaimedOvertime(res.data);
+        } catch (error) {
+            console.error('Error fetching unclaimed overtime:', error);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -240,6 +265,52 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes }) => {
 
     const renderOvertimeForm = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            {unclaimedOvertime.length > 0 && (
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 mb-4">
+                    <label className="block text-sm font-bold text-amber-800 mb-1.5 flex items-center gap-2">
+                        <Clock size={16} />
+                        Tespit Edilen Fazla Mesai (Opsiyonel)
+                    </label>
+                    <select
+                        onChange={(e) => {
+                            const attId = e.target.value;
+                            if (!attId) {
+                                setOvertimeForm(prev => ({ ...prev, attendance: null }));
+                                return;
+                            }
+                            const att = unclaimedOvertime.find(a => a.id.toString() === attId);
+                            if (att) {
+                                // Simple Time Calculation logic
+                                let st = '';
+                                let et = '';
+                                if (att.check_out) {
+                                    const d = new Date(att.check_out);
+                                    const s = new Date(d.getTime() - att.overtime_minutes * 60000);
+                                    const fmt = (date) => date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                                    st = fmt(s);
+                                    et = fmt(d);
+                                }
+                                setOvertimeForm({
+                                    attendance: att.id,
+                                    date: att.work_date,
+                                    start_time: st,
+                                    end_time: et,
+                                    reason: ''
+                                });
+                            }
+                        }}
+                        className="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-amber-500 outline-none"
+                    >
+                        <option value="">-- Seçiniz --</option>
+                        {unclaimedOvertime.map(u => (
+                            <option key={u.id} value={u.id}>
+                                {u.work_date} - {u.overtime_minutes} dakika ({u.check_in ? new Date(u.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'} - {u.check_out ? new Date(u.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
             <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
                 <input
