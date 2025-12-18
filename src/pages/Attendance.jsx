@@ -22,6 +22,9 @@ const Attendance = () => {
     useEffect(() => {
         if (user?.employee?.id) {
             setSelectedEmployeeId(user.employee.id);
+        } else if (user) {
+            // User loaded but no employee profile? Stop loading.
+            setLoading(false);
         }
     }, [user]);
 
