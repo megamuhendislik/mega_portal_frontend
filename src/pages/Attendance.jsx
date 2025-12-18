@@ -3,11 +3,13 @@ import { Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2 } from 'luci
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import DailySummaryCard from '../components/DailySummaryCard';
+import TeamSelector from '../components/TeamSelector';
 
 const Attendance = () => {
     const { user } = useAuth();
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
     const [summary, setSummary] = useState({
         totalWorkHours: 0,
         totalOvertime: 0,
@@ -16,13 +18,26 @@ const Attendance = () => {
 
     const [todaySummary, setTodaySummary] = useState(null);
 
+    // Initialize intent
     useEffect(() => {
-        fetchAttendance();
-        fetchTodaySummary();
-    }, []);
+        if (user?.employee?.id) {
+            setSelectedEmployeeId(user.employee.id);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (selectedEmployeeId) {
+            fetchAttendance();
+            fetchTodaySummary();
+        }
+    }, [selectedEmployeeId]);
 
     const fetchTodaySummary = async () => {
         try {
+            // Note: Current Status API defaults to Request.User. 
+            // If viewing another employee, we might not see THEIR 'today summary' unless API supports it.
+            // For now, let's keep it as is (User's own status) or update API later.
+            // The requirement was mainly about seeing logs.
             const response = await api.get('/attendance/today_summary/');
             setTodaySummary(response.data);
         } catch (error) {
@@ -31,12 +46,9 @@ const Attendance = () => {
     };
 
     const fetchAttendance = async () => {
+        setLoading(true);
         try {
-            // Fetch user's attendance logs (defaults to current user via backend permission)
-            // Using 'view_team' logic if manager, but for now let's assume /api/attendance/ returns list
-            // We might need a specific endpoint for "my attendance" if the default list is filtered differently
-            // But based on views.py, if user has ATTENDANCE_VIEW_SELF, it returns their own logs.
-            const response = await api.get('/attendance/');
+            const response = await api.get(`/attendance/?employee_id=${selectedEmployeeId}`);
             const data = response.data.results || response.data;
             setLogs(data);
             calculateSummary(data);
@@ -125,6 +137,12 @@ const Attendance = () => {
                     <p className="text-slate-500 mt-1">Giriş-çıkış kayıtlarınız ve çalışma süreleriniz</p>
                 </div>
                 <div className="flex gap-3">
+                    {/* Team Selector */}
+                    <TeamSelector
+                        selectedId={selectedEmployeeId}
+                        onSelect={setSelectedEmployeeId}
+                    />
+
                     {/* Admin Reset Button */}
                     {user?.user?.is_superuser && (
                         <button

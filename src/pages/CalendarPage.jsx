@@ -6,6 +6,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
 import { X, Clock, Calendar as CalendarIcon, Info, CheckCircle2, AlertCircle, Briefcase, Timer, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import TeamSelector from '../components/TeamSelector';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -20,6 +21,9 @@ const CalendarPage = () => {
     const [showModal, setShowModal] = useState(false);
 
     // Monthly Summary State
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+
+    // Monthly Summary State
     const [currentDate, setCurrentDate] = useState(new Date());
     const [monthlySummary, setMonthlySummary] = useState({
         totalWorkHours: 0,
@@ -32,9 +36,18 @@ const CalendarPage = () => {
 
     const [dailyStats, setDailyStats] = useState({});
 
+    // Initialize intent
     useEffect(() => {
-        fetchData();
-    }, [currentDate]); // Refetch when month changes
+        if (user?.employee?.id) {
+            setSelectedEmployeeId(user.employee.id);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (selectedEmployeeId) {
+            fetchData();
+        }
+    }, [currentDate, selectedEmployeeId]); // Refetch when month or employee changes
 
     const fetchData = async () => {
         console.log('DEBUG: fetchData called');
@@ -50,9 +63,9 @@ const CalendarPage = () => {
             console.log(`DEBUG: Fetching data for range ${viewStart} to ${viewEnd}`);
 
             const [calendarRes, attendanceRes, summaryRes] = await Promise.all([
-                api.get(`/calendar/?start=${viewStart}&end=${viewEnd}`),
-                api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}`),
-                api.get(`/stats/summary/?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`)
+                api.get(`/calendar/?start=${viewStart}&end=${viewEnd}&employee_id=${selectedEmployeeId}`),
+                api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}&employee_id=${selectedEmployeeId}`),
+                api.get(`/stats/summary/?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}&employee_id=${selectedEmployeeId}`)
             ]);
 
             console.log('DEBUG: API Responses received');
@@ -271,6 +284,14 @@ const CalendarPage = () => {
                         <CalendarIcon className="text-blue-600" />
                         Takvim
                     </h2>
+
+                    <div className="mb-4">
+                        <TeamSelector
+                            selectedId={selectedEmployeeId}
+                            onSelect={setSelectedEmployeeId}
+                            className="w-full"
+                        />
+                    </div>
                     <p className="text-slate-500 text-sm mb-6">
                         {moment(currentDate).subtract(1, 'month').date(26).format('D MMMM')} - {moment(currentDate).date(25).format('D MMMM YYYY')} dönemi verileri.
                     </p>
