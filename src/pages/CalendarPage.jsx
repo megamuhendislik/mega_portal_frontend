@@ -40,6 +40,8 @@ const CalendarPage = () => {
     useEffect(() => {
         if (user?.employee?.id) {
             setSelectedEmployeeId(user.employee.id);
+        } else if (user) {
+            setLoading(false);
         }
     }, [user]);
 
