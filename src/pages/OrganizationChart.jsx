@@ -64,13 +64,27 @@ const TreeNode = ({ node, level = 0 }) => {
                                             }
                                         `}
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-medium truncate">{emp.name}</span>
-                                            {emp.is_secondary && <span className="text-[8px] px-1 rounded bg-amber-100 text-amber-700 ml-1">Ek</span>}
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium truncate">{emp.name}</span>
+                                                {emp.is_secondary && <span className="text-[8px] px-1 rounded bg-amber-100 text-amber-700 ml-1">Ek</span>}
+                                            </div>
+
+                                            <span className={`text-[9px] ${emp.is_secondary ? 'text-amber-700/70' : 'text-slate-400'}`}>
+                                                {emp.title}
+                                            </span>
+
+                                            {/* Functional Group Badges */}
+                                            {emp.functional_groups && emp.functional_groups.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                                    {emp.functional_groups.map((group, idx) => (
+                                                        <span key={idx} className="text-[8px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                                            {group}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className={`text-[9px] ${emp.is_secondary ? 'text-amber-700/70' : 'text-slate-400'}`}>
-                                            {emp.title}
-                                        </span>
                                     </div>
                                 ))}
                             </div>
