@@ -51,27 +51,25 @@ const EmployeeNode = ({ emp }) => (
 const DepartmentNode = ({ node }) => (
     <div
         className={`
-            relative z-10 p-4 rounded-xl border shadow-sm transition-all hover:shadow-lg bg-white min-w-[220px] text-center cursor-pointer
-            border-blue-400 bg-blue-50/30 ring-1 ring-blue-100
+            relative z-10 p-3 rounded-xl border shadow-sm transition-all hover:shadow-lg bg-white min-w-[180px] max-w-[220px] text-center cursor-pointer
+            border-blue-200 hover:border-blue-400
         `}
         onClick={(e) => {
             e.stopPropagation();
         }}
     >
         <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-sm bg-blue-600 text-white">
-                <Building size={20} />
+            <div className={`
+                w-8 h-8 rounded-lg flex items-center justify-center shadow-sm 
+                ${node.code === 'COMPANY' ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'}
+            `}>
+                <Building size={16} />
             </div>
 
             <div>
-                <h3 className="font-bold text-blue-900 text-sm">
+                <h3 className="font-bold text-slate-800 text-sm leading-tight">
                     {node.name}
                 </h3>
-                {node.code && <div className="text-[10px] text-slate-400">{node.code}</div>}
-            </div>
-
-            <div className="px-2 py-0.5 bg-white/50 rounded-full text-[10px] font-medium text-blue-700 border border-blue-100">
-                {(node.employees?.length || 0) + (node.children?.length || 0)} Alt Birim/Kişi
             </div>
         </div>
     </div>
