@@ -75,9 +75,13 @@ const DepartmentNode = ({ node }) => (
     </div>
 );
 
-const TreeNode = ({ node }) => {
-    // We treat everything as children (Employees + Sub-Departments)
-    const hasChildren = (node.employees && node.employees.length > 0) || (node.children && node.children.length > 0);
+const TreeNode = ({ node, showAllEmployees }) => {
+    // Only treat as having children if:
+    // 1. It has sub-departments (always show)
+    // 2. It has employees AND showAllEmployees is true
+    const hasSubDepts = node.children && node.children.length > 0;
+    const hasEmployees = node.employees && node.employees.length > 0;
+    const shouldRenderChildren = hasSubDepts || (hasEmployees && showAllEmployees);
 
     return (
         <li>
@@ -87,14 +91,16 @@ const TreeNode = ({ node }) => {
                 <DepartmentNode node={node} />
             )}
 
-            {hasChildren && (
+            {shouldRenderChildren && (
                 <ul>
-                    {/* Visualizing Employees as nodes directly under the department */}
-                    {node.employees?.map(emp => (
-                        <TreeNode key={`emp-${emp.id}`} node={{ ...emp, type: 'employee' }} />
+                    {/* Render Employees if toggle is ON */}
+                    {showAllEmployees && node.employees?.map(emp => (
+                        <TreeNode key={`emp-${emp.id}`} node={{ ...emp, type: 'employee' }} showAllEmployees={showAllEmployees} />
                     ))}
+
+                    {/* Always render sub-departments */}
                     {node.children?.map(child => (
-                        <TreeNode key={child.id} node={{ ...child, type: 'department' }} />
+                        <TreeNode key={child.id} node={{ ...child, type: 'department' }} showAllEmployees={showAllEmployees} />
                     ))}
                 </ul>
             )}
@@ -106,6 +112,7 @@ const OrganizationChart = () => {
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showEmployees, setShowEmployees] = useState(false); // Default off to reduce clutter
 
     // Zoom & Pan State
     const [scale, setScale] = useState(1);
@@ -117,27 +124,19 @@ const OrganizationChart = () => {
     useEffect(() => {
         const fetchHierarchy = async () => {
             try {
-                console.log('OrgChart: Fetching hierarchy...');
                 const response = await api.get('/departments/hierarchy/');
-                console.log('OrgChart: Raw API Response:', response);
                 let data = response.data;
-                console.log('OrgChart: Initial Data:', data);
 
                 // Filter Functional Groups
                 if (Array.isArray(data)) {
-                    const originalLength = data.length;
-                    data = data.filter(node => {
-                        const isFunc = node.code.includes('ROOT_FUNC') ||
-                            node.name.includes('Fonksiyonel') ||
-                            node.name.includes('Functional');
-                        if (isFunc) console.log('OrgChart: Filtered out node:', node.name);
-                        return !isFunc;
-                    });
-                    console.log(`OrgChart: Filtered ${originalLength - data.length} nodes. Remaining:`, data.length);
+                    data = data.filter(node =>
+                        !node.code.includes('ROOT_FUNC') &&
+                        !node.name.includes('Fonksiyonel') &&
+                        !node.name.includes('Functional')
+                    );
                 }
 
                 if (Array.isArray(data) && data.length > 1) {
-                    console.log('OrgChart: Multiple roots detected, wrapping in company node.');
                     data = [{
                         id: 'root-company',
                         name: 'Mega Portal',
@@ -145,15 +144,11 @@ const OrganizationChart = () => {
                         employees: [],
                         children: data
                     }];
-                } else if (Array.isArray(data) && data.length === 0) {
-                    console.warn('OrgChart: Data is empty after filtering!');
                 }
-
-                console.log('OrgChart: Final Tree Data to set:', data);
                 setTreeData(data);
             } catch (err) {
-                console.error('OrgChart: Error fetching hierarchy:', err);
-                setError('Organizasyon şemasını görüntüleme yetkiniz yok veya bir hata oluştu.');
+                console.error('Error fetching hierarchy:', err);
+                setError('Organizasyon şemasını görüntüleme yetkiniz yok.');
             } finally {
                 setLoading(false);
             }
@@ -206,12 +201,12 @@ const OrganizationChart = () => {
     );
 
     if (!treeData || treeData.length === 0) return (
-        <div className="p-8 flex flex-col items-center justify-center text-center h-full">
+        <div className="p-8 flex flex-col items-center justify-center text-center h-full min-h-[400px]">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
                 <Building size={32} />
             </div>
             <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadı</h3>
-            <p className="text-slate-500 mt-2">Organizasyon şeması boş (Filtreleme sorunu olabilir) veya veri yüklenemedi.</p>
+            <p className="text-slate-500 mt-2">Organizasyon şeması boş.</p>
         </div>
     );
 
@@ -223,12 +218,28 @@ const OrganizationChart = () => {
                     <p className="text-slate-500 mt-1">İnteraktif Şema (Sürükle & Yakınlaştır)</p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
-                    <button onClick={handleZoomOut} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
-                    <span className="text-xs font-mono w-12 text-center">{(scale * 100).toFixed(0)}%</span>
-                    <button onClick={handleZoomIn} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18} /></button>
-                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                    <button onClick={handleResetZoom} className="p-2 hover:bg-slate-100 rounded text-slate-600" title="Sıfırla"><Maximize size={18} /></button>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setShowEmployees(!showEmployees)}
+                        className={`
+                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border shadow-sm
+                            ${showEmployees
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }
+                        `}
+                    >
+                        <User size={16} />
+                        {showEmployees ? 'Çalışanları Gizle' : 'Çalışanları Göster'}
+                    </button>
+
+                    <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
+                        <button onClick={handleZoomOut} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
+                        <span className="text-xs font-mono w-12 text-center">{(scale * 100).toFixed(0)}%</span>
+                        <button onClick={handleZoomIn} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18} /></button>
+                        <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                        <button onClick={handleResetZoom} className="p-2 hover:bg-slate-100 rounded text-slate-600" title="Sıfırla"><Maximize size={18} /></button>
+                    </div>
                 </div>
             </div>
 
@@ -248,7 +259,7 @@ const OrganizationChart = () => {
                         left: 0,
                         minWidth: '100%',
                         minHeight: '100%',
-                        padding: '100px', // Ensures content isn't flush against edge
+                        padding: '100px',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'flex-start'
@@ -257,7 +268,7 @@ const OrganizationChart = () => {
                     <div className="tree select-none">
                         <ul>
                             {treeData.map(node => (
-                                <TreeNode key={node.id} node={{ ...node, type: node.type || 'department' }} />
+                                <TreeNode key={node.id} node={{ ...node, type: node.type || 'department' }} showAllEmployees={showEmployees} />
                             ))}
                         </ul>
                     </div>
