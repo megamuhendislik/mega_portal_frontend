@@ -52,9 +52,23 @@ const TreeNode = ({ node, level = 0 }) => {
                         {showEmployees && (
                             <div className="mt-2 w-full pt-2 border-t border-slate-100 flex flex-col gap-1">
                                 {node.employees.map(emp => (
-                                    <div key={emp.id} className="text-[10px] text-left text-slate-600 bg-slate-50 p-1 rounded flex flex-col">
-                                        <span className="font-medium">{emp.name}</span>
-                                        <span className="text-[9px] text-slate-400">{emp.title}</span>
+                                    <div
+                                        key={emp.id}
+                                        className={`
+                                            text-[10px] text-left p-1.5 rounded flex flex-col border
+                                            ${emp.is_secondary
+                                                ? 'bg-amber-50 text-amber-900 border-amber-100'
+                                                : 'bg-slate-50 text-slate-600 border-slate-100'
+                                            }
+                                        `}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-medium truncate">{emp.name}</span>
+                                            {emp.is_secondary && <span className="text-[8px] px-1 rounded bg-amber-100 text-amber-700 ml-1">Ek</span>}
+                                        </div>
+                                        <span className={`text-[9px] ${emp.is_secondary ? 'text-amber-700/70' : 'text-slate-400'}`}>
+                                            {emp.title}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
