@@ -102,10 +102,10 @@ const EmployeeNode = ({ emp, onClick }) => (
                 {emp.name.charAt(0)}
             </div>
 
-            <div className="w-full">
-                <h4 className="font-bold text-slate-700 text-xs truncate w-full px-1">{emp.name}</h4>
+            <div className="w-full px-1">
+                <h4 className="font-bold text-slate-800 text-sm leading-tight break-words">{emp.name}</h4>
                 {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className="text-[10px] text-slate-500 truncate w-full px-1">{emp.title}</p>
+                    <p className="text-xs text-blue-600 font-medium mt-0.5 leading-tight break-words">{emp.title}</p>
                 )}
             </div>
 
@@ -224,7 +224,7 @@ const OrganizationChart = () => {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // Zoom & Pan State
-    const [scale, setScale] = useState(1.4); // Default bigger zoom
+    const [scale, setScale] = useState(1); // Default 100% zoom as requested
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
