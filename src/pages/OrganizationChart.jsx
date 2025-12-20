@@ -2,40 +2,125 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer } from 'lucide-react';
 import api from '../services/api';
 
-const EmployeeNode = ({ emp }) => (
+// Simple Modal Component for Employee Details
+const EmployeeDetailModal = ({ employee, onClose }) => {
+    if (!employee) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-blue-600 p-6 text-white text-center relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/20 transition-colors"
+                    >
+                        <ChevronDown className="rotate-180" size={20} />
+                    </button>
+
+                    <div className="w-20 h-20 mx-auto bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-3xl font-bold mb-3 border-4 border-white/30">
+                        {employee.name.charAt(0)}
+                    </div>
+                    <h2 className="text-xl font-bold">{employee.name}</h2>
+                    <p className="text-blue-100 font-medium text-sm mt-1">
+                        {(!employee.title || employee.title === 'Temp') ? 'Unvan Belirtilmemiş' : employee.title}
+                    </p>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                                <Building size={20} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-medium">Bölüm</p>
+                                <p className="text-sm font-semibold text-slate-700">
+                                    {employee.department_name || 'Ana Birim'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {employee.functional_groups && employee.functional_groups.length > 0 && (
+                            <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                                <p className="text-xs text-blue-600 font-bold mb-2 uppercase tracking-wide">Fonksiyonel Gruplar</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {employee.functional_groups.map((group, idx) => (
+                                        <span key={idx} className="px-2 py-1 bg-white text-blue-700 text-xs font-medium rounded border border-blue-200 shadow-sm">
+                                            {group}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {employee.email && (
+                            <div className="flex items-center gap-3 p-2">
+                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <span className="text-xs">@</span>
+                                </div>
+                                <div className="overflow-hidden">
+                                    <p className="text-xs text-slate-500">Email</p>
+                                    <p className="text-sm font-medium text-slate-700 truncate">{employee.email}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+                    <button
+                        onClick={() => alert('Profil detay sayfasına yönlendirilecek...')}
+                        className="text-sm text-blue-600 font-medium hover:underline"
+                    >
+                        Tam Profili Görüntüle
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const EmployeeNode = ({ emp, onClick }) => (
     <div
         className={`
-            relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:shadow-md bg-white min-w-[140px] text-center cursor-pointer group
+            relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:shadow-md bg-white min-w-[160px] text-center cursor-pointer group
             ${emp.is_secondary
                 ? 'border-amber-200 bg-amber-50 hover:border-amber-300'
-                : 'border-slate-200 hover:border-blue-300'
+                : 'border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100'
             }
         `}
         onClick={(e) => {
             e.stopPropagation();
-            alert(`Çalışan: ${emp.name}\nUnvan: ${emp.title}`);
+            if (onClick) onClick(emp);
         }}
     >
         <div className="flex flex-col items-center gap-1">
             <div className={`
-                w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold
+                w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-1
                 ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}
             `}>
                 {emp.name.charAt(0)}
             </div>
 
-            <div>
-                <h4 className="font-bold text-slate-700 text-xs truncate max-w-[120px]">{emp.name}</h4>
-                <p className="text-[9px] text-slate-500 truncate max-w-[120px]">{emp.title}</p>
+            <div className="w-full">
+                <h4 className="font-bold text-slate-700 text-xs truncate w-full px-1">{emp.name}</h4>
+                {(!emp.title || emp.title === 'Temp') ? null : (
+                    <p className="text-[10px] text-slate-500 truncate w-full px-1">{emp.title}</p>
+                )}
             </div>
 
             {emp.functional_groups && emp.functional_groups.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                    {emp.functional_groups.map((group, idx) => (
+                    {emp.functional_groups.slice(0, 2).map((group, idx) => (
                         <span key={idx} className="text-[6px] px-1 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
                             {group}
                         </span>
                     ))}
+                    {emp.functional_groups.length > 2 && (
+                        <span className="text-[6px] px-1 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-100">
+                            +{emp.functional_groups.length - 2}
+                        </span>
+                    )}
                 </div>
             )}
 
@@ -75,7 +160,7 @@ const DepartmentNode = ({ node }) => (
     </div>
 );
 
-const TreeNode = ({ node, showAllEmployees }) => {
+const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
     // Logic:
     // 1. Employees are rendered Vertically directly under the department (Vertical Stack).
     // 2. Sub-departments are rendered Horizontally in the <ul> (Standard Tree).
@@ -93,7 +178,7 @@ const TreeNode = ({ node, showAllEmployees }) => {
 
                 {/* 1. Department Node */}
                 {node.type === 'employee' ? (
-                    <EmployeeNode emp={node} />
+                    <EmployeeNode emp={node} onClick={onEmployeeClick} />
                 ) : (
                     <DepartmentNode node={node} />
                 )}
@@ -107,7 +192,7 @@ const TreeNode = ({ node, showAllEmployees }) => {
                         {employees.map((emp, index) => (
                             <React.Fragment key={emp.id}>
                                 {index > 0 && <div className="w-px h-4 bg-slate-300"></div>}
-                                <EmployeeNode emp={emp} />
+                                <EmployeeNode emp={emp} onClick={onEmployeeClick} />
                             </React.Fragment>
                         ))}
                     </div>
@@ -118,7 +203,12 @@ const TreeNode = ({ node, showAllEmployees }) => {
             {hasSubDepts && (
                 <ul>
                     {node.children.map(child => (
-                        <TreeNode key={child.id} node={{ ...child, type: 'department' }} showAllEmployees={showAllEmployees} />
+                        <TreeNode
+                            key={child.id}
+                            node={{ ...child, type: 'department' }}
+                            showAllEmployees={showAllEmployees}
+                            onEmployeeClick={onEmployeeClick}
+                        />
                     ))}
                 </ul>
             )}
@@ -131,6 +221,7 @@ const OrganizationChart = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showEmployees, setShowEmployees] = useState(false); // Default off to reduce clutter
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // Zoom & Pan State
     const [scale, setScale] = useState(1);
@@ -229,7 +320,14 @@ const OrganizationChart = () => {
     );
 
     return (
-        <div className="space-y-6 h-full flex flex-col overflow-hidden">
+        <div className="space-y-6 h-full flex flex-col overflow-hidden relative">
+            {selectedEmployee && (
+                <EmployeeDetailModal
+                    employee={selectedEmployee}
+                    onClose={() => setSelectedEmployee(null)}
+                />
+            )}
+
             <div className="flex items-center justify-between shrink-0 px-1">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
@@ -286,7 +384,12 @@ const OrganizationChart = () => {
                     <div className="tree select-none">
                         <ul>
                             {treeData.map(node => (
-                                <TreeNode key={node.id} node={{ ...node, type: node.type || 'department' }} showAllEmployees={showEmployees} />
+                                <TreeNode
+                                    key={node.id}
+                                    node={{ ...node, type: node.type || 'department' }}
+                                    showAllEmployees={showEmployees}
+                                    onEmployeeClick={setSelectedEmployee}
+                                />
                             ))}
                         </ul>
                     </div>
@@ -309,7 +412,6 @@ const OrganizationChart = () => {
                     position: relative;
                     padding: 20px 5px 0 5px;
                     transition: all 0.5s;
-                    /* Core Flex Behavior for LIs */
                     display: flex;
                     flex-direction: column;
                     align-items: center;
