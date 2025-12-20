@@ -276,7 +276,7 @@ const OrganizationChart = () => {
             </div>
 
             <style>{`
-                /* Tree CSS - Standard Logic */
+                /* Tree CSS - Robust Flexbox Implementation */
                 .tree ul {
                     padding-top: 20px; 
                     position: relative;
@@ -284,45 +284,79 @@ const OrganizationChart = () => {
                     display: flex;
                     justify-content: center;
                 }
+
                 .tree li {
-                    float: left; 
                     text-align: center;
                     list-style-type: none;
                     position: relative;
                     padding: 20px 5px 0 5px;
                     transition: all 0.5s;
+                    /* Core Flex Behavior for LIs */
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
                 }
+
+                /* Connectors */
                 .tree li::before, .tree li::after {
                     content: '';
-                    position: absolute; top: 0; right: 50%;
-                    border-top: 1px solid #94a3b8;
-                    width: 50%; height: 20px;
+                    position: absolute; 
+                    top: 0; 
+                    right: 50%;
+                    border-top: 2px solid #cbd5e1; /* Thicker, lighter line */
+                    width: 50%; 
+                    height: 20px;
+                    z-index: -1;
                 }
+
                 .tree li::after {
-                    right: auto; left: 50%;
-                    border-left: 1px solid #94a3b8;
+                    right: auto; 
+                    left: 50%;
+                    border-left: 2px solid #cbd5e1;
                 }
+
+                /* Only Child: No horizontal connectors needed at top */
                 .tree li:only-child::after, .tree li:only-child::before {
                     display: none;
                 }
+
+                /* Only Child: Remove top padding */
                 .tree li:only-child { 
                     padding-top: 0;
                 }
-                .tree li:first-child::before, .tree li:last-child::after {
+
+                /* First Child: Remove left connector */
+                .tree li:first-child::before {
                     border: 0 none;
                 }
-                .tree li:last-child::before{
-                    border-right: 1px solid #94a3b8;
-                    border-radius: 0 5px 0 0;
-                }
-                .tree li:first-child::after{
+                
+                /* First Child: Add curve to right connector */
+                .tree li:first-child::after {
                     border-radius: 5px 0 0 0;
                 }
-                .tree ul ul::before{
+
+                /* Last Child: Remove right connector */
+                .tree li:last-child::after {
+                    border: 0 none;
+                }
+                
+                /* Last Child: Add curve to left connector */
+                .tree li:last-child::before {
+                    border-right: 2px solid #cbd5e1;
+                    border-radius: 0 5px 0 0;
+                }
+
+                /* Vertical connector from Parent down to Children */
+                .tree ul ul::before {
                     content: '';
-                    position: absolute; top: 0; left: 50%;
-                    border-left: 1px solid #94a3b8;
-                    width: 0; height: 20px;
+                    position: absolute; 
+                    top: 0; 
+                    left: 50%;
+                    border-left: 2px solid #cbd5e1;
+                    width: 0; 
+                    height: 20px;
+                    transform: translateX(-50%); /* Perfectly center vertical line */
+                    z-index: -1;
                 }
             `}</style>
         </div>
