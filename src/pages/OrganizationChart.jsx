@@ -119,19 +119,27 @@ const OrganizationChart = () => {
     useEffect(() => {
         const fetchHierarchy = async () => {
             try {
+                console.log('OrgChart: Fetching hierarchy...');
                 const response = await api.get('/departments/hierarchy/');
+                console.log('OrgChart: Raw API Response:', response);
                 let data = response.data;
+                console.log('OrgChart: Initial Data:', data);
 
                 // Filter Functional Groups
                 if (Array.isArray(data)) {
-                    data = data.filter(node =>
-                        !node.code.includes('ROOT_FUNC') &&
-                        !node.name.includes('Fonksiyonel') &&
-                        !node.name.includes('Functional')
-                    );
+                    const originalLength = data.length;
+                    data = data.filter(node => {
+                        const isFunc = node.code.includes('ROOT_FUNC') ||
+                            node.name.includes('Fonksiyonel') ||
+                            node.name.includes('Functional');
+                        if (isFunc) console.log('OrgChart: Filtered out node:', node.name);
+                        return !isFunc;
+                    });
+                    console.log(`OrgChart: Filtered ${originalLength - data.length} nodes. Remaining:`, data.length);
                 }
 
                 if (Array.isArray(data) && data.length > 1) {
+                    console.log('OrgChart: Multiple roots detected, wrapping in company node.');
                     data = [{
                         id: 'root-company',
                         name: 'Mega Portal',
@@ -139,11 +147,15 @@ const OrganizationChart = () => {
                         employees: [],
                         children: data
                     }];
+                } else if (Array.isArray(data) && data.length === 0) {
+                    console.warn('OrgChart: Data is empty after filtering!');
                 }
+
+                console.log('OrgChart: Final Tree Data to set:', data);
                 setTreeData(data);
             } catch (err) {
-                console.error('Error fetching hierarchy:', err);
-                setError('Organizasyon şemasını görüntüleme yetkiniz yok.');
+                console.error('OrgChart: Error fetching hierarchy:', err);
+                setError('Organizasyon şemasını görüntüleme yetkiniz yok veya bir hata oluştu.');
             } finally {
                 setLoading(false);
             }
