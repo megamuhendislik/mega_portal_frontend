@@ -235,7 +235,7 @@ const OrganizationChart = () => {
             </div>
 
             <div
-                className="card bg-slate-50/50 flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl"
+                className="card bg-slate-50/50 flex-1 min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
