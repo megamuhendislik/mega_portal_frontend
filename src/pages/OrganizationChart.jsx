@@ -342,7 +342,7 @@ const OrganizationChart = () => {
     );
 
     return (
-        <div className="space-y-4 md:space-y-6 h-full flex flex-col overflow-hidden relative">
+        <div className="space-y-2 h-full flex flex-col overflow-hidden relative">
             {selectedEmployee && (
                 <EmployeeDetailModal
                     employee={selectedEmployee}
@@ -350,10 +350,9 @@ const OrganizationChart = () => {
                 />
             )}
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 px-1 gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 px-1 gap-2">
                 <div>
                     <h2 className="text-xl md:text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
-                    <p className="text-slate-500 mt-1 text-sm md:text-base">İnteraktif Şema (Sürükle & Yakınlaştır)</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 md:gap-4">
@@ -382,7 +381,7 @@ const OrganizationChart = () => {
             </div>
 
             <div
-                className="card bg-slate-50/50 flex-1 h-[calc(100vh-180px)] min-h-[500px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
+                className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
