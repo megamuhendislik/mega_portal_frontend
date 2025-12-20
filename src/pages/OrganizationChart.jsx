@@ -118,6 +118,15 @@ const OrganizationChart = () => {
                 console.log('Organization Chart Data:', data);
 
                 // If multiple roots, wrap them in a virtual company node
+                // CLIENT-SIDE FILTERING: Extra safety to remove Functional Groups
+                if (Array.isArray(data)) {
+                    data = data.filter(node =>
+                        !node.code.includes('ROOT_FUNC') &&
+                        !node.name.includes('Fonksiyonel') &&
+                        !node.name.includes('Functional')
+                    );
+                }
+
                 if (Array.isArray(data) && data.length > 1) {
                     data = [{
                         id: 'root-company',
@@ -126,6 +135,8 @@ const OrganizationChart = () => {
                         employees: [],
                         children: data
                     }];
+                } else if (Array.isArray(data) && data.length === 0) {
+                    // If filtered to empty, maybe show nothing or check if it was wrapped
                 }
 
                 setTreeData(data);
