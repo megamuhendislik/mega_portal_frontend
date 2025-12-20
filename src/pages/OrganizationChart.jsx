@@ -136,8 +136,8 @@ const EmployeeNode = ({ emp, onClick }) => (
 const DepartmentNode = ({ node }) => (
     <div
         className={`
-            relative z-10 p-3 rounded-xl border shadow-sm transition-all hover:shadow-lg bg-white min-w-[180px] max-w-[220px] text-center cursor-pointer
-            border-blue-200 hover:border-blue-400
+            relative z-10 p-4 rounded-2xl border shadow-sm transition-all hover:shadow-xl bg-white min-w-[220px] max-w-[260px] text-center cursor-pointer
+            border-slate-200 hover:border-blue-400 group
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -145,7 +145,7 @@ const DepartmentNode = ({ node }) => (
     >
         <div className="flex flex-col items-center gap-2">
             <div className={`
-                w-8 h-8 rounded-lg flex items-center justify-center shadow-sm 
+                w-8 h-8 rounded-lg flex items-center justify-center shadow-sm
                 ${node.code === 'COMPANY' ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'}
             `}>
                 <Building size={16} />
@@ -224,7 +224,7 @@ const OrganizationChart = () => {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // Zoom & Pan State
-    const [scale, setScale] = useState(1);
+    const [scale, setScale] = useState(1.4); // Default bigger zoom
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });

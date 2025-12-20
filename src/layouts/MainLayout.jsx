@@ -143,39 +143,46 @@ const MainLayout = () => {
             {/* Sidebar */}
             <aside
                 className={clsx(
-                    "fixed md:relative z-40 h-full transition-all duration-300 ease-in-out flex flex-col shadow-2xl",
-                    // Apple-style Frosted Glass Sidebar
-                    "bg-slate-900/95 backdrop-blur-xl border-r border-white/10",
+                    "fixed md:relative z-40 h-full transition-all duration-300 ease-in-out flex flex-col shadow-2xl overflow-hidden",
+                    // Premium Dark Gradient Background
+                    "bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 border-r border-white/5",
                     isSidebarOpen ? "w-72 translate-x-0" : (isMobile ? "-translate-x-full w-72" : "w-20 translate-x-0")
                 )}
             >
                 {/* Logo Area */}
-                <div className="p-6 flex items-center justify-between h-20 border-b border-white/10">
+                <div className="p-6 flex items-center justify-between h-24 border-b border-white/5 relative overflow-hidden">
+                    {/* Abstract Background Decoration */}
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-500/10 to-transparent pointer-events-none" />
+
                     {isSidebarOpen || isMobile ? (
-                        <div className="flex items-center space-x-3 animate-fade-in">
-                            {/* Frosted Logo Background */}
-                            <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
-                                <img src="/logo.png" alt="Logo" className="h-8 w-8 object-contain" />
+                        <div className="flex items-center space-x-3 relative z-10 animate-fade-in">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                <img src="/logo.png" alt="Logo" className="h-6 w-6 object-contain brightness-0 invert" />
                             </div>
-                            <span className="font-bold text-xl tracking-wide text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                                PORTAL
-                            </span>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-lg tracking-wide text-white">
+                                    MEGA PORTAL
+                                </span>
+                                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                                    Yönetim Paneli
+                                </span>
+                            </div>
                         </div>
                     ) : (
-                        <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto border border-white/20 shadow-inner">
-                            <img src="/logo.png" alt="Logo" className="h-6 w-6 object-contain" />
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/20">
+                            <span className="text-white font-bold text-lg">M</span>
                         </div>
                     )}
 
                     {isMobile && (
-                        <button onClick={() => setIsSidebarOpen(false)} className="text-slate-400 hover:text-white">
-                            <X size={24} />
+                        <button onClick={() => setIsSidebarOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                            <X size={20} />
                         </button>
                     )}
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-hide">
+                <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                     {filteredNavItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
@@ -183,22 +190,28 @@ const MainLayout = () => {
                                 key={item.path}
                                 to={item.path}
                                 className={clsx(
-                                    "group flex items-center px-3 py-3.5 rounded-xl transition-all duration-300 relative overflow-hidden",
+                                    "group flex items-center px-3 py-3 rounded-xl transition-all duration-300 relative overflow-hidden",
                                     isActive
-                                        ? "bg-blue-600/90 text-white shadow-lg shadow-blue-500/30 backdrop-blur-sm"
-                                        : "text-slate-400 hover:bg-white/5 hover:text-white hover:backdrop-blur-sm"
+                                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/10"
+                                        : "text-slate-400 hover:bg-white/5 hover:text-white"
                                 )}
                             >
-                                <item.icon size={22} className={clsx("transition-transform duration-300", isActive && "scale-110")} />
+                                <item.icon
+                                    size={20}
+                                    className={clsx(
+                                        "transition-transform duration-300",
+                                        isActive ? "text-white" : "text-slate-500 group-hover:text-blue-400"
+                                    )}
+                                />
 
                                 {(isSidebarOpen || isMobile) && (
-                                    <span className="ml-3 font-medium tracking-wide animate-fade-in">
+                                    <span className="ml-3 font-medium text-sm tracking-wide transition-colors">
                                         {item.label}
                                     </span>
                                 )}
 
                                 {(isSidebarOpen || isMobile) && isActive && (
-                                    <ChevronRight size={16} className="ml-auto opacity-70" />
+                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                                 )}
                             </Link>
                         );
@@ -206,28 +219,29 @@ const MainLayout = () => {
                 </nav>
 
                 {/* Footer / Logout */}
-                <div className="p-4 border-t border-white/10 bg-black/20 backdrop-blur-md">
+                <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-sm">
                     <button
                         onClick={logout}
                         className={clsx(
-                            "flex items-center w-full p-3 rounded-xl transition-all duration-300 group",
-                            "text-slate-400 hover:bg-red-500/20 hover:text-red-400 hover:backdrop-blur-sm"
+                            "flex items-center w-full p-3 rounded-xl transition-all duration-300 group border border-transparent",
+                            "text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
                         )}
                     >
-                        <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-                        {(isSidebarOpen || isMobile) && <span className="ml-3 font-medium">Çıkış Yap</span>}
+                        <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        {(isSidebarOpen || isMobile) && <span className="ml-3 font-medium text-sm">Çıkış Yap</span>}
                     </button>
 
                     {!isMobile && (
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="mt-4 w-full flex items-center justify-center p-2 text-slate-500 hover:text-white transition-colors"
+                            className="mt-3 w-full flex items-center justify-center p-2 text-slate-600 hover:text-slate-300 transition-colors"
                         >
                             {isSidebarOpen ? (
-                                <div className="flex items-center text-xs uppercase tracking-wider space-x-2 opacity-70 hover:opacity-100">
-                                    <span>Daralt</span><X size={14} />
+                                <div className="flex items-center text-[10px] uppercase tracking-widest gap-2 opacity-50 hover:opacity-100">
+                                    <ChevronRight className="rotate-180" size={12} />
+                                    <span>Daralt</span>
                                 </div>
-                            ) : <Menu size={20} />}
+                            ) : <Menu size={18} />}
                         </button>
                     )}
                 </div>
