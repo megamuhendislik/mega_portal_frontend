@@ -76,30 +76,48 @@ const DepartmentNode = ({ node }) => (
 );
 
 const TreeNode = ({ node, showAllEmployees }) => {
-    // Only treat as having children if:
-    // 1. It has sub-departments (always show)
-    // 2. It has employees AND showAllEmployees is true
+    // Logic:
+    // 1. Employees are rendered Vertically directly under the department (Vertical Stack).
+    // 2. Sub-departments are rendered Horizontally in the <ul> (Standard Tree).
+
+    // Check if we have employees to show
+    const employees = (showAllEmployees && node.employees) ? node.employees : [];
+    const hasEmployees = employees.length > 0;
+
+    // Check if we have sub-departments
     const hasSubDepts = node.children && node.children.length > 0;
-    const hasEmployees = node.employees && node.employees.length > 0;
-    const shouldRenderChildren = hasSubDepts || (hasEmployees && showAllEmployees);
 
     return (
         <li>
-            {node.type === 'employee' ? (
-                <EmployeeNode emp={node} />
-            ) : (
-                <DepartmentNode node={node} />
-            )}
+            <div className="flex flex-col items-center">
 
-            {shouldRenderChildren && (
+                {/* 1. Department Node */}
+                {node.type === 'employee' ? (
+                    <EmployeeNode emp={node} />
+                ) : (
+                    <DepartmentNode node={node} />
+                )}
+
+                {/* 2. Vertical Employee Stack (if visible) */}
+                {hasEmployees && (
+                    <div className="flex flex-col items-center relative">
+                        {/* Connector Line from Dept to First Employee */}
+                        <div className="w-px h-4 bg-slate-300"></div>
+
+                        {employees.map((emp, index) => (
+                            <React.Fragment key={emp.id}>
+                                {index > 0 && <div className="w-px h-4 bg-slate-300"></div>}
+                                <EmployeeNode emp={emp} />
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* 3. Horizontal Sub-Departments */}
+            {hasSubDepts && (
                 <ul>
-                    {/* Render Employees if toggle is ON */}
-                    {showAllEmployees && node.employees?.map(emp => (
-                        <TreeNode key={`emp-${emp.id}`} node={{ ...emp, type: 'employee' }} showAllEmployees={showAllEmployees} />
-                    ))}
-
-                    {/* Always render sub-departments */}
-                    {node.children?.map(child => (
+                    {node.children.map(child => (
                         <TreeNode key={child.id} node={{ ...child, type: 'department' }} showAllEmployees={showAllEmployees} />
                     ))}
                 </ul>
