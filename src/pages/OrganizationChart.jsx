@@ -4,7 +4,7 @@ import api from '../services/api';
 
 const TreeNode = ({ node, level = 0 }) => {
     const [expanded, setExpanded] = useState(true);
-    const [showEmployees, setShowEmployees] = useState(false);
+    const [showEmployees, setShowEmployees] = useState(true); // Open by default
     const hasChildren = node.children && node.children.length > 0;
 
     return (
@@ -12,7 +12,7 @@ const TreeNode = ({ node, level = 0 }) => {
             <div className="flex flex-col items-center">
                 <div
                     className={`
-                        relative z-10 p-3 rounded-xl border shadow-sm transition-all hover:shadow-md bg-white min-w-[180px] text-center cursor-pointer
+                        relative z-10 p-3 rounded-xl border shadow-sm transition-all hover:shadow-md bg-white min-w-[200px] text-center cursor-pointer
                         ${level === 0 ? 'border-blue-400 bg-blue-50 ring-4 ring-blue-50/50' : 'border-slate-200'}
                     `}
                     onClick={() => hasChildren && setExpanded(!expanded)}
@@ -24,6 +24,8 @@ const TreeNode = ({ node, level = 0 }) => {
                         `}>
                             <Building size={16} />
                         </div>
+
+                        {/* ... */}
 
                         <div>
                             <h3 className={`font-bold ${level === 0 ? 'text-blue-900 text-base' : 'text-slate-800 text-sm'}`}>
@@ -145,8 +147,8 @@ const OrganizationChart = () => {
                 </div>
             </div>
 
-            <div className="card p-8 overflow-auto bg-slate-50/50 flex-1 min-h-[600px] flex justify-center">
-                <div className="tree">
+            <div className="card p-8 overflow-auto bg-slate-50/50 flex-1 min-h-[600px]">
+                <div className="tree min-w-max mx-auto">
                     <ul>
                         {treeData.map(node => (
                             <TreeNode key={node.id} node={node} />
