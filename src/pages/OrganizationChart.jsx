@@ -69,6 +69,10 @@ const DepartmentNode = ({ node }) => (
                 </h3>
                 {node.code && <div className="text-[10px] text-slate-400">{node.code}</div>}
             </div>
+
+            <div className="px-2 py-0.5 bg-white/50 rounded-full text-[10px] font-medium text-blue-700 border border-blue-100">
+                {(node.employees?.length || 0) + (node.children?.length || 0)} Alt Birim/Kişi
+            </div>
         </div>
     </div>
 );
@@ -180,7 +184,26 @@ const OrganizationChart = () => {
     };
 
     if (loading) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
-    if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+
+    if (error) return (
+        <div className="p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-500 mb-4">
+                <User size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Erişim Engellendi</h3>
+            <p className="text-slate-500 max-w-md">{error}</p>
+        </div>
+    );
+
+    if (!treeData || treeData.length === 0) return (
+        <div className="p-8 flex flex-col items-center justify-center text-center h-full">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
+                <Building size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadı</h3>
+            <p className="text-slate-500 mt-2">Organizasyon şeması boş (Filtreleme sorunu olabilir) veya veri yüklenemedi.</p>
+        </div>
+    );
 
     return (
         <div className="space-y-6 h-full flex flex-col overflow-hidden">
@@ -190,7 +213,7 @@ const OrganizationChart = () => {
                     <p className="text-slate-500 mt-1">İnteraktif Şema (Sürükle & Yakınlaştır)</p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
+                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
                     <button onClick={handleZoomOut} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
                     <span className="text-xs font-mono w-12 text-center">{(scale * 100).toFixed(0)}%</span>
                     <button onClick={handleZoomIn} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18} /></button>
@@ -208,18 +231,23 @@ const OrganizationChart = () => {
                 onWheel={handleWheel}
             >
                 <div
-                    className="absolute top-0 left-0 origin-top-left transition-transform duration-75 ease-out"
+                    className="origin-top-left transition-transform duration-75 ease-out absolute"
                     style={{
                         transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                        width: 'fit-content',
-                        height: 'fit-content',
-                        padding: '100px' // Initial padding
+                        top: 0,
+                        left: 0,
+                        minWidth: '100%',
+                        minHeight: '100%',
+                        padding: '100px', // Ensures content isn't flush against edge
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start'
                     }}
                 >
                     <div className="tree select-none">
                         <ul>
                             {treeData.map(node => (
-                                <TreeNode key={node.id} node={{ ...node, type: 'department' }} />
+                                <TreeNode key={node.id} node={{ ...node, type: node.type || 'department' }} />
                             ))}
                         </ul>
                     </div>
