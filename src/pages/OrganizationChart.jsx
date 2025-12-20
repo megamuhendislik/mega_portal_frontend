@@ -271,22 +271,44 @@ const OrganizationChart = () => {
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.3));
     const handleResetZoom = () => { setScale(1); setPosition({ x: 0, y: 0 }); };
 
-    // Pan Handlers
-    const handleMouseDown = (e) => {
+    // Pan Handlers (Mouse & Touch)
+    const handleStart = (clientX, clientY) => {
         setIsDragging(true);
-        setStartPos({ x: e.clientX - position.x, y: e.clientY - position.y });
+        setStartPos({ x: clientX - position.x, y: clientY - position.y });
     };
 
-    const handleMouseMove = (e) => {
+    const handleMove = (clientX, clientY) => {
         if (!isDragging) return;
-        e.preventDefault();
         setPosition({
-            x: e.clientX - startPos.x,
-            y: e.clientY - startPos.y
+            x: clientX - startPos.x,
+            y: clientY - startPos.y
         });
     };
 
+    // Mouse Events
+    const handleMouseDown = (e) => handleStart(e.clientX, e.clientY);
+    const handleMouseMove = (e) => {
+        if (isDragging) {
+            e.preventDefault();
+            handleMove(e.clientX, e.clientY);
+        }
+    };
     const handleMouseUp = () => setIsDragging(false);
+
+    // Touch Events
+    const handleTouchStart = (e) => {
+        if (e.touches.length === 1) {
+            handleStart(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    };
+    const handleTouchMove = (e) => {
+        if (isDragging && e.touches.length === 1) {
+            e.preventDefault(); // Prevent scrolling while panning
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    };
+    const handleTouchEnd = () => setIsDragging(false);
+
 
     // Wheel Zoom
     const handleWheel = (e) => {
@@ -320,7 +342,7 @@ const OrganizationChart = () => {
     );
 
     return (
-        <div className="space-y-6 h-full flex flex-col overflow-hidden relative">
+        <div className="space-y-4 md:space-y-6 h-full flex flex-col overflow-hidden relative">
             {selectedEmployee && (
                 <EmployeeDetailModal
                     employee={selectedEmployee}
@@ -328,17 +350,17 @@ const OrganizationChart = () => {
                 />
             )}
 
-            <div className="flex items-center justify-between shrink-0 px-1">
+            <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 px-1 gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
-                    <p className="text-slate-500 mt-1">İnteraktif Şema (Sürükle & Yakınlaştır)</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
+                    <p className="text-slate-500 mt-1 text-sm md:text-base">İnteraktif Şema (Sürükle & Yakınlaştır)</p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2 md:gap-4">
                     <button
                         onClick={() => setShowEmployees(!showEmployees)}
                         className={`
-                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border shadow-sm
+                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
                             ${showEmployees
                                 ? 'bg-blue-600 text-white border-blue-600'
                                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -349,22 +371,25 @@ const OrganizationChart = () => {
                         {showEmployees ? 'Çalışanları Gizle' : 'Çalışanları Göster'}
                     </button>
 
-                    <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
-                        <button onClick={handleZoomOut} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
-                        <span className="text-xs font-mono w-12 text-center">{(scale * 100).toFixed(0)}%</span>
-                        <button onClick={handleZoomIn} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18} /></button>
+                    <div className="flex items-center gap-1 md:gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
+                        <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
+                        <span className="text-xs font-mono w-10 md:w-12 text-center">{(scale * 100).toFixed(0)}%</span>
+                        <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18} /></button>
                         <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                        <button onClick={handleResetZoom} className="p-2 hover:bg-slate-100 rounded text-slate-600" title="Sıfırla"><Maximize size={18} /></button>
+                        <button onClick={handleResetZoom} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600" title="Sıfırla"><Maximize size={18} /></button>
                     </div>
                 </div>
             </div>
 
             <div
-                className="card bg-slate-50/50 flex-1 min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl"
+                className="card bg-slate-50/50 flex-1 min-h-[400px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 onWheel={handleWheel}
             >
                 <div
