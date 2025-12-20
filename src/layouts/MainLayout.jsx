@@ -316,7 +316,7 @@ const MainLayout = () => {
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-8 scroll-smooth">
-                    <div className="max-w-7xl mx-auto animate-fade-in">
+                    <div className="max-w-7xl mx-auto h-full flex flex-col animate-fade-in">
                         <Outlet />
                     </div>
                 </main>
