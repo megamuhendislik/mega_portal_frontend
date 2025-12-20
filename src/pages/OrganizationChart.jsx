@@ -126,6 +126,40 @@ const OrganizationChart = () => {
         fetchHierarchy();
     }, []);
 
+    const containerRef = React.useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+    const [scrollTop, setScrollTop] = useState(0);
+    const [startY, setStartY] = useState(0);
+
+    const handleMouseDown = (e) => {
+        setIsDragging(true);
+        setStartX(e.pageX - containerRef.current.offsetLeft);
+        setStartY(e.pageY - containerRef.current.offsetTop);
+        setScrollLeft(containerRef.current.scrollLeft);
+        setScrollTop(containerRef.current.scrollTop);
+    };
+
+    const handleMouseLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - containerRef.current.offsetLeft;
+        const y = e.pageY - containerRef.current.offsetTop;
+        const walkX = (x - startX) * 1.5; // Scroll-fast
+        const walkY = (y - startY) * 1.5;
+        containerRef.current.scrollLeft = scrollLeft - walkX;
+        containerRef.current.scrollTop = scrollTop - walkY;
+    };
+
     if (loading) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
     if (error) return (
@@ -143,13 +177,20 @@ const OrganizationChart = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
-                    <p className="text-slate-500 mt-1">Şirket hiyerarşisi ve departman yapısı</p>
+                    <p className="text-slate-500 mt-1">Şirket hiyerarşisi ve departman yapısı (Sürükleyerek gezinebilirsiniz)</p>
                 </div>
             </div>
 
-            <div className="card p-8 overflow-auto bg-slate-50/50 flex-1 min-h-[600px]">
-                <div className="tree min-w-max mx-auto">
-                    <ul>
+            <div
+                ref={containerRef}
+                className={`card p-8 overflow-auto bg-slate-50/50 flex-1 min-h-[600px] select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+            >
+                <div className="tree min-w-max mx-auto pointer-events-none">
+                    <ul className="pointer-events-auto">
                         {treeData.map(node => (
                             <TreeNode key={node.id} node={node} />
                         ))}
