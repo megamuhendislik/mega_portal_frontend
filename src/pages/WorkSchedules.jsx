@@ -37,7 +37,8 @@ const WorkSchedules = () => {
     const [selectedDateForHoliday, setSelectedDateForHoliday] = useState(null);
 
     const { user } = useAuth();
-    const canManageHolidays = user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
+    // Permission Check: Allow Superusers, Admins, or specific permission holders
+    const canManageHolidays = user?.is_superuser || user?.role === 'system_admin' || user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
     const today = moment().startOf('day');
 
     // --- Effects ---
@@ -91,8 +92,8 @@ const WorkSchedules = () => {
             is_default: false,
             lunch_start: '12:30',
             lunch_end: '13:30',
-            daily_break_allowance: 30,
-            late_tolerance_minutes: 15,
+            daily_break_allowance: 30, // Default for placeholders
+            late_tolerance_minutes: 15, // Default for placeholders
             schedule: defaultSchedule
         });
         setShowScheduleModal(true);
@@ -145,14 +146,26 @@ const WorkSchedules = () => {
     };
 
     // --- Handlers: Holidays ---
+    // Handle Single Click (Only in Edit Mode)
     const handleDayClick = (date, existingHoliday) => {
-        // Only trigger if Edit Mode is active AND user has permission
         if (editMode && canManageHolidays) {
-            setSelectedDateForHoliday(date);
-            setHolidayFormData(existingHoliday ? { ...existingHoliday } : { name: '', category: 'OFFICIAL' });
-            setShowHolidayModal(true);
+            openHolidayModal(date, existingHoliday);
         }
     };
+
+    // Handle Double Click (Always availble if permited)
+    const handleDayDoubleClick = (date, existingHoliday) => {
+        if (canManageHolidays) {
+            openHolidayModal(date, existingHoliday);
+        }
+    };
+
+    const openHolidayModal = (date, existingHoliday) => {
+        setSelectedDateForHoliday(date);
+        setHolidayFormData(existingHoliday ? { ...existingHoliday } : { name: '', category: 'OFFICIAL' });
+        setShowHolidayModal(true);
+    };
+
 
     const handleSaveHoliday = async () => {
         if (!holidayFormData.name.trim()) {
@@ -388,12 +401,13 @@ const WorkSchedules = () => {
                                             <div
                                                 key={i}
                                                 onClick={() => handleDayClick(date, status.holiday)}
+                                                onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
                                                 className={`
                                                     h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-all select-none relative group
                                                     ${status.color} 
                                                     ${isPast ? 'opacity-50 grayscale-[0.5]' : ''} 
-                                                    ${editMode && canManageHolidays
-                                                        ? 'cursor-pointer hover:ring-2 ring-blue-400 hover:scale-110 hover:shadow-lg z-0 hover:z-10 bg-white/50 backdrop-blur-sm' // Hover effect in edit mode
+                                                    ${(editMode && canManageHolidays) || canManageHolidays
+                                                        ? 'cursor-pointer hover:ring-2 ring-blue-400 hover:scale-110 hover:shadow-lg z-0 hover:z-10 bg-white/50 backdrop-blur-sm'
                                                         : 'cursor-default'
                                                     }
                                                 `}
