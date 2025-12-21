@@ -70,6 +70,7 @@ const Employees = () => {
     // Filters & Search
     const [searchTerm, setSearchTerm] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('');
+    const [showSettings, setShowSettings] = useState(false); // Toggle management mode
 
     useEffect(() => {
         fetchInitialData();
@@ -162,6 +163,19 @@ const Employees = () => {
     const handleBack = () => {
         setCurrentStep(prev => Math.max(prev - 1, 1));
         window.scrollTo(0, 0);
+    };
+
+    const handleDelete = async (employeeId) => {
+        if (!window.confirm("Bu personeli silmek istediğinize emin misiniz? Bu işlem geri alınamaz (soft delete).")) return;
+
+        try {
+            await api.delete(`/employees/${employeeId}/`);
+            alert("Personel silindi.");
+            fetchInitialData();
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("Silme işlemi başarısız: " + (error.response?.data?.error || "Yetkiniz yok."));
+        }
     };
 
     const handleSubmit = async () => {
@@ -438,9 +452,17 @@ const Employees = () => {
                         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Personel Listesi</h1>
                         <p className="text-slate-500 mt-1">Süper Admin / İK Yönetimi</p>
                     </div>
-                    <button onClick={() => setViewMode('create')} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all">
-                        <UserPlus size={20} /> Yeni Personel Ekle
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowSettings(!showSettings)}
+                            className={`px-3 py-2 rounded-xl font-bold flex items-center gap-2 border transition-colors ${showSettings ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                        >
+                            <Settings size={20} /> {showSettings ? 'Ayarları Kapat' : 'Yönet'}
+                        </button>
+                        <button onClick={() => setViewMode('create')} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all">
+                            <UserPlus size={20} /> Yeni Personel Ekle
+                        </button>
+                    </div>
                 </div>
 
                 {/* Search / Filter Bar */}
@@ -484,6 +506,14 @@ const Employees = () => {
                                     <span className="font-medium text-slate-700">{emp.email}</span>
                                 </div>
                             </div>
+                            {showSettings && (
+                                <button
+                                    onClick={(ev) => { ev.stopPropagation(); handleDelete(emp.id); }}
+                                    className="mt-3 w-full py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center gap-2 text-sm font-bold border border-red-100 transition-colors"
+                                >
+                                    <Trash2 size={14} /> Sil
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>
