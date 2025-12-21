@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Edit, Trash2, Save, X, Check, Calendar, ChevronLeft, ChevronRight, Settings, Info } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
@@ -50,6 +51,8 @@ const WorkSchedules = () => {
 
     // --- Effects ---
     useEffect(() => {
+        // Enforce Turkish locale
+        moment.locale('tr');
         fetchData();
     }, []);
 
@@ -168,7 +171,9 @@ const WorkSchedules = () => {
     // Handle Single Click (Only in Edit Mode)
     const handleDayClick = (date, existingHoliday) => {
         // Prevent editing past days
-        if (date.isBefore(today, 'day')) return;
+        if (date.isBefore(today, 'day')) {
+            return;
+        }
 
         if (editMode && canManageHolidays) {
             openHolidayModal(date, existingHoliday);
@@ -178,7 +183,10 @@ const WorkSchedules = () => {
     // Handle Double Click (Always availble if permited)
     const handleDayDoubleClick = (date, existingHoliday) => {
         // Prevent editing past days
-        if (date.isBefore(today, 'day')) return;
+        if (date.isBefore(today, 'day')) {
+            console.log("Past day double click blocked:", date.format());
+            return;
+        }
 
         if (canManageHolidays) {
             openHolidayModal(date, existingHoliday);
@@ -448,11 +456,11 @@ const WorkSchedules = () => {
                 })}
             </div>
 
-            {/* --- Modals --- */}
+            {/* --- Modals (Rendered via Portal to avoid z-index/transform issues) --- */}
 
             {/* Holiday Modal */}
-            {showHolidayModal && holidayFormData && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm animate-fade-in">
+            {showHolidayModal && holidayFormData && createPortal(
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm animate-fade-in text-left">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100">
                         <div className="bg-slate-50 p-5 border-b border-slate-100 flex justify-between items-center">
                             <h3 className="font-bold text-slate-800 text-lg">
@@ -464,12 +472,12 @@ const WorkSchedules = () => {
                         </div>
 
                         <div className="p-6 space-y-5">
-                            <div className="text-sm font-medium text-blue-800 text-center bg-blue-50 py-3 rounded-xl border border-blue-100">
+                            <div className="text-sm font-medium text-blue-800 text-center bg-blue-50 py-3 rounded-xl border border-blue-100 capitalize">
                                 {selectedDateForHoliday?.format('DD MMMM YYYY, dddd')}
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tatil Adı</label>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Tatil Adı</label>
                                 <input
                                     type="text"
                                     value={holidayFormData.name}
@@ -481,7 +489,7 @@ const WorkSchedules = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tatil Türü</label>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Tatil Türü</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={() => setHolidayFormData({ ...holidayFormData, category: 'OFFICIAL' })}
@@ -519,12 +527,13 @@ const WorkSchedules = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Schedule Modal (Weekly Rules) */}
-            {showScheduleModal && scheduleFormData && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[55] p-4 backdrop-blur-sm animate-fade-in">
+            {showScheduleModal && scheduleFormData && createPortal(
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm animate-fade-in text-left">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                             <div>
@@ -616,7 +625,6 @@ const WorkSchedules = () => {
                                 </div>
                             </div>
 
-                            {/* Weekly Schedule Grid */}
                             <div className="space-y-4">
                                 <h4 className="font-bold text-slate-800 flex items-center gap-2 border-t border-slate-100 pt-6">
                                     <div className="w-1 h-5 bg-green-500 rounded-full"></div>
@@ -702,7 +710,8 @@ const WorkSchedules = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
