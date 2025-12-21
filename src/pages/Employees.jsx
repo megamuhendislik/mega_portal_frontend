@@ -598,117 +598,166 @@ const Employees = () => {
     const progress = ((currentStep - 1) / (STEPS.length - 1)) * 100;
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center py-10 px-4">
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center py-10 px-4 font-sans text-slate-900">
             {/* Nav Back */}
-            <div className="w-full max-w-5xl mb-6">
+            <div className="w-full max-w-7xl mb-6">
                 <button
                     onClick={() => setViewMode('list')}
                     className="text-slate-500 hover:text-slate-800 flex items-center gap-2 font-bold transition-colors group"
                 >
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-slate-400 transition-colors shadow-sm">
-                        <ArrowLeft size={16} />
+                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-slate-400 transition-colors shadow-sm">
+                        <ArrowLeft size={18} />
                     </div>
-                    Listeye Dön
+                    <span className="text-lg">Personel Listesine Dön</span>
                 </button>
             </div>
 
-            {/* Stepper Container */}
-            <div className="w-full max-w-5xl bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-white overflow-hidden backdrop-blur-xl relative">
+            {/* Main Card Container */}
+            <div className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[700px] flex flex-col md:flex-row">
 
-                {/* Header & Steps */}
-                <div className="bg-slate-50/50 border-b border-slate-100 p-8">
-                    <div className="flex justify-between items-center mb-10">
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-800">Yeni Personel Ekle</h1>
-                            <p className="text-slate-500 mt-1 text-sm">Lütfen tüm adımları eksiksiz tamamlayın.</p>
-                        </div>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold border border-blue-100">
-                            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                            Adım {currentStep} / 5
-                        </div>
+                {/* Left Sidebar - Stepper */}
+                <div className="w-full md:w-80 bg-slate-900 text-white p-8 flex flex-col relative overflow-hidden shrink-0">
+                    {/* Decorative Background Elements */}
+                    <div className="absolute top-0 left-0 w-full h-full bg-slate-900 z-0">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
                     </div>
 
-                    {/* Stepper Visual */}
-                    <div className="relative px-4">
-                        <div className="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -z-10 -translate-y-1/2 rounded-full"></div>
-                        <div
-                            className="absolute top-1/2 left-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 -z-10 -translate-y-1/2 rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${progress}%` }}
-                        ></div>
-                        <div className="flex justify-between">
+                    <div className="relative z-10">
+                        <div className="mb-10">
+                            <div className="flex items-center gap-3 mb-2 opacity-80">
+                                <UserPlus size={24} className="text-blue-400" />
+                                <span className="text-xs font-bold tracking-widest uppercase text-blue-200">İK YÖNETİMİ</span>
+                            </div>
+                            <h2 className="text-3xl font-bold leading-tight">Yeni Personel<br /><span className="text-blue-400">Oluşturma</span></h2>
+                        </div>
+
+                        {/* Vertical Steps */}
+                        <div className="space-y-1 relative">
+                            {/* Vertical Line */}
+                            <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
+
                             {STEPS.map((s, idx) => {
                                 const isActive = currentStep === s.number;
                                 const isCompleted = currentStep > s.number;
                                 const Icon = s.icon;
+
                                 return (
-                                    <div key={s.number} className="flex flex-col items-center gap-3 relative group cursor-default">
+                                    <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
                                         <div
                                             className={`
-                                                w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 border-2 shadow-sm relative z-10
-                                                ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-110 shadow-blue-500/30' :
-                                                    isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                                                        'bg-white border-slate-200 text-slate-300'}
+                                                w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0
+                                                ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' :
+                                                    isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' :
+                                                        'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}
                                             `}
                                         >
-                                            {isCompleted ? <Check size={20} className="stroke-[3]" /> : <Icon size={20} />}
+                                            {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
                                         </div>
-                                        <span className={`text-xs font-bold transition-colors duration-300 absolute top-14 w-32 text-center ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-slate-300'}`}>
-                                            {s.title}
-                                        </span>
+                                        <div>
+                                            <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>
+                                                {s.title}
+                                            </h4>
+                                            {isActive && (
+                                                <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
                     </div>
+
+                    <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">
+                        MEGA PORTAL v1.0 &copy; 2025
+                    </div>
                 </div>
 
-                {/* Form Content */}
-                <div className="p-8 md:p-12 min-h-[500px]">
-                    {currentStep === 1 && renderStep1()}
-                    {currentStep === 2 && renderStep2()}
-                    {currentStep === 3 && renderStep3()}
-                    {currentStep === 4 && renderStep4()}
-                    {currentStep === 5 && renderStep5()}
-                </div>
+                {/* Right Content Area */}
+                <div className="flex-1 bg-white flex flex-col">
+                    {/* Header */}
+                    <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                {STEPS[currentStep - 1].icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 })}
+                                {STEPS[currentStep - 1].title}
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-1">Lütfen gerekli bilgileri eksiksiz doldurunuz.</p>
+                        </div>
+                        <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                            Adım {currentStep} / {STEPS.length}
+                        </div>
+                    </div>
 
-                {/* Footer Controls */}
-                <div className="bg-slate-50 border-t border-slate-100 p-6 flex justify-between items-center">
-                    <button
-                        onClick={handleBack}
-                        disabled={currentStep === 1}
-                        className="px-8 py-3 rounded-xl font-bold text-slate-600 hover:bg-white hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                    >
-                        Geri
-                    </button>
+                    {/* Scrollable Form Content */}
+                    <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
+                        {currentStep === 1 && renderStep1()}
+                        {currentStep === 2 && renderStep2()}
+                        {currentStep === 3 && renderStep3()}
+                        {currentStep === 4 && renderStep4()}
+                        {currentStep === 5 && renderStep5()}
+                    </div>
 
-                    {currentStep < 5 ? (
+                    {/* Footer Actions */}
+                    <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                         <button
-                            onClick={handleNext}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                            onClick={handleBack}
+                            disabled={currentStep === 1}
+                            className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:text-slate-800 disabled:opacity-30 transition-all flex items-center gap-2"
                         >
-                            İleri <ArrowRight size={18} />
+                            <ArrowLeft size={18} /> Önceki Adım
                         </button>
-                    ) : (
-                        <button
-                            onClick={handleSubmit}
-                            disabled={submitting}
-                            className="bg-green-600 hover:bg-green-700 text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-green-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                            {submitting ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
-                            Kaydı Tamamla
-                        </button>
-                    )}
+
+                        <div className="flex items-center gap-4">
+                            {/* Optional Cancel Button could go here */}
+
+                            {currentStep < 5 ? (
+                                <button
+                                    onClick={handleNext}
+                                    className="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-slate-900/20 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                                >
+                                    Sonraki Adım <ArrowRight size={18} />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={submitting}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {submitting ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
+                                    Kaydı Tamamla
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Custom Styles for Animation */}
+            {/* Custom Styles */}
             <style>{`
-                @keyframes fade-in-up {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
+                @keyframes fade-in {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                .animate-fade-in {
+                    animation: fade-in 0.5s ease-out forwards;
                 }
                 .animate-fade-in-up {
-                    animation: fade-in-up 0.4s ease-out forwards;
+                     animation: fade-in 0.4s ease-out forwards; 
+                }
+                /* Custom Scrollbar */
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #f1f5f9; 
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #cbd5e1; 
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8; 
                 }
             `}</style>
         </div>
