@@ -305,7 +305,7 @@ const WorkSchedules = () => {
     if (loading) return <div className="p-10 text-center animate-pulse text-slate-500">Yükleniyor...</div>;
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto select-none" onMouseUp={handleMouseUp}>
+        <div className="p-6 w-full max-w-[98%] mx-auto select-none" onMouseUp={handleMouseUp}>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
@@ -410,7 +410,7 @@ const WorkSchedules = () => {
             )}
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
                 {MONTHS_TR.map((monthName, index) => {
                     const monthStart = moment(`${selectedYear}-${index + 1}-01`, 'YYYY-M-DD').locale('tr');
                     const daysInMonth = monthStart.daysInMonth();
