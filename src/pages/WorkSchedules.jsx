@@ -420,7 +420,7 @@ const WorkSchedules = () => {
                                                     ${status.color} 
                                                     ${isPast ? 'opacity-50 grayscale-[0.5]' : ''} 
                                                     ${(editMode && canManageHolidays) || canManageHolidays
-                                                        ? 'cursor-pointer hover:ring-2 ring-blue-400 hover:scale-110 hover:shadow-lg z-0 hover:z-10 bg-white/50 backdrop-blur-sm'
+                                                        ? 'cursor-pointer hover:ring-2 ring-blue-400 hover:scale-110 hover:shadow-lg z-0 hover:z-10'
                                                         : 'cursor-default'
                                                     }
                                                 `}
