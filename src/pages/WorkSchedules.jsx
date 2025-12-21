@@ -629,9 +629,9 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
             </div>
 
             {canManageHolidays && (
-                <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-2">
+                <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-2 animate-pulse">
                     <Check size={16} />
-                    <span>Yönetici Modu: Tatil eklemek veya çıkarmak için günlerin üzerine <strong>Çift Tıklayın</strong>.</span>
+                    <span>Yönetici Modu: Tatil eklemek için günlerin üzerine <strong>İKİ KEZ (ÇİFT) TIKLAYINIZ</strong>.</span>
                 </div>
             )}
 
@@ -665,13 +665,19 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
                                         <div
                                             key={i}
                                             onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
+                                            onClick={() => {
+                                                if (canManageHolidays) {
+                                                    // Optional: You could use a toast here instead of console
+                                                    console.log("Double click to manage");
+                                                }
+                                            }}
                                             className={`
-                                                h-8 flex items-center justify-center text-xs rounded transition-all 
+                                                h-8 flex items-center justify-center text-xs rounded transition-all select-none
                                                 ${status.color} 
                                                 ${isPast ? 'opacity-40 grayscale' : ''} 
                                                 ${canManageHolidays ? 'cursor-pointer hover:ring-2 ring-blue-300 hover:scale-110 hover:shadow-lg z-0 hover:z-10' : 'cursor-default'}
                                             `}
-                                            title={`${date.format('DD MMMM YYYY')}\n${status.label}${isPast ? ' (Geçmiş)' : ''}`}
+                                            title={`${date.format('DD MMMM YYYY')}\n${status.label}${isPast ? ' (Geçmiş)' : ''}\n${canManageHolidays ? '(Düzenlemek için Çift Tıklayın)' : ''}`}
                                         >
                                             {i + 1}
                                         </div>
