@@ -268,10 +268,10 @@ const Employees = () => {
                 <p className="text-slate-500 text-sm">Personelin temel kimlik ve iletişim detayları.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <InputField label="Ad" value={formData.first_name} onChange={e => handleInputChange('first_name', e.target.value)} required placeholder="Örn: Ahmet" />
-                <InputField label="Soyad" value={formData.last_name} onChange={e => handleInputChange('last_name', e.target.value)} required placeholder="Örn: Yılmaz" />
+                <InputField label="Ad" value={formData.first_name} onChange={e => handleInputChange('first_name', e.target.value)} required placeholder="Personel Adı" />
+                <InputField label="Soyad" value={formData.last_name} onChange={e => handleInputChange('last_name', e.target.value)} required placeholder="Personel Soyadı" />
                 <InputField label="TC Kimlik No" value={formData.tc_number} onChange={e => handleInputChange('tc_number', e.target.value)} required placeholder="11 haneli TC no" />
-                <InputField label="E-posta" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} required type="email" placeholder="ahmet@sirket.com" />
+                <InputField label="E-posta" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} required type="email" placeholder="isim.soyisim@mega.com" />
                 <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleInputChange('birth_date', e.target.value)} type="date" />
                 <InputField label="Doğum Yeri" value={formData.birth_place} onChange={e => handleInputChange('birth_place', e.target.value)} placeholder="Örn: İstanbul" />
             </div>
