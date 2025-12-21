@@ -16,6 +16,11 @@ const DAYS = [
     { key: 'SUN', label: 'Pazar' },
 ];
 
+const MONTHS_TR = [
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+];
+
 const WorkSchedules = () => {
     // --- State ---
     const [schedules, setSchedules] = useState([]);
@@ -41,17 +46,6 @@ const WorkSchedules = () => {
     // Note: user object from AuthContext is the Employee object, which contains a nested 'user' object for the Django User.
     const canManageHolidays = user?.user?.is_superuser || user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
 
-    // Debug Log
-    useEffect(() => {
-        if (user) {
-            console.log("WorkSchedules User Check:", {
-                is_superuser: user?.user?.is_superuser,
-                permissions: user?.all_permissions,
-                can_manage: canManageHolidays
-            });
-        }
-    }, [user, canManageHolidays]);
-
     const today = moment().startOf('day');
 
     // --- Effects ---
@@ -65,6 +59,18 @@ const WorkSchedules = () => {
             setSelectedScheduleId(schedules[0].id);
         }
     }, [schedules]);
+
+    // Debug Log
+    useEffect(() => {
+        if (user) {
+            console.log("WorkSchedules User Check:", {
+                is_superuser: user?.user?.is_superuser,
+                permissions: user?.all_permissions,
+                can_manage: canManageHolidays
+            });
+        }
+    }, [user, canManageHolidays]);
+
 
     // --- Data Fetching ---
     const fetchData = async () => {
@@ -161,6 +167,9 @@ const WorkSchedules = () => {
     // --- Handlers: Holidays ---
     // Handle Single Click (Only in Edit Mode)
     const handleDayClick = (date, existingHoliday) => {
+        // Prevent editing past days
+        if (date.isBefore(today, 'day')) return;
+
         if (editMode && canManageHolidays) {
             openHolidayModal(date, existingHoliday);
         }
@@ -168,6 +177,9 @@ const WorkSchedules = () => {
 
     // Handle Double Click (Always availble if permited)
     const handleDayDoubleClick = (date, existingHoliday) => {
+        // Prevent editing past days
+        if (date.isBefore(today, 'day')) return;
+
         if (canManageHolidays) {
             openHolidayModal(date, existingHoliday);
         }
@@ -178,7 +190,6 @@ const WorkSchedules = () => {
         setHolidayFormData(existingHoliday ? { ...existingHoliday } : { name: '', category: 'OFFICIAL' });
         setShowHolidayModal(true);
     };
-
 
     const handleSaveHoliday = async () => {
         if (!holidayFormData.name.trim()) {
@@ -380,7 +391,7 @@ const WorkSchedules = () => {
 
             {/* Annual Calendar Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-                {moment.months().map((monthName, index) => {
+                {MONTHS_TR.map((monthName, index) => {
                     const monthStart = moment(`${selectedYear}-${index + 1}-01`, 'YYYY-M-DD');
                     const daysInMonth = monthStart.daysInMonth();
                     const startDayOfWeek = (monthStart.day() + 6) % 7; // Monday start
@@ -408,7 +419,7 @@ const WorkSchedules = () => {
                                     {Array(daysInMonth).fill(null).map((_, i) => {
                                         const date = moment(monthStart).add(i, 'days');
                                         const status = getDayStatus(date);
-                                        const isPast = date.isBefore(today);
+                                        const isPast = date.isBefore(today, 'day');
 
                                         return (
                                             <div
@@ -418,13 +429,13 @@ const WorkSchedules = () => {
                                                 className={`
                                                     h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-all select-none relative group
                                                     ${status.color} 
-                                                    ${isPast ? 'opacity-50 grayscale-[0.5]' : ''} 
-                                                    ${(editMode && canManageHolidays) || canManageHolidays
+                                                    ${isPast ? 'opacity-50 grayscale-[0.5] cursor-not-allowed' : ''} 
+                                                    ${!isPast && ((editMode && canManageHolidays) || canManageHolidays)
                                                         ? 'cursor-pointer hover:ring-2 ring-blue-400 hover:scale-110 hover:shadow-lg z-0 hover:z-10'
-                                                        : 'cursor-default'
+                                                        : ''
                                                     }
                                                 `}
-                                                title={`${date.format('DD MMMM YYYY')}\n${status.label}`}
+                                                title={`${date.format('DD MMMM YYYY')}\n${status.label}${isPast ? ' (Geçmiş - Düzenlenemez)' : ''}`}
                                             >
                                                 {i + 1}
                                             </div>
