@@ -239,9 +239,9 @@ const OrganizationChart = () => {
                 // Filter Functional Groups
                 if (Array.isArray(data)) {
                     data = data.filter(node =>
+                        node.is_chart_visible !== false && // Check explicit false
                         !node.code.includes('ROOT_FUNC') &&
-                        !node.name.includes('Fonksiyonel') &&
-                        !node.name.includes('Functional')
+                        !node.name.includes('Fonksiyonel')
                     );
                 }
 

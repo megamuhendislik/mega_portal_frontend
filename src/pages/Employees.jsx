@@ -22,9 +22,12 @@ const INITIAL_FORM_STATE = {
     birth_place: '',
     email: '', // Required for user creation
 
-    // Step 2: Corporate
-    department: '', // ID
-    job_position: '', // ID
+    // Step 2: Corporate (Matrix)
+    department: '', // Hierarchy Dept (Auto-filled)
+    job_position: '',
+    reports_to: '', // Manager ID
+    functional_department: '', // Attribute (stored in secondary_departments)
+
     employee_code: '',
     card_uid: '',
     employment_status: 'ACTIVE',
@@ -102,6 +105,15 @@ const Employees = () => {
     const handleInputChange = (field, value) => {
         setFormData(prev => {
             const newState = { ...prev, [field]: value };
+
+            // Logic: Manager Selection -> Auto Dept
+            if (field === 'reports_to') {
+                const manager = employees.find(e => e.id == value);
+                if (manager && manager.department) {
+                    newState.department = manager.department.id || manager.department; // Auto-assign Manager's Dept
+                }
+            }
+
             // Auto-generate username/email draft if creating
             if (viewMode === 'create' && (field === 'first_name' || field === 'last_name')) {
                 const username = generateUsername(newState.first_name, newState.last_name);
@@ -114,12 +126,20 @@ const Employees = () => {
 
     // --- Wizard Navigation ---
     const validateStep = (step) => {
-        const { first_name, last_name, tc_number, email, department, job_position, employee_code } = formData;
+        const { first_name, last_name, tc_number, email, department, job_position, employee_code, reports_to, functional_department } = formData;
         switch (step) {
             case 1: // Personal
                 return first_name && last_name && tc_number && email;
             case 2: // Corporate
-                return department && job_position && employee_code;
+                // reports_to is mandatory now for matrix structure
+                let valid = department && job_position && employee_code && reports_to;
+
+                // Special Rule: If 'Departman Müdürü', strictly require functional_department
+                const posName = jobPositions.find(p => p.id == job_position)?.name;
+                if (posName === 'Departman Müdürü' && !functional_department) {
+                    return false;
+                }
+                return valid;
             case 3: // Contact
                 return true; // Optional fields mostly
             case 4: // Details
@@ -147,8 +167,13 @@ const Employees = () => {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            // Prepare payload
-            const payload = { ...formData };
+            // Payload Prep
+            const payload = {
+                ...formData,
+                // If functional department selected, put it in secondary_departments list
+                secondary_departments: formData.functional_department ? [formData.functional_department] : []
+            };
+
             if (viewMode === 'create') {
                 await api.post('/employees/create_with_user/', payload);
                 alert("Personel başarıyla oluşturuldu.");
@@ -202,52 +227,84 @@ const Employees = () => {
     );
 
     const renderStep2 = () => {
-        // Recursive function to render department tree in select
-        const renderDepartmentOptions = (depts, level = 0) => {
-            return depts.map(dept => {
-                // Find children
-                const children = departments.filter(d => d.parent === dept.id);
-                return (
-                    <React.Fragment key={dept.id}>
-                        <option value={dept.id}>
-                            {'\u00A0'.repeat(level * 4)}{level > 0 ? '└ ' : ''}{dept.name}
-                        </option>
-                        {children.length > 0 && renderDepartmentOptions(children, level + 1)}
-                    </React.Fragment>
-                );
-            });
-        };
+        // Functional Depts (Hidden in Chart)
+        // Adjust filter logic based on your 'is_chart_visible' field logic or naming convention
+        // Assuming backend sends 'is_chart_visible' or we filter by code/parent
+        const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
 
-        // Get root departments
-        const rootDepartments = departments.filter(d => !d.parent);
+        // Managers (Active Employees)
+        const potentialManagers = employees.filter(e => e.is_active);
 
         return (
             <div className="space-y-6 animate-fade-in">
-                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Kurumsal Pozisyon ve Departman</h3>
+                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Kurumsal & Hiyerarşi</h3>
+
+                {/* Matrix Logic Alert */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+                    <p className="font-bold flex items-center gap-2"><UserPlus size={16} /> Matris Atama Sistemi</p>
+                    <p>Lütfen önce personelin bağlı olacağı <strong>Yöneticiyi</strong> seçiniz. Ana departman otomatik atanacaktır. Ardından varsa fonksiyonel uzmanlık alanını belirtiniz.</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {/* 1. DIRECT MANAGER (Primary Driver) */}
                     <div className="md:col-span-2">
-                        <label className="label-std">Departman / Birim <span className="text-red-500">*</span></label>
+                        <label className="label-std">Bağlı Olduğu Yönetici (Reports To) <span className="text-red-500">*</span></label>
+                        <select
+                            value={formData.reports_to}
+                            onChange={e => handleInputChange('reports_to', e.target.value)}
+                            className="input-std bg-blue-50/50 border-blue-200"
+                        >
+                            <option value="">Bir Yönetici Seçiniz...</option>
+                            {potentialManagers.map(mgr => (
+                                <option key={mgr.id} value={mgr.id}>
+                                    {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'} ({mgr.department?.name || '-'})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* 2. AUTO-FILLED DEPARTMENT */}
+                    <div>
+                        <label className="label-std">Ana Departman (Otomatik) <span className="text-red-500">*</span></label>
                         <div className="relative">
                             <select
                                 value={formData.department}
-                                onChange={e => handleInputChange('department', e.target.value)}
-                                className="input-std appearance-none"
+                                className="input-std bg-slate-100 text-slate-500 cursor-not-allowed"
+                                disabled
                             >
-                                <option value="">Seçiniz...</option>
-                                {renderDepartmentOptions(rootDepartments)}
+                                <option value="">Yönetici Seçimi Bekleniyor...</option>
+                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            <Building className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">Lütfen organizasyon şemasına uygun ana veya alt birimi seçiniz.</p>
                     </div>
 
+                    {/* 3. FUNCTIONAL DEPARTMENT (Attribute) */}
                     <div>
-                        <label className="label-std">Unvan (Job Position) <span className="text-red-500">*</span></label>
+                        <label className="label-std">Fonksiyonel Birim / Disiplin</label>
                         <select
-                            value={formData.job_position}
-                            onChange={e => handleInputChange('job_position', e.target.value)}
-                            className="input-std"
+                            value={formData.functional_department}
+                            onChange={e => handleInputChange('functional_department', e.target.value)}
+                            className={`input-std ${jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü' ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-200' : ''
+                                }`}
                         >
+                            <option value="">Yok / Genel</option>
+                            {functionalDepts.map(f => (
+                                <option key={f.id} value={f.id}>{f.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-slate-500 mt-1">
+                            {jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü'
+                                ? <span className="text-amber-600 font-bold">Departman Müdürü için zorunludur.</span>
+                                : "Örn: Geoteknik, Tünel, vb."}
+                        </p>
+                    </div>
+
+                    {/* 4. JOB POSITION */}
+                    <div>
+                        <label className="label-std">Unvan (Pozisyon) <span className="text-red-500">*</span></label>
+                        <select value={formData.job_position} onChange={e => handleInputChange('job_position', e.target.value)} className="input-std">
                             <option value="">Seçiniz...</option>
                             {jobPositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
                         </select>
@@ -261,16 +318,6 @@ const Employees = () => {
                     <div>
                         <label className="label-std">İşe Başlama Tarihi</label>
                         <input type="date" value={formData.hired_date} onChange={e => handleInputChange('hired_date', e.target.value)} className="input-std" />
-                    </div>
-                    <div>
-                        <label className="label-std">Çalışma Şekli</label>
-                        <select value={formData.work_type} onChange={e => handleInputChange('work_type', e.target.value)} className="input-std">
-                            <option value="FULL_TIME">Tam Zamanlı</option>
-                            <option value="PART_TIME">Yarı Zamanlı</option>
-                            <option value="REMOTE">Uzaktan</option>
-                            <option value="HYBRID">Hibrit</option>
-                            <option value="FIELD">Saha</option>
-                        </select>
                     </div>
                 </div>
             </div>
