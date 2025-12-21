@@ -404,9 +404,114 @@ const WorkSchedules = () => {
 
 export default WorkSchedules;
 
+
+const HolidayModal = ({ isOpen, onClose, onSave, date, onDelete, existingHoliday }) => {
+    if (!isOpen) return null;
+
+    const [name, setName] = useState(existingHoliday ? existingHoliday.name : '');
+    const [category, setCategory] = useState(existingHoliday ? existingHoliday.category : 'OFFICIAL');
+
+    useEffect(() => {
+        if (isOpen) {
+            setName(existingHoliday ? existingHoliday.name : '');
+            setCategory(existingHoliday ? existingHoliday.category : 'OFFICIAL');
+        }
+    }, [isOpen, existingHoliday]);
+
+    const handleSave = () => {
+        if (!name.trim()) {
+            alert('Lütfen bir isim giriniz.');
+            return;
+        }
+        onSave({ name, category, date: date.format('YYYY-MM-DD') });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in border border-slate-200">
+                <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-800">
+                        {existingHoliday ? 'Tatili Düzenle' : 'Yeni Tatil Ekle'}
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    <div className="text-sm font-medium text-slate-500 text-center bg-blue-50 py-2 rounded-lg border border-blue-100 mb-2">
+                        {date.format('DD MMMM YYYY, dddd')}
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tatil Adı</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                            placeholder="Örn: 29 Ekim Cumhuriyet Bayramı"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tatil Türü</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setCategory('OFFICIAL')}
+                                className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${category === 'OFFICIAL' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-100 hover:border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                <div className="font-bold text-sm">Resmi Tatil</div>
+                                <div className="text-[10px] opacity-75 mt-0.5">Mesai Yapılmaz</div>
+                            </button>
+                            <button
+                                onClick={() => setCategory('RELIGIOUS')}
+                                className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${category === 'RELIGIOUS' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-100 hover:border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                <div className="font-bold text-sm">Dini Bayram</div>
+                                <div className="text-[10px] opacity-75 mt-0.5">Mesai Yapılmaz</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    {existingHoliday && (
+                        <div className="pt-2">
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('Bu tatili silmek istediğinize emin misiniz?')) {
+                                        onDelete(existingHoliday.id);
+                                    }
+                                }}
+                                className="w-full py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={16} />
+                                Tatili Sil
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors">Vazgeç</button>
+                    <button onClick={handleSave} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2">
+                        <Save size={16} />
+                        Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh }) => {
     const [selectedScheduleId, setSelectedScheduleId] = useState(initialSchedule?.id || (schedules[0]?.id));
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [holidayToEdit, setHolidayToEdit] = useState(null);
+
     const { user } = useAuth();
+    const today = moment().startOf('day');
 
     const selectedSchedule = schedules.find(s => s.id === parseInt(selectedScheduleId));
     const months = moment.months();
@@ -414,36 +519,37 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
     // Permission Check
     const canManageHolidays = user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
 
-    const handleDayClick = async (date, currentHoliday) => {
+    const handleDayDoubleClick = (date, currentHoliday) => {
         if (!canManageHolidays) return;
 
-        const dateStr = date.format('YYYY-MM-DD');
+        setSelectedDate(date);
+        setHolidayToEdit(currentHoliday);
+        setModalOpen(true);
+    };
 
-        if (currentHoliday) {
-            if (window.confirm(`${dateStr} tarihli "${currentHoliday.name}" tatilini silmek istiyor musunuz?`)) {
-                try {
-                    await api.delete(`/public-holidays/${currentHoliday.id}/`);
-                    if (onRefresh) onRefresh();
-                } catch (error) {
-                    console.error('Error deleting holiday:', error);
-                    alert('Silme işlemi başarısız.');
-                }
+    const handleHolidaySave = async (data) => {
+        try {
+            if (holidayToEdit) {
+                await api.put(`/public-holidays/${holidayToEdit.id}/`, data);
+            } else {
+                await api.post('/public-holidays/', data);
             }
-        } else {
-            const name = window.prompt(`${dateStr} için tatil adı giriniz:`);
-            if (name) {
-                try {
-                    await api.post('/public-holidays/', {
-                        name,
-                        date: dateStr,
-                        type: 'FULL_DAY'
-                    });
-                    if (onRefresh) onRefresh();
-                } catch (error) {
-                    console.error('Error creating holiday:', error);
-                    alert('Oluşturma işlemi başarısız.');
-                }
-            }
+            setModalOpen(false);
+            if (onRefresh) onRefresh();
+        } catch (error) {
+            console.error('Error saving holiday:', error);
+            alert('İşlem başarısız.');
+        }
+    };
+
+    const handleHolidayDelete = async (id) => {
+        try {
+            await api.delete(`/public-holidays/${id}/`);
+            setModalOpen(false);
+            if (onRefresh) onRefresh();
+        } catch (error) {
+            console.error('Error deleting holiday:', error);
+            alert('Silme işlemi başarısız.');
         }
     };
 
@@ -453,7 +559,15 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
         // Check Public Holiday
         const holiday = holidays.find(h => h.date === dateStr);
         if (holiday) {
-            return { type: 'HOLIDAY', label: holiday.name, color: 'bg-red-100 text-red-700 border-red-200', holiday };
+            const isReligious = holiday.category === 'RELIGIOUS';
+            return {
+                type: 'HOLIDAY',
+                label: holiday.name,
+                color: isReligious
+                    ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                    : 'bg-red-100 text-red-700 border-red-200',
+                holiday
+            };
         }
 
         // Check Schedule
@@ -470,7 +584,16 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative">
+            <HolidayModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                date={selectedDate}
+                existingHoliday={holidayToEdit}
+                onSave={handleHolidaySave}
+                onDelete={handleHolidayDelete}
+            />
+
             <div className="mb-6 flex flex-col md:flex-row items-center gap-4 justify-between">
                 <div className="flex items-center gap-4">
                     <label className="text-sm font-medium text-slate-700">Görüntülenen Takvim:</label>
@@ -498,13 +621,17 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
                         <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                         <span>Resmi Tatil</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-indigo-100 border border-indigo-200 rounded"></div>
+                        <span>Dini Bayram</span>
+                    </div>
                 </div>
             </div>
 
             {canManageHolidays && (
                 <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-2">
                     <Check size={16} />
-                    <span>Yönetici Modu: Tatil eklemek veya çıkarmak için günlerin üzerine tıklayabilirsiniz.</span>
+                    <span>Yönetici Modu: Tatil eklemek veya çıkarmak için günlerin üzerine <strong>Çift Tıklayın</strong>.</span>
                 </div>
             )}
 
@@ -532,13 +659,19 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
                                 {Array(daysInMonth).fill(null).map((_, i) => {
                                     const date = moment(monthStart).add(i, 'days');
                                     const status = getDayStatus(date);
+                                    const isPast = date.isBefore(today);
 
                                     return (
                                         <div
                                             key={i}
-                                            onClick={() => handleDayClick(date, status.holiday)}
-                                            className={`h-8 flex items-center justify-center text-xs rounded transition-colors ${status.color} ${canManageHolidays ? 'cursor-pointer hover:opacity-80 ring-inset hover:ring-2 ring-blue-300' : 'cursor-help'}`}
-                                            title={`${date.format('DD MMMM YYYY')}\n${status.label}`}
+                                            onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
+                                            className={`
+                                                h-8 flex items-center justify-center text-xs rounded transition-all 
+                                                ${status.color} 
+                                                ${isPast ? 'opacity-40 grayscale' : ''} 
+                                                ${canManageHolidays ? 'cursor-pointer hover:ring-2 ring-blue-300 hover:scale-110 hover:shadow-lg z-0 hover:z-10' : 'cursor-default'}
+                                            `}
+                                            title={`${date.format('DD MMMM YYYY')}\n${status.label}${isPast ? ' (Geçmiş)' : ''}`}
                                         >
                                             {i + 1}
                                         </div>
