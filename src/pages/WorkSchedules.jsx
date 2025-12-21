@@ -38,7 +38,20 @@ const WorkSchedules = () => {
 
     const { user } = useAuth();
     // Permission Check: Allow Superusers, Admins, or specific permission holders
-    const canManageHolidays = user?.is_superuser || user?.role === 'system_admin' || user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
+    // Note: user object from AuthContext is the Employee object, which contains a nested 'user' object for the Django User.
+    const canManageHolidays = user?.user?.is_superuser || user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
+
+    // Debug Log
+    useEffect(() => {
+        if (user) {
+            console.log("WorkSchedules User Check:", {
+                is_superuser: user?.user?.is_superuser,
+                permissions: user?.all_permissions,
+                can_manage: canManageHolidays
+            });
+        }
+    }, [user, canManageHolidays]);
+
     const today = moment().startOf('day');
 
     // --- Effects ---
