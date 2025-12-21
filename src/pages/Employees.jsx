@@ -1,828 +1,541 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Plus, Search, Filter, MoreVertical, Mail, Phone, MapPin, User, Settings, Trash2, Power, ShieldAlert, CheckCircle, X, Clock, Key, Users } from 'lucide-react';
+import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save } from 'lucide-react';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
-import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
+import { useAuth } from '../context/AuthContext';
+import { Settings, Trash2, Edit2, Download, Upload } from 'lucide-react';
+
+// --- Constants ---
+const STEPS = [
+    { number: 1, title: 'Kişisel Bilgiler', icon: UserPlus },
+    { number: 2, title: 'Kurumsal Bilgiler', icon: Building },
+    { number: 3, title: 'İletişim & Acil', icon: Phone },
+    { number: 4, title: 'Detaylar & Yetkinlik', icon: Briefcase },
+    { number: 5, title: 'Önizleme & Onay', icon: FileText }
+];
+
+const INITIAL_FORM_STATE = {
+    // Step 1: Personal
+    first_name: '',
+    last_name: '',
+    tc_number: '',
+    birth_date: '',
+    birth_place: '',
+    email: '', // Required for user creation
+
+    // Step 2: Corporate
+    department: '', // ID
+    job_position: '', // ID
+    employee_code: '',
+    card_uid: '',
+    employment_status: 'ACTIVE',
+    work_type: 'FULL_TIME',
+    hired_date: new Date().toISOString().split('T')[0],
+
+    // Step 3: Contact
+    phone: '',
+    phone_secondary: '',
+    address: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+
+    // Step 4: Details
+    title: '',
+    job_description: '',
+    technical_skills: [], // List of strings
+    certificates: [], // List of {name, date}
+    foreign_languages: [], // List of {name, level}
+
+    // System
+    password: 'Password123!', // Default initial password
+    username: '' // Will be auto-generated or manual
+};
 
 const Employees = () => {
-    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit'
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [jobPositions, setJobPositions] = useState([]);
-    const [roles, setRoles] = useState([]);
-    const [permissions, setPermissions] = useState([]);
-    const [workSchedules, setWorkSchedules] = useState([]);
-
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedDept, setSelectedDept] = useState('');
-    const [filterStatus, setFilterStatus] = useState('ALL');
+    const [submitting, setSubmitting] = useState(false);
 
-    const [showModal, setShowModal] = useState(false);
+    // Wizard State
     const [currentStep, setCurrentStep] = useState(1);
-    const [openMenuId, setOpenMenuId] = useState(null);
+    const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+    const [completedSteps, setCompletedSteps] = useState([]);
 
-    // Form Data State
-    const [formData, setFormData] = useState({
-        // Identity
-        username: '', password: '',
-        first_name: '', last_name: '', email: '', phone: '',
-        tc_no: '', birth_date: '',
-
-        // Corporate
-        department: '', job_position: '', secondary_job_positions: [],
-        hired_date: '', employee_code: '',
-        primary_manager_ids: [], cross_manager_ids: [],
-
-        // Work Schedule
-        work_schedule: '', card_uid: '',
-        attendance_tolerance_minutes: 0, daily_break_allowance: 0,
-        shift_start: '', shift_end: '',
-        weekly_schedule: {}, is_custom_schedule: false,
-
-        // Permissions
-        roles: [], direct_permissions: [],
-
-        // Other
-        address: '', emergency_contact_name: '', emergency_contact_phone: ''
-    });
-
-    const totalSteps = 5;
+    // Filters & Search
+    const [searchTerm, setSearchTerm] = useState('');
+    const [departmentFilter, setDepartmentFilter] = useState('');
 
     useEffect(() => {
         fetchInitialData();
     }, []);
 
     const fetchInitialData = async () => {
+        setLoading(true);
         try {
-            setLoading(true);
-            const [empRes, deptRes, posRes, rolesRes, permsRes, schedRes] = await Promise.all([
+            const [empRes, deptRes, posRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
-                api.get('/job-positions/'),
-                api.get('/roles/'),
-                api.get('/permissions/'),
-                api.get('/work-schedules/')
+                api.get('/job-positions/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
             setJobPositions(posRes.data.results || posRes.data);
-            setRoles(rolesRes.data.results || rolesRes.data);
-            setPermissions(permsRes.data.results || permsRes.data);
-            setWorkSchedules(schedRes.data.results || schedRes.data);
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error("Data fetch error:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleToggleStatus = async (emp) => {
-        try {
-            await api.patch(`/employees/${emp.id}/`, { is_active: !emp.is_active });
-            setEmployees(employees.map(e => e.id === emp.id ? { ...e, is_active: !e.is_active } : e));
-        } catch (error) {
-            console.error('Error toggling status:', error);
-            alert('Durum değiştirilirken hata oluştu.');
-        }
+    // --- Helpers ---
+    const generateUsername = (first, last) => {
+        if (!first || !last) return '';
+        const trMap = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'Ç': 'C', 'Ğ': 'G', 'İ': 'I', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U' };
+        const cleanFirst = first.toLowerCase().replace(/[çğıöşü]/g, l => trMap[l]).replace(/[^a-z0-9]/g, '');
+        const cleanLast = last.toLowerCase().replace(/[çğıöşü]/g, l => trMap[l]).replace(/[^a-z0-9]/g, '');
+        return `${cleanFirst}.${cleanLast}`;
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Bu çalışanı silmek istediğinize emin misiniz?')) return;
-        try {
-            await api.delete(`/employees/${id}/`);
-            setEmployees(employees.filter(e => e.id !== id));
-        } catch (error) {
-            console.error('Error deleting employee:', error);
-            alert('Silme işlemi başarısız.');
-        }
-    };
-
-    const getJobPositionName = (id) => {
-        const pos = jobPositions.find(p => p.id === parseInt(id));
-        return pos ? pos.name : '-';
-    };
-
-    const getDepartmentName = (id) => {
-        const dept = departments.find(d => d.id === parseInt(id));
-        return dept ? dept.name : '-';
-    };
-
-    const filteredEmployees = employees.filter(emp => {
-        const matchesSearch = (emp.first_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (emp.last_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (emp.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-        const matchesDept = selectedDept ? emp.department === parseInt(selectedDept) : true;
-        const matchesStatus = filterStatus === 'ALL' ? true :
-            filterStatus === 'ACTIVE' ? emp.is_active : !emp.is_active;
-        return matchesSearch && matchesDept && matchesStatus;
-    });
-
-    // Wizard Logic
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    // Auto-fill permissions when Job Positions change
-    useEffect(() => {
-        // Validation: wait for reference data
-        if (jobPositions.length === 0 || roles.length === 0) return;
-
-        if (!formData.job_position && (!formData.secondary_job_positions || formData.secondary_job_positions.length === 0)) {
-            // If no position selected, maybe clear? But let's verify if we want to clear everything.
-            // For now, if no position, we typically don't auto-fill anything.
-            return;
-        }
-
-        const allSelectedRoleIds = new Set();
-
-        // 1. Get roles from Primary Position
-        if (formData.job_position) {
-            const posId = parseInt(formData.job_position);
-            const primaryPos = jobPositions.find(p => p.id === posId);
-            if (primaryPos && primaryPos.default_roles) {
-                primaryPos.default_roles.forEach(r => allSelectedRoleIds.add(r.id));
-            }
-        }
-
-        // 2. Get roles from Secondary Positions
-        if (formData.secondary_job_positions && formData.secondary_job_positions.length > 0) {
-            formData.secondary_job_positions.forEach(posId => {
-                const secPos = jobPositions.find(p => p.id === parseInt(posId));
-                if (secPos && secPos.default_roles) {
-                    secPos.default_roles.forEach(r => allSelectedRoleIds.add(r.id));
-                }
-            });
-        }
-
-        // 3. Collect permissions recursively (handling inheritance)
-        const collectedPermissions = new Set();
-        const visitedRoles = new Set(); // Prevent infinite loops
-
-        const collectFromRole = (roleId) => {
-            if (visitedRoles.has(roleId)) return;
-            visitedRoles.add(roleId);
-
-            const role = roles.find(r => r.id === roleId);
-            if (!role) return;
-
-            // Add direct permissions of this role
-            // Check if 'permissions' is list of objects (from serializer) or IDs
-            if (role.permissions) {
-                role.permissions.forEach(p => {
-                    // Handle both object and ID cases just to be safe
-                    const pId = typeof p === 'object' ? p.id : p;
-                    collectedPermissions.add(pId);
-                });
-            }
-
-            // Recurse for inherited roles
-            if (role.inherits_from && role.inherits_from.length > 0) {
-                role.inherits_from.forEach(inheritedId => {
-                    // inherits_from is typically list of IDs
-                    const iId = typeof inheritedId === 'object' ? inheritedId.id : inheritedId;
-                    collectFromRole(iId);
-                });
-            }
-        };
-
-        allSelectedRoleIds.forEach(roleId => collectFromRole(roleId));
-
-        // Update FormData
-        // We overwrite direct_permissions with the auto-calculated set.
-        // This is standard "Preset" behavior.
-        setFormData(prev => ({
-            ...prev,
-            roles: Array.from(allSelectedRoleIds),
-            direct_permissions: Array.from(collectedPermissions)
-        }));
-
-    }, [formData.job_position, formData.secondary_job_positions, jobPositions, roles]);
-
-    const handleMultiSelectChange = (e, field) => {
-        const options = e.target.options;
-        const values = [];
-        for (let i = 0, l = options.length; i < l; i++) {
-            if (options[i].selected) {
-                values.push(parseInt(options[i].value));
-            }
-        }
-        setFormData(prev => ({ ...prev, [field]: values }));
-    };
-
-    const toggleArrayItem = (field, id) => {
+    const handleInputChange = (field, value) => {
         setFormData(prev => {
-            const current = prev[field] || [];
-            if (current.includes(id)) {
-                return { ...prev, [field]: current.filter(item => item !== id) };
-            } else {
-                return { ...prev, [field]: [...current, id] };
+            const newState = { ...prev, [field]: value };
+            // Auto-generate username/email draft if creating
+            if (viewMode === 'create' && (field === 'first_name' || field === 'last_name')) {
+                const username = generateUsername(newState.first_name, newState.last_name);
+                newState.username = username;
+                if (!prev.email) newState.email = `${username}@mega.com`;
             }
+            return newState;
         });
     };
 
-    const nextStep = () => {
-        if (currentStep < totalSteps) setCurrentStep(curr => curr + 1);
-    };
-
-    const prevStep = () => {
-        if (currentStep > 1) setCurrentStep(curr => curr - 1);
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            // Clean payload
-            const payload = {
-                ...formData,
-                shift_start: formData.shift_start || null,
-                shift_end: formData.shift_end || null,
-                birth_date: formData.birth_date || null,
-                hired_date: formData.hired_date || null,
-                lunch_start: formData.lunch_start || null,
-                lunch_end: formData.lunch_end || null,
-                card_uid: formData.card_uid || null,
-                // Ensure Arrays
-                weekly_schedule: formData.weekly_schedule || {},
-                roles: formData.roles || [],
-                direct_permissions: formData.direct_permissions || [],
-                secondary_job_positions: formData.secondary_job_positions || [],
-            };
-
-            const response = await api.post('/employees/', payload);
-            setEmployees([...employees, response.data]);
-            setShowModal(false);
-            setFormData({
-                username: '', password: '',
-                first_name: '', last_name: '', email: '', phone: '',
-                department: '', job_position: '',
-                hired_date: '', employee_code: '',
-                primary_manager_ids: [], cross_manager_ids: [],
-                work_schedule: '', card_uid: '',
-                attendance_tolerance_minutes: 0, daily_break_allowance: 0,
-                shift_start: '', shift_end: '',
-                roles: [], direct_permissions: [],
-                tc_no: '', birth_date: '', address: '',
-                emergency_contact_name: '', emergency_contact_phone: ''
-            });
-            setCurrentStep(1);
-            alert('Çalışan başarıyla eklendi.');
-        } catch (error) {
-            console.error('Error creating employee:', error);
-            let errorMsg = 'Çalışan eklenirken hata oluştu.';
-            if (error.response?.data) {
-                // If data is object with keys (validation errors)
-                if (typeof error.response.data === 'object') {
-                    errorMsg += '\n' + Object.entries(error.response.data)
-                        .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
-                        .join('\n');
-                } else {
-                    errorMsg += ' ' + (error.response.data.detail || JSON.stringify(error.response.data));
-                }
-            } else {
-                errorMsg += ' ' + error.message;
-            }
-            alert(errorMsg);
+    // --- Wizard Navigation ---
+    const validateStep = (step) => {
+        const { first_name, last_name, tc_number, email, department, job_position, employee_code } = formData;
+        switch (step) {
+            case 1: // Personal
+                return first_name && last_name && tc_number && email;
+            case 2: // Corporate
+                return department && job_position && employee_code;
+            case 3: // Contact
+                return true; // Optional fields mostly
+            case 4: // Details
+                return true; // Optional
+            default:
+                return true;
         }
     };
 
-    const renderStepIndicator = () => (
-        <div className="flex items-center justify-between mb-8 relative">
-            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-slate-100 -z-10"></div>
-            {[1, 2, 3, 4, 5].map(step => (
-                <div key={step} className={`flex flex-col items-center gap-2 bg-white px-2`}>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${step === currentStep ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' :
-                        step < currentStep ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
-                        }`}>
-                        {step < currentStep ? '✓' : step}
-                    </div>
-                    <span className={`text-xs font-medium ${step === currentStep ? 'text-blue-600' : 'text-slate-400'}`}>
-                        {step === 1 ? 'Kimlik' : step === 2 ? 'Kurumsal' : step === 3 ? 'Mesai' : step === 4 ? 'Yetki' : 'Özet'}
-                    </span>
+    const handleNext = () => {
+        if (validateStep(currentStep)) {
+            setCompletedSteps(prev => [...new Set([...prev, currentStep])]);
+            setCurrentStep(prev => Math.min(prev + 1, 5));
+            window.scrollTo(0, 0);
+        } else {
+            alert("Lütfen zorunlu alanları doldurunuz.");
+        }
+    };
+
+    const handleBack = () => {
+        setCurrentStep(prev => Math.max(prev - 1, 1));
+        window.scrollTo(0, 0);
+    };
+
+    const handleSubmit = async () => {
+        setSubmitting(true);
+        try {
+            // Prepare payload
+            const payload = { ...formData };
+            if (viewMode === 'create') {
+                await api.post('/employees/create_with_user/', payload);
+                alert("Personel başarıyla oluşturuldu.");
+            } else {
+                // Update logic would go here
+            }
+            fetchInitialData();
+            setViewMode('list');
+            setFormData(INITIAL_FORM_STATE);
+            setCurrentStep(1);
+        } catch (error) {
+            console.error("Submit Error:", error);
+            alert("Hata: " + (error.response?.data?.detail || "İşlem başarısız."));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // --- Wizard Steps Components ---
+
+    const renderStep1 = () => (
+        <div className="space-y-6 animate-fade-in">
+            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Kişisel Kimlik Bilgileri</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="label-std">Ad <span className="text-red-500">*</span></label>
+                    <input value={formData.first_name} onChange={e => handleInputChange('first_name', e.target.value)} className="input-std" placeholder="Örn: Ahmet" />
                 </div>
-            ))}
+                <div>
+                    <label className="label-std">Soyad <span className="text-red-500">*</span></label>
+                    <input value={formData.last_name} onChange={e => handleInputChange('last_name', e.target.value)} className="input-std" placeholder="Örn: Yılmaz" />
+                </div>
+                <div>
+                    <label className="label-std">TC Kimlik No <span className="text-red-500">*</span></label>
+                    <input value={formData.tc_number} onChange={e => handleInputChange('tc_number', e.target.value)} className="input-std" maxLength={11} placeholder="11 haneli TC no" />
+                </div>
+                <div>
+                    <label className="label-std">E-posta <span className="text-red-500">*</span></label>
+                    <input value={formData.email} onChange={e => handleInputChange('email', e.target.value)} className="input-std" type="email" />
+                </div>
+                <div>
+                    <label className="label-std">Doğum Tarihi</label>
+                    <input type="date" value={formData.birth_date} onChange={e => handleInputChange('birth_date', e.target.value)} className="input-std" />
+                </div>
+                <div>
+                    <label className="label-std">Doğum Yeri</label>
+                    <input value={formData.birth_place} onChange={e => handleInputChange('birth_place', e.target.value)} className="input-std" />
+                </div>
+            </div>
         </div>
     );
 
-    const renderStepContent = () => {
-        switch (currentStep) {
-            case 1: // Identity
+    const renderStep2 = () => {
+        // Recursive function to render department tree in select
+        const renderDepartmentOptions = (depts, level = 0) => {
+            return depts.map(dept => {
+                // Find children
+                const children = departments.filter(d => d.parent === dept.id);
                 return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ad <span className="text-red-500">*</span></label>
-                            <input type="text" name="first_name" required value={formData.first_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Soyad <span className="text-red-500">*</span></label>
-                            <input type="text" name="last_name" required value={formData.last_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">E-posta <span className="text-red-500">*</span></label>
-                            <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Adı <span className="text-red-500">*</span></label>
-                            <input type="text" name="username" required value={formData.username} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Şifre <span className="text-red-500">*</span></label>
-                            <input type="password" name="password" required value={formData.password} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
-                            <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">TC Kimlik No</label>
-                            <input type="text" name="tc_no" maxLength={11} value={formData.tc_no} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
-                            <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
-                            <textarea name="address" rows="2" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Kişisi</label>
-                            <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Telefonu</label>
-                            <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                    </div>
+                    <React.Fragment key={dept.id}>
+                        <option value={dept.id}>
+                            {'\u00A0'.repeat(level * 4)}{level > 0 ? '└ ' : ''}{dept.name}
+                        </option>
+                        {children.length > 0 && renderDepartmentOptions(children, level + 1)}
+                    </React.Fragment>
                 );
-            case 2: // Corporate
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Departman <span className="text-red-500">*</span></label>
-                            <select name="department" required value={formData.department} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                <option value="">Seçiniz</option>
-                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Pozisyon (Primary) <span className="text-red-500">*</span></label>
-                            <select name="job_position" required value={formData.job_position} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                <option value="">Seçiniz</option>
-                                {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                        </div>
+            });
+        };
 
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ek Pozisyonlar (Secondary)</label>
-                            <div className="flex flex-wrap gap-2">
-                                {jobPositions.filter(p => p.id !== parseInt(formData.job_position)).map(p => (
-                                    <label key={p.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-colors ${(formData.secondary_job_positions || []).includes(p.id) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                                        }`}>
-                                        <input
-                                            type="checkbox"
-                                            className="hidden"
-                                            checked={(formData.secondary_job_positions || []).includes(p.id)}
-                                            onChange={() => toggleArrayItem('secondary_job_positions', p.id)}
-                                        />
-                                        <span>{p.name}</span>
-                                        {(formData.secondary_job_positions || []).includes(p.id) && <CheckCircle size={14} />}
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
+        // Get root departments
+        const rootDepartments = departments.filter(d => !d.parent);
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">İşe Başlama Tarihi <span className="text-red-500">*</span></label>
-                            <input type="date" name="hired_date" required value={formData.hired_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Sicil No</label>
-                            <input type="text" name="employee_code" value={formData.employee_code} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-
-                        {/* Managers */}
-                        <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                <Users size={18} className="text-blue-500" /> Yönetici Atamaları
-                            </h4>
-                        </div>
-
-                        {/* Primary Manager - Single Select */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Doğrudan Amir (Direct Manager)</label>
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Kurumsal Pozisyon ve Departman</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                        <label className="label-std">Departman / Birim <span className="text-red-500">*</span></label>
+                        <div className="relative">
                             <select
-                                value={formData.primary_manager_ids[0] || ''}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        primary_manager_ids: val ? [parseInt(val)] : []
-                                    }));
-                                }}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={formData.department}
+                                onChange={e => handleInputChange('department', e.target.value)}
+                                className="input-std appearance-none"
                             >
-                                <option value="">Departman Yöneticisine Bağla (Varsayılan)</option>
-                                {employees.map(emp => (
-                                    <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name} ({getJobPositionName(emp.job_position)})</option>
-                                ))}
+                                <option value="">Seçiniz...</option>
+                                {renderDepartmentOptions(rootDepartments)}
                             </select>
-                            <p className="text-xs text-slate-500 mt-1">Seçilmezse, hiyerarşide departman yöneticisine bağlanır.</p>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                         </div>
-
-                        {/* Cross Managers - Multi Select */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Matrix)</label>
-                            <div className="h-32 overflow-y-auto border rounded-lg p-2 bg-slate-50">
-                                {employees.map(emp => (
-                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.cross_manager_ids.includes(emp.id)}
-                                            onChange={() => toggleArrayItem('cross_manager_ids', emp.id)}
-                                            className="rounded text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen, ek yöneticiler.</p>
-                        </div>
+                        <p className="text-xs text-slate-500 mt-1">Lütfen organizasyon şemasına uygun ana veya alt birimi seçiniz.</p>
                     </div>
-                );
-            case 3: // Work Schedule
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
-                        <div className="md:col-span-2">
-                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                <Clock size={18} className="text-blue-500" /> Çalışma Takvimi & Mesai
-                            </h4>
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Çalışma Takvimi</label>
-                            <select
-                                name="work_schedule"
-                                value={formData.work_schedule || (formData.is_custom_schedule ? 'custom' : '')}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === 'custom') {
-                                        setFormData(prev => ({ ...prev, work_schedule: '', is_custom_schedule: true }));
-                                    } else {
-                                        setFormData(prev => ({ ...prev, work_schedule: val, is_custom_schedule: false }));
-                                    }
-                                }}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Varsayılan</option>
-                                <option value="custom">Özel Takvim Oluştur (Custom)</option>
-                                {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
-                            </select>
-                        </div>
 
-                        {/* Custom Weekly Schedule Editor */}
-                        {formData.is_custom_schedule && (
-                            <div className="md:col-span-2 animate-in fade-in slide-in-from-top-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Haftalık Çalışma Planı</label>
-                                <WeeklyScheduleEditor
-                                    value={formData.weekly_schedule}
-                                    onChange={(newSchedule) => setFormData(prev => ({ ...prev, weekly_schedule: newSchedule }))}
-                                />
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
-                            <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Kart okutunuz veya giriniz" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Geç Kalma Toleransı (Dk)</label>
-                            <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Günlük Mola Hakkı (Dk)</label>
-                            <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                    </div>
-                );
-            case 4: // Permissions
-                return (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                            <h4 className="font-semibold text-blue-800 flex items-center gap-2 mb-2">
-                                <ShieldAlert size={18} /> Yetkilendirme
-                            </h4>
-                            <p className="text-sm text-blue-700">
-                                Seçilen pozisyona göre yetkiler otomatik işaretlenmiştir. İsterseniz düzenleyebilirsiniz.
-                            </p>
-                        </div>
-
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-slate-700">Tüm Yetkiler</label>
-                                <span className="text-xs text-slate-500">{permissions.length} yetki tanımlı</span>
-                            </div>
-
-                            <div className="h-[400px] overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {permissions.map(perm => {
-                                    const isChecked = formData.direct_permissions.includes(perm.id);
-                                    return (
-                                        <label
-                                            key={perm.id}
-                                            className={`flex items-start gap-2 p-2 rounded border cursor-pointer transition-all ${isChecked
-                                                ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
-                                                : 'bg-slate-100 border-transparent hover:bg-white hover:border-slate-300'
-                                                }`}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={isChecked}
-                                                onChange={() => toggleArrayItem('direct_permissions', perm.id)}
-                                                className="mt-1 rounded text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div className="flex-1">
-                                                <div className={`font-medium text-sm ${isChecked ? 'text-blue-700' : 'text-slate-700'}`}>
-                                                    {perm.name}
-                                                </div>
-                                                <div className="text-xs text-slate-400 font-mono mt-0.5">{perm.code}</div>
-                                                {perm.description && (
-                                                    <div className="text-xs text-slate-500 mt-1 leading-snug">{perm.description}</div>
-                                                )}
-                                            </div>
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                );
-            case 5: // Summary
-                return (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <h4 className="font-bold text-slate-800 mb-4 border-b pb-2">Özet Bilgiler</h4>
-                            <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
-                                <div><span className="text-slate-500 block">Ad Soyad:</span> {formData.first_name} {formData.last_name}</div>
-                                <div><span className="text-slate-500 block">E-posta:</span> {formData.email}</div>
-                                <div><span className="text-slate-500 block">Departman:</span> {getDepartmentName(formData.department)}</div>
-                                <div><span className="text-slate-500 block">Pozisyon:</span> {getJobPositionName(formData.job_position)}</div>
-                                <div><span className="text-slate-500 block">Ana Yöneticiler:</span> {formData.primary_manager_ids.length} Kişi</div>
-                                <div><span className="text-slate-500 block">Çapraz Yöneticiler:</span> {formData.cross_manager_ids.length} Kişi</div>
-                                <div><span className="text-slate-500 block">Çalışma Takvimi:</span> {workSchedules.find(w => w.id === parseInt(formData.work_schedule))?.name || 'Varsayılan'}</div>
-                                <div><span className="text-slate-500 block">Kullanıcı Adı:</span> {formData.username}</div>
-                                <div><span className="text-slate-500 block">Kullanıcı Adı:</span> {formData.username}</div>
-                                <div><span className="text-slate-500 block">Yetkiler:</span> {formData.direct_permissions.length} Adet Seçili</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-lg">
-                            <CheckCircle size={20} />
-                            <span className="font-medium">Tüm bilgiler hazır. Kaydı tamamlayabilirsiniz.</span>
-                        </div>
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const handleResetData = async () => {
-        if (!window.confirm('⚠️ DİKKAT! Admin hariç TÜM çalışanlar ve kullanıcılar silinecek.\n\nBu işlem geri alınamaz.\n\nOnaylıyor musunuz?')) return;
-        try {
-            const res = await api.post('/employees/reset-data/');
-            alert(res.data.status);
-            window.location.reload();
-        } catch (error) {
-            console.error('Reset error:', error);
-            alert('Sıfırlama başarısız: ' + (error.response?.data?.error || error.message));
-        }
-    };
-
-    return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Çalışanlar</h2>
-                    <p className="text-slate-500 mt-1">Personel listesi ve yönetimi</p>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={handleResetData}
-                        className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors border border-red-200"
-                    >
-                        <Trash2 size={18} className="mr-2" /> Verileri Sıfırla
-                    </button>
-                    <button
-                        onClick={() => { setShowModal(true); setCurrentStep(1); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-blue-500/30"
-                    >
-                        <Plus size={18} className="mr-2" />
-                        Yeni Çalışan Ekle
-                    </button>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="card p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="İsim veya e-posta ile ara..."
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <Filter size={20} className="text-slate-400" />
-                    <select
-                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                        value={selectedDept}
-                        onChange={(e) => setSelectedDept(e.target.value)}
-                    >
-                        <option value="">Tüm Departmanlar</option>
-                        {departments.map(dept => (
-                            <option key={dept.id} value={dept.id}>{dept.name}</option>
-                        ))}
-                    </select>
-                    <select
-                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                        <option value="ALL">Tüm Durumlar</option>
-                        <option value="ACTIVE">Aktif</option>
-                        <option value="PASSIVE">Pasif</option>
-                    </select>
-                </div>
-            </div>
-
-            {/* Employee Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredEmployees.map(emp => (
-                    <div key={emp.id} className={`card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group relative ${openMenuId === emp.id ? 'z-30' : 'z-0'}`}>
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                                {emp.first_name?.[0]}{emp.last_name?.[0]}
-                            </div>
-                            <div className="relative">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenMenuId(openMenuId === emp.id ? null : emp.id);
-                                    }}
-                                    className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-slate-100"
-                                >
-                                    <MoreVertical size={20} />
-                                </button>
-
-                                {openMenuId === emp.id && (
-                                    <>
-                                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 z-20 py-1 animate-fade-in">
-                                            <button
-                                                onClick={() => navigate(`/employees/${emp.id}`)}
-                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                                            >
-                                                <Settings size={14} /> Detaylar
-                                            </button>
-                                            <button
-                                                onClick={() => handleToggleStatus(emp)}
-                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                                            >
-                                                <Power size={14} /> {emp.is_active ? 'Pasife Al' : 'Aktif Et'}
-                                            </button>
-                                            <div className="h-px bg-slate-100 my-1"></div>
-                                            <button
-                                                onClick={() => handleDelete(emp.id)}
-                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                            >
-                                                <Trash2 size={14} /> Sil
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
-                            {emp.first_name} {emp.last_name}
-                        </h3>
-                        <p className="text-sm text-slate-500 font-medium mb-4">{getJobPositionName(emp.job_position)}</p>
-
-                        <div className="space-y-2 text-sm text-slate-600">
-                            <div className="flex items-center">
-                                <Mail size={14} className="mr-2 text-slate-400" />
-                                <span className="truncate">{emp.email}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <User size={14} className="mr-2 text-slate-400" />
-                                <span>{getDepartmentName(emp.department)}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <span className={`w-2 h-2 rounded-full mr-2 ${emp.is_active ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                                <span className={emp.is_active ? 'text-emerald-600' : 'text-red-600'}>
-                                    {emp.is_active ? 'Aktif' : 'Pasif'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={() => navigate(`/employees/${emp.id}`)}
-                            className="mt-4 w-full py-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    <div>
+                        <label className="label-std">Unvan (Job Position) <span className="text-red-500">*</span></label>
+                        <select
+                            value={formData.job_position}
+                            onChange={e => handleInputChange('job_position', e.target.value)}
+                            className="input-std"
                         >
-                            <Settings size={16} />
-                            Yönet
-                        </button>
+                            <option value="">Seçiniz...</option>
+                            {jobPositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
+                        </select>
                     </div>
-                ))}
+
+                    <div>
+                        <label className="label-std">Personel Sicil No <span className="text-red-500">*</span></label>
+                        <input value={formData.employee_code} onChange={e => handleInputChange('employee_code', e.target.value)} className="input-std" placeholder="Örn: 2478" />
+                    </div>
+
+                    <div>
+                        <label className="label-std">İşe Başlama Tarihi</label>
+                        <input type="date" value={formData.hired_date} onChange={e => handleInputChange('hired_date', e.target.value)} className="input-std" />
+                    </div>
+                    <div>
+                        <label className="label-std">Çalışma Şekli</label>
+                        <select value={formData.work_type} onChange={e => handleInputChange('work_type', e.target.value)} className="input-std">
+                            <option value="FULL_TIME">Tam Zamanlı</option>
+                            <option value="PART_TIME">Yarı Zamanlı</option>
+                            <option value="REMOTE">Uzaktan</option>
+                            <option value="HYBRID">Hibrit</option>
+                            <option value="FIELD">Saha</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderStep3 = () => (
+        <div className="space-y-6 animate-fade-in">
+            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">İletişim Bilgileri</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="label-std">Cep Telefonu</label>
+                    <input value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} className="input-std" placeholder="05..." />
+                </div>
+                <div>
+                    <label className="label-std">İkinci Telefon</label>
+                    <input value={formData.phone_secondary} onChange={e => handleInputChange('phone_secondary', e.target.value)} className="input-std" />
+                </div>
+                <div className="md:col-span-2">
+                    <label className="label-std">Adres</label>
+                    <textarea value={formData.address} onChange={e => handleInputChange('address', e.target.value)} className="input-std h-24" />
+                </div>
             </div>
 
-            {
-                filteredEmployees.length === 0 && (
-                    <div className="text-center py-12 text-slate-400">
-                        Kayıtlı çalışan bulunamadı.
+            <h4 className="text-md font-bold text-slate-700 mt-6 mb-4">Acil Durum Kişisi</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="label-std">Adı Soyadı</label>
+                    <input value={formData.emergency_contact_name} onChange={e => handleInputChange('emergency_contact_name', e.target.value)} className="input-std" />
+                </div>
+                <div>
+                    <label className="label-std">Yakınlık Telefonu</label>
+                    <input value={formData.emergency_contact_phone} onChange={e => handleInputChange('emergency_contact_phone', e.target.value)} className="input-std" />
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderStep4 = () => (
+        <div className="space-y-6 animate-fade-in">
+            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Profesyonel Detaylar</h3>
+            <div>
+                <label className="label-std">Görev Tanımı (Kısa)</label>
+                <input value={formData.title} onChange={e => handleInputChange('title', e.target.value)} className="input-std" placeholder="Örn: Kıdemli İnşaat Mühendisi" />
+            </div>
+            <div>
+                <label className="label-std">Detaylı İş Tanımı</label>
+                <textarea value={formData.job_description} onChange={e => handleInputChange('job_description', e.target.value)} className="input-std h-32" />
+            </div>
+
+            {/* Dynamic Lists Concept - Simplified for now */}
+            <div>
+                <label className="label-std">Teknik Yetkinlikler (Virgülle ayırın)</label>
+                <input
+                    className="input-std"
+                    placeholder="AutoCAD, Primavera, Python..."
+                    onChange={e => setFormData({ ...formData, technical_skills: e.target.value.split(',').map(s => s.trim()) })}
+                />
+            </div>
+        </div>
+    );
+
+    const renderStep5 = () => {
+        const dept = departments.find(d => d.id == formData.department)?.name || '-';
+        const pos = jobPositions.find(p => p.id == formData.job_position)?.name || '-';
+
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-6 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                        <Check size={24} strokeWidth={3} />
                     </div>
-                )
-            }
+                    <div>
+                        <h3 className="text-lg font-bold text-green-800">Kayda Hazır</h3>
+                        <p className="text-green-600 text-sm">Girilen bilgileri kontrol edip oluşturma işlemini tamamlayın.</p>
+                    </div>
+                </div>
 
-            {/* Add Employee Modal with Portal */}
-            {
-                showModal && createPortal(
-                    <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
-                            {/* Modal Header */}
-                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <div>
-                                    <h3 className="text-2xl font-bold text-slate-800">Yeni Çalışan Ekle</h3>
-                                    <p className="text-sm text-slate-500 mt-1">Lütfen çalışan bilgilerini eksiksiz doldurunuz.</p>
+                <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+                    <div className="p-4 flex gap-4">
+                        <div className="w-1/3 text-slate-500 font-medium">Ad Soyad</div>
+                        <div className="font-bold text-slate-800">{formData.first_name} {formData.last_name}</div>
+                    </div>
+                    <div className="p-4 flex gap-4">
+                        <div className="w-1/3 text-slate-500 font-medium">TC No</div>
+                        <div className="font-bold text-slate-800">{formData.tc_number}</div>
+                    </div>
+                    <div className="p-4 flex gap-4">
+                        <div className="w-1/3 text-slate-500 font-medium">E-posta</div>
+                        <div className="font-bold text-slate-800">{formData.email}</div>
+                    </div>
+                    <div className="p-4 flex gap-4">
+                        <div className="w-1/3 text-slate-500 font-medium">Departman</div>
+                        <div className="font-bold text-blue-600">{dept}</div>
+                    </div>
+                    <div className="p-4 flex gap-4">
+                        <div className="w-1/3 text-slate-500 font-medium">Pozisyon</div>
+                        <div className="font-bold text-slate-800">{pos}</div>
+                    </div>
+                    <div className="p-4 flex gap-4">
+                        <div className="w-1/3 text-slate-500 font-medium">Kullanıcı Adı (Otomatik)</div>
+                        <div className="font-bold text-slate-800 font-mono bg-slate-100 px-2 rounded">{formData.username}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- Main Render ---
+
+    if (loading) return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+
+    if (viewMode === 'list') {
+        return (
+            <div className="p-6 max-w-[1600px] mx-auto animate-fade-in">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Personel Listesi</h1>
+                        <p className="text-slate-500 mt-1">Süper Admin / İK Yönetimi</p>
+                    </div>
+                    <button onClick={() => setViewMode('create')} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all">
+                        <UserPlus size={20} /> Yeni Personel Ekle
+                    </button>
+                </div>
+
+                {/* Search / Filter Bar */}
+                <div className="flex gap-4 mb-6">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                        <input
+                            placeholder="Personel ara..."
+                            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {employees.filter(e => e.first_name.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
+                        <div key={emp.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all group relative">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg">
+                                        {emp.first_name[0]}{emp.last_name[0]}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">{emp.first_name} {emp.last_name}</h3>
+                                        <div className="text-xs text-slate-500 font-medium">{emp.job_position?.name || '-'}</div>
+                                    </div>
                                 </div>
-                                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-red-500 transition-colors bg-white p-2 rounded-full shadow-sm hover:shadow-md">
-                                    <Plus size={24} className="rotate-45" />
-                                </button>
+                                <div className={`px-2 py-1 rounded-lg text-[10px] font-bold ${emp.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {emp.is_active ? 'AKTİF' : 'PASİF'}
+                                </div>
                             </div>
-
-                            {/* Stepper Indicator */}
-                            <div className="pt-8 px-8">
-                                {renderStepIndicator()}
-                            </div>
-
-                            {/* Form Content */}
-                            <div className="flex-1 overflow-y-auto px-8 pb-8">
-                                <form onSubmit={handleSubmit} id="employeeForm">
-                                    {renderStepContent()}
-                                </form>
-                            </div>
-
-                            {/* Footer Actions */}
-                            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                <button
-                                    type="button"
-                                    onClick={prevStep}
-                                    disabled={currentStep === 1}
-                                    className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${currentStep === 1
-                                        ? 'text-slate-300 cursor-not-allowed'
-                                        : 'text-slate-600 hover:bg-slate-200 hover:text-slate-800'
-                                        }`}
-                                >
-                                    Geri
-                                </button>
-
-                                {currentStep < totalSteps ? (
-                                    <button
-                                        type="button"
-                                        onClick={nextStep}
-                                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all text-sm flex items-center transform hover:scale-[1.02]"
-                                    >
-                                        İleri <span className="ml-2">&gt;</span>
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="submit"
-                                        form="employeeForm"
-                                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/30 transition-all text-sm flex items-center transform hover:scale-[1.02]"
-                                    >
-                                        <span className="mr-2">✓</span>
-                                        Kaydı Tamamla
-                                    </button>
-                                )}
+                            <div className="mt-4 pt-4 border-t border-slate-100 text-xs space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Departman:</span>
+                                    <span className="font-medium text-slate-700 text-right">{emp.department?.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Email:</span>
+                                    <span className="font-medium text-slate-700">{emp.email}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>,
-                    document.body
-                )
-            }
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
-            {/* Global Backdrop for Dropdowns */}
-            {
-                openMenuId && (
+    // Create View (Wizard)
+    return (
+        <div className="p-6 max-w-5xl mx-auto animate-fade-in pb-32">
+            {/* Wizard Header */}
+            <div className="flex items-center gap-4 mb-8">
+                <button onClick={() => setViewMode('list')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
+                    <ArrowLeft size={24} />
+                </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800">Yeni Personel Ekleme</h1>
+                    <p className="text-slate-500">Lütfen tüm adımları eksiksiz tamamlayın.</p>
+                </div>
+            </div>
+
+            {/* Steps Indicator */}
+            <div className="mb-10">
+                <div className="flex justify-between relative">
+                    {/* Progress Bar Background */}
+                    <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -z-10 -translate-y-1/2 rounded-full"></div>
+                    {/* Active Progress */}
                     <div
-                        className="fixed inset-0 z-20"
-                        onClick={() => setOpenMenuId(null)}
+                        className="absolute top-1/2 left-0 h-1 bg-blue-600 -z-10 -translate-y-1/2 rounded-full transition-all duration-500"
+                        style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
                     ></div>
-                )
-            }
+
+                    {STEPS.map((step) => {
+                        const isActive = currentStep >= step.number;
+                        const isCurrent = currentStep === step.number;
+                        return (
+                            <div key={step.number} className="flex flex-col items-center gap-2 bg-white px-2">
+                                <div className={`
+                                    w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 shadow-sm
+                                    ${isCurrent ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-110' :
+                                        isActive ? 'bg-green-500 text-white' : 'bg-white border-2 border-slate-200 text-slate-400'}
+                                `}>
+                                    {isActive && !isCurrent ? <Check size={18} /> : step.number}
+                                </div>
+                                <span className={`text-xs font-bold whitespace-nowrap ${isCurrent ? 'text-blue-600' : 'text-slate-500'}`}>{step.title}</span>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Form Content */}
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 min-h-[400px]">
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+                {currentStep === 4 && renderStep4()}
+                {currentStep === 5 && renderStep5()}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-4 z-50 flex justify-center">
+                <div className="w-full max-w-5xl flex justify-between items-center px-6">
+                    <button
+                        onClick={handleBack}
+                        disabled={currentStep === 1}
+                        className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                        <ArrowLeft size={20} /> Geri
+                    </button>
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-50 border border-transparent hover:border-slate-200"
+                        >
+                            İptal
+                        </button>
+
+                        {currentStep < 5 ? (
+                            <button
+                                onClick={handleNext}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all"
+                            >
+                                İleri <ArrowRight size={20} />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-green-500/20 flex items-center gap-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                {submitting ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                                Kaydı Tamamla
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
