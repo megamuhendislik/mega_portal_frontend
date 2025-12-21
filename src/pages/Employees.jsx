@@ -104,6 +104,233 @@ const SelectField = ({ label, value, onChange, options, icon: Icon, required, di
     </div>
 );
 
+// --- Step Components ---
+
+const StepPersonal = ({ formData, handleChange }) => (
+    <div className="animate-fade-in-up">
+        <div className="mb-6 pb-4 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-800">Kişisel Kimlik Bilgileri</h3>
+            <p className="text-slate-500 text-sm">Personelin temel kimlik ve iletişim detayları.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <InputField label="Ad" value={formData.first_name} onChange={e => handleChange('first_name', e.target.value)} required placeholder="Personel Adı" />
+            <InputField label="Soyad" value={formData.last_name} onChange={e => handleChange('last_name', e.target.value)} required placeholder="Personel Soyadı" />
+            <InputField label="TC Kimlik No" value={formData.tc_number} onChange={e => handleChange('tc_number', e.target.value)} required placeholder="11 haneli TC no" />
+            <InputField label="E-posta" value={formData.email} onChange={e => handleChange('email', e.target.value)} required type="email" placeholder="isim.soyisim@mega.com" />
+            <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleChange('birth_date', e.target.value)} type="date" />
+            <InputField label="Doğum Yeri" value={formData.birth_place} onChange={e => handleChange('birth_place', e.target.value)} placeholder="Örn: İstanbul" />
+        </div>
+    </div>
+);
+
+const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees }) => {
+    const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü';
+    const rootDepartments = departments.filter(d => !d.parent);
+    const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
+    const potentialManagers = employees.filter(e => e.is_active);
+
+    return (
+        <div className="animate-fade-in-up space-y-6">
+            <div className="mb-2 pb-4 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800">Kurumsal & Hiyerarşi</h3>
+                <p className="text-slate-500 text-sm">Pozisyon, raporlama hattı ve departman atamaları.</p>
+            </div>
+
+            {/* Matrix Alert Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 flex gap-4 items-start shadow-sm">
+                <div className="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                    <Building size={18} />
+                </div>
+                <div>
+                    <h4 className="font-bold text-blue-900 text-sm">Matris Organizasyon Yapısı</h4>
+                    <p className="text-blue-800/80 text-xs mt-1 leading-relaxed">
+                        Lütfen önce <strong>Yönetici (Reports To)</strong> seçimini yapınız. Ana departman yöneticiden otomatik çekilecektir.
+                        Eğer <strong>"Departman Müdürü"</strong> unvanı seçilirse, Fonksiyonel Birim seçimi zorunlu hale gelir.
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                {/* 1. MANAGER */}
+                <div className="md:col-span-2">
+                    <SelectField
+                        label="Bağlı Olduğu Yönetici (Reports To)"
+                        value={formData.reports_to}
+                        onChange={e => handleChange('reports_to', e.target.value)}
+                        required
+                        icon={UserPlus} // Using UserPlus as generic user icon
+                        className="bg-blue-50/30 border-blue-200"
+                        options={
+                            <>
+                                <option value="">Bir Yönetici Seçiniz...</option>
+                                {potentialManagers.map(mgr => (
+                                    <option key={mgr.id} value={mgr.id}>
+                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'} ({mgr.department?.name || '-'})
+                                    </option>
+                                ))}
+                            </>
+                        }
+                    />
+                </div>
+
+                {/* 2. AUTO DEPARTMENT */}
+                <div>
+                    <SelectField
+                        label="Ana Departman (Otomatik)"
+                        value={formData.department}
+                        disabled
+                        required
+                        icon={Building}
+                        className="bg-slate-100 text-slate-500"
+                        options={
+                            <>
+                                <option value="">Yönetici Seçimi Bekleniyor...</option>
+                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </>
+                        }
+                    />
+                </div>
+
+                {/* 3. FUNCTIONAL */}
+                <div>
+                    <SelectField
+                        label="Fonksiyonel Birim / Disiplin"
+                        value={formData.functional_department}
+                        onChange={e => handleChange('functional_department', e.target.value)}
+                        icon={Settings}
+                        className={isDeptManager ? 'border-amber-400 bg-amber-50/50' : ''}
+                        options={
+                            <>
+                                <option value="">Yok / Genel</option>
+                                {functionalDepts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                            </>
+                        }
+                    />
+                    {isDeptManager && <p className="text-xs text-amber-600 font-bold mt-1 ml-1 animate-pulse">bu alan zorunludur *</p>}
+                </div>
+
+                {/* 4. JOB POSITION */}
+                <div>
+                    <SelectField
+                        label="Unvan (Pozisyon)"
+                        value={formData.job_position}
+                        onChange={e => handleChange('job_position', e.target.value)}
+                        required
+                        icon={Briefcase}
+                        options={
+                            <>
+                                <option value="">Seçiniz...</option>
+                                {jobPositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
+                            </>
+                        }
+                    />
+                </div>
+
+                <div>
+                    <InputField label="Personel Sicil No" value={formData.employee_code} onChange={e => handleChange('employee_code', e.target.value)} required placeholder="Örn: 2478" />
+                </div>
+
+                <div>
+                    <InputField label="İşe Başlama Tarihi" value={formData.hired_date} onChange={e => handleChange('hired_date', e.target.value)} type="date" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const StepContact = ({ formData, handleChange }) => (
+    <div className="animate-fade-in-up">
+        <div className="mb-6 pb-4 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-800">İletişim & Acil Durum</h3>
+            <p className="text-slate-500 text-sm">İrtibat ve acil durumda aranacak kişi bilgileri.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <InputField label="Cep Telefonu" value={formData.phone} onChange={e => handleChange('phone', e.target.value)} icon={Phone} placeholder="05..." />
+            <InputField label="İkinci Telefon" value={formData.phone_secondary} onChange={e => handleChange('phone_secondary', e.target.value)} icon={Phone} />
+            <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Adres</label>
+                <textarea
+                    value={formData.address}
+                    onChange={e => handleChange('address', e.target.value)}
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all shadow-sm h-24 resize-none"
+                />
+            </div>
+        </div>
+
+        <div className="mt-8 mb-4">
+            <h4 className="font-bold text-slate-700 flex items-center gap-2"><span className="w-8 h-1 bg-red-400 rounded-full inline-block"></span> Acil Durum Kişisi</h4>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <InputField label="Ad Soyad" value={formData.emergency_contact_name} onChange={e => handleChange('emergency_contact_name', e.target.value)} />
+            <InputField label="Telefonu" value={formData.emergency_contact_phone} onChange={e => handleChange('emergency_contact_phone', e.target.value)} icon={Phone} />
+        </div>
+    </div>
+);
+
+const StepDetails = ({ formData, handleChange }) => (
+    <div className="animate-fade-in-up">
+        <div className="mb-6 pb-4 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-800">Detaylar & Yetkinlikler</h3>
+            <p className="text-slate-500 text-sm">Görev tanımı ve beceri seti.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-6">
+            <div>
+                <InputField label="Görev Tanımı Özeti" value={formData.title} onChange={e => handleChange('title', e.target.value)} />
+            </div>
+        </div>
+    </div>
+);
+
+const StepPreview = ({ formData, departments, jobPositions, employees }) => {
+    const mgr = employees.find(e => e.id == formData.reports_to);
+    const dept = departments.find(d => d.id == formData.department)?.name;
+    const func = departments.find(d => d.id == formData.functional_department)?.name || '-';
+    const pos = jobPositions.find(p => p.id == formData.job_position)?.name;
+
+    return (
+        <div className="animate-fade-in-up">
+            <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-slow">
+                    <Check size={40} />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-800">Kaydı Tamamla</h2>
+                <p className="text-slate-500 mt-2">Lütfen bilgileri son kez kontrol ediniz.</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-1/3 text-slate-500 font-medium">Ad Soyad</div>
+                    <div className="font-bold text-slate-800">{formData.first_name} {formData.last_name}</div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-1/3 text-slate-500 font-medium">TC Kimlik No</div>
+                    <div className="font-bold text-slate-800">{formData.tc_number}</div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
+                    <div className="w-1/3 text-slate-500 font-medium">Ana Departman</div>
+                    <div className="font-bold text-blue-700">{dept}</div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
+                    <div className="w-1/3 text-slate-500 font-medium">Yönetici</div>
+                    <div className="font-bold text-blue-700">{mgr ? mgr.first_name + ' ' + mgr.last_name : '-'}</div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-1/3 text-slate-500 font-medium">Fonksiyonel</div>
+                    <div className="font-bold text-slate-800">{func}</div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-1/3 text-slate-500 font-medium">Pozisyon</div>
+                    <div className="font-bold text-slate-800">{pos}</div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-1/3 text-slate-500 font-medium">Kullanıcı Adı</div>
+                    <div className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-sm">{formData.username}</div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Employees = () => {
     const { user } = useAuth();
     const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit'
@@ -261,245 +488,7 @@ const Employees = () => {
     // Moved outside of component scope to fix focus issues
 
     // --- Render Steps ---
-
-    const renderStep1 = () => (
-        <div className="animate-fade-in-up">
-            <div className="mb-6 pb-4 border-b border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800">Kişisel Kimlik Bilgileri</h3>
-                <p className="text-slate-500 text-sm">Personelin temel kimlik ve iletişim detayları.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <InputField label="Ad" value={formData.first_name} onChange={e => handleInputChange('first_name', e.target.value)} required placeholder="Personel Adı" />
-                <InputField label="Soyad" value={formData.last_name} onChange={e => handleInputChange('last_name', e.target.value)} required placeholder="Personel Soyadı" />
-                <InputField label="TC Kimlik No" value={formData.tc_number} onChange={e => handleInputChange('tc_number', e.target.value)} required placeholder="11 haneli TC no" />
-                <InputField label="E-posta" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} required type="email" placeholder="isim.soyisim@mega.com" />
-                <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleInputChange('birth_date', e.target.value)} type="date" />
-                <InputField label="Doğum Yeri" value={formData.birth_place} onChange={e => handleInputChange('birth_place', e.target.value)} placeholder="Örn: İstanbul" />
-            </div>
-        </div>
-    );
-
-    const renderStep2 = () => {
-        // Validation Logic for Functional Department Highlight
-        const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü';
-
-        const renderDepartmentOptions = (depts, level = 0) => {
-            return depts.map(dept => {
-                const children = departments.filter(d => d.parent === dept.id);
-                return (
-                    <React.Fragment key={dept.id}>
-                        <option value={dept.id}>{'\u00A0'.repeat(level * 4)}{level > 0 ? '└ ' : ''}{dept.name}</option>
-                        {children.length > 0 && renderDepartmentOptions(children, level + 1)}
-                    </React.Fragment>
-                );
-            });
-        };
-        const rootDepartments = departments.filter(d => !d.parent);
-        const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
-        const potentialManagers = employees.filter(e => e.is_active);
-
-        return (
-            <div className="animate-fade-in-up space-y-6">
-                <div className="mb-2 pb-4 border-b border-slate-100">
-                    <h3 className="text-xl font-bold text-slate-800">Kurumsal & Hiyerarşi</h3>
-                    <p className="text-slate-500 text-sm">Pozisyon, raporlama hattı ve departman atamaları.</p>
-                </div>
-
-                {/* Matrix Alert Card */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 flex gap-4 items-start shadow-sm">
-                    <div className="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                        <Building size={18} />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-blue-900 text-sm">Matris Organizasyon Yapısı</h4>
-                        <p className="text-blue-800/80 text-xs mt-1 leading-relaxed">
-                            Lütfen önce <strong>Yönetici (Reports To)</strong> seçimini yapınız. Ana departman yöneticiden otomatik çekilecektir.
-                            Eğer <strong>"Departman Müdürü"</strong> unvanı seçilirse, Fonksiyonel Birim seçimi zorunlu hale gelir.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                    {/* 1. MANAGER */}
-                    <div className="md:col-span-2">
-                        <SelectField
-                            label="Bağlı Olduğu Yönetici (Reports To)"
-                            value={formData.reports_to}
-                            onChange={e => handleInputChange('reports_to', e.target.value)}
-                            required
-                            icon={User}
-                            className="bg-blue-50/30 border-blue-200"
-                            options={
-                                <>
-                                    <option value="">Bir Yönetici Seçiniz...</option>
-                                    {potentialManagers.map(mgr => (
-                                        <option key={mgr.id} value={mgr.id}>
-                                            {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'} ({mgr.department?.name || '-'})
-                                        </option>
-                                    ))}
-                                </>
-                            }
-                        />
-                    </div>
-
-                    {/* 2. AUTO DEPARTMENT */}
-                    <div>
-                        <SelectField
-                            label="Ana Departman (Otomatik)"
-                            value={formData.department}
-                            disabled
-                            required
-                            icon={Building}
-                            className="bg-slate-100 text-slate-500"
-                            options={
-                                <>
-                                    <option value="">Yönetici Seçimi Bekleniyor...</option>
-                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                </>
-                            }
-                        />
-                    </div>
-
-                    {/* 3. FUNCTIONAL */}
-                    <div>
-                        <SelectField
-                            label="Fonksiyonel Birim / Disiplin"
-                            value={formData.functional_department}
-                            onChange={e => handleInputChange('functional_department', e.target.value)}
-                            icon={Settings}
-                            className={isDeptManager ? 'border-amber-400 bg-amber-50/50' : ''}
-                            options={
-                                <>
-                                    <option value="">Yok / Genel</option>
-                                    {functionalDepts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                                </>
-                            }
-                        />
-                        {isDeptManager && <p className="text-xs text-amber-600 font-bold mt-1 ml-1 animate-pulse">bu alan zorunludur *</p>}
-                    </div>
-
-                    {/* 4. JOB POSITION */}
-                    <div>
-                        <SelectField
-                            label="Unvan (Pozisyon)"
-                            value={formData.job_position}
-                            onChange={e => handleInputChange('job_position', e.target.value)}
-                            required
-                            icon={Briefcase}
-                            options={
-                                <>
-                                    <option value="">Seçiniz...</option>
-                                    {jobPositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
-                                </>
-                            }
-                        />
-                    </div>
-
-                    <div>
-                        <InputField label="Personel Sicil No" value={formData.employee_code} onChange={e => handleInputChange('employee_code', e.target.value)} required placeholder="Örn: 2478" />
-                    </div>
-
-                    <div>
-                        <InputField label="İşe Başlama Tarihi" value={formData.hired_date} onChange={e => handleInputChange('hired_date', e.target.value)} type="date" />
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const renderStep3 = () => (
-        <div className="animate-fade-in-up">
-            <div className="mb-6 pb-4 border-b border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800">İletişim & Acil Durum</h3>
-                <p className="text-slate-500 text-sm">İrtibat ve acil durumda aranacak kişi bilgileri.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <InputField label="Cep Telefonu" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} icon={Phone} placeholder="05..." />
-                <InputField label="İkinci Telefon" value={formData.phone_secondary} onChange={e => handleInputChange('phone_secondary', e.target.value)} icon={Phone} />
-                <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Adres</label>
-                    <textarea
-                        value={formData.address}
-                        onChange={e => handleInputChange('address', e.target.value)}
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all shadow-sm h-24 resize-none"
-                    />
-                </div>
-            </div>
-
-            <div className="mt-8 mb-4">
-                <h4 className="font-bold text-slate-700 flex items-center gap-2"><span className="w-8 h-1 bg-red-400 rounded-full inline-block"></span> Acil Durum Kişisi</h4>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <InputField label="Ad Soyad" value={formData.emergency_contact_name} onChange={e => handleInputChange('emergency_contact_name', e.target.value)} />
-                <InputField label="Telefonu" value={formData.emergency_contact_phone} onChange={e => handleInputChange('emergency_contact_phone', e.target.value)} icon={Phone} />
-            </div>
-        </div>
-    );
-
-    const renderStep4 = () => (
-        <div className="animate-fade-in-up">
-            <div className="mb-6 pb-4 border-b border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800">Detaylar & Yetkinlikler</h3>
-                <p className="text-slate-500 text-sm">Görev tanımı ve beceri seti.</p>
-            </div>
-            <div className="grid grid-cols-1 gap-6">
-                <div>
-                    <InputField label="Görev Tanımı Özeti" value={formData.title} onChange={e => handleInputChange('title', e.target.value)} />
-                </div>
-                {/* Placeholder for tags/skills input components - can be expanded later */}
-            </div>
-        </div>
-    );
-
-    const renderStep5 = () => {
-        const mgr = employees.find(e => e.id == formData.reports_to);
-        const dept = departments.find(d => d.id == formData.department)?.name;
-        const func = departments.find(d => d.id == formData.functional_department)?.name || '-';
-        const pos = jobPositions.find(p => p.id == formData.job_position)?.name;
-
-        return (
-            <div className="animate-fade-in-up">
-                <div className="text-center mb-8">
-                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-slow">
-                        <Check size={40} />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-800">Kaydı Tamamla</h2>
-                    <p className="text-slate-500 mt-2">Lütfen bilgileri son kez kontrol ediniz.</p>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                        <div className="w-1/3 text-slate-500 font-medium">Ad Soyad</div>
-                        <div className="font-bold text-slate-800">{formData.first_name} {formData.last_name}</div>
-                    </div>
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                        <div className="w-1/3 text-slate-500 font-medium">TC Kimlik No</div>
-                        <div className="font-bold text-slate-800">{formData.tc_number}</div>
-                    </div>
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                        <div className="w-1/3 text-slate-500 font-medium">Ana Departman</div>
-                        <div className="font-bold text-blue-700">{dept}</div>
-                    </div>
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                        <div className="w-1/3 text-slate-500 font-medium">Yönetici</div>
-                        <div className="font-bold text-blue-700">{mgr ? mgr.first_name + ' ' + mgr.last_name : '-'}</div>
-                    </div>
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                        <div className="w-1/3 text-slate-500 font-medium">Fonksiyonel</div>
-                        <div className="font-bold text-slate-800">{func}</div>
-                    </div>
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                        <div className="w-1/3 text-slate-500 font-medium">Pozisyon</div>
-                        <div className="font-bold text-slate-800">{pos}</div>
-                    </div>
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                        <div className="w-1/3 text-slate-500 font-medium">Kullanıcı Adı</div>
-                        <div className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-sm">{formData.username}</div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
+    // Using external components StepPersonal, StepCorporate, etc.
 
     // --- Main Render ---
 
@@ -692,11 +681,26 @@ const Employees = () => {
 
                     {/* Scrollable Form Content */}
                     <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
-                        {currentStep === 1 && renderStep1()}
-                        {currentStep === 2 && renderStep2()}
-                        {currentStep === 3 && renderStep3()}
-                        {currentStep === 4 && renderStep4()}
-                        {currentStep === 5 && renderStep5()}
+                        {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
+                        {currentStep === 2 && (
+                            <StepCorporate
+                                formData={formData}
+                                handleChange={handleInputChange}
+                                departments={departments}
+                                jobPositions={jobPositions}
+                                employees={employees}
+                            />
+                        )}
+                        {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
+                        {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} />}
+                        {currentStep === 5 && (
+                            <StepPreview
+                                formData={formData}
+                                departments={departments}
+                                jobPositions={jobPositions}
+                                employees={employees}
+                            />
+                        )}
                     </div>
 
                     {/* Footer Actions */}
