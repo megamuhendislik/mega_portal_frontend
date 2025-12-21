@@ -144,13 +144,18 @@ const MainLayout = () => {
             <aside
                 className={clsx(
                     "fixed md:relative z-40 h-full transition-all duration-300 ease-in-out flex flex-col shadow-2xl overflow-hidden",
-                    // Premium Dark Gradient Background
-                    "bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 border-r border-white/5",
+                    // Base Dark Theme to match Employee Wizard
+                    "bg-slate-900 text-white border-r border-white/5",
                     isSidebarOpen ? "w-72 translate-x-0" : (isMobile ? "-translate-x-full w-72" : "w-20 translate-x-0")
                 )}
             >
+                {/* Decorative Background Elements (MATCHING WIZARD DESIGN) */}
+                <div className="absolute top-0 left-0 w-full h-full bg-slate-900 z-0 pointer-events-none">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-50"></div>
+                </div>
                 {/* Logo Area */}
-                <div className="p-6 flex items-center justify-between h-24 border-b border-white/5 relative overflow-hidden">
+                <div className="p-6 flex items-center justify-between h-24 border-b border-white/5 relative z-10 overflow-hidden">
                     {/* Abstract Background Decoration */}
                     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-500/10 to-transparent pointer-events-none" />
 
@@ -182,7 +187,7 @@ const MainLayout = () => {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent relative z-10">
                     {filteredNavItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
@@ -219,7 +224,7 @@ const MainLayout = () => {
                 </nav>
 
                 {/* Footer / Logout */}
-                <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-sm">
+                <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-sm relative z-10">
                     <button
                         onClick={logout}
                         className={clsx(
