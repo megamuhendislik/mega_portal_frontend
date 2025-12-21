@@ -305,7 +305,7 @@ const WorkSchedules = () => {
     if (loading) return <div className="p-10 text-center animate-pulse text-slate-500">Yükleniyor...</div>;
 
     return (
-        <div className="p-6 w-full max-w-[98%] mx-auto select-none" onMouseUp={handleMouseUp}>
+        <div className="p-4 w-full mx-auto select-none" onMouseUp={handleMouseUp}>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
