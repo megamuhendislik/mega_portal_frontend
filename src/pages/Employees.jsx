@@ -49,7 +49,7 @@ const INITIAL_FORM_STATE = {
     foreign_languages: [], // List of {name, level}
 
     // System
-    password: 'Password123!', // Default initial password
+    password: '', // Default initial password
     username: '' // Will be auto-generated or manual
 };
 
@@ -118,7 +118,8 @@ const StepPersonal = ({ formData, handleChange }) => (
             <InputField label="TC Kimlik No" value={formData.tc_number} onChange={e => handleChange('tc_number', e.target.value)} required placeholder="11 haneli TC no" />
             <InputField label="E-posta" value={formData.email} onChange={e => handleChange('email', e.target.value)} required type="email" placeholder="isim.soyisim@mega.com" />
             <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleChange('birth_date', e.target.value)} type="date" />
-            <InputField label="Doğum Yeri" value={formData.birth_place} onChange={e => handleChange('birth_place', e.target.value)} placeholder="Örn: İstanbul" />
+            <InputField label="Kullanıcı Adı" value={formData.username} onChange={e => handleChange('username', e.target.value)} required placeholder="kullanici.adi" />
+            <InputField label="Şifre" value={formData.password} onChange={e => handleChange('password', e.target.value)} required type="text" placeholder="İlk giriş şifresi" />
         </div>
     </div>
 );
@@ -408,7 +409,7 @@ const Employees = () => {
         const { first_name, last_name, tc_number, email, department, job_position, employee_code, reports_to, functional_department } = formData;
         switch (step) {
             case 1: // Personal
-                return first_name && last_name && tc_number && email;
+                return first_name && last_name && tc_number && email && formData.username && formData.password;
             case 2: // Corporate
                 // reports_to is mandatory now for matrix structure
                 let valid = department && job_position && employee_code && reports_to;
@@ -467,8 +468,8 @@ const Employees = () => {
             };
 
             if (viewMode === 'create') {
-                await api.post('/employees/create_with_user/', payload);
-                alert("Personel başarıyla oluşturuldu.");
+                await api.post('/employees/', payload);
+                alert("Personel ve Kullanıcı Hesabı başarıyla oluşturuldu.");
             } else {
                 // Update logic would go here
             }
