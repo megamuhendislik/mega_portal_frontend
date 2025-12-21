@@ -245,6 +245,17 @@ const WorkSchedules = () => {
                                     );
                                 })}
                             </div>
+
+                            <button
+                                onClick={() => {
+                                    setSelectedScheduleForView(sch);
+                                    setViewMode('ANNUAL');
+                                }}
+                                className="w-full mt-4 py-2 border border-blue-100 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Calendar size={16} />
+                                Yıllık Takvim & Tatiller
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -255,6 +266,7 @@ const WorkSchedules = () => {
                     holidays={holidays}
                     initialSchedule={selectedScheduleForView}
                     onRefresh={fetchData}
+                    onBack={() => setViewMode('LIST')}
                 />
             )}
 
@@ -504,11 +516,12 @@ const HolidayModal = ({ isOpen, onClose, onSave, date, onDelete, existingHoliday
     );
 };
 
-const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh }) => {
+const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh, onBack }) => {
     const [selectedScheduleId, setSelectedScheduleId] = useState(initialSchedule?.id || (schedules[0]?.id));
     const [selectedDate, setSelectedDate] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [holidayToEdit, setHolidayToEdit] = useState(null);
+    const [editMode, setEditMode] = useState(false); // New Edit Mode State
 
     const { user } = useAuth();
     const today = moment().startOf('day');
@@ -519,12 +532,13 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
     // Permission Check
     const canManageHolidays = user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
 
-    const handleDayDoubleClick = (date, currentHoliday) => {
-        if (!canManageHolidays) return;
-
-        setSelectedDate(date);
-        setHolidayToEdit(currentHoliday);
-        setModalOpen(true);
+    const handleDayClick = (date, currentHoliday) => {
+        // If Edit Mode is active AND user has permission, open modal on SINGLE CLICK
+        if (editMode && canManageHolidays) {
+            setSelectedDate(date);
+            setHolidayToEdit(currentHoliday);
+            setModalOpen(true);
+        }
     };
 
     const handleHolidaySave = async (data) => {
@@ -594,46 +608,78 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
                 onDelete={handleHolidayDelete}
             />
 
-            <div className="mb-6 flex flex-col md:flex-row items-center gap-4 justify-between">
-                <div className="flex items-center gap-4">
-                    <label className="text-sm font-medium text-slate-700">Görüntülenen Takvim:</label>
-                    <select
-                        value={selectedScheduleId}
-                        onChange={(e) => setSelectedScheduleId(e.target.value)}
-                        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[200px]"
+            {/* Header / Controls */}
+            <div className="mb-6 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors font-medium"
                     >
-                        {schedules.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                    </select>
+                        <ArrowLeft size={20} />
+                        Listeye Dön
+                    </button>
+
+                    {canManageHolidays && (
+                        <div className="flex items-center gap-3">
+                            <label className="flex items-center cursor-pointer gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors">
+                                <span className={`text-sm font-medium ${editMode ? 'text-blue-600' : 'text-slate-600'}`}>
+                                    {editMode ? 'Tatil Düzenleme Modu: AÇIK' : 'Tatil Düzenleme Modu: KAPALI'}
+                                </span>
+                                <div className={`w-10 h-5 rounded-full relative transition-colors ${editMode ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                                    <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${editMode ? 'left-5.5' : 'left-0.5'}`}></div>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={editMode}
+                                    onChange={(e) => setEditMode(e.target.checked)}
+                                />
+                            </label>
+                        </div>
+                    )}
                 </div>
 
-                <div className="flex gap-4 text-xs">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
-                        <span>Çalışma</span>
+                <div className="flex flex-col md:flex-row items-center gap-4 justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-4">
+                        <label className="text-sm font-medium text-slate-700">Takvim Şablonu:</label>
+                        <select
+                            value={selectedScheduleId}
+                            onChange={(e) => setSelectedScheduleId(e.target.value)}
+                            className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[200px]"
+                        >
+                            {schedules.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-slate-100 rounded"></div>
-                        <span>Hafta Tatili</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
-                        <span>Resmi Tatil</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-indigo-100 border border-indigo-200 rounded"></div>
-                        <span>Dini Bayram</span>
+
+                    <div className="flex gap-4 text-xs">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
+                            <span>Çalışma</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-slate-100 rounded"></div>
+                            <span>Hafta Tatili</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
+                            <span>Resmi Tatil</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-indigo-100 border border-indigo-200 rounded"></div>
+                            <span>Dini Bayram</span>
+                        </div>
                     </div>
                 </div>
+
+                {editMode && (
+                    <div className="p-3 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-2 animate-pulse border border-blue-100">
+                        <Check size={16} />
+                        <span><strong>Düzenleme Modu Aktif:</strong> Tatil eklemek veya düzenlemek için günlerin üzerine TIKLAYINIZ.</span>
+                    </div>
+                )}
             </div>
-
-            {canManageHolidays && (
-                <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-2 animate-pulse">
-                    <Check size={16} />
-                    <span>Yönetici Modu: Tatil eklemek için günlerin üzerine <strong>İKİ KEZ (ÇİFT) TIKLAYINIZ</strong>.</span>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {months.map((monthName, index) => {
@@ -664,20 +710,17 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh 
                                     return (
                                         <div
                                             key={i}
-                                            onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
-                                            onClick={() => {
-                                                if (canManageHolidays) {
-                                                    // Optional: You could use a toast here instead of console
-                                                    console.log("Double click to manage");
-                                                }
-                                            }}
+                                            onClick={() => handleDayClick(date, status.holiday)}
                                             className={`
                                                 h-8 flex items-center justify-center text-xs rounded transition-all select-none
                                                 ${status.color} 
                                                 ${isPast ? 'opacity-40 grayscale' : ''} 
-                                                ${canManageHolidays ? 'cursor-pointer hover:ring-2 ring-blue-300 hover:scale-110 hover:shadow-lg z-0 hover:z-10' : 'cursor-default'}
+                                                ${editMode
+                                                    ? 'cursor-pointer hover:ring-2 ring-blue-400 hover:scale-110 hover:shadow-lg z-0 hover:z-10'
+                                                    : 'cursor-default'
+                                                }
                                             `}
-                                            title={`${date.format('DD MMMM YYYY')}\n${status.label}${isPast ? ' (Geçmiş)' : ''}\n${canManageHolidays ? '(Düzenlemek için Çift Tıklayın)' : ''}`}
+                                            title={`${date.format('DD MMMM YYYY')}\n${status.label}${isPast ? ' (Geçmiş)' : ''}`}
                                         >
                                             {i + 1}
                                         </div>
