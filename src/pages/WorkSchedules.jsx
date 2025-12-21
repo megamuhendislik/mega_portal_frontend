@@ -516,12 +516,23 @@ const HolidayModal = ({ isOpen, onClose, onSave, date, onDelete, existingHoliday
     );
 };
 
-const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh, onBack }) => {
+const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh, onBack, onEdit }) => {
+    // If initialSchedule is provided, use its ID. Otherwise default to first schedule's ID.
+    // We use a useEffect to sync if initialSchedule changes (e.g. after fetch)
     const [selectedScheduleId, setSelectedScheduleId] = useState(initialSchedule?.id || (schedules[0]?.id));
+
+    useEffect(() => {
+        if (initialSchedule?.id) {
+            setSelectedScheduleId(initialSchedule.id);
+        } else if (schedules.length > 0 && !selectedScheduleId) {
+            setSelectedScheduleId(schedules[0].id);
+        }
+    }, [initialSchedule, schedules]);
+
     const [selectedDate, setSelectedDate] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [holidayToEdit, setHolidayToEdit] = useState(null);
-    const [editMode, setEditMode] = useState(false); // New Edit Mode State
+    const [editMode, setEditMode] = useState(false);
 
     const { user } = useAuth();
     const today = moment().startOf('day');
@@ -533,7 +544,6 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh,
     const canManageHolidays = user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
 
     const handleDayClick = (date, currentHoliday) => {
-        // If Edit Mode is active AND user has permission, open modal on SINGLE CLICK
         if (editMode && canManageHolidays) {
             setSelectedDate(date);
             setHolidayToEdit(currentHoliday);
@@ -641,16 +651,28 @@ const AnnualCalendar = ({ year, schedules, holidays, initialSchedule, onRefresh,
 
                 <div className="flex flex-col md:flex-row items-center gap-4 justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-4">
-                        <label className="text-sm font-medium text-slate-700">Takvim Şablonu:</label>
-                        <select
-                            value={selectedScheduleId}
-                            onChange={(e) => setSelectedScheduleId(e.target.value)}
-                            className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[200px]"
-                        >
-                            {schedules.map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
-                        </select>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-slate-700 whitespace-nowrap">Görüntülenen Takvim:</label>
+                            <select
+                                value={selectedScheduleId}
+                                onChange={(e) => setSelectedScheduleId(e.target.value)}
+                                className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[200px]"
+                            >
+                                {schedules.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {selectedSchedule && (
+                            <button
+                                onClick={() => onEdit(selectedSchedule)}
+                                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                            >
+                                <Edit size={16} />
+                                Haftalık Programı Düzenle
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex gap-4 text-xs">
