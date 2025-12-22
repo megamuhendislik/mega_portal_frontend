@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils, CheckCircle2, XCircle, AlertCircle, Users } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
@@ -11,8 +11,7 @@ const Requests = () => {
     const [overtimeRequests, setOvertimeRequests] = useState([]);
     const [mealRequests, setMealRequests] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
-    const [incomingHistory, setIncomingHistory] = useState([]); // New state for history
-    const [incomingFilter, setIncomingFilter] = useState('PENDING'); // 'PENDING' or 'HISTORY'
+    const [teamHistoryRequests, setTeamHistoryRequests] = useState([]); // Team History
     const [requestTypes, setRequestTypes] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -34,10 +33,10 @@ const Requests = () => {
 
     // Fetch history when filter changes to HISTORY
     useEffect(() => {
-        if (activeTab === 'incoming' && incomingFilter === 'HISTORY' && incomingHistory.length === 0) {
-            fetchIncomingHistory();
+        if (activeTab === 'team_history' && teamHistoryRequests.length === 0) {
+            fetchTeamHistory();
         }
-    }, [activeTab, incomingFilter]);
+    }, [activeTab]);
 
     const fetchData = async () => {
         try {
@@ -60,12 +59,12 @@ const Requests = () => {
         }
     };
 
-    const fetchIncomingHistory = async () => {
+    const fetchTeamHistory = async () => {
         try {
-            const res = await api.get('/leave/requests/recently_processed/');
-            setIncomingHistory(res.data.results || res.data);
+            const res = await api.get('/leave/requests/team_history/');
+            setTeamHistoryRequests(res.data.results || res.data);
         } catch (error) {
-            console.error('Error fetching history:', error);
+            console.error('Error fetching team history:', error);
         }
     };
 
@@ -139,7 +138,8 @@ const Requests = () => {
             });
             // Refresh lists
             fetchData();
-            if (incomingFilter === 'HISTORY') fetchIncomingHistory();
+            fetchData();
+            if (activeTab === 'team_history') fetchTeamHistory();
             // alert('Talep onaylandı.');
         } catch (error) {
             console.error('Error approving request:', error);
@@ -162,7 +162,8 @@ const Requests = () => {
             });
             // Refresh lists
             fetchData();
-            if (incomingFilter === 'HISTORY') fetchIncomingHistory();
+            fetchData();
+            if (activeTab === 'team_history') fetchTeamHistory();
             // alert('Talep reddedildi.');
         } catch (error) {
             console.error('Error rejecting request:', error);
@@ -244,52 +245,44 @@ const Requests = () => {
                 </div>
             );
         } else if (activeTab === 'incoming') {
-            const list = incomingFilter === 'PENDING' ? incomingRequests : incomingHistory;
+            if (incomingRequests.length === 0) return <EmptyState title="Onay Bekleyen Talep Yok" desc="Şu anda onayınızı bekleyen herhangi bir talep bulunmuyor." />;
 
             content = (
-                <div className="space-y-6">
-                    {/* Filter Toggle */}
-                    <div className="flex justify-end">
-                        <div className="bg-slate-100 p-1 rounded-lg inline-flex">
-                            <button
-                                onClick={() => setIncomingFilter('PENDING')}
-                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${incomingFilter === 'PENDING' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Bekleyenler
-                            </button>
-                            <button
-                                onClick={() => setIncomingFilter('HISTORY')}
-                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${incomingFilter === 'HISTORY' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Geçmiş İşlemler
-                            </button>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                    {incomingRequests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={{
+                                ...req,
+                                leave_type_name: req.request_type_detail?.name,
+                                employee_name: req.employee_detail?.full_name
+                            }}
+                            isIncoming={true}
+                            statusBadge={getStatusBadge}
+                            onApprove={handleApprove}
+                            onReject={handleReject}
+                        />
+                    ))}
+                </div>
+            );
+        } else if (activeTab === 'team_history') {
+            if (teamHistoryRequests.length === 0) return <EmptyState title="Geçmiş Kayıt Yok" desc="Ekibinize ait herhangi bir geçmiş talep kaydı bulunamadı." />;
 
-                    {list.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                            <p className="text-slate-500">
-                                {incomingFilter === 'PENDING' ? 'Onay bekleyen talep bulunmuyor.' : 'Geçmiş işlem bulunamadı.'}
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
-                            {list.map(req => (
-                                <RequestCard
-                                    key={req.id}
-                                    request={{
-                                        ...req,
-                                        leave_type_name: req.request_type_detail?.name,
-                                        employee_name: req.employee_detail?.full_name
-                                    }}
-                                    isIncoming={true}
-                                    statusBadge={getStatusBadge}
-                                    onApprove={handleApprove}
-                                    onReject={handleReject}
-                                />
-                            ))}
-                        </div>
-                    )}
+            content = (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                    {teamHistoryRequests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={{
+                                ...req,
+                                leave_type_name: req.request_type_detail?.name,
+                                employee_name: req.employee_detail?.full_name
+                            }}
+                            isIncoming={true} // To show employee info
+                            // No actions passed -> Read Only
+                            statusBadge={getStatusBadge}
+                        />
+                    ))}
                 </div>
             );
         }
@@ -368,7 +361,8 @@ const Requests = () => {
                         { id: 'my_requests', label: 'İzin Taleplerim' },
                         { id: 'overtime_requests', label: 'Fazla Mesai' },
                         { id: 'meal_requests', label: 'Yemek' },
-                        { id: 'incoming', label: 'Gelen Talepler', badge: incomingRequests.length }
+                        { id: 'incoming', label: 'Onay Bekleyenler', badge: incomingRequests.length },
+                        { id: 'team_history', label: 'Ekip Geçmişi' }
                     ].map(tab => (
                         <button
                             key={tab.id}

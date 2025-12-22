@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import DailySummaryCard from '../components/DailySummaryCard';
@@ -18,6 +18,16 @@ const Attendance = () => {
 
     const [todaySummary, setTodaySummary] = useState(null);
 
+    // Date Filters
+    const [dateFilter, setDateFilter] = useState('MONTH'); // WEEK, MONTH, CUSTOM
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // Initialize dates on mount
+    useEffect(() => {
+        handleDateFilterChange('MONTH');
+    }, []);
+
     // Initialize intent
     useEffect(() => {
         if (user?.employee?.id) {
@@ -29,11 +39,36 @@ const Attendance = () => {
     }, [user]);
 
     useEffect(() => {
-        if (selectedEmployeeId) {
+        if (selectedEmployeeId && startDate && endDate) {
             fetchAttendance();
             fetchTodaySummary();
         }
-    }, [selectedEmployeeId]);
+    }, [selectedEmployeeId, startDate, endDate]);
+
+    const handleDateFilterChange = (type) => {
+        setDateFilter(type);
+        const today = new Date();
+        let start = new Date();
+        let end = new Date();
+
+        if (type === 'WEEK') {
+            const day = today.getDay();
+            const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+            start.setDate(diff);
+            end.setDate(start.getDate() + 6);
+        } else if (type === 'MONTH') {
+            start.setDate(1);
+            end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        } else if (type === 'TODAY') {
+            // start = end = today
+        }
+
+        // For Custom, we don't auto-set, user sets manually
+        if (type !== 'CUSTOM') {
+            setStartDate(start.toISOString().split('T')[0]);
+            setEndDate(end.toISOString().split('T')[0]);
+        }
+    };
 
     const fetchTodaySummary = async () => {
         try {
@@ -51,7 +86,7 @@ const Attendance = () => {
     const fetchAttendance = async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/attendance/?employee_id=${selectedEmployeeId}`);
+            const response = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             const data = response.data.results || response.data;
             setLogs(data);
             calculateSummary(data);
@@ -156,7 +191,35 @@ const Attendance = () => {
                             Tüm Mesaileri Sıfırla
                         </button>
                     )}
-                    {/* Future: Date Range Picker */}
+                    {/* Date Range Picker */}
+                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                        <button
+                            onClick={() => handleDateFilterChange('WEEK')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${dateFilter === 'WEEK' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Bu Hafta
+                        </button>
+                        <button
+                            onClick={() => handleDateFilterChange('MONTH')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${dateFilter === 'MONTH' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Bu Ay
+                        </button>
+                        <div className="h-4 w-px bg-slate-300 mx-1"></div>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => { setStartDate(e.target.value); setDateFilter('CUSTOM'); }}
+                            className="bg-transparent text-xs font-medium text-slate-600 outline-none w-24"
+                        />
+                        <span className="text-slate-400">-</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => { setEndDate(e.target.value); setDateFilter('CUSTOM'); }}
+                            className="bg-transparent text-xs font-medium text-slate-600 outline-none w-24"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -206,6 +269,7 @@ const Attendance = () => {
                                 <th className="p-4">Giriş</th>
                                 <th className="p-4">Çıkış</th>
                                 <th className="p-4">Süre (Dk)</th>
+                                <th className="p-4">Beklenen</th>
                                 <th className="p-4">Mola (Dk)</th>
                                 <th className="p-4">Normal / Fazla</th>
                                 <th className="p-4">Durum</th>
@@ -224,6 +288,12 @@ const Attendance = () => {
                                     <td className="p-4 font-mono text-slate-600">{formatTime(log.check_out)}</td>
                                     <td className="p-4 font-bold text-slate-800">
                                         {log.total_minutes ? `${Math.floor(log.total_minutes / 60)}s ${log.total_minutes % 60}dk` : '-'}
+                                    </td>
+                                    <td className="p-4 text-slate-500 font-mono text-xs">
+                                        {log.normal_minutes || log.missing_minutes ?
+                                            `${Math.floor(((log.normal_minutes || 0) + (log.missing_minutes || 0)) / 60)}s ${((log.normal_minutes || 0) + (log.missing_minutes || 0)) % 60}dk`
+                                            : '-'
+                                        }
                                     </td>
                                     <td className="p-4 text-slate-600">
                                         {log.break_minutes > 0 ? (
