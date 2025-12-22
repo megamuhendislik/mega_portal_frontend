@@ -891,119 +891,118 @@ const Employees = () => {
                                 <UserPlus size={24} className="text-blue-400" />
                                 <span className="text-xs font-bold tracking-widest uppercase text-blue-200">İK YÖNETİMİ</span>
                             </div>
+                            <h2 className="text-3xl font-bold leading-tight">Personel<br /><span className="text-blue-400">{viewMode === 'edit' ? 'Düzenleme' : 'Oluşturma'}</span></h2>
                         </div>
-                        <h2 className="text-3xl font-bold leading-tight">Personel<br /><span className="text-blue-400">{viewMode === 'edit' ? 'Düzenleme' : 'Oluşturma'}</span></h2>
-                    </div>
 
-                    {/* Vertical Steps */}
-                    <div className="space-y-1 relative">
-                        {/* Vertical Line */}
-                        <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
+                        {/* Vertical Steps */}
+                        <div className="space-y-1 relative">
+                            {/* Vertical Line */}
+                            <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
 
-                        {STEPS.map((s, idx) => {
-                            const isActive = currentStep === s.number;
-                            const isCompleted = currentStep > s.number;
-                            const Icon = s.icon;
+                            {STEPS.map((s, idx) => {
+                                const isActive = currentStep === s.number;
+                                const isCompleted = currentStep > s.number;
+                                const Icon = s.icon;
 
-                            return (
-                                <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
-                                    <div
-                                        className={`
+                                return (
+                                    <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
+                                        <div
+                                            className={`
                                                 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0
                                                 ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' :
-                                                isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' :
-                                                    'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}
+                                                    isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' :
+                                                        'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}
                                             `}
-                                    >
-                                        {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
+                                        >
+                                            {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
+                                        </div>
+                                        <div>
+                                            <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>
+                                                {s.title}
+                                            </h4>
+                                            {isActive && (
+                                                <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>
-                                            {s.title}
-                                        </h4>
-                                        {isActive && (
-                                            <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">
+                        MEGA PORTAL v1.0 &copy; 2025
                     </div>
                 </div>
 
-                <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">
-                    MEGA PORTAL v1.0 &copy; 2025
-                </div>
-            </div>
-
-            {/* Right Content Area */}
-            <div className="flex-1 bg-white flex flex-col">
-                {/* Header */}
-                <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            {STEPS[currentStep - 1].icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 })}
-                            {STEPS[currentStep - 1].title}
-                        </h3>
-                        <p className="text-slate-500 text-sm mt-1">Lütfen gerekli bilgileri eksiksiz doldurunuz.</p>
+                {/* Right Content Area */}
+                <div className="flex-1 bg-white flex flex-col">
+                    {/* Header */}
+                    <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                {STEPS[currentStep - 1].icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 })}
+                                {STEPS[currentStep - 1].title}
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-1">Lütfen gerekli bilgileri eksiksiz doldurunuz.</p>
+                        </div>
+                        <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                            Adım {currentStep} / {STEPS.length}
+                        </div>
                     </div>
-                    <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                        Adım {currentStep} / {STEPS.length}
+
+                    {/* Scrollable Form Content */}
+                    <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
+                        {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
+                        {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                        {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
+                        {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
+                        {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
+                        {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                     </div>
-                </div>
 
-                {/* Scrollable Form Content */}
-                <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
-                    {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
-                    {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
-                    {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
-                    {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                    {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
-                    {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
-                </div>
-
-                {/* Footer Actions */}
-                <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <button
-                        onClick={handleBack}
-                        disabled={currentStep === 1}
-                        className={`
+                    {/* Footer Actions */}
+                    <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <button
+                            onClick={handleBack}
+                            disabled={currentStep === 1}
+                            className={`
                                 h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all
                                 ${currentStep === 1
-                                ? 'text-slate-300 cursor-not-allowed'
-                                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
+                                    ? 'text-slate-300 cursor-not-allowed'
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
                             `}
-                    >
-                        <ArrowLeft size={20} />
-                        Geri
-                    </button>
+                        >
+                            <ArrowLeft size={20} />
+                            Geri
+                        </button>
 
-                    <button
-                        onClick={currentStep === 6 ? handleSubmit : handleNext}
-                        disabled={submitting}
-                        className={`
+                        <button
+                            onClick={currentStep === 6 ? handleSubmit : handleNext}
+                            disabled={submitting}
+                            className={`
                                 h-12 px-8 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95
                                 ${submitting ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:-translate-y-1'}
                             `}
-                    >
-                        {submitting ? (
-                            <>
-                                <Loader2 size={20} className="animate-spin" />
-                                İşleniyor...
-                            </>
-                        ) : (
-                            <>
-                                {currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et'}
-                                {currentStep !== 6 && <ArrowRight size={20} />}
-                            </>
-                        )}
-                    </button>
+                        >
+                            {submitting ? (
+                                <>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    İşleniyor...
+                                </>
+                            ) : (
+                                <>
+                                    {currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et'}
+                                    {currentStep !== 6 && <ArrowRight size={20} />}
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-            {/* Custom Styles */ }
-    <style>{`
+            {/* Custom Styles */}
+            <style>{`
                 @keyframes fade-in {
                     from { opacity: 0; }
                     to { opacity: 1; }
@@ -1029,8 +1028,12 @@ const Employees = () => {
                     background: #94a3b8; 
                 }
             `}</style>
-        </div >
+        </div>
     );
+
 };
 
 export default Employees;
+
+
+
