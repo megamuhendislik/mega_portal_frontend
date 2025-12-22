@@ -612,7 +612,7 @@ const Employees = () => {
     const handleNext = () => {
         if (validateStep(currentStep)) {
             setCompletedSteps(prev => [...new Set([...prev, currentStep])]);
-            setCurrentStep(prev => Math.min(prev + 1, 5));
+            setCurrentStep(prev => Math.min(prev + 1, 6));
             window.scrollTo(0, 0);
         } else {
             alert("Lütfen zorunlu alanları doldurunuz.");
