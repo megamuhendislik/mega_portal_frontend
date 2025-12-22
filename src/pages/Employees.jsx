@@ -637,6 +637,77 @@ const Employees = () => {
         }
     };
 
+    const handleEdit = (emp) => {
+        // Populate formData from emp
+        // Need to parse permissions, schedule etc.
+        const workSched = emp.work_schedule?.id || '';
+        const customSched = emp.work_schedule ? {} : (emp.weekly_schedule || {});
+
+        // Find reverse lookup for roles vs direct (this is tricky in frontend, 
+        // but for now we just load what we have. 
+        // Ideally we fetch DETAIL for this employee to get full perms. 
+        // We will do a Quick Fetch using ID.
+        loadEmployeeDetail(emp.id);
+    };
+
+    const loadEmployeeDetail = async (id) => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/employees/${id}/`);
+            const data = res.data;
+
+            // Transform to Form Data
+            const newForm = {
+                id: data.id, // Important for update
+                first_name: data.first_name,
+                last_name: data.last_name,
+                tc_number: data.tc_number || '',
+                birth_date: data.birth_date || '',
+                birth_place: data.birth_place || '',
+                email: data.email,
+                username: data.user?.username || '', // Read only usually
+
+                department: data.department?.id || data.department,
+                job_position: data.job_position?.id || data.job_position,
+                reports_to: data.reports_to || '',
+                functional_department: (data.secondary_departments?.[0]?.id) || '', // Simplify first dim
+
+                employee_code: data.employee_code,
+                card_uid: data.card_uid || '',
+                employment_status: data.employment_status,
+                work_type: data.work_type,
+                hired_date: data.hired_date || '',
+
+                work_schedule: data.work_schedule?.id || '',
+                weekly_schedule: data.weekly_schedule || {},
+
+                phone: data.phone || '',
+                phone_secondary: data.phone_secondary || '',
+                address: data.address || '',
+                emergency_contact_name: data.emergency_contact_name || '',
+                emergency_contact_phone: data.emergency_contact_phone || '',
+
+                title: data.title || '',
+                job_description: data.job_description || '',
+                technical_skills: data.technical_skills || [],
+                certificates: data.certificates || [],
+                foreign_languages: data.foreign_languages || [],
+
+                direct_permissions: data.direct_permissions ? data.direct_permissions.map(p => p.id) : [],
+                password: '', // Don't populate
+            };
+
+            setFormData(newForm);
+            setViewMode('edit');
+            setCurrentStep(1);
+        } catch (err) {
+            console.error(err);
+            alert("Detaylar yüklenemedi.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
@@ -644,16 +715,23 @@ const Employees = () => {
             const payload = {
                 ...formData,
                 work_schedule: formData.work_schedule || null,
-                // If functional department selected, put it in secondary_departments list
                 secondary_departments: formData.functional_department ? [formData.functional_department] : []
             };
 
             if (viewMode === 'create') {
                 await api.post('/employees/', payload);
                 alert("Personel ve Kullanıcı Hesabı başarıyla oluşturuldu.");
-            } else {
-                // Update logic would go here
+            } else if (viewMode === 'edit') {
+                // Update
+                // Remove readonly fields if necessary or backend handles it.
+                // Password usually handled separately but here we might allow reset if provided?
+                // For safety, remove password if empty
+                if (!payload.password) delete payload.password;
+
+                await api.patch(`/employees/${payload.id}/`, payload);
+                alert("Personel bilgileri güncellendi.");
             }
+
             fetchInitialData();
             setViewMode('list');
             setFormData(INITIAL_FORM_STATE);
@@ -732,10 +810,17 @@ const Employees = () => {
                         {employees.filter(e => e.first_name.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
                             <div key={emp.id} className="group bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative overflow-hidden">
                                 {showSettings && (
-                                    <div className="absolute top-4 right-4 z-10 animate-fade-in">
+                                    <div className="absolute top-4 right-4 z-10 animate-fade-in flex gap-2">
+                                        <button
+                                            onClick={(ev) => { ev.stopPropagation(); handleEdit(emp); }}
+                                            className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
+                                            title="Düzenle"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
                                         <button
                                             onClick={(ev) => { ev.stopPropagation(); handleDelete(emp.id); }}
-                                            className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"
+                                            className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
                                             title="Sil"
                                         >
                                             <Trash2 size={16} />
@@ -806,118 +891,119 @@ const Employees = () => {
                                 <UserPlus size={24} className="text-blue-400" />
                                 <span className="text-xs font-bold tracking-widest uppercase text-blue-200">İK YÖNETİMİ</span>
                             </div>
-                            <h2 className="text-3xl font-bold leading-tight">Yeni Personel<br /><span className="text-blue-400">Oluşturma</span></h2>
                         </div>
-
-                        {/* Vertical Steps */}
-                        <div className="space-y-1 relative">
-                            {/* Vertical Line */}
-                            <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
-
-                            {STEPS.map((s, idx) => {
-                                const isActive = currentStep === s.number;
-                                const isCompleted = currentStep > s.number;
-                                const Icon = s.icon;
-
-                                return (
-                                    <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
-                                        <div
-                                            className={`
-                                                w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0
-                                                ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' :
-                                                    isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' :
-                                                        'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}
-                                            `}
-                                        >
-                                            {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
-                                        </div>
-                                        <div>
-                                            <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>
-                                                {s.title}
-                                            </h4>
-                                            {isActive && (
-                                                <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        <h2 className="text-3xl font-bold leading-tight">Personel<br /><span className="text-blue-400">{viewMode === 'edit' ? 'Düzenleme' : 'Oluşturma'}</span></h2>
                     </div>
 
-                    <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">
-                        MEGA PORTAL v1.0 &copy; 2025
+                    {/* Vertical Steps */}
+                    <div className="space-y-1 relative">
+                        {/* Vertical Line */}
+                        <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
+
+                        {STEPS.map((s, idx) => {
+                            const isActive = currentStep === s.number;
+                            const isCompleted = currentStep > s.number;
+                            const Icon = s.icon;
+
+                            return (
+                                <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
+                                    <div
+                                        className={`
+                                                w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0
+                                                ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' :
+                                                isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' :
+                                                    'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}
+                                            `}
+                                    >
+                                        {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
+                                    </div>
+                                    <div>
+                                        <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>
+                                            {s.title}
+                                        </h4>
+                                        {isActive && (
+                                            <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Right Content Area */}
-                <div className="flex-1 bg-white flex flex-col">
-                    {/* Header */}
-                    <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                {STEPS[currentStep - 1].icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 })}
-                                {STEPS[currentStep - 1].title}
-                            </h3>
-                            <p className="text-slate-500 text-sm mt-1">Lütfen gerekli bilgileri eksiksiz doldurunuz.</p>
-                        </div>
-                        <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                            Adım {currentStep} / {STEPS.length}
-                        </div>
-                    </div>
-
-                    {/* Scrollable Form Content */}
-                    <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
-                        {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
-                        {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                        {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
-                        {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-                        <button
-                            onClick={handleBack}
-                            disabled={currentStep === 1}
-                            className={`
-                                h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all
-                                ${currentStep === 1
-                                    ? 'text-slate-300 cursor-not-allowed'
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
-                            `}
-                        >
-                            <ArrowLeft size={20} />
-                            Geri
-                        </button>
-
-                        <button
-                            onClick={currentStep === 6 ? handleSubmit : handleNext}
-                            disabled={submitting}
-                            className={`
-                                h-12 px-8 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95
-                                ${submitting ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:-translate-y-1'}
-                            `}
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 size={20} className="animate-spin" />
-                                    İşleniyor...
-                                </>
-                            ) : (
-                                <>
-                                    {currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et'}
-                                    {currentStep !== 6 && <ArrowRight size={20} />}
-                                </>
-                            )}
-                        </button>
-                    </div>
+                <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">
+                    MEGA PORTAL v1.0 &copy; 2025
                 </div>
             </div>
 
-            {/* Custom Styles */}
-            <style>{`
+            {/* Right Content Area */}
+            <div className="flex-1 bg-white flex flex-col">
+                {/* Header */}
+                <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            {STEPS[currentStep - 1].icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 })}
+                            {STEPS[currentStep - 1].title}
+                        </h3>
+                        <p className="text-slate-500 text-sm mt-1">Lütfen gerekli bilgileri eksiksiz doldurunuz.</p>
+                    </div>
+                    <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                        Adım {currentStep} / {STEPS.length}
+                    </div>
+                </div>
+
+                {/* Scrollable Form Content */}
+                <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
+                    {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
+                    {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                    {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
+                    {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
+                    {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
+                    {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <button
+                        onClick={handleBack}
+                        disabled={currentStep === 1}
+                        className={`
+                                h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all
+                                ${currentStep === 1
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
+                            `}
+                    >
+                        <ArrowLeft size={20} />
+                        Geri
+                    </button>
+
+                    <button
+                        onClick={currentStep === 6 ? handleSubmit : handleNext}
+                        disabled={submitting}
+                        className={`
+                                h-12 px-8 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95
+                                ${submitting ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:-translate-y-1'}
+                            `}
+                    >
+                        {submitting ? (
+                            <>
+                                <Loader2 size={20} className="animate-spin" />
+                                İşleniyor...
+                            </>
+                        ) : (
+                            <>
+                                {currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et'}
+                                {currentStep !== 6 && <ArrowRight size={20} />}
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+            {/* Custom Styles */ }
+    <style>{`
                 @keyframes fade-in {
                     from { opacity: 0; }
                     to { opacity: 1; }
@@ -943,7 +1029,7 @@ const Employees = () => {
                     background: #94a3b8; 
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 
