@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Settings, Trash2, Edit2, Download, Upload } from 'lucide-react';
+import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
+import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 
 // --- Constants ---
 const STEPS = [
@@ -33,7 +34,12 @@ const INITIAL_FORM_STATE = {
     card_uid: '',
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
+    work_type: 'FULL_TIME',
     hired_date: new Date().toISOString().split('T')[0],
+
+    // Schedule
+    work_schedule: '', // ID of selected schedule or '' for Custom
+    weekly_schedule: {}, // Custom JSON content
 
     // Step 3: Contact
     phone: '',
@@ -282,19 +288,72 @@ const StepContact = ({ formData, handleChange }) => (
     </div>
 );
 
-const StepDetails = ({ formData, handleChange }) => (
-    <div className="animate-fade-in-up">
-        <div className="mb-6 pb-4 border-b border-slate-100">
-            <h3 className="text-xl font-bold text-slate-800">Detaylar & Yetkinlikler</h3>
-            <p className="text-slate-500 text-sm">Görev tanımı ve beceri seti.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-6">
-            <div>
-                <InputField label="Görev Tanımı Özeti" value={formData.title} onChange={e => handleChange('title', e.target.value)} />
+const StepDetails = ({ formData, handleChange, workSchedules }) => {
+    const [customMode, setCustomMode] = useState(!formData.work_schedule);
+
+    // Sync customMode with parent if needed, but local toggle is fine for UI
+    // Logic: If user selects "Custom" in dropdown -> set work_schedule = "" -> show Editor
+
+    return (
+        <div className="animate-fade-in-up">
+            <div className="mb-6 pb-4 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800">Detaylar & Çalışma Takvimi</h3>
+                <p className="text-slate-500 text-sm">Görev tanımı ve mesai saatleri.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-6">
+                <div>
+                    <InputField label="Görev Tanımı Özeti" value={formData.title} onChange={e => handleChange('title', e.target.value)} />
+                </div>
+
+                {/* Work Schedule Section */}
+                <div className="space-y-4">
+                    <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                        <CalendarRange size={18} className="text-blue-500" />
+                        Çalışma Takvimi
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
+                            <select
+                                value={formData.work_schedule || (customMode ? 'custom' : '')}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'custom') {
+                                        setCustomMode(true);
+                                        handleChange('work_schedule', '');
+                                        // Initialize weekly_schedule if empty? Editor handles it.
+                                    } else {
+                                        setCustomMode(false);
+                                        handleChange('work_schedule', val);
+                                        handleChange('weekly_schedule', {}); // Clear custom if switching to Default
+                                    }
+                                }}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            >
+                                <option value="">Varsayılan / Yok</option>
+                                <option value="custom">Özel (Custom)</option>
+                                {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                            </select>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {customMode ? "Kişiye özel haftalık program." : "Şablon seçildiğinde haftalık saatler şablondan gelir."}
+                            </p>
+                        </div>
+                    </div>
+
+                    {customMode && (
+                        <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                            <WeeklyScheduleEditor
+                                value={formData.weekly_schedule}
+                                onChange={(val) => handleChange('weekly_schedule', val)}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const StepPermissions = ({ formData, handleChange, permissions, jobPositions }) => {
     // 1. Calculate Default Permissions from Job Position -> Roles
@@ -450,6 +509,7 @@ const Employees = () => {
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [jobPositions, setJobPositions] = useState([]);
+    const [workSchedules, setWorkSchedules] = useState([]); // Added
     const [permissions, setPermissions] = useState([]); // All available permissions
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -471,16 +531,18 @@ const Employees = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const [empRes, deptRes, posRes, permRes] = await Promise.all([
+            const [empRes, deptRes, posRes, permRes, schedRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
-                api.get('/permissions/')
+                api.get('/permissions/'),
+                api.get('/work-schedules/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
             setJobPositions(posRes.data.results || posRes.data);
             setPermissions(permRes.data.results || permRes.data);
+            setWorkSchedules(schedRes.data.results || schedRes.data);
         } catch (error) {
             console.error("Data fetch error:", error);
         } finally {
@@ -581,6 +643,7 @@ const Employees = () => {
             // Payload Prep
             const payload = {
                 ...formData,
+                work_schedule: formData.work_schedule || null,
                 // If functional department selected, put it in secondary_departments list
                 secondary_departments: formData.functional_department ? [formData.functional_department] : []
             };
@@ -808,7 +871,7 @@ const Employees = () => {
                         {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
                         {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
                         {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} />}
+                        {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
                         {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
                         {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                     </div>
