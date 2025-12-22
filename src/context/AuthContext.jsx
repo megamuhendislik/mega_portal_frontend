@@ -68,8 +68,15 @@ export const AuthProvider = ({ children }) => {
         window.location.href = '/login';
     };
 
+    const hasPermission = (permissionCode) => {
+        if (!user || !user.all_permissions) return false;
+        // Superuser check if needed (backend handles it usually, but failsafe)
+        if (user.username === 'admin') return true;
+        return user.all_permissions.includes(permissionCode);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, hasPermission }}>
             {children}
         </AuthContext.Provider>
     );

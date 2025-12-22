@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save } from 'lucide-react';
+import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Settings, Trash2, Edit2, Download, Upload } from 'lucide-react';
@@ -445,11 +445,12 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
 };
 
 const Employees = () => {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit'
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [jobPositions, setJobPositions] = useState([]);
+    const [permissions, setPermissions] = useState([]); // All available permissions
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -623,25 +624,30 @@ const Employees = () => {
                             <p className="text-slate-500 mt-1">Süper Admin / İK Yönetimi</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setShowSettings(!showSettings)}
-                                className={`
-                                    h-12 px-4 rounded-xl font-bold flex items-center gap-2 border transition-all duration-300
-                                    ${showSettings
-                                        ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-amber-500/10'
-                                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md'
-                                    }
-                                `}
-                            >
-                                <Settings size={20} className={showSettings ? 'animate-spin-slow' : ''} />
-                                {showSettings ? 'Yönetimi Kapat' : 'Yönet'}
-                            </button>
-                            <button
-                                onClick={() => setViewMode('create')}
-                                className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-                            >
-                                <UserPlus size={20} /> Yeni Ekle
-                            </button>
+                            {hasPermission('EMPLOYEE_UPDATE') && (
+                                <button
+                                    onClick={() => setShowSettings(!showSettings)}
+                                    className={`
+                                        h-12 px-4 rounded-xl font-bold flex items-center gap-2 border transition-all duration-300
+                                        ${showSettings
+                                            ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-amber-500/10'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md'
+                                        }
+                                    `}
+                                >
+                                    <Settings size={20} className={showSettings ? 'animate-spin-slow' : ''} />
+                                    {showSettings ? 'Yönetimi Kapat' : 'Yönet'}
+                                </button>
+                            )}
+
+                            {hasPermission('EMPLOYEE_CREATE') && (
+                                <button
+                                    onClick={() => setViewMode('create')}
+                                    className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                                >
+                                    <UserPlus size={20} /> Yeni Ekle
+                                </button>
+                            )}
                         </div>
                     </div>
 

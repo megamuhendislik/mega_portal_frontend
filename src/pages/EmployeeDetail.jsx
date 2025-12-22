@@ -9,8 +9,11 @@ import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 const EmployeeDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { hasPermission } = useAuth(); // Destructure
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
+
+    const canEdit = hasPermission('EMPLOYEE_UPDATE'); // Check permission
 
     // Data Sources
     const [departments, setDepartments] = useState([]);
@@ -185,13 +188,15 @@ const EmployeeDetail = () => {
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={handleSave}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02]"
-                >
-                    <Save size={18} />
-                    Kaydet
-                </button>
+                {canEdit && (
+                    <button
+                        onClick={handleSave}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02]"
+                    >
+                        <Save size={18} />
+                        Kaydet
+                    </button>
+                )}
             </div>
 
             {/* Tabs */}
@@ -225,238 +230,239 @@ const EmployeeDetail = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column - Main Form */}
                 <div className="lg:col-span-2 space-y-6">
-
-                    {activeTab === 'overview' && (
-                        <div className="card p-6 space-y-6 animate-in fade-in slide-in-from-left-4">
-                            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4">Kişisel Bilgiler</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Ad <span className="text-red-500">*</span></label>
-                                    <input type="text" name="first_name" required value={formData.first_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Soyad <span className="text-red-500">*</span></label>
-                                    <input type="text" name="last_name" required value={formData.last_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">E-posta <span className="text-red-500">*</span></label>
-                                    <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
-                                    <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">TC Kimlik No</label>
-                                    <input type="text" name="tc_no" maxLength={11} value={formData.tc_no} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
-                                    <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
-                                    <textarea name="address" rows="2" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Kişisi</label>
-                                    <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Telefonu</label>
-                                    <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'organization' && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
-                            <div className="card p-6">
-                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Kurumsal Bilgiler</h3>
+                    <fieldset disabled={!canEdit} className="contents">
+                        {activeTab === 'overview' && (
+                            <div className="card p-6 space-y-6 animate-in fade-in slide-in-from-left-4">
+                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4">Kişisel Bilgiler</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Departman <span className="text-red-500">*</span></label>
-                                        <select name="department" required value={formData.department} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option value="">Seçiniz</option>
-                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                        </select>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Ad <span className="text-red-500">*</span></label>
+                                        <input type="text" name="first_name" required value={formData.first_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Pozisyon <span className="text-red-500">*</span></label>
-                                        <select name="job_position" required value={formData.job_position} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option value="">Seçiniz</option>
-                                            {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                        </select>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Soyad <span className="text-red-500">*</span></label>
+                                        <input type="text" name="last_name" required value={formData.last_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">İşe Başlama Tarihi <span className="text-red-500">*</span></label>
-                                        <input type="date" name="hired_date" required value={formData.hired_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">E-posta <span className="text-red-500">*</span></label>
+                                        <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Sicil No</label>
-                                        <input type="text" name="employee_code" value={formData.employee_code} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card p-6">
-                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Yönetici Atamaları</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Primary)</label>
-                                        <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
-                                            {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
-                                                <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.primary_manager_ids.includes(emp.id)}
-                                                        onChange={() => toggleArrayItem('primary_manager_ids', emp.id)}
-                                                        className="rounded text-blue-600 focus:ring-blue-500"
-                                                    />
-                                                    <span className="text-sm">{emp.first_name} {emp.last_name}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
+                                        <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
-                                        <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
-                                            {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
-                                                <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.cross_manager_ids.includes(emp.id)}
-                                                        onChange={() => toggleArrayItem('cross_manager_ids', emp.id)}
-                                                        className="rounded text-blue-600 focus:ring-blue-500"
-                                                    />
-                                                    <span className="text-sm">{emp.first_name} {emp.last_name}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">TC Kimlik No</label>
+                                        <input type="text" name="tc_no" maxLength={11} value={formData.tc_no} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'settings' && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
-                            {/* Work Schedule */}
-                            <div className="card p-6">
-                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
-                                    <CalendarRange size={20} className="text-blue-500" />
-                                    Çalışma Takvimi & Mesai
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
+                                        <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    </div>
                                     <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
-                                        <select
-                                            value={formData.work_schedule || (customScheduleMode ? 'custom' : '')}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val === 'custom') {
-                                                    setCustomScheduleMode(true);
-                                                    setFormData(prev => ({ ...prev, work_schedule: '' }));
-                                                } else if (val === '') {
-                                                    setCustomScheduleMode(false);
-                                                    setFormData(prev => ({ ...prev, work_schedule: '' }));
-                                                } else {
-                                                    setCustomScheduleMode(false);
-                                                    setFormData(prev => ({ ...prev, work_schedule: parseInt(val) }));
-                                                }
-                                            }}
-                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                        >
-                                            <option value="">Varsayılan / Yok</option>
-                                            <option value="custom">Özel (Custom)</option>
-                                            {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
-                                        </select>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
+                                        <textarea name="address" rows="2" value={formData.address} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
-                                        <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Kişisi</label>
+                                        <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dk)</label>
-                                        <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
-                                        <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                    </div>
-
-                                    {customScheduleMode && (
-                                        <>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Başlangıç</label>
-                                                <input type="time" name="shift_start" value={formData.shift_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Bitiş</label>
-                                                <input type="time" name="shift_end" value={formData.shift_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Başlangıç</label>
-                                        <input type="time" name="lunch_start" value={formData.lunch_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Bitiş</label>
-                                        <input type="time" name="lunch_end" value={formData.lunch_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Acil Durum Telefonu</label>
+                                        <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* Roles & Permissions */}
-                            <div className="card p-6">
-                                <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
-                                    <Shield size={20} className="text-blue-500" /> Roller ve Yetkiler
-                                </h3>
+                        {activeTab === 'organization' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
+                                <div className="card p-6">
+                                    <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Kurumsal Bilgiler</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Departman <span className="text-red-500">*</span></label>
+                                            <select name="department" required value={formData.department} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                                <option value="">Seçiniz</option>
+                                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Pozisyon <span className="text-red-500">*</span></label>
+                                            <select name="job_position" required value={formData.job_position} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                                <option value="">Seçiniz</option>
+                                                {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">İşe Başlama Tarihi <span className="text-red-500">*</span></label>
+                                            <input type="date" name="hired_date" required value={formData.hired_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Sicil No</label>
+                                            <input type="text" name="employee_code" value={formData.employee_code} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                    </div>
+                                </div>
 
-                                <div className="mb-6">
-                                    <h4 className="font-semibold text-slate-700 mb-3">Roller</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {allRoles.map(role => (
-                                            <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.roles.includes(role.id)}
-                                                    onChange={() => toggleArrayItem('roles', role.id)}
-                                                    className="mt-1 rounded text-blue-600 focus:ring-blue-500"
-                                                />
+                                <div className="card p-6">
+                                    <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Yönetici Atamaları</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Primary)</label>
+                                            <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
+                                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData.primary_manager_ids.includes(emp.id)}
+                                                            onChange={() => toggleArrayItem('primary_manager_ids', emp.id)}
+                                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
+                                            <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
+                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
+                                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData.cross_manager_ids.includes(emp.id)}
+                                                            onChange={() => toggleArrayItem('cross_manager_ids', emp.id)}
+                                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
+                                {/* Work Schedule */}
+                                <div className="card p-6">
+                                    <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
+                                        <CalendarRange size={20} className="text-blue-500" />
+                                        Çalışma Takvimi & Mesai
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Şablonu</label>
+                                            <select
+                                                value={formData.work_schedule || (customScheduleMode ? 'custom' : '')}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === 'custom') {
+                                                        setCustomScheduleMode(true);
+                                                        setFormData(prev => ({ ...prev, work_schedule: '' }));
+                                                    } else if (val === '') {
+                                                        setCustomScheduleMode(false);
+                                                        setFormData(prev => ({ ...prev, work_schedule: '' }));
+                                                    } else {
+                                                        setCustomScheduleMode(false);
+                                                        setFormData(prev => ({ ...prev, work_schedule: parseInt(val) }));
+                                                    }
+                                                }}
+                                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Varsayılan / Yok</option>
+                                                <option value="custom">Özel (Custom)</option>
+                                                {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
+                                            <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dk)</label>
+                                            <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
+                                            <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+
+                                        {customScheduleMode && (
+                                            <>
                                                 <div>
-                                                    <div className="font-medium text-sm text-slate-800">{role.name}</div>
-                                                    <div className="text-xs text-slate-500">{role.description}</div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Başlangıç</label>
+                                                    <input type="time" name="shift_start" value={formData.shift_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                                 </div>
-                                            </label>
-                                        ))}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-1">Vardiya Bitiş</label>
+                                                    <input type="time" name="shift_end" value={formData.shift_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Başlangıç</label>
+                                            <input type="time" name="lunch_start" value={formData.lunch_start} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Bitiş</label>
+                                            <input type="time" name="lunch_end" value={formData.lunch_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <h4 className="font-semibold text-slate-700 mb-3">Ekstra Yetkiler</h4>
-                                    <div className="h-64 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {allPermissions.map(perm => (
-                                            <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.direct_permissions.includes(perm.id)}
-                                                    onChange={() => toggleArrayItem('direct_permissions', perm.id)}
-                                                    className="rounded text-orange-600 focus:ring-orange-500"
-                                                />
-                                                <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>
-                                            </label>
-                                        ))}
+                                {/* Roles & Permissions */}
+                                <div className="card p-6">
+                                    <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
+                                        <Shield size={20} className="text-blue-500" /> Roller ve Yetkiler
+                                    </h3>
+
+                                    <div className="mb-6">
+                                        <h4 className="font-semibold text-slate-700 mb-3">Roller</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {allRoles.map(role => (
+                                                <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.roles.includes(role.id)}
+                                                        onChange={() => toggleArrayItem('roles', role.id)}
+                                                        className="mt-1 rounded text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <div>
+                                                        <div className="font-medium text-sm text-slate-800">{role.name}</div>
+                                                        <div className="text-xs text-slate-500">{role.description}</div>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-semibold text-slate-700 mb-3">Ekstra Yetkiler</h4>
+                                        <div className="h-64 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {allPermissions.map(perm => (
+                                                <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.direct_permissions.includes(perm.id)}
+                                                        onChange={() => toggleArrayItem('direct_permissions', perm.id)}
+                                                        className="rounded text-orange-600 focus:ring-orange-500"
+                                                    />
+                                                    <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </fieldset>
                 </div>
 
                 {/* Right Column - Summary Card */}
@@ -491,14 +497,15 @@ const EmployeeDetail = () => {
                                 <span className="font-medium text-slate-800">{formData.primary_manager_ids.length} Ana, {formData.cross_manager_ids.length} Çapraz</span>
                             </div>
                         </div>
-
-                        <button
-                            onClick={handleSave}
-                            className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                        >
-                            <Save size={18} />
-                            Değişiklikleri Kaydet
-                        </button>
+                        {canEdit && (
+                            <button
+                                onClick={handleSave}
+                                className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                            >
+                                <Save size={18} />
+                                Değişiklikleri Kaydet
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

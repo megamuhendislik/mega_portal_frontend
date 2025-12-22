@@ -17,8 +17,8 @@ import PublicHolidays from './pages/PublicHolidays';
 import AttendanceTracking from './pages/AttendanceTracking';
 import Reports from './pages/Reports';
 
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, requiredPermission }) => {
+  const { user, loading, hasPermission } = useAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Yükleniyor...</div>;
@@ -26,6 +26,16 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
+        <h2 className="text-xl font-bold text-red-500 mb-2">Erişim Reddedildi</h2>
+        <p>Bu sayfayı görüntülemek için gerekli yetkiye sahip değilsiniz.</p>
+        <code className="bg-slate-100 px-2 py-1 rounded mt-2 text-xs">{requiredPermission}</code>
+      </div>
+    );
   }
 
   return children;
@@ -43,20 +53,24 @@ function App() {
               <MainLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<Dashboard />} />
+            <Route index element={<ProtectedRoute requiredPermission="VIEW_SECTION_DASHBOARD"><Dashboard /></ProtectedRoute>} />
             <Route path="profile" element={<Profile />} />
-            <Route path="employees" element={<Employees />} />
-            <Route path="employees/:id" element={<EmployeeDetail />} />
-            <Route path="organization-chart" element={<OrganizationChart />} />
-            <Route path="projects" element={<Projects />} />
-            <Route path="attendance" element={<Attendance />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="work-schedules" element={<WorkSchedules />} />
-            <Route path="work-schedules" element={<WorkSchedules />} />
-            <Route path="attendance-tracking" element={<AttendanceTracking />} />
-            <Route path="attendance-tracking" element={<AttendanceTracking />} />
-            <Route path="requests" element={<Requests />} />
-            <Route path="reports" element={<Reports />} />
+
+            <Route path="employees" element={<ProtectedRoute requiredPermission="VIEW_SECTION_EMPLOYEES"><Employees /></ProtectedRoute>} />
+            <Route path="employees/:id" element={<ProtectedRoute requiredPermission="VIEW_SECTION_EMPLOYEES"><EmployeeDetail /></ProtectedRoute>} />
+
+            <Route path="organization-chart" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ORG_CHART"><OrganizationChart /></ProtectedRoute>} />
+            <Route path="projects" element={<ProtectedRoute requiredPermission="VIEW_SECTION_PROJECTS"><Projects /></ProtectedRoute>} />
+
+            <Route path="attendance" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ATTENDANCE"><Attendance /></ProtectedRoute>} />
+            <Route path="attendance-tracking" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ATTENDANCE"><AttendanceTracking /></ProtectedRoute>} />
+
+            <Route path="calendar" element={<ProtectedRoute requiredPermission="VIEW_SECTION_CALENDAR"><CalendarPage /></ProtectedRoute>} />
+            <Route path="work-schedules" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><WorkSchedules /></ProtectedRoute>} />
+            <Route path="public-holidays" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><PublicHolidays /></ProtectedRoute>} />
+
+            <Route path="requests" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REQUESTS"><Requests /></ProtectedRoute>} />
+            <Route path="reports" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REPORTS"><Reports /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>
