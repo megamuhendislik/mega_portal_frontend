@@ -166,13 +166,16 @@ const CalendarPage = () => {
 
         let myStats = {};
         if (summaryData && summaryData.length > 0) {
-            if (user?.employee?.id) {
-                myStats = summaryData.find(s => s.employee_id === user.employee.id) || {};
-                console.log('DEBUG: Found My Stats by ID:', myStats);
+            // Find stats for the SELECTED employee (could be self or subordinate)
+            const targetId = selectedEmployeeId || user?.employee?.id;
+
+            if (targetId) {
+                // Ensure ID types match (int vs string)
+                myStats = summaryData.find(s => s.employee_id === parseInt(targetId)) || {};
+                console.log('DEBUG: Found Stats for ID:', targetId, myStats);
             } else {
-                // Fallback: If no specific employee ID (e.g. superuser without employee profile?), take first or empty
+                // Fallback
                 myStats = summaryData[0] || {};
-                console.log('DEBUG: Fallback Stats (First Item):', myStats);
             }
         } else {
             console.log('DEBUG: No summary data available from API');
