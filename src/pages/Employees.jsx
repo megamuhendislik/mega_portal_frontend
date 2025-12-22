@@ -10,7 +10,8 @@ const STEPS = [
     { number: 2, title: 'Kurumsal Bilgiler', icon: Building },
     { number: 3, title: 'İletişim & Acil', icon: Phone },
     { number: 4, title: 'Detaylar & Yetkinlik', icon: Briefcase },
-    { number: 5, title: 'Önizleme & Onay', icon: FileText }
+    { number: 5, title: 'Yetkilendirme', icon: Key }, // New Step
+    { number: 6, title: 'Önizleme & Onay', icon: FileText }
 ];
 
 const INITIAL_FORM_STATE = {
@@ -47,6 +48,9 @@ const INITIAL_FORM_STATE = {
     technical_skills: [], // List of strings
     certificates: [], // List of {name, date}
     foreign_languages: [], // List of {name, level}
+
+    // Step 5: Permissions
+    direct_permissions: [], // List of Permission IDs
 
     // System
     password: '', // Default initial password
@@ -292,6 +296,97 @@ const StepDetails = ({ formData, handleChange }) => (
     </div>
 );
 
+const StepPermissions = ({ formData, handleChange, permissions, jobPositions }) => {
+    // 1. Calculate Default Permissions from Job Position -> Roles
+    const pos = jobPositions.find(p => p.id == formData.job_position);
+    const defaultRolePermissions = new Set();
+
+    if (pos && pos.default_roles) {
+        pos.default_roles.forEach(role => {
+            if (role.permissions) {
+                role.permissions.forEach(perm => {
+                    defaultRolePermissions.add(perm.id);
+                });
+            }
+        });
+    }
+
+    const togglePermission = (permId) => {
+        const currentDirect = formData.direct_permissions || [];
+        if (currentDirect.includes(permId)) {
+            handleChange('direct_permissions', currentDirect.filter(id => id !== permId));
+        } else {
+            handleChange('direct_permissions', [...currentDirect, permId]);
+        }
+    };
+
+    // Group permissions by prefix for better UI (Optional, but flat list requested "tek tek")
+    // Let's just flat list for now but with good search/filter potentially? 
+    // User asked for "tek tek" (one by one).
+
+    return (
+        <div className="animate-fade-in-up">
+            <div className="mb-6 pb-4 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800">Yetkilendirme</h3>
+                <p className="text-slate-500 text-sm">Pozisyona dayalı varsayılan yetkiler ve ek yetki tanımları.</p>
+            </div>
+
+            <div className="bg-blue-50/50 p-4 rounded-xl mb-4 border border-blue-100 flex items-start gap-3">
+                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
+                    <Key size={20} />
+                </div>
+                <div>
+                    <h4 className="font-bold text-blue-900 text-sm">Otomatik Yetki Atama</h4>
+                    <p className="text-blue-700/80 text-xs mt-1">
+                        Seçilen <strong>{pos?.name || 'Pozisyon'}</strong> pozisyonu için tanımlı rollerden gelen yetkiler otomatik olarak işaretlenmiştir ve değiştirilemez.
+                        Ekstradan yetki vermek için kutucukları işaretleyebilirsiniz.
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {permissions.map(perm => {
+                    const isDefault = defaultRolePermissions.has(perm.id);
+                    const isChecked = isDefault || (formData.direct_permissions || []).includes(perm.id);
+
+                    return (
+                        <label
+                            key={perm.id}
+                            className={`
+                                flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none
+                                ${isChecked
+                                    ? isDefault
+                                        ? 'bg-slate-50 border-slate-200 opacity-75'
+                                        : 'bg-indigo-50 border-indigo-200 shadow-sm'
+                                    : 'bg-white border-slate-100 hover:border-slate-300'
+                                }
+                            `}
+                        >
+                            <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? (isDefault ? 'bg-slate-400 border-slate-400' : 'bg-indigo-600 border-indigo-600') : 'bg-white border-slate-300'}`}>
+                                {isChecked && <Check size={12} className="text-white" />}
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={isChecked}
+                                onChange={() => !isDefault && togglePermission(perm.id)}
+                                disabled={isDefault}
+                            />
+                            <div>
+                                <div className={`font-medium text-sm ${isChecked ? 'text-slate-900' : 'text-slate-600'}`}>
+                                    {perm.name}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">{perm.code}</div>
+                                {isDefault && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-auto mt-1 inline-block">Varsayılan</span>}
+                            </div>
+                        </label>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const StepPreview = ({ formData, departments, jobPositions, employees }) => {
     const mgr = employees.find(e => e.id == formData.reports_to);
     const dept = departments.find(d => d.id == formData.department)?.name;
@@ -334,6 +429,13 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     <div className="font-bold text-slate-800">{pos}</div>
                 </div>
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-1/3 text-slate-500 font-medium">Yetkiler</div>
+                    <div className="font-bold text-slate-800 flex items-center gap-2">
+                        <Key size={16} className="text-blue-500" />
+                        <span>{(formData.direct_permissions?.length || 0)} Ek Yetki Seçildi</span>
+                    </div>
+                </div>
+                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-1/3 text-slate-500 font-medium">Kullanıcı Adı</div>
                     <div className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-sm">{formData.username}</div>
                 </div>
@@ -368,14 +470,16 @@ const Employees = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const [empRes, deptRes, posRes] = await Promise.all([
+            const [empRes, deptRes, posRes, permRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
-                api.get('/job-positions/')
+                api.get('/job-positions/'),
+                api.get('/permissions/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
             setJobPositions(posRes.data.results || posRes.data);
+            setPermissions(permRes.data.results || permRes.data);
         } catch (error) {
             console.error("Data fetch error:", error);
         } finally {
@@ -434,6 +538,8 @@ const Employees = () => {
             case 3: // Contact
                 return true; // Optional fields mostly
             case 4: // Details
+                return true; // Optional
+            case 5: // Permissions
                 return true; // Optional
             default:
                 return true;
@@ -694,25 +800,11 @@ const Employees = () => {
                     {/* Scrollable Form Content */}
                     <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
                         {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 2 && (
-                            <StepCorporate
-                                formData={formData}
-                                handleChange={handleInputChange}
-                                departments={departments}
-                                jobPositions={jobPositions}
-                                employees={employees}
-                            />
-                        )}
+                        {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
                         {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                         {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 5 && (
-                            <StepPreview
-                                formData={formData}
-                                departments={departments}
-                                jobPositions={jobPositions}
-                                employees={employees}
-                            />
-                        )}
+                        {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
+                        {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                     </div>
 
                     {/* Footer Actions */}
@@ -720,32 +812,37 @@ const Employees = () => {
                         <button
                             onClick={handleBack}
                             disabled={currentStep === 1}
-                            className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:text-slate-800 disabled:opacity-30 transition-all flex items-center gap-2"
+                            className={`
+                                h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all
+                                ${currentStep === 1
+                                    ? 'text-slate-300 cursor-not-allowed'
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
+                            `}
                         >
-                            <ArrowLeft size={18} /> Önceki Adım
+                            <ArrowLeft size={20} />
+                            Geri
                         </button>
 
-                        <div className="flex items-center gap-4">
-                            {/* Optional Cancel Button could go here */}
-
-                            {currentStep < 5 ? (
-                                <button
-                                    onClick={handleNext}
-                                    className="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-slate-900/20 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-                                >
-                                    Sonraki Adım <ArrowRight size={18} />
-                                </button>
+                        <button
+                            onClick={currentStep === 6 ? handleSubmit : handleNext}
+                            disabled={submitting}
+                            className={`
+                                h-12 px-8 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95
+                                ${submitting ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:-translate-y-1'}
+                            `}
+                        >
+                            {submitting ? (
+                                <>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    İşleniyor...
+                                </>
                             ) : (
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={submitting}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    {submitting ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
-                                    Kaydı Tamamla
-                                </button>
+                                <>
+                                    {currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et'}
+                                    {currentStep !== 6 && <ArrowRight size={20} />}
+                                </>
                             )}
-                        </div>
+                        </button>
                     </div>
                 </div>
             </div>
