@@ -130,6 +130,18 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
     const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
     const potentialManagers = employees.filter(e => e.is_active);
 
+    const renderDepartmentOptions = (depts, level = 0) => {
+        return depts.map(dept => {
+            const children = departments.filter(d => d.parent === dept.id);
+            return (
+                <React.Fragment key={dept.id}>
+                    <option value={dept.id}>{'\u00A0'.repeat(level * 4)}{level > 0 ? '└ ' : ''}{dept.name}</option>
+                    {children.length > 0 && renderDepartmentOptions(children, level + 1)}
+                </React.Fragment>
+            );
+        });
+    };
+
     return (
         <div className="animate-fade-in-up space-y-6">
             <div className="mb-2 pb-4 border-b border-slate-100">
@@ -152,18 +164,17 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                {/* 1. MANAGER */}
+                {/* 1. MANAGER (Optional for Top Level) */}
                 <div className="md:col-span-2">
                     <SelectField
                         label="Bağlı Olduğu Yönetici (Reports To)"
                         value={formData.reports_to}
                         onChange={e => handleChange('reports_to', e.target.value)}
-                        required
-                        icon={UserPlus} // Using UserPlus as generic user icon
+                        icon={UserPlus}
                         className="bg-blue-50/30 border-blue-200"
                         options={
                             <>
-                                <option value="">Bir Yönetici Seçiniz...</option>
+                                <option value="">Bir Yönetici Seçiniz (Opsiyonel / En Üst Düzey)...</option>
                                 {potentialManagers.map(mgr => (
                                     <option key={mgr.id} value={mgr.id}>
                                         {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'} ({mgr.department?.name || '-'})
@@ -174,19 +185,18 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     />
                 </div>
 
-                {/* 2. AUTO DEPARTMENT */}
+                {/* 2. DEPARTMENT (Editable) */}
                 <div>
                     <SelectField
-                        label="Ana Departman (Otomatik)"
+                        label="Ana Departman"
                         value={formData.department}
-                        disabled
+                        onChange={e => handleChange('department', e.target.value)}
                         required
                         icon={Building}
-                        className="bg-slate-100 text-slate-500"
                         options={
                             <>
-                                <option value="">Yönetici Seçimi Bekleniyor...</option>
-                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                <option value="">Bir Departman Seçiniz...</option>
+                                {renderDepartmentOptions(rootDepartments)}
                             </>
                         }
                     />
@@ -411,8 +421,9 @@ const Employees = () => {
             case 1: // Personal
                 return first_name && last_name && tc_number && email && formData.username && formData.password;
             case 2: // Corporate
-                // reports_to is mandatory now for matrix structure
-                let valid = department && job_position && employee_code && reports_to;
+                // reports_to is OPTIONAL for top-level managers (CEO, GM) or first employee
+                // But Department and Position are MUST.
+                let valid = department && job_position && employee_code;
 
                 // Special Rule: If 'Departman Müdürü', strictly require functional_department
                 const posName = jobPositions.find(p => p.id == job_position)?.name;
