@@ -161,51 +161,57 @@ const DepartmentNode = ({ node }) => (
 );
 
 const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
-    // Logic:
-    // 1. Employees are rendered Vertically directly under the department (Vertical Stack).
-    // 2. Sub-departments are rendered Horizontally in the <ul> (Standard Tree).
+    // Unified Logic:
+    // Both Departments and Employees are nodes in the tree.
+    // Departments can have:
+    //   1. 'employees' (Roots of the employee tree in this dept) - Rendered if showAllEmployees=true
+    //   2. 'children' (Sub-departments) - Always rendered
+    // Employees can have:
+    //   1. 'children' (Subordinates) - Rendered if parent is visible
 
-    // Check if we have employees to show
-    const employees = (showAllEmployees && node.employees) ? node.employees : [];
-    const hasEmployees = employees.length > 0;
+    let childrenToRender = [];
 
-    // Check if we have sub-departments
-    const hasSubDepts = node.children && node.children.length > 0;
+    if (node.type === 'department') {
+        // 1. Employee Roots (Only if toggle is ON)
+        if (showAllEmployees && node.employees && node.employees.length > 0) {
+            // Mark them as employees for the next recursive step
+            const empNodes = node.employees.map(e => ({ ...e, type: 'employee' }));
+            childrenToRender = [...childrenToRender, ...empNodes];
+        }
+
+        // 2. Sub-Departments
+        if (node.children && node.children.length > 0) {
+            const deptNodes = node.children.map(d => ({ ...d, type: 'department' }));
+            childrenToRender = [...childrenToRender, ...deptNodes];
+        }
+    } else if (node.type === 'employee') {
+        // Employees only have subordinates (children)
+        if (node.children && node.children.length > 0) {
+            const subNodes = node.children.map(e => ({ ...e, type: 'employee' }));
+            childrenToRender = [...childrenToRender, ...subNodes];
+        }
+    }
+
+    const hasChildren = childrenToRender.length > 0;
 
     return (
         <li>
             <div className="flex flex-col items-center">
-
-                {/* 1. Department Node */}
+                {/* Node Card */}
                 {node.type === 'employee' ? (
                     <EmployeeNode emp={node} onClick={onEmployeeClick} />
                 ) : (
                     <DepartmentNode node={node} />
                 )}
-
-                {/* 2. Vertical Employee Stack (if visible) */}
-                {hasEmployees && (
-                    <div className="flex flex-col items-center relative">
-                        {/* Connector Line from Dept to First Employee */}
-                        <div className="w-px h-4 bg-slate-300"></div>
-
-                        {employees.map((emp, index) => (
-                            <React.Fragment key={emp.id}>
-                                {index > 0 && <div className="w-px h-4 bg-slate-300"></div>}
-                                <EmployeeNode emp={emp} onClick={onEmployeeClick} />
-                            </React.Fragment>
-                        ))}
-                    </div>
-                )}
             </div>
 
-            {/* 3. Horizontal Sub-Departments */}
-            {hasSubDepts && (
+            {/* Recursive Children (Horizontal Branching) */}
+            {hasChildren && (
                 <ul>
-                    {node.children.map(child => (
+                    {childrenToRender.map(child => (
                         <TreeNode
-                            key={child.id}
-                            node={{ ...child, type: 'department' }}
+                            key={`${child.type}-${child.id}`}
+                            node={child}
                             showAllEmployees={showAllEmployees}
                             onEmployeeClick={onEmployeeClick}
                         />
