@@ -241,6 +241,7 @@ const OrganizationChart = () => {
             try {
                 const response = await api.get('/departments/hierarchy/');
                 let data = response.data;
+                console.log('DEBUG: Organization Chart Data:', data);
 
                 // Filter Functional Groups
                 if (Array.isArray(data)) {
