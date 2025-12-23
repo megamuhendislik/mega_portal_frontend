@@ -102,7 +102,7 @@ const MainLayout = () => {
     };
 
     const navItems = [
-        { path: '/', label: 'Dashboard', icon: LayoutDashboard, permission: 'VIEW_SECTION_DASHBOARD' },
+        { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: 'VIEW_SECTION_DASHBOARD' },
         { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'VIEW_SECTION_EMPLOYEES' },
         { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'VIEW_SECTION_ORG_CHART' },
         { path: '/projects', label: 'Projeler', icon: Briefcase, permission: 'VIEW_SECTION_PROJECTS' },
