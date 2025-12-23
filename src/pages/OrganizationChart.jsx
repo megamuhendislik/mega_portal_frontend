@@ -208,14 +208,17 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
             {/* Recursive Children (Horizontal Branching) */}
             {hasChildren && (
                 <ul>
-                    {childrenToRender.map(child => (
-                        <TreeNode
-                            key={`${child.type}-${child.id}`}
-                            node={child}
-                            showAllEmployees={showAllEmployees}
-                            onEmployeeClick={onEmployeeClick}
-                        />
-                    ))}
+                    {childrenToRender.map(child => {
+                        console.log(`DEBUG: TreeNode Rendering Child: ${child.name} (Type: ${child.type}) Parent: ${node.name}`);
+                        return (
+                            <TreeNode
+                                key={`${child.type}-${child.id}`}
+                                node={child}
+                                showAllEmployees={showAllEmployees}
+                                onEmployeeClick={onEmployeeClick}
+                            />
+                        );
+                    })}
                 </ul>
             )}
         </li>
