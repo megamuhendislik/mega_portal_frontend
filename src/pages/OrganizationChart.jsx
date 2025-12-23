@@ -209,7 +209,7 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
             {hasChildren && (
                 <ul>
                     {childrenToRender.map(child => {
-                        console.log(`DEBUG: TreeNode Rendering Child: ${child.name} (Type: ${child.type}) Parent: ${node.name}`);
+                        console.log(`DEBUG: TreeNode Rendering Child: ${child.name} (Type: ${child.type}) Parent: ${node.name} DebugRels: ${JSON.stringify(child._debug_relations)} InMap: ${JSON.stringify(child._debug_in_map)}`);
                         return (
                             <TreeNode
                                 key={`${child.type}-${child.id}`}
