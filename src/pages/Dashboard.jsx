@@ -9,7 +9,8 @@ import { tr } from 'date-fns/locale';
 
 const Dashboard = () => {
     const { user } = useAuth();
-    const [loading, setLoading] = useState(true);
+    const [loadingSummaries, setLoadingSummaries] = useState(true);
+    const [loadingRequests, setLoadingRequests] = useState(true);
 
     // Data States
     const [todaySummary, setTodaySummary] = useState(null);
@@ -22,30 +23,37 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
-            try {
-                // 1. Fetch Summaries
-                // We fetch monthly summary for the current employee specifically to ensure it's their data
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = today.getMonth() + 1;
+            if (!user?.employee?.id) return;
 
-                const [todayRes, monthRes] = await Promise.all([
+            setLoadingSummaries(true);
+            setLoadingRequests(true);
+
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1;
+
+            // 1. Fetch Summaries Independently
+            try {
+                const [todayResult, monthResult] = await Promise.allSettled([
                     api.get('/attendance/today_summary/'),
-                    api.get(`/attendance/stats/summary/?year=${year}&month=${month}&employee_id=${user?.employee?.id}`)
+                    api.get(`/attendance/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`)
                 ]);
 
-                setTodaySummary(todayRes.data);
-
-                // Month res returns a list, take the first item (should be the user)
-                if (Array.isArray(monthRes.data) && monthRes.data.length > 0) {
-                    setMonthlySummary(monthRes.data[0]);
+                if (todayResult.status === 'fulfilled') {
+                    setTodaySummary(todayResult.value.data);
                 }
+                if (monthResult.status === 'fulfilled' && Array.isArray(monthResult.value.data) && monthResult.value.data.length > 0) {
+                    setMonthlySummary(monthResult.value.data[0]);
+                }
+            } catch (err) {
+                console.error("Summary fetch error", err);
+            } finally {
+                setLoadingSummaries(false);
+            }
 
-                // 2. Fetch Requests
-                // We need to aggregate different types of requests for "My Requests"
-                // And fetch pending approvals for "Incoming"
-
-                const [leaveRes, overtimeRes, mealRes, incomingLeaveRes, incomingAttendanceRes] = await Promise.all([
+            // 2. Fetch Requests Independently
+            try {
+                const [leaveRes, overtimeRes, mealRes, incomingLeaveRes, incomingAttendanceRes] = await Promise.allSettled([
                     api.get('/leave/requests/'),
                     api.get('/overtime-requests/'),
                     api.get('/meal-requests/'),
@@ -53,31 +61,32 @@ const Dashboard = () => {
                     api.get('/attendance/pending/')
                 ]);
 
-                // Normalize and Combine My Requests
-                const leaves = (leaveRes.data.results || leaveRes.data).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
-                const overtimes = (overtimeRes.data.results || overtimeRes.data).map(r => ({ ...r, type: 'OVERTIME', date: r.date }));
-                const meals = (mealRes.data.results || mealRes.data).map(r => ({ ...r, type: 'MEAL', date: r.date }));
+                // Helper to safely get data array
+                const getData = (res) => (res.status === 'fulfilled' ? (res.value.data.results || res.value.data || []) : []);
+
+                // My Requests
+                const leaves = getData(leaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
+                const overtimes = getData(overtimeRes).map(r => ({ ...r, type: 'OVERTIME', date: r.date }));
+                const meals = getData(mealRes).map(r => ({ ...r, type: 'MEAL', date: r.date }));
 
                 const combinedMyRequests = [...leaves, ...overtimes, ...meals].sort((a, b) => new Date(b.date) - new Date(a.date));
                 setMyRequests(combinedMyRequests.slice(0, 10)); // Show last 10
 
                 // Incoming Requests
-                const incomingLeaves = (incomingLeaveRes.data.results || incomingLeaveRes.data).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
-                const incomingAttendance = (incomingAttendanceRes.data.results || incomingAttendanceRes.data).map(r => ({ ...r, type: 'ATTENDANCE_APPROVAL', date: r.work_date }));
+                const incomingLeaves = getData(incomingLeaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
+                const incomingAttendance = getData(incomingAttendanceRes).map(r => ({ ...r, type: 'ATTENDANCE_APPROVAL', date: r.work_date }));
 
                 const combinedIncoming = [...incomingLeaves, ...incomingAttendance].sort((a, b) => new Date(b.date) - new Date(a.date));
                 setIncomingRequests(combinedIncoming);
 
-            } catch (error) {
-                console.error('Dashboard data fetch failed:', error);
+            } catch (err) {
+                console.error("Requests fetch error", err);
             } finally {
-                setLoading(false);
+                setLoadingRequests(false);
             }
         };
 
-        if (user?.employee?.id) {
-            fetchDashboardData();
-        }
+        fetchDashboardData();
     }, [user]);
 
     // --- Helper Components ---
@@ -160,8 +169,8 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-800">Hoş Geldiniz, {user?.first_name} 👋</h1>
-                <p className="text-slate-500">Bugünün özeti ve bekleyen işleriniz.</p>
+                <h1 className="text-2xl font-bold text-slate-800">Genel Bakış</h1>
+                <p className="text-slate-500">İşletmenizin anlık durumunu buradan takip edebilirsiniz.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -170,7 +179,7 @@ const Dashboard = () => {
                 <div className="lg:col-span-4 space-y-6">
                     {/* 1. Today's Summary */}
                     <div className="h-full">
-                        <DailySummaryCard summary={todaySummary} loading={loading} />
+                        <DailySummaryCard summary={todaySummary} loading={loadingSummaries} />
                     </div>
 
                     {/* 2. Monthly Summary */}
@@ -180,7 +189,7 @@ const Dashboard = () => {
                             Bu Ayın Özeti
                         </h3>
 
-                        {loading || !monthlySummary ? (
+                        {loadingSummaries || !monthlySummary ? (
                             <div className="animate-pulse space-y-3">
                                 <div className="h-4 bg-slate-100 rounded w-3/4"></div>
                                 <div className="h-8 bg-slate-100 rounded w-full"></div>
@@ -275,8 +284,20 @@ const Dashboard = () => {
                         <div className="p-6 flex-1 overflow-y-auto max-h-[600px] scrollbar-thin">
                             {requestTab === 'my_requests' ? (
                                 <div className="space-y-1">
-                                    {loading ? (
-                                        <p className="text-slate-400 text-center py-10">Yükleniyor...</p>
+                                    {loadingRequests ? (
+                                        <div className="space-y-3 p-4">
+                                            {[1, 2, 3].map(i => (
+                                                <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-10 h-10 bg-slate-100 rounded-full animate-pulse"></div>
+                                                        <div className="space-y-2">
+                                                            <div className="w-24 h-4 bg-slate-100 rounded animate-pulse"></div>
+                                                            <div className="w-16 h-3 bg-slate-100 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     ) : myRequests.length === 0 ? (
                                         <div className="text-center py-12">
                                             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -291,8 +312,20 @@ const Dashboard = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-1">
-                                    {loading ? (
-                                        <p className="text-slate-400 text-center py-10">Yükleniyor...</p>
+                                    {loadingRequests ? (
+                                        <div className="space-y-3 p-4">
+                                            {[1, 2, 3].map(i => (
+                                                <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-10 h-10 bg-slate-100 rounded-full animate-pulse"></div>
+                                                        <div className="space-y-2">
+                                                            <div className="w-24 h-4 bg-slate-100 rounded animate-pulse"></div>
+                                                            <div className="w-16 h-3 bg-slate-100 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     ) : incomingRequests.length === 0 ? (
                                         <div className="text-center py-12">
                                             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
