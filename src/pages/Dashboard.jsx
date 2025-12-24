@@ -2,21 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import DailySummaryCard from '../components/DailySummaryCard';
-import { Clock, Calendar, FileText, CheckCircle2, XCircle, AlertCircle, ChefHat, Briefcase } from 'lucide-react';
+import UpcomingEventsCard from '../components/UpcomingEventsCard';
+import { Clock, Calendar, FileText, CheckCircle2, Briefcase, ChefHat, Activity, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
-import { format } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 const Dashboard = () => {
     const { user } = useAuth();
+
+    // Loading States
     const [loadingSummaries, setLoadingSummaries] = useState(true);
     const [loadingRequests, setLoadingRequests] = useState(true);
+    const [loadingCalendar, setLoadingCalendar] = useState(true);
 
     // Data States
     const [todaySummary, setTodaySummary] = useState(null);
     const [monthlySummary, setMonthlySummary] = useState(null);
     const [myRequests, setMyRequests] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
+    const [calendarEvents, setCalendarEvents] = useState([]);
 
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests'); // 'my_requests' | 'incoming'
@@ -27,6 +32,7 @@ const Dashboard = () => {
 
             setLoadingSummaries(true);
             setLoadingRequests(true);
+            setLoadingCalendar(true);
 
             const today = new Date();
             const year = today.getFullYear();
@@ -36,14 +42,16 @@ const Dashboard = () => {
             try {
                 const [todayResult, monthResult] = await Promise.allSettled([
                     api.get('/attendance/today_summary/'),
-                    api.get(`/attendance/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`)
+                    api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`) // Corrected Endpoint if needed
                 ]);
 
                 if (todayResult.status === 'fulfilled') {
                     setTodaySummary(todayResult.value.data);
                 }
-                if (monthResult.status === 'fulfilled' && Array.isArray(monthResult.value.data) && monthResult.value.data.length > 0) {
-                    setMonthlySummary(monthResult.value.data[0]);
+                if (monthResult.status === 'fulfilled') {
+                    // API might return array or object depending on backend
+                    const data = monthResult.value.data;
+                    setMonthlySummary(Array.isArray(data) ? data[0] : data);
                 }
             } catch (err) {
                 console.error("Summary fetch error", err);
@@ -84,6 +92,23 @@ const Dashboard = () => {
             } finally {
                 setLoadingRequests(false);
             }
+
+            // 3. Fetch Upcoming Calendar Events (Next 7 days)
+            try {
+                const startStr = format(startOfDay(today), 'yyyy-MM-dd');
+                const endStr = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd');
+
+                const eventsRes = await api.get(`/calendar/?start=${startStr}&end=${endStr}&employee_id=${user.employee.id}`);
+                const events = eventsRes.data.results || eventsRes.data || [];
+
+                // Sort by start date
+                const sortedEvents = events.sort((a, b) => new Date(a.start) - new Date(b.start));
+                setCalendarEvents(sortedEvents);
+            } catch (err) {
+                console.error("Calendar fetch error", err);
+            } finally {
+                setLoadingCalendar(false);
+            }
         };
 
         fetchDashboardData();
@@ -103,13 +128,13 @@ const Dashboard = () => {
         const labels = {
             'APPROVED': 'Onaylandı',
             'PENDING': 'Bekliyor',
-            'PENDING_MANAGER_APPROVAL': 'Yönetici Onayı Bekliyor',
+            'PENDING_MANAGER_APPROVAL': 'Yönetici Onayı',
             'REJECTED': 'Reddedildi',
             'CANCELLED': 'İptal',
         };
 
         return (
-            <span className={`text-xs px-2 py-1 rounded-full border font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+            <span className={`text-[10px] md:text-xs px-2 py-1 rounded-full border font-bold ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
                 {labels[status] || status}
             </span>
         );
@@ -124,7 +149,7 @@ const Dashboard = () => {
             Icon = Briefcase;
             if (req.employee) {
                 title = `${req.employee.first_name} ${req.employee.last_name}`;
-                subtitle = `${req.request_type?.name} - ${req.days} Gün`;
+                subtitle = `${req.request_type?.name || 'İzin'} - ${req.days} Gün`;
             } else {
                 title = `${req.request_type_name || 'İzin'} Talebi`;
                 subtitle = `${format(new Date(req.start_date), 'd MMM', { locale: tr })} - ${req.days} Gün`;
@@ -144,10 +169,10 @@ const Dashboard = () => {
         }
 
         return (
-            <div className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100 group">
-                <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 group cursor-pointer">
+                <div className="flex items-center space-x-3 min-w-0">
                     <div className={clsx(
-                        "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                        "w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 shadow-sm",
                         req.type === 'LEAVE' ? "bg-blue-50 text-blue-600 group-hover:bg-blue-100" :
                             req.type === 'OVERTIME' ? "bg-orange-50 text-orange-600 group-hover:bg-orange-100" :
                                 req.type === 'MEAL' ? "bg-purple-50 text-purple-600 group-hover:bg-purple-100" :
@@ -155,104 +180,106 @@ const Dashboard = () => {
                     )}>
                         <Icon size={18} />
                     </div>
-                    <div>
-                        <p className="text-sm font-semibold text-slate-800">{title}</p>
-                        <p className="text-xs text-slate-500">{subtitle}</p>
+                    <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">{title}</p>
+                        <p className="text-xs text-slate-500 truncate">{subtitle}</p>
                     </div>
                 </div>
-                <StatusBadge status={req.status} />
+                <div className="ml-2 shrink-0">
+                    <StatusBadge status={req.status} />
+                </div>
             </div>
         );
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6 pb-20 md:pb-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-800">Genel Bakış</h1>
-                <p className="text-slate-500">İşletmenizin anlık durumunu buradan takip edebilirsiniz.</p>
+                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Genel Bakış</h1>
+                <p className="text-slate-500 text-sm md:text-base">Hoş geldin {user?.first_name}, bugünkü durumun burada.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Main Grid Layout */}
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative items-start">
 
-                {/* LEFT COLUMN: SUMMARIES (4 cols) */}
-                <div className="lg:col-span-4 space-y-6">
-                    {/* 1. Today's Summary */}
-                    <div className="h-full">
-                        <DailySummaryCard summary={todaySummary} loading={loadingSummaries} />
-                    </div>
+                {/* LEFT COLUMN (Content) */}
+                <div className="xl:col-span-8 space-y-6">
 
-                    {/* 2. Monthly Summary */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                        <h3 className="font-bold text-slate-800 mb-4 flex items-center">
-                            <Calendar className="w-5 h-5 mr-2 text-indigo-500" />
-                            Bu Ayın Özeti
-                        </h3>
+                    {/* TOP ROW: SUMMARIES */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 1. Today's Summary */}
+                        <div className="h-full">
+                            <DailySummaryCard summary={todaySummary} loading={loadingSummaries} />
+                        </div>
 
-                        {loadingSummaries || !monthlySummary ? (
-                            <div className="animate-pulse space-y-3">
-                                <div className="h-4 bg-slate-100 rounded w-3/4"></div>
-                                <div className="h-8 bg-slate-100 rounded w-full"></div>
-                                <div className="h-4 bg-slate-100 rounded w-1/2"></div>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs text-slate-500 font-medium uppercase">Toplam Mesai</p>
-                                        <p className="text-lg font-bold text-slate-800 mt-1">
-                                            {Math.floor(monthlySummary.total_minutes / 60)}s {monthlySummary.total_minutes % 60}dk
-                                        </p>
-                                    </div>
-                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs text-slate-500 font-medium uppercase">Fazla Mesai</p>
-                                        <p className="text-lg font-bold text-amber-600 mt-1">
-                                            {Math.floor(monthlySummary.total_overtime / 60)}s {monthlySummary.total_overtime % 60}dk
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-2">
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="text-slate-500">Hedeflenen</span>
-                                        <span className="font-medium text-slate-700">{Math.floor(monthlySummary.monthly_required / 60)} saat</span>
-                                    </div>
-                                    {/* Progress Bar (Capped at 100%) */}
-                                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                        <div
-                                            className="bg-indigo-500 h-2.5 rounded-full"
-                                            style={{ width: `${Math.min(100, (monthlySummary.total_minutes / monthlySummary.monthly_required) * 100)}%` }}
-                                        ></div>
-                                    </div>
-                                    <div className="flex justify-between text-xs mt-1 text-slate-400">
-                                        <span>%{Math.round((monthlySummary.total_minutes / monthlySummary.monthly_required) * 100) || 0} Tamamlandı</span>
-                                    </div>
-                                </div>
-
-                                <div className="pt-3 border-t border-slate-100 flex justify-between items-center bg-indigo-50/50 p-3 rounded-lg mt-2">
-                                    <span className="text-sm font-medium text-slate-600">Net Bakiye</span>
+                        {/* 2. Monthly Summary */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+                            <div className="flex justify-between items-start mb-4">
+                                <h3 className="font-bold text-slate-800 flex items-center">
+                                    <Activity className="w-5 h-5 mr-2 text-emerald-500" />
+                                    Bu Ayın Özeti
+                                </h3>
+                                {/* Safe display if monthlySummary is null */}
+                                {monthlySummary && (
                                     <span className={clsx(
-                                        "font-bold text-lg",
-                                        monthlySummary.monthly_net_balance >= 0 ? "text-emerald-600" : "text-red-500"
+                                        "text-xs font-bold px-2 py-0.5 rounded",
+                                        monthlySummary.monthly_net_balance >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                                     )}>
-                                        {monthlySummary.monthly_net_balance > 0 ? '+' : ''}{Math.floor(monthlySummary.monthly_net_balance / 60)}s {Math.abs(monthlySummary.monthly_net_balance % 60)}dk
+                                        {monthlySummary.monthly_net_balance > 0 ? '+' : ''}
+                                        {Math.floor(monthlySummary.monthly_net_balance / 60)}s {Math.abs(monthlySummary.monthly_net_balance % 60)}dk
                                     </span>
-                                </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
 
-                {/* RIGHT COLUMN: REQUESTS (8 cols) */}
-                <div className="lg:col-span-8">
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full min-h-[500px]">
-                        {/* Tabs header */}
-                        <div className="flex items-center border-b border-slate-100 px-6 pt-6 gap-6">
+                            {loadingSummaries || !monthlySummary ? (
+                                <div className="animate-pulse space-y-4 flex-1">
+                                    <div className="h-20 bg-slate-50 rounded-xl"></div>
+                                    <div className="h-4 bg-slate-100 rounded w-full"></div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col justify-between">
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Çalışılan</p>
+                                            <p className="text-lg font-bold text-slate-800">
+                                                {Math.floor(monthlySummary.total_minutes / 60)}s <span className="text-xs text-slate-500 font-normal">{monthlySummary.total_minutes % 60}dk</span>
+                                            </p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hedef</p>
+                                            <p className="text-lg font-bold text-slate-600">
+                                                {Math.floor(monthlySummary.monthly_required / 60)}s
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between text-xs mb-1.5 font-medium">
+                                            <span className="text-slate-500">Aylık İlerleme</span>
+                                            <span className="text-indigo-600">%{Math.round((monthlySummary.total_minutes / monthlySummary.monthly_required) * 100) || 0}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                            <div
+                                                className="bg-indigo-500 h-2 rounded-full transition-all duration-1000 ease-out"
+                                                style={{ width: `${Math.min(100, (monthlySummary.total_minutes / monthlySummary.monthly_required) * 100)}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* REQUESTS PANEL */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col min-h-[400px]">
+                        {/* Tabs */}
+                        <div className="flex items-center border-b border-slate-100 px-6 pt-5 gap-8">
                             <button
                                 onClick={() => setRequestTab('my_requests')}
                                 className={clsx(
-                                    "pb-4 text-sm font-semibold transition-all relative",
-                                    requestTab === 'my_requests' ? "text-blue-600" : "text-slate-500 hover:text-slate-700"
+                                    "pb-4 text-sm font-bold transition-all relative",
+                                    requestTab === 'my_requests' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
                                 )}
                             >
                                 Taleplerim
@@ -264,13 +291,13 @@ const Dashboard = () => {
                             <button
                                 onClick={() => setRequestTab('incoming')}
                                 className={clsx(
-                                    "pb-4 text-sm font-semibold transition-all relative flex items-center gap-2",
-                                    requestTab === 'incoming' ? "text-blue-600" : "text-slate-500 hover:text-slate-700"
+                                    "pb-4 text-sm font-bold transition-all relative flex items-center gap-2",
+                                    requestTab === 'incoming' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
                                 )}
                             >
-                                Gelen Talepler <span className="text-xs font-normal text-slate-400">(Ekibim)</span>
+                                Gelen Talepler
                                 {incomingRequests.length > 0 && (
-                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm shadow-red-200">
                                         {incomingRequests.length}
                                     </span>
                                 )}
@@ -280,59 +307,41 @@ const Dashboard = () => {
                             </button>
                         </div>
 
-                        {/* Tab Content */}
-                        <div className="p-6 flex-1 overflow-y-auto max-h-[600px] scrollbar-thin">
+                        {/* Requests List */}
+                        <div className="p-4 md:p-6 flex-1 overflow-y-auto max-h-[500px] custom-scrollbar">
                             {requestTab === 'my_requests' ? (
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                     {loadingRequests ? (
-                                        <div className="space-y-3 p-4">
-                                            {[1, 2, 3].map(i => (
-                                                <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg">
-                                                    <div className="flex items-center space-x-3">
-                                                        <div className="w-10 h-10 bg-slate-100 rounded-full animate-pulse"></div>
-                                                        <div className="space-y-2">
-                                                            <div className="w-24 h-4 bg-slate-100 rounded animate-pulse"></div>
-                                                            <div className="w-16 h-3 bg-slate-100 rounded animate-pulse"></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                        <div className="space-y-3">
+                                            {[1, 2].map(i => (
+                                                <div key={i} className="h-16 bg-slate-50 rounded-xl animate-pulse"></div>
                                             ))}
                                         </div>
                                     ) : myRequests.length === 0 ? (
                                         <div className="text-center py-12">
-                                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <FileText className="text-slate-300" />
                                             </div>
-                                            <p className="text-slate-500 font-medium">Henüz bir talebiniz bulunmuyor.</p>
-                                            <p className="text-slate-400 text-sm mt-1">İzin veya fazla mesai talebi oluşturabilirsiniz.</p>
+                                            <p className="text-slate-500 font-medium">Henüz bir talebiniz yok.</p>
                                         </div>
                                     ) : (
                                         myRequests.map((req, idx) => <RequestItem key={`${req.type}-${idx}`} req={req} />)
                                     )}
                                 </div>
                             ) : (
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                     {loadingRequests ? (
-                                        <div className="space-y-3 p-4">
-                                            {[1, 2, 3].map(i => (
-                                                <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg">
-                                                    <div className="flex items-center space-x-3">
-                                                        <div className="w-10 h-10 bg-slate-100 rounded-full animate-pulse"></div>
-                                                        <div className="space-y-2">
-                                                            <div className="w-24 h-4 bg-slate-100 rounded animate-pulse"></div>
-                                                            <div className="w-16 h-3 bg-slate-100 rounded animate-pulse"></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                        <div className="space-y-3">
+                                            {[1, 2].map(i => (
+                                                <div key={i} className="h-16 bg-slate-50 rounded-xl animate-pulse"></div>
                                             ))}
                                         </div>
                                     ) : incomingRequests.length === 0 ? (
                                         <div className="text-center py-12">
-                                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                <CheckCircle2 className="text-slate-300" />
+                                            <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <CheckCircle2 className="text-emerald-300" />
                                             </div>
-                                            <p className="text-slate-500 font-medium">Bekleyen talep yok.</p>
-                                            <p className="text-slate-400 text-sm mt-1">Tüm talepleri yanıtladınız!</p>
+                                            <p className="text-slate-500 font-medium">Tüm onaylar tamam!</p>
                                         </div>
                                     ) : (
                                         incomingRequests.map((req, idx) => <RequestItem key={`incoming-${idx}`} req={req} />)
@@ -342,13 +351,33 @@ const Dashboard = () => {
                         </div>
 
                         {/* Footer Link */}
-                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl text-center">
-                            <a href="/requests" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                                Tüm Talepleri Görüntüle &rarr;
+                        <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl text-center">
+                            <a href="/requests" className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide">
+                                Tümünü Gör
                             </a>
                         </div>
                     </div>
                 </div>
+
+                {/* RIGHT COLUMN (Sidebarish components) */}
+                <div className="xl:col-span-4 space-y-6">
+                    {/* Upcoming Events */}
+                    <div className="h-full max-h-[600px]">
+                        <UpcomingEventsCard events={calendarEvents} loading={loadingCalendar} />
+                    </div>
+
+                    {/* Quick Info / Tip (Optional filler for balance) */}
+                    <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20 md:hidden xl:block">
+                        <h4 className="font-bold text-lg mb-2 flex items-center gap-2">
+                            <AlertCircle size={20} className="text-blue-200" />
+                            İpucu
+                        </h4>
+                        <p className="text-blue-100 text-sm leading-relaxed">
+                            Mesaiye başlamadan önce konum servislerinizin açık olduğundan emin olun. Giriş/Çıkış saatleriniz otomatik olarak kaydedilir.
+                        </p>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

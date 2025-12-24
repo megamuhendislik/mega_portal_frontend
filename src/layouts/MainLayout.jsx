@@ -286,7 +286,7 @@ const MainLayout = () => {
                             onClick={handleShiftToggle}
                             disabled={shiftLoading}
                             className={clsx(
-                                "hidden md:flex items-center px-4 py-2 rounded-full font-medium transition-all shadow-sm mx-4",
+                                "flex items-center px-3 py-1.5 md:px-4 md:py-2 rounded-full font-medium transition-all shadow-sm mx-2 md:mx-4 text-xs md:text-sm",
                                 isShiftActive
                                     ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
                                     : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200",
