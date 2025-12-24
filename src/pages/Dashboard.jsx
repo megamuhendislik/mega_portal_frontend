@@ -10,6 +10,7 @@ import { tr } from 'date-fns/locale';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    console.log("DASHBOARD RENDER - User Object:", user);
 
     // Loading States
     const [loadingSummaries, setLoadingSummaries] = useState(true);
