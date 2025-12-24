@@ -58,7 +58,11 @@ const Dashboard = () => {
                 ]);
 
                 if (todayResult.status === 'fulfilled') {
+                    console.log("Today Result Fulfilled:", todayResult.value);
+                    console.log("Today Summary Data to Set:", todayResult.value.data);
                     setTodaySummary(todayResult.value.data);
+                } else {
+                    console.error("Today Result Failed:", todayResult.reason);
                 }
                 if (monthStatsResult.status === 'fulfilled') {
                     const data = monthStatsResult.value.data;
