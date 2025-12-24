@@ -1,129 +1,190 @@
 import React from 'react';
-import { Clock, Coffee, Briefcase, Zap, Timer } from 'lucide-react';
+import { Clock, Coffee, Briefcase, Zap, Timer, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 
 const HeroDailySummary = ({ summary, loading }) => {
     if (loading || !summary) {
         return (
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 w-full animate-pulse h-64">
-                <div className="h-8 bg-slate-100 rounded-lg w-1/3 mb-10"></div>
-                <div className="space-y-8">
-                    <div className="h-4 bg-slate-50 rounded w-full"></div>
-                    <div className="h-4 bg-slate-50 rounded w-full"></div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="bg-white rounded-3xl p-6 h-48 border border-slate-100 shadow-sm"></div>
+                ))}
             </div>
         );
     }
 
-    // Calculations
-    const totalWorkMinutes = summary.total_inside_duration_minutes || 0;
-    const workTarget = 540; // 9 hours * 60 minutes
+    // Correct Backend Field Mapping
+    const totalWorkMinutes = summary.total_worked || 0;
+    const workTarget = summary.daily_expected || 480; // Default 8h if missing
     const workPercent = Math.min(100, Math.round((totalWorkMinutes / workTarget) * 100));
 
-    const usedBreak = summary.total_break_duration_minutes || 0;
-    const breakTarget = 60; // 1 hour
-    const breakPercent = Math.min(100, Math.round((usedBreak / breakTarget) * 100));
+    const usedBreak = summary.break_used || 0;
+    const breakTarget = 60; // Standard 1 hour, or calculate if needed
+    // Backend separates allowance, but usually 60 mins is standard. 
+    // We can assume 60 or use `remaining_break` + `break_used` if available?
+    // Let's stick to 60 or 45 based on common rules, or just show Used.
+    // The backend `remaining_break` is mapped. So Total = Used + Remaining.
+    const totalBreakAllowance = (summary.remaining_break || 0) + usedBreak || 60;
+    const breakPercent = Math.min(100, Math.round((usedBreak / totalBreakAllowance) * 100));
 
-    const overtime = summary.overtime_minutes || 0;
+    const overtime = summary.current_overtime || 0;
+    const isWorking = summary.is_working || false;
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8 w-full relative overflow-hidden">
-            {/* Background Decor */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl pointer-events-none"></div>
-
-            <div className="relative z-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                            <Zap className="text-amber-500 fill-amber-500" size={24} />
-                            Bugünün Özeti
-                        </h2>
-                        <p className="text-slate-500 text-sm mt-1">Bugünkü mesai durumu ve mola kullanımları.</p>
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <Zap className="text-amber-500 fill-amber-500" size={24} />
+                    Bugünün Durumu
+                </h2>
+                {isWorking && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse border border-emerald-200 shadow-sm">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Aktif Mesai
                     </div>
-                    {summary.is_active && (
-                        <div className="px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse border border-emerald-200">
-                            Aktif Mesai
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                {/* 1. Work Widget */}
+                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-blue-200 transition-colors">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-3 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-500/30">
+                                    <Briefcase size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mesai</p>
+                                    <h3 className="text-lg font-bold text-slate-800">Çalışma Süresi</h3>
+                                </div>
+                            </div>
+
+                            <div className="flex items-baseline gap-1 mb-2">
+                                <span className="text-4xl font-black text-slate-800 tracking-tight">
+                                    {Math.floor(totalWorkMinutes / 60)}
+                                </span>
+                                <span className="text-lg font-bold text-slate-500">s</span>
+                                <span className="text-4xl font-black text-slate-800 tracking-tight ml-2">
+                                    {totalWorkMinutes % 60}
+                                </span>
+                                <span className="text-lg font-bold text-slate-500">dk</span>
+                            </div>
+                            <p className="text-sm font-medium text-slate-400">
+                                Hedef: {Math.floor(workTarget / 60)}s {workTarget % 60}dk
+                            </p>
                         </div>
-                    )}
+
+                        <div className="mt-6">
+                            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                    style={{ width: `${workPercent}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between mt-2 text-xs font-bold">
+                                <span className="text-blue-600">%{workPercent} Tamamlandı</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                    {/* Work Progress */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                            <div className="flex items-center gap-2 text-slate-600 font-medium">
-                                <Briefcase size={18} className="text-blue-500" />
-                                <span>Mesai Durumu</span>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-black text-slate-800 tabular-nums">
-                                    {Math.floor(totalWorkMinutes / 60)}<span className="text-base font-medium text-slate-400">s</span> {totalWorkMinutes % 60}<span className="text-base font-medium text-slate-400">dk</span>
+                {/* 2. Break Widget */}
+                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-amber-200 transition-colors">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/30">
+                                    <Coffee size={24} />
                                 </div>
-                                <div className="text-xs text-slate-400 font-medium">/ 09s 00dk Hedef</div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mola</p>
+                                    <h3 className="text-lg font-bold text-slate-800">Kullanılan Mola</h3>
+                                </div>
                             </div>
+
+                            <div className="flex items-baseline gap-1 mb-2">
+                                <span className="text-4xl font-black text-slate-800 tracking-tight">
+                                    {Math.floor(usedBreak / 60)}
+                                </span>
+                                <span className="text-lg font-bold text-slate-500">s</span>
+                                <span className="text-4xl font-black text-slate-800 tracking-tight ml-2">
+                                    {usedBreak % 60}
+                                </span>
+                                <span className="text-lg font-bold text-slate-500">dk</span>
+                            </div>
+                            <p className="text-sm font-medium text-slate-400">
+                                Hak: {Math.floor(totalBreakAllowance / 60)}s {totalBreakAllowance % 60}dk
+                            </p>
                         </div>
 
-                        {/* Progress Bar */}
-                        <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
-                            {/* Striped Pattern Overlay */}
-                            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(0,0,0,0.1)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.1)_50%,rgba(0,0,0,0.1)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem]"></div>
-
-                            <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out relative shadow-sm"
-                                style={{ width: `${workPercent}%` }}
-                            >
-                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/20"></div>
+                        <div className="mt-6">
+                            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    className={clsx(
+                                        "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
+                                        usedBreak > totalBreakAllowance ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" : "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                    )}
+                                    style={{ width: `${Math.min(100, Math.max(5, breakPercent))}%` }}
+                                ></div>
                             </div>
-                        </div>
-
-                        {/* Helper Text */}
-                        <div className="flex justify-between text-xs font-semibold text-slate-400 mt-1">
-                            <span>%{workPercent} Tamamlandı</span>
-                            <span>{Math.max(0, workTarget - totalWorkMinutes)}dk Kaldı</span>
+                            <div className="flex justify-between mt-2 text-xs font-bold">
+                                <span className={usedBreak > totalBreakAllowance ? "text-red-500" : "text-amber-600"}>
+                                    {usedBreak > totalBreakAllowance ? "Süre Aşıldı" : "Limit Dahilinde"}
+                                </span>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Break Progress */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                            <div className="flex items-center gap-2 text-slate-600 font-medium">
-                                <Coffee size={18} className="text-amber-500" />
-                                <span>Mola Kullanımı</span>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-black text-slate-800 tabular-nums">
-                                    {Math.floor(usedBreak / 60)}<span className="text-base font-medium text-slate-400">s</span> {usedBreak % 60}<span className="text-base font-medium text-slate-400">dk</span>
+                {/* 3. Overtime Widget */}
+                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-emerald-200 transition-colors">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-500/30">
+                                    <Timer size={24} />
                                 </div>
-                                <div className="text-xs text-slate-400 font-medium">/ 01s 00dk Hak</div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ekstra</p>
+                                    <h3 className="text-lg font-bold text-slate-800">Fazla Mesai</h3>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Progress Bar */}
-                        <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
-                            <div
-                                className={clsx(
-                                    "h-full rounded-full transition-all duration-1000 ease-out relative shadow-sm",
-                                    usedBreak > breakTarget ? "bg-gradient-to-r from-red-400 to-red-600" : "bg-gradient-to-r from-amber-400 to-orange-500"
-                                )}
-                                style={{ width: `${Math.min(100, Math.max(5, breakPercent))}%` }}
-                            >
-                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/20"></div>
-                            </div>
-                        </div>
-
-                        {/* Helper Text */}
-                        <div className="flex justify-between text-xs font-semibold text-slate-400 mt-1">
-                            <span className={usedBreak > breakTarget ? "text-red-500" : ""}>
-                                {usedBreak > breakTarget ? "Süre Aşıldı" : `Kalan: ${breakTarget - usedBreak}dk`}
-                            </span>
-                            {overtime > 0 && (
-                                <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                    <Timer size={10} /> +{overtime}dk Ek Mesai
+                            <div className="flex items-baseline gap-1 mb-2">
+                                <span className="text-4xl font-black text-slate-800 tracking-tight">
+                                    {overtime}
                                 </span>
+                                <span className="text-lg font-bold text-slate-500">dk</span>
+                            </div>
+                            <p className="text-sm font-medium text-slate-400">
+                                Onay bekleyen veya onaylanmış
+                            </p>
+                        </div>
+
+                        <div className="mt-6">
+                            {overtime > 0 ? (
+                                <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <CheckCircle2 size={16} className="text-emerald-600" />
+                                    <span className="text-xs font-bold text-emerald-700">Mesai Tespit Edildi</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 opacity-60">
+                                    <Clock size={16} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-500">Ek mesai yok</span>
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );
