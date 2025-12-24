@@ -51,28 +51,41 @@ const Dashboard = () => {
 
             // 1. Fetch Summaries & Month Events for Stats
             try {
+                console.log("=== DASHBOARD FETCH START ===");
+                console.log("Fetching from: /attendance/today_summary/");
+
                 const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
                     api.get('/attendance/today_summary/'),
                     api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`),
                     api.get(`/calendar/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${user.employee.id}`)
                 ]);
 
+                console.log("=== FETCH RESULTS ACQUIRED ===");
+                console.log("Today Result Status:", todayResult.status);
+
                 if (todayResult.status === 'fulfilled') {
-                    console.log("Today Result Fulfilled:", todayResult.value);
-                    console.log("Today Summary Data to Set:", todayResult.value.data);
+                    console.log("Today Result DATA:", todayResult.value.data);
                     setTodaySummary(todayResult.value.data);
                 } else {
-                    console.error("Today Result Failed:", todayResult.reason);
+                    console.log("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
+                    if (todayResult.reason?.response) {
+                        console.log("Error Response Status:", todayResult.reason.response.status);
+                        console.log("Error Response Data:", todayResult.reason.response.data);
+                    }
                 }
+
                 if (monthStatsResult.status === 'fulfilled') {
                     const data = monthStatsResult.value.data;
                     setMonthlySummary(Array.isArray(data) ? data[0] : data);
+                } else {
+                    console.log("Month Stats Failed:", monthStatsResult.reason);
                 }
+
                 if (monthEventsResult.status === 'fulfilled') {
                     setMonthEvents(monthEventsResult.value.data.results || monthEventsResult.value.data || []);
                 }
             } catch (err) {
-                console.error("Summary fetch error", err);
+                console.log("!!! CRITICAL SUMMARY FETCH ERROR !!!", err);
             } finally {
                 setLoadingSummaries(false);
             }
