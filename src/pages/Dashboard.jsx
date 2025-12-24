@@ -148,7 +148,8 @@ const Dashboard = () => {
 
     // Calculate Month Stats from Events (Leave/Missing)
     const monthStats = {
-        leaveDays: monthEvents.filter(e => e.type === 'LEAVE').length,
+        // Filter out weekends for leave count
+        leaveDays: monthEvents.filter(e => e.type === 'LEAVE' && new Date(e.start).getDay() !== 0 && new Date(e.start).getDay() !== 6).length,
         missingDays: monthEvents.filter(e => e.type === 'ABSENT' && new Date(e.start).getDay() !== 0 && new Date(e.start).getDay() !== 6).length
     };
 
@@ -226,12 +227,6 @@ const Dashboard = () => {
 
     return (
         <div className="p-6 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
-            {/* DEBUG BANNER - TEMPORARY */}
-            <div className="bg-red-600 text-white p-4 rounded-xl font-bold text-center shadow-lg animate-pulse">
-                🔴 DEBUG MODE: V3.5 - IF YOU SEE THIS, CODE IS UPDATED 🔴
-                <br />
-                User ID: {user?.employee?.id || 'NO USER'}
-            </div>
 
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
