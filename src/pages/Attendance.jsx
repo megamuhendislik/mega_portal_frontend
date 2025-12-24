@@ -37,13 +37,19 @@ const Attendance = () => {
 
     // Initial Load & Auth Check
     useEffect(() => {
+        console.log("Attendance: User changed", user);
         if (user) {
+            console.log("Attendance: User Employee ID:", user.employee?.id);
             if (activeTab === 'my_attendance') {
                 // Default to self for My Attendance
-                setSelectedEmployeeId(user.employee?.id || null);
+                const empId = user.employee?.id || null;
+                console.log("Attendance: Setting selectedEmployeeId to", empId);
+                setSelectedEmployeeId(empId);
             } else if (activeTab === 'team_attendance') {
                 fetchTeamData();
             }
+        } else {
+            console.log("Attendance: No user found in context");
         }
     }, [user, activeTab]);
 
@@ -91,9 +97,13 @@ const Attendance = () => {
     };
 
     const fetchAttendance = async () => {
+        console.log("Attendance: Fetching data...", { selectedEmployeeId, startDate, endDate });
         setLoading(true);
         try {
-            const response = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
+            const url = `/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`;
+            console.log("Attendance: API Request URL:", url);
+            const response = await api.get(url);
+            console.log("Attendance: API Response:", response.data);
             const data = response.data.results || response.data;
             setLogs(data);
             calculateSummary(data);
