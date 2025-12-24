@@ -3,6 +3,8 @@ import { Clock, Coffee, Briefcase, Zap, Timer, CheckCircle2 } from 'lucide-react
 import clsx from 'clsx';
 
 const HeroDailySummary = ({ summary, loading }) => {
+    console.log("HeroDailySummary Render:", { summary, loading });
+
     if (loading || !summary) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
