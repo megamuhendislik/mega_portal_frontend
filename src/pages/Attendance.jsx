@@ -72,11 +72,11 @@ const Attendance = () => {
 
     const fetchTodaySummary = async () => {
         try {
-            // Note: Current Status API defaults to Request.User. 
-            // If viewing another employee, we might not see THEIR 'today summary' unless API supports it.
-            // For now, let's keep it as is (User's own status) or update API later.
-            // The requirement was mainly about seeing logs.
-            const response = await api.get('/attendance/today_summary/');
+            const params = {};
+            if (selectedEmployeeId) {
+                params.employee_id = selectedEmployeeId;
+            }
+            const response = await api.get('/attendance/today_summary/', { params });
             setTodaySummary(response.data);
         } catch (error) {
             console.error('Error fetching today summary:', error);
@@ -223,6 +223,15 @@ const Attendance = () => {
                 </div>
             </div>
 
+            {/* Selected User Indicator (if not self) */}
+            {selectedEmployeeId && user?.employee?.id && String(selectedEmployeeId) !== String(user.employee.id) && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+                    <Filter size={16} />
+                    Şu an görüntülenen çalışan ID: {selectedEmployeeId}
+                    {/* Note: ideally we'd show the name, but we only have ID in state until we fetch details. 
+                        The TeamSelector shows the name, so this is just a confirmation. */}
+                </div>
+            )}
 
             {/* Today's Summary Card */}
             <DailySummaryCard summary={todaySummary} loading={loading} />
