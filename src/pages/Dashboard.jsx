@@ -28,7 +28,12 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
-            if (!user?.employee?.id) return;
+            if (!user?.employee?.id) {
+                setLoadingSummaries(false);
+                setLoadingRequests(false);
+                setLoadingCalendar(false);
+                return;
+            }
 
             setLoadingSummaries(true);
             setLoadingRequests(true);
@@ -42,7 +47,7 @@ const Dashboard = () => {
             try {
                 const [todayResult, monthResult] = await Promise.allSettled([
                     api.get('/attendance/today_summary/'),
-                    api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`) // Corrected Endpoint if needed
+                    api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`)
                 ]);
 
                 if (todayResult.status === 'fulfilled') {
@@ -367,13 +372,14 @@ const Dashboard = () => {
                     </div>
 
                     {/* Quick Info / Tip (Optional filler for balance) */}
+                    {/* Quick Info (Optional) */}
                     <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20 md:hidden xl:block">
                         <h4 className="font-bold text-lg mb-2 flex items-center gap-2">
-                            <AlertCircle size={20} className="text-blue-200" />
-                            İpucu
+                            <Activity size={20} className="text-blue-200" />
+                            İyi Çalışmalar
                         </h4>
                         <p className="text-blue-100 text-sm leading-relaxed">
-                            Mesaiye başlamadan önce konum servislerinizin açık olduğundan emin olun. Giriş/Çıkış saatleriniz otomatik olarak kaydedilir.
+                            Verimli ve başarılı bir gün geçirmenizi dileriz.
                         </p>
                     </div>
                 </div>
