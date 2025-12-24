@@ -40,7 +40,14 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
-            if (!user?.employee?.id) {
+            // Fix: 'user' from useAuth seems to be the Employee object itself (based on logs having user.user nested)
+            // So we try user.employee.id first, falling back to user.id if that fails but looks like an employee
+            const employeeId = user?.employee?.id || user?.id;
+
+            console.log("DASHBOARD FETCH CHECK - Employee ID:", employeeId);
+
+            if (!employeeId) {
+                console.log("Abort Fetch: No Employee ID found.");
                 setLoadingSummaries(false);
                 setLoadingRequests(false);
                 setLoadingCalendar(false);
@@ -54,12 +61,12 @@ const Dashboard = () => {
             // 1. Fetch Summaries & Month Events for Stats
             try {
                 console.log("=== DASHBOARD FETCH START ===");
-                console.log("Fetching from: /attendance/today_summary/");
+                console.log(`Fetching for Employee ID: ${employeeId}`);
 
                 const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
                     api.get('/attendance/today_summary/'),
-                    api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${user.employee.id}`),
-                    api.get(`/calendar/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${user.employee.id}`)
+                    api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${employeeId}`),
+                    api.get(`/calendar/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`)
                 ]);
 
                 console.log("=== FETCH RESULTS ACQUIRED ===");
@@ -125,7 +132,8 @@ const Dashboard = () => {
 
             // 3. Fetch Upcoming Calendar Events
             try {
-                const eventsRes = await api.get(`/calendar/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${user.employee.id}`);
+                const employeeId = user?.employee?.id || user?.id; // Re-derive for safety or use from scope if I could
+                const eventsRes = await api.get(`/calendar/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${employeeId}`);
                 const events = eventsRes.data.results || eventsRes.data || [];
                 setCalendarEvents(events.sort((a, b) => new Date(a.start) - new Date(b.start)));
             } catch (err) {
