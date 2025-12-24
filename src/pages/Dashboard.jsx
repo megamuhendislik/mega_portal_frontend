@@ -67,7 +67,7 @@ const Dashboard = () => {
                     console.log("Today Result DATA:", todayResult.value.data);
                     setTodaySummary(todayResult.value.data);
                 } else {
-                    console.log("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
+                    console.error("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
                     if (todayResult.reason?.response) {
                         console.log("Error Response Status:", todayResult.reason.response.status);
                         console.log("Error Response Data:", todayResult.reason.response.data);
@@ -85,7 +85,7 @@ const Dashboard = () => {
                     setMonthEvents(monthEventsResult.value.data.results || monthEventsResult.value.data || []);
                 }
             } catch (err) {
-                console.log("!!! CRITICAL SUMMARY FETCH ERROR !!!", err);
+                console.error("!!! CRITICAL SUMMARY FETCH ERROR !!!", err);
             } finally {
                 setLoadingSummaries(false);
             }
@@ -215,7 +215,29 @@ const Dashboard = () => {
     const netBalance = monthlySummary ? (monthlySummary.monthly_net_balance / 60).toFixed(1) : '0.0';
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 pb-20 md:pb-8">
+        <div className="p-6 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+            {/* DEBUG BANNER - TEMPORARY */}
+            <div className="bg-red-600 text-white p-4 rounded-xl font-bold text-center shadow-lg animate-pulse">
+                🔴 DEBUG MODE: V3.5 - IF YOU SEE THIS, CODE IS UPDATED 🔴
+                <br />
+                User ID: {user?.employee?.id || 'NO USER'}
+            </div>
+
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">Ana Sayfa</h1>
+                    <p className="text-slate-500 font-medium mt-1">Hoş Geldiniz, {user?.first_name || 'Kullanıcı'} 👋</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 text-sm font-semibold text-slate-600 flex items-center gap-2">
+                        <CalendarIcon size={16} className="text-blue-500" />
+                        {format(new Date(), 'd MMMM yyyy, EEEE', { locale: tr })}
+                    </div>
+                </div>
+            </div>
+
             {/* 1. HERO Daily Summary */}
             <section>
                 <HeroDailySummary summary={todaySummary} loading={loadingSummaries} />
@@ -298,55 +320,65 @@ const Dashboard = () => {
                 </div>
             </section>
 
-            {/* 3. Bottom Grid: Requests & Events */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left: Requests */}
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
-                    <div className="flex items-center border-b border-slate-100 px-6 pt-5 gap-6">
+            {/* 3. Requests & Calendar */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Pending Requests */}
+                <div className="lg:col-span-2 space-y-4">
+                    {/* Tabs */}
+                    <div className="flex items-center gap-4 border-b border-slate-100 pb-2">
                         <button
                             onClick={() => setRequestTab('my_requests')}
                             className={clsx(
-                                "pb-4 text-sm font-bold transition-all relative",
+                                "text-sm font-bold pb-2 transition-colors relative",
                                 requestTab === 'my_requests' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
-                            )}
-                        >
+                            )}>
                             Taleplerim
-                            {requestTab === 'my_requests' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></div>}
+                            {requestTab === 'my_requests' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></div>}
                         </button>
                         <button
                             onClick={() => setRequestTab('incoming')}
                             className={clsx(
-                                "pb-4 text-sm font-bold transition-all relative flex items-center gap-2",
+                                "text-sm font-bold pb-2 transition-colors relative",
                                 requestTab === 'incoming' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
-                            )}
-                        >
+                            )}>
                             Gelen Talepler
-                            {incomingRequests.length > 0 && (
-                                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">{incomingRequests.length}</span>
-                            )}
-                            {requestTab === 'incoming' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></div>}
+                            {requestTab === 'incoming' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></div>}
                         </button>
                     </div>
 
-                    <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-                        {requestTab === 'my_requests' ? (
-                            loadingRequests ? <div className="text-center text-slate-400 py-10">Yükleniyor...</div> :
-                                myRequests.length === 0 ? <div className="text-center text-slate-400 py-10">Henüz talep yok.</div> :
-                                    myRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 min-h-[300px]">
+                        {loadingRequests ? (
+                            <div className="space-y-3 animate-pulse">
+                                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-slate-50 rounded-xl"></div>)}
+                            </div>
                         ) : (
-                            loadingRequests ? <div className="text-center text-slate-400 py-10">Yükleniyor...</div> :
-                                incomingRequests.length === 0 ? <div className="text-center text-slate-400 py-10">Onay bekleyen talep yok.</div> :
-                                    incomingRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
+                            <div className="space-y-2">
+                                {requestTab === 'my_requests' ? (
+                                    myRequests.length > 0 ? (
+                                        myRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
+                                    ) : (
+                                        <div className="text-center py-10 text-slate-400 text-sm font-medium">Henüz talep yok.</div>
+                                    )
+                                ) : (
+                                    incomingRequests.length > 0 ? (
+                                        incomingRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
+                                    ) : (
+                                        <div className="text-center py-10 text-slate-400 text-sm font-medium">Onay bekleyen talep yok.</div>
+                                    )
+                                )}
+                            </div>
                         )}
-                    </div>
-                    <div className="p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-3xl text-center">
-                        <a href="/requests" className="text-xs font-bold text-blue-600 uppercase hover:underline">Tümünü Gör</a>
                     </div>
                 </div>
 
-                {/* Right: Upcoming Events */}
-                <div className="h-[500px]">
-                    <UpcomingEventsCard events={calendarEvents} loading={loadingCalendar} />
+                {/* Upcoming Events */}
+                <div>
+                    <UpcomingEventsCard
+                        events={calendarEvents}
+                        loading={loadingCalendar}
+                        upcomingStartStr={upcomingStartStr}
+                        upcomingEndStr={upcomingEndStr}
+                    />
                 </div>
             </div>
         </div>
