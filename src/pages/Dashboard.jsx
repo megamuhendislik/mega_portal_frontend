@@ -27,6 +27,16 @@ const Dashboard = () => {
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
 
+    // Date Calculations
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+
+    const monthStartStr = format(startOfMonth(today), 'yyyy-MM-dd');
+    const monthEndStr = format(endOfMonth(today), 'yyyy-MM-dd');
+    const upcomingStartStr = format(startOfDay(today), 'yyyy-MM-dd');
+    const upcomingEndStr = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd');
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!user?.employee?.id) {
@@ -39,15 +49,6 @@ const Dashboard = () => {
             setLoadingSummaries(true);
             setLoadingRequests(true);
             setLoadingCalendar(true);
-
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth() + 1;
-
-            const monthStartStr = format(startOfMonth(today), 'yyyy-MM-dd');
-            const monthEndStr = format(endOfMonth(today), 'yyyy-MM-dd');
-            const upcomingStartStr = format(startOfDay(today), 'yyyy-MM-dd');
-            const upcomingEndStr = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd');
 
             // 1. Fetch Summaries & Month Events for Stats
             try {
