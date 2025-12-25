@@ -37,19 +37,14 @@ const Attendance = () => {
 
     // Initial Load & Auth Check
     useEffect(() => {
-        console.log("Attendance: User changed", user);
         if (user) {
-            console.log("Attendance: User Employee ID:", user.employee?.id);
             if (activeTab === 'my_attendance') {
                 // Default to self for My Attendance
-                const empId = user.employee?.id || null;
-                console.log("Attendance: Setting selectedEmployeeId to", empId);
+                const empId = user.id; // User object IS the employee profile
                 setSelectedEmployeeId(empId);
             } else if (activeTab === 'team_attendance') {
                 fetchTeamData();
             }
-        } else {
-            console.log("Attendance: No user found in context");
         }
     }, [user, activeTab]);
 
@@ -99,12 +94,13 @@ const Attendance = () => {
     const fetchAttendance = async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
+            const url = `/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`;
+            const response = await api.get(url);
             const data = response.data.results || response.data;
             setLogs(data);
             calculateSummary(data);
         } catch (error) {
-            console.error('Error fetching attendance:', error);
+            // console.error('Error fetching attendance:', error); // Removed as per instruction
         } finally {
             setLoading(false);
         }
@@ -203,7 +199,7 @@ const Attendance = () => {
                         <User size={16} />
                         Kendi Mesaim
                     </button>
-                    {(user?.user?.is_superuser || user?.employee?.roles?.some(r => r.key === 'MANAGER')) && (
+                    {(user?.user?.is_superuser || user?.roles?.some(r => r.key === 'MANAGER')) && (
                         <button
                             onClick={() => setActiveTab('team_attendance')}
                             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
