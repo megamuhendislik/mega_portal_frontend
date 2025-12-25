@@ -97,13 +97,9 @@ const Attendance = () => {
     };
 
     const fetchAttendance = async () => {
-        console.log("Attendance: Fetching data...", { selectedEmployeeId, startDate, endDate });
         setLoading(true);
         try {
-            const url = `/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`;
-            console.log("Attendance: API Request URL:", url);
-            const response = await api.get(url);
-            console.log("Attendance: API Response:", response.data);
+            const response = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             const data = response.data.results || response.data;
             setLogs(data);
             calculateSummary(data);
