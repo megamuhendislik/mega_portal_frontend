@@ -186,11 +186,11 @@ const Dashboard = () => {
             subtitle = `${format(new Date(req.start_date), 'd MMM', { locale: tr })} - ${req.days} Gün`;
         } else if (req.type === 'OVERTIME') {
             Icon = Clock;
-            title = 'Fazla Mesai';
+            title = req.reason || 'Fazla Mesai';
             subtitle = `${format(new Date(req.date), 'd MMM', { locale: tr })} - ${req.duration_minutes} dk`;
         } else if (req.type === 'MEAL') {
             Icon = ChefHat;
-            title = 'Yemek Talebi';
+            title = req.description || 'Yemek Talebi';
             subtitle = format(new Date(req.date), 'd MMM', { locale: tr });
         } else if (req.type === 'ATTENDANCE_APPROVAL') {
             Icon = Clock;
