@@ -249,167 +249,156 @@ const Dashboard = () => {
                         </p>
                     </div>
                 </div>
-
-                <div className="hidden md:block">
-                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 active:scale-95">
-                        <CheckCircle2 size={20} />
-                        Hızlı Mesai Başlat
-                    </button>
-                </div>
             </div>
 
             {/* Daily Hero Summary */}
             <HeroDailySummary summary={todaySummary} loading={loadingSummaries} />
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Monthly Summary Section - Full Width */}
+            <div className="animate-fade-in-delayed">
+                <div className="glass-card p-6 relative overflow-hidden">
+                    {/* Decorative BG */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
 
-                {/* Left Column: Monthly Stats & Charts */}
-                <div className="lg:col-span-2 space-y-8 animate-fade-in-delayed">
-                    {/* Monthly Summary Section */}
-                    <div className="glass-card p-6 relative overflow-hidden">
-                        {/* Decorative BG */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                    <div className="flex items-center justify-between mb-6 relative">
+                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <PieChart className="text-indigo-500" size={24} />
+                            Aylık Özet
+                        </h2>
+                        <button className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1.5 rounded-lg">
+                            Detaylı Rapor
+                        </button>
+                    </div>
 
-                        <div className="flex items-center justify-between mb-6 relative">
-                            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <PieChart className="text-indigo-500" size={24} />
-                                Aylık Özet
-                            </h2>
-                            <button className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1.5 rounded-lg">
-                                Detaylı Rapor
-                            </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+                        {/* Total Work */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl w-fit mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                                <Briefcase size={20} />
+                            </div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Toplam Çalışma</p>
+                            <p className="text-2xl font-black text-slate-800 tracking-tight">{workHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
-                            {/* Total Work */}
-                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
-                                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl w-fit mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                                    <Briefcase size={20} />
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Toplam Çalışma</p>
-                                <p className="text-2xl font-black text-slate-800 tracking-tight">{workHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
+                        {/* Overtime */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all group">
+                            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl w-fit mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                                <Timer size={20} />
                             </div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fazla Mesai</p>
+                            <p className="text-2xl font-black text-slate-800 tracking-tight">{overtimeHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
+                        </div>
 
-                            {/* Overtime */}
-                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all group">
-                                <div className="p-3 bg-amber-100 text-amber-600 rounded-xl w-fit mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                                    <Timer size={20} />
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fazla Mesai</p>
-                                <p className="text-2xl font-black text-slate-800 tracking-tight">{overtimeHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
+                        {/* Leave Days */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all group">
+                            <div className="p-3 bg-purple-100 text-purple-600 rounded-xl w-fit mb-3 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
+                                <CalendarIcon size={20} />
                             </div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">İzin</p>
+                            <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.leaveDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
+                        </div>
 
-                            {/* Leave Days */}
-                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all group">
-                                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl w-fit mb-3 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                                    <CalendarIcon size={20} />
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">İzin</p>
-                                <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.leaveDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
+                        {/* Missing Days */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all group">
+                            <div className="p-3 bg-red-100 text-red-600 rounded-xl w-fit mb-3 group-hover:bg-red-500 group-hover:text-white transition-colors duration-300">
+                                <Activity size={20} />
                             </div>
-
-                            {/* Missing Days */}
-                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all group">
-                                <div className="p-3 bg-red-100 text-red-600 rounded-xl w-fit mb-3 group-hover:bg-red-500 group-hover:text-white transition-colors duration-300">
-                                    <Activity size={20} />
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Devamsızlık</p>
-                                <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.missingDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
-                            </div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Devamsızlık</p>
+                            <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.missingDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Right Column: Activity Feed & Events */}
-                <div className="space-y-8 animate-fade-in-delayed" style={{ animationDelay: '0.2s' }}>
+            {/* Bottom Grid: Activity Feed & Events */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in-delayed" style={{ animationDelay: '0.2s' }}>
 
-                    {/* Tabs / Recent Requests */}
-                    <div className="glass-card p-6 min-h-[400px]">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                                <FileText size={20} className="text-indigo-500" />
-                                Aktiviteler
-                            </h3>
-                        </div>
+                {/* Tabs / Recent Requests */}
+                <div className="glass-card p-6 min-h-[400px]">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <FileText size={20} className="text-indigo-500" />
+                            Aktiviteler
+                        </h3>
+                    </div>
 
-                        {/* Tabs */}
-                        <div className="flex items-center gap-6 border-b border-slate-100 pb-0 mb-4">
-                            <button
-                                onClick={() => setRequestTab('my_requests')}
-                                className={clsx(
-                                    "text-sm font-bold pb-3 transition-colors relative",
-                                    requestTab === 'my_requests' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
-                                )}>
-                                Taleplerim
-                                {requestTab === 'my_requests' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></div>}
-                            </button>
-                            <button
-                                onClick={() => setRequestTab('incoming')}
-                                className={clsx(
-                                    "text-sm font-bold pb-3 transition-colors relative",
-                                    requestTab === 'incoming' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
-                                )}>
-                                Gelen Talepler
-                                {requestTab === 'incoming' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></div>}
-                            </button>
-                        </div>
+                    {/* Tabs */}
+                    <div className="flex items-center gap-6 border-b border-slate-100 pb-0 mb-4">
+                        <button
+                            onClick={() => setRequestTab('my_requests')}
+                            className={clsx(
+                                "text-sm font-bold pb-3 transition-colors relative",
+                                requestTab === 'my_requests' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
+                            )}>
+                            Taleplerim
+                            {requestTab === 'my_requests' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></div>}
+                        </button>
+                        <button
+                            onClick={() => setRequestTab('incoming')}
+                            className={clsx(
+                                "text-sm font-bold pb-3 transition-colors relative",
+                                requestTab === 'incoming' ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
+                            )}>
+                            Gelen Talepler
+                            {requestTab === 'incoming' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></div>}
+                        </button>
+                    </div>
 
-                        <div className="space-y-2 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
-                            {loadingRequests ? (
-                                <div className="space-y-3 animate-pulse">
-                                    {[1, 2, 3].map(i => <div key={i} className="h-16 bg-slate-50 rounded-xl"></div>)}
-                                </div>
-                            ) : (
-                                <>
-                                    {requestTab === 'my_requests' ? (
-                                        myRequests.length > 0 ? (
-                                            myRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
-                                        ) : (
-                                            <div className="text-center py-12 text-slate-400 text-sm font-medium bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                                Henüz bir talebiniz yok.
-                                            </div>
-                                        )
+                    <div className="space-y-2 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+                        {loadingRequests ? (
+                            <div className="space-y-3 animate-pulse">
+                                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-slate-50 rounded-xl"></div>)}
+                            </div>
+                        ) : (
+                            <>
+                                {requestTab === 'my_requests' ? (
+                                    myRequests.length > 0 ? (
+                                        myRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
                                     ) : (
-                                        incomingRequests.length > 0 ? (
-                                            incomingRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
-                                        ) : (
-                                            <div className="text-center py-12 text-slate-400 text-sm font-medium bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                                Onay bekleyen talep yok.
-                                            </div>
-                                        )
-                                    )}
-                                </>
-                            )}
-                        </div>
+                                        <div className="text-center py-12 text-slate-400 text-sm font-medium bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                            Henüz bir talebiniz yok.
+                                        </div>
+                                    )
+                                ) : (
+                                    incomingRequests.length > 0 ? (
+                                        incomingRequests.map((req, idx) => <RequestItem key={idx} req={req} />)
+                                    ) : (
+                                        <div className="text-center py-12 text-slate-400 text-sm font-medium bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                            Onay bekleyen talep yok.
+                                        </div>
+                                    )
+                                )}
+                            </>
+                        )}
                     </div>
-
-                    {/* Upcoming Events */}
-                    <div className="glass-card p-0 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                                <CalendarIcon size={20} className="text-emerald-500" />
-                                Yaklaşan Etkinlikler
-                            </h3>
-                            <a href="/calendar" className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
-                                TAKVİM
-                            </a>
-                        </div>
-                        <div className="p-3">
-                            <UpcomingEventsCard
-                                events={calendarEvents}
-                                loading={loadingCalendar}
-                                upcomingStartStr={upcomingStartStr}
-                                upcomingEndStr={upcomingEndStr}
-                                embedded={true}
-                            />
-                        </div>
-                    </div>
-
                 </div>
+
+                {/* Upcoming Events */}
+                <div className="glass-card p-0 overflow-hidden h-full flex flex-col">
+                    <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                        <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <CalendarIcon size={20} className="text-emerald-500" />
+                            Yaklaşan Etkinlikler
+                        </h3>
+                        <a href="/calendar" className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                            TAKVİM
+                        </a>
+                    </div>
+                    <div className="p-3 flex-1 overflow-hidden flex flex-col">
+                        <UpcomingEventsCard
+                            events={calendarEvents}
+                            loading={loadingCalendar}
+                            upcomingStartStr={upcomingStartStr}
+                            upcomingEndStr={upcomingEndStr}
+                            embedded={true}
+                        />
+                    </div>
+                </div>
+
             </div>
         </div>
     );
 };
 
 export default Dashboard;
+```
