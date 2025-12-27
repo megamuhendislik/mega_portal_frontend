@@ -33,14 +33,15 @@ const HeroDailySummary = ({ summary, loading }) => {
     const isWorking = summary.is_working || false;
 
     return (
-        <div className="space-y-4">
+
+        <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 flex items-center gap-2">
                     Bugünün Durumu
                 </h2>
                 {isWorking && (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse border border-emerald-200 shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
                         Aktif Mesai
                     </div>
                 )}
@@ -49,94 +50,104 @@ const HeroDailySummary = ({ summary, loading }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* 1. Work Widget */}
-                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-blue-200 transition-colors">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                <div className="glass-card p-6 group hover:border-blue-200/60">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-bl-[100px] -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-110 opacity-80"></div>
 
                     <div className="relative z-10 flex flex-col h-full justify-between">
                         <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-3 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-500/30">
-                                    <Briefcase size={24} />
+                            <div className="flex items-center gap-4 mb-5">
+                                <div className="p-3.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
+                                    <Briefcase size={22} />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mesai</p>
-                                    <h3 className="text-lg font-bold text-slate-800">Çalışma Süresi</h3>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Performans</p>
+                                    <h3 className="text-lg font-bold text-slate-700">Çalışma Süresi</h3>
                                 </div>
                             </div>
 
-                            <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-4xl font-black text-slate-800 tracking-tight">
+                            <div className="flex items-baseline gap-1.5 mb-3">
+                                <span className="text-4xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor(totalWorkMinutes / 60)}
                                 </span>
-                                <span className="text-lg font-bold text-slate-500">s</span>
-                                <span className="text-4xl font-black text-slate-800 tracking-tight ml-2">
+                                <span className="text-base font-bold text-slate-400 uppercase">sa</span>
+                                <span className="text-4xl font-black text-slate-800 tracking-tighter ml-2">
                                     {totalWorkMinutes % 60}
                                 </span>
-                                <span className="text-lg font-bold text-slate-500">dk</span>
+                                <span className="text-base font-bold text-slate-400 uppercase">dk</span>
                             </div>
-                            <p className="text-sm font-medium text-slate-400">
+                            <p className="text-sm font-medium text-slate-400 bg-slate-50 inline-block px-3 py-1 rounded-lg border border-slate-100/50">
                                 Hedef: {Math.floor(workTarget / 60)}s {workTarget % 60}dk
                             </p>
                         </div>
 
-                        <div className="mt-6">
-                            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="mt-8">
+                            <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-100">
                                 <div
-                                    className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(59,130,246,0.4)] relative"
                                     style={{ width: `${workPercent}%` }}
-                                ></div>
+                                >
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/30"></div>
+                                </div>
                             </div>
-                            <div className="flex justify-between mt-2 text-xs font-bold">
-                                <span className="text-blue-600">%{workPercent} Tamamlandı</span>
+                            <div className="flex justify-between mt-3 text-xs font-bold tracking-wide">
+                                <span className="text-blue-600 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    %{workPercent} Tamamlandı
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* 2. Break Widget */}
-                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-amber-200 transition-colors">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                <div className="glass-card p-6 group hover:border-amber-200/60">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-50 to-orange-50 rounded-bl-[100px] -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-110 opacity-80"></div>
 
                     <div className="relative z-10 flex flex-col h-full justify-between">
                         <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/30">
-                                    <Coffee size={24} />
+                            <div className="flex items-center gap-4 mb-5">
+                                <div className="p-3.5 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
+                                    <Coffee size={22} />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mola</p>
-                                    <h3 className="text-lg font-bold text-slate-800">Kullanılan Mola</h3>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Dinlenme</p>
+                                    <h3 className="text-lg font-bold text-slate-700">Mola Kullanımı</h3>
                                 </div>
                             </div>
 
-                            <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-4xl font-black text-slate-800 tracking-tight">
+                            <div className="flex items-baseline gap-1.5 mb-3">
+                                <span className="text-4xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor(usedBreak / 60)}
                                 </span>
-                                <span className="text-lg font-bold text-slate-500">s</span>
-                                <span className="text-4xl font-black text-slate-800 tracking-tight ml-2">
+                                <span className="text-base font-bold text-slate-400 uppercase">sa</span>
+                                <span className="text-4xl font-black text-slate-800 tracking-tighter ml-2">
                                     {usedBreak % 60}
                                 </span>
-                                <span className="text-lg font-bold text-slate-500">dk</span>
+                                <span className="text-base font-bold text-slate-400 uppercase">dk</span>
                             </div>
-                            <p className="text-sm font-medium text-slate-400">
+                            <p className="text-sm font-medium text-slate-400 bg-slate-50 inline-block px-3 py-1 rounded-lg border border-slate-100/50">
                                 Hak: {Math.floor(totalBreakAllowance / 60)}s {totalBreakAllowance % 60}dk
                             </p>
                         </div>
 
-                        <div className="mt-6">
-                            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="mt-8">
+                            <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-100">
                                 <div
                                     className={clsx(
-                                        "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
-                                        usedBreak > totalBreakAllowance ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" : "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                        "h-full rounded-full transition-all duration-1000 ease-out shadow-sm relative",
+                                        usedBreak > totalBreakAllowance
+                                            ? "bg-gradient-to-r from-red-500 to-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                                            : "bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
                                     )}
                                     style={{ width: `${Math.min(100, Math.max(5, breakPercent))}%` }}
-                                ></div>
+                                >
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/30"></div>
+                                </div>
                             </div>
-                            <div className="flex justify-between mt-2 text-xs font-bold">
-                                <span className={usedBreak > totalBreakAllowance ? "text-red-500" : "text-amber-600"}>
-                                    {usedBreak > totalBreakAllowance ? "Süre Aşıldı" : "Limit Dahilinde"}
+                            <div className="flex justify-between mt-3 text-xs font-bold tracking-wide">
+                                <span className={clsx("flex items-center gap-1", usedBreak > totalBreakAllowance ? "text-red-500" : "text-amber-600")}>
+                                    <span className={clsx("w-1.5 h-1.5 rounded-full", usedBreak > totalBreakAllowance ? "bg-red-500" : "bg-amber-500")}></span>
+                                    {usedBreak > totalBreakAllowance ? "Limit Aşıldı" : "Limit Dahilinde"}
                                 </span>
                             </div>
                         </div>
@@ -144,42 +155,42 @@ const HeroDailySummary = ({ summary, loading }) => {
                 </div>
 
                 {/* 3. Overtime Widget */}
-                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-emerald-200 transition-colors">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                <div className="glass-card p-6 group hover:border-emerald-200/60">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-bl-[100px] -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-110 opacity-80"></div>
 
                     <div className="relative z-10 flex flex-col h-full justify-between">
                         <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-500/30">
-                                    <Timer size={24} />
+                            <div className="flex items-center gap-4 mb-5">
+                                <div className="p-3.5 bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
+                                    <Timer size={22} />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ekstra</p>
-                                    <h3 className="text-lg font-bold text-slate-800">Fazla Mesai</h3>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Ekstra</p>
+                                    <h3 className="text-lg font-bold text-slate-700">Fazla Mesai</h3>
                                 </div>
                             </div>
 
-                            <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-4xl font-black text-slate-800 tracking-tight">
+                            <div className="flex items-baseline gap-1.5 mb-3">
+                                <span className="text-4xl font-black text-slate-800 tracking-tighter">
                                     {overtime}
                                 </span>
-                                <span className="text-lg font-bold text-slate-500">dk</span>
+                                <span className="text-base font-bold text-slate-400 uppercase">dk</span>
                             </div>
-                            <p className="text-sm font-medium text-slate-400">
-                                Onay bekleyen veya onaylanmış
+                            <p className="text-sm font-medium text-slate-400/80 leading-relaxed">
+                                Onaylanmış veya bekleyen ek çalışma süresi
                             </p>
                         </div>
 
-                        <div className="mt-6">
+                        <div className="mt-8">
                             {overtime > 0 ? (
-                                <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
+                                <div className="flex items-center gap-2.5 p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-100/50 backdrop-blur-sm">
                                     <CheckCircle2 size={16} className="text-emerald-600" />
-                                    <span className="text-xs font-bold text-emerald-700">Mesai Tespit Edildi</span>
+                                    <span className="text-xs font-bold text-emerald-700 tracking-wide">Mesai Tespit Edildi</span>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 opacity-60">
+                                <div className="flex items-center gap-2.5 p-2.5 bg-slate-50/80 rounded-xl border border-slate-100/50 backdrop-blur-sm opacity-70">
                                     <Clock size={16} className="text-slate-400" />
-                                    <span className="text-xs font-bold text-slate-500">Ek mesai yok</span>
+                                    <span className="text-xs font-bold text-slate-500 tracking-wide">Ek mesai kaydı yok</span>
                                 </div>
                             )}
                         </div>
@@ -188,6 +199,7 @@ const HeroDailySummary = ({ summary, loading }) => {
 
             </div>
         </div>
+    );
     );
 };
 

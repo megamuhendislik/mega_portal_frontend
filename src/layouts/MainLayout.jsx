@@ -121,7 +121,7 @@ const MainLayout = () => {
     });
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+        <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden">
             {/* Overtime Modal */}
             <OvertimeRequestModal
                 isOpen={isOvertimeModalOpen}
@@ -135,49 +135,47 @@ const MainLayout = () => {
             {/* Mobile Overlay */}
             {isMobile && isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity duration-300"
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 transition-opacity duration-300"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Premium Sidebar */}
             <aside
                 className={clsx(
-                    "fixed md:relative z-40 h-full transition-all duration-300 ease-in-out flex flex-col shadow-2xl overflow-hidden",
-                    // Base Dark Theme to match Employee Wizard
-                    "bg-slate-900 text-white border-r border-white/5",
-                    isSidebarOpen ? "w-72 translate-x-0" : (isMobile ? "-translate-x-full w-72" : "w-20 translate-x-0")
+                    "fixed md:relative z-40 h-full transition-all duration-400 cubic-bezier(0.16, 1, 0.3, 1) flex flex-col shadow-2xl overflow-hidden",
+                    "bg-[#0F172A] border-r border-white/5",
+                    isSidebarOpen ? "w-[280px] translate-x-0" : (isMobile ? "-translate-x-full w-[280px]" : "w-[88px] translate-x-0")
                 )}
             >
-                {/* Decorative Background Elements (MATCHING WIZARD DESIGN) */}
-                <div className="absolute top-0 left-0 w-full h-full bg-slate-900 z-0 pointer-events-none">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50"></div>
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-50"></div>
+                {/* Dynamic Background */}
+                <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
                 </div>
-                {/* Logo Area */}
-                <div className="p-6 flex items-center justify-between h-24 border-b border-white/5 relative z-10 overflow-hidden">
-                    {/* Abstract Background Decoration */}
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-500/10 to-transparent pointer-events-none" />
 
-                    {isSidebarOpen || isMobile ? (
-                        <div className="flex items-center space-x-3 relative z-10 animate-fade-in">
-                            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                                <img src="/logo.png" alt="Logo" className="h-6 w-6 object-contain brightness-0 invert" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-bold text-lg tracking-wide text-white">
+                {/* Logo Section */}
+                <div className="p-6 h-24 flex items-center justify-between border-b border-white/5 relative z-10">
+                    <div className={clsx("flex items-center gap-4 transition-all duration-300", !isSidebarOpen && !isMobile && "justify-center w-full")}>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/10 shrink-0">
+                            {isSidebarOpen || isMobile ? (
+                                <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain brightness-0 invert" />
+                            ) : (
+                                <span className="text-white font-bold text-lg">M</span>
+                            )}
+                        </div>
+
+                        {(isSidebarOpen || isMobile) && (
+                            <div className="flex flex-col animate-fade-in">
+                                <span className="font-bold text-lg tracking-tight text-white leading-tight">
                                     MEGA PORTAL
                                 </span>
-                                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                                <span className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
                                     Yönetim Paneli
                                 </span>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/20">
-                            <span className="text-white font-bold text-lg">M</span>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {isMobile && (
                         <button onClick={() => setIsSidebarOpen(false)} className="text-slate-400 hover:text-white transition-colors">
@@ -186,8 +184,8 @@ const MainLayout = () => {
                     )}
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent relative z-10">
+                {/* Navigation Links */}
+                <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent relative z-10">
                     {filteredNavItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
@@ -195,133 +193,144 @@ const MainLayout = () => {
                                 key={item.path}
                                 to={item.path}
                                 className={clsx(
-                                    "group flex items-center px-3 py-3 rounded-xl transition-all duration-300 relative overflow-hidden",
+                                    "group flex items-center px-3.5 py-3.5 rounded-xl transition-all duration-300 relative overflow-hidden",
                                     isActive
-                                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/10"
+                                        ? "bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white shadow-lg shadow-blue-900/20 ring-1 ring-white/10"
                                         : "text-slate-400 hover:bg-white/5 hover:text-white"
                                 )}
                             >
                                 <item.icon
-                                    size={20}
+                                    size={22}
                                     className={clsx(
-                                        "transition-transform duration-300",
-                                        isActive ? "text-white" : "text-slate-500 group-hover:text-blue-400"
+                                        "transition-transform duration-300 shrink-0",
+                                        isActive ? "text-white scale-110" : "text-slate-500 group-hover:text-blue-400 group-hover:scale-105"
                                     )}
                                 />
 
                                 {(isSidebarOpen || isMobile) && (
-                                    <span className="ml-3 font-medium text-sm tracking-wide transition-colors">
+                                    <span className={clsx(
+                                        "ml-3.5 font-medium text-[15px] tracking-wide transition-colors truncate",
+                                        isActive ? "text-white" : "text-slate-400 group-hover:text-white"
+                                    )}>
                                         {item.label}
                                     </span>
                                 )}
 
-                                {(isSidebarOpen || isMobile) && isActive && (
-                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                {isActive && (isSidebarOpen || isMobile) && (
+                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] animate-pulse" />
                                 )}
                             </Link>
                         );
                     })}
                 </nav>
 
-                {/* Footer / Logout */}
-                <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-sm relative z-10">
+                {/* User & Toggle Section */}
+                <div className="p-4 border-t border-white/5 bg-slate-900/50 backdrop-blur-md relative z-10">
                     <button
                         onClick={logout}
                         className={clsx(
-                            "flex items-center w-full p-3 rounded-xl transition-all duration-300 group border border-transparent",
+                            "flex items-center w-full p-3.5 rounded-xl transition-all duration-300 group border border-transparent",
                             "text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
                         )}
                     >
-                        <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-                        {(isSidebarOpen || isMobile) && <span className="ml-3 font-medium text-sm">Çıkış Yap</span>}
+                        <LogOut size={20} className="group-hover:-translate-x-1 transition-transform shrink-0" />
+                        {(isSidebarOpen || isMobile) && (
+                            <span className="ml-3 font-medium text-sm">Oturumu Kapat</span>
+                        )}
                     </button>
 
                     {!isMobile && (
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="mt-3 w-full flex items-center justify-center p-2 text-slate-600 hover:text-slate-300 transition-colors"
+                            className="mt-2 w-full flex items-center justify-center p-2 text-slate-500 hover:text-slate-300 transition-colors"
                         >
                             {isSidebarOpen ? (
                                 <div className="flex items-center text-[10px] uppercase tracking-widest gap-2 opacity-50 hover:opacity-100">
                                     <ChevronRight className="rotate-180" size={12} />
-                                    <span>Daralt</span>
+                                    <span>Menüyü Daralt</span>
                                 </div>
-                            ) : <Menu size={18} />}
+                            ) : <Menu size={20} />}
                         </button>
                     )}
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden relative w-full">
-                {/* Header */}
-                <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 h-20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10 transition-all duration-300">
+            <div className="flex-1 flex flex-col overflow-hidden relative w-full bg-[#F8FAFC]">
+                {/* Modern Header */}
+                <header className="h-20 px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 transition-all duration-300 backdrop-blur-xl bg-white/80 border-b border-slate-200/50 supports-[backdrop-filter]:bg-white/60">
                     <div className="flex items-center gap-4">
                         {isMobile && (
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
-                                className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                className="p-2.5 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors active:scale-95"
                             >
                                 <Menu size={24} />
                             </button>
                         )}
-                        <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight truncate">
+                        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
                             {navItems.find(i => i.path === location.pathname)?.label || 'Mega Portal'}
                         </h1>
                     </div>
 
-                    <div className="flex items-center space-x-3 md:space-x-6">
-                        {/* Search Bar (Desktop) */}
-                        <div className="hidden md:flex items-center bg-slate-100/80 rounded-full px-4 py-2 border border-transparent focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                            <Search size={18} className="text-slate-400" />
+                    <div className="flex items-center gap-3 md:gap-6">
+                        {/* Search (Desktop) */}
+                        <div className="hidden md:flex items-center bg-slate-100/50 hover:bg-white border border-slate-200/60 focus-within:border-blue-400/50 rounded-full px-4 py-2.5 w-64 transition-all duration-300 focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:shadow-md">
+                            <Search size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Ara..."
-                                className="bg-transparent border-none focus:ring-0 text-sm ml-2 w-48 text-slate-700 placeholder-slate-400"
+                                placeholder="Arama yap..."
+                                className="bg-transparent border-none focus:ring-0 text-sm ml-2 w-full text-slate-700 placeholder-slate-400 outline-none"
                             />
                         </div>
 
-                        {/* Shift Toggle Button */}
+                        {/* Shift Button */}
                         <button
                             onClick={handleShiftToggle}
                             disabled={shiftLoading}
                             className={clsx(
-                                "flex items-center px-3 py-1.5 md:px-4 md:py-2 rounded-full font-medium transition-all shadow-sm mx-2 md:mx-4 text-xs md:text-sm",
+                                "flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 shadow-sm border transform hover:scale-105 active:scale-95",
                                 isShiftActive
-                                    ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-                                    : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200",
-                                shiftLoading && "opacity-70 cursor-not-allowed"
+                                    ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 hover:border-rose-200 hover:shadow-rose-100"
+                                    : "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 hover:shadow-emerald-100",
+                                shiftLoading && "opacity-70 cursor-wait"
                             )}
                         >
-                            <Clock size={18} className="mr-2" />
-                            {shiftLoading ? '...' : (isShiftActive ? 'Bitir' : 'Başlat')}
+                            <Clock size={18} className={clsx(shiftLoading && "animate-spin")} />
+                            {shiftLoading ? 'İşleniyor...' : (isShiftActive ? 'Mesaiyi Bitir' : 'Mesai Başlat')}
                         </button>
 
-                        {/* Notifications */}
                         <NotificationBell />
 
-                        {/* User Profile */}
-                        <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
+                        <div className="h-8 w-px bg-slate-200 hidden md:block" />
 
-                        <Link to="/profile" className="flex items-center space-x-3 group cursor-pointer">
+                        {/* Profile Dropdown Trigger */}
+                        <Link to="/profile" className="flex items-center gap-3 pl-2 group">
                             <div className="text-right hidden md:block">
-                                <div className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                                <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
                                     {user?.first_name ? `${user.first_name} ${user.last_name}` : (user?.username || 'Kullanıcı')}
                                 </div>
-                                <div className="text-xs text-slate-500 font-medium">{user?.job_position?.name || 'Personel'}</div>
-                            </div>
-                            <div className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
-                                <div className="h-full w-full rounded-full bg-white flex items-center justify-center text-blue-600 font-bold text-lg">
-                                    {user?.first_name?.[0] || user?.username?.[0]?.toUpperCase() || 'U'}
+                                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                    {user?.job_position?.name || 'Personel'}
                                 </div>
+                            </div>
+                            <div className="relative">
+                                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all duration-300">
+                                    <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-indigo-600 font-black text-lg">
+                                            {user?.first_name?.[0] || user?.username?.[0]?.toUpperCase() || 'U'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
                             </div>
                         </Link>
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 scroll-smooth">
-                    <div className="w-full h-full flex flex-col animate-fade-in">
+                {/* Content */}
+                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                    <div className="max-w-[1600px] mx-auto animate-fade-in w-full pb-10">
                         <Outlet />
                     </div>
                 </main>
