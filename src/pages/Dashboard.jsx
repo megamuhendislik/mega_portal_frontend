@@ -221,7 +221,7 @@ const Dashboard = () => {
 
     // Calculate Summary Values
     const workHours = monthlySummary ? (monthlySummary.total_minutes / 60).toFixed(1) : '0.0';
-    const overtimeHours = monthlySummary ? (monthlySummary.overtime_minutes / 60).toFixed(1) : '0.0';
+    const overtimeHours = monthlySummary ? (monthlySummary.total_overtime / 60).toFixed(1) : '0.0';
     const targetHours = monthlySummary ? (monthlySummary.monthly_required / 60).toFixed(1) : '0.0';
     const netBalance = monthlySummary ? (monthlySummary.monthly_net_balance / 60).toFixed(1) : '0.0';
 
