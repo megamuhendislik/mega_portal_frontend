@@ -243,13 +243,15 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="bg-white p-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3 px-4 backdrop-blur-sm bg-white/80">
+                    <div className="glass-card p-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3 px-4 backdrop-blur-sm bg-white/80">
                         <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                             <Clock size={20} />
                         </div>
                         <div>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Son Giriş</p>
-                            <p className="text-sm font-bold text-slate-700">09:00</p>
+                            <p className="text-sm font-bold text-slate-700">
+                                {user?.last_login ? format(new Date(user.last_login), 'HH:mm', { locale: tr }) : '09:00'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -263,7 +265,8 @@ const Dashboard = () => {
 
                 {/* Left Column: Monthly Stats & Charts */}
                 <div className="lg:col-span-2 space-y-8 animate-fade-in-delayed">
-                    <section>
+                    {/* Monthly Summary Section */}
+                    <div className="glass-card p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <PieChart className="text-indigo-500" size={24} />
@@ -276,17 +279,17 @@ const Dashboard = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Total Work */}
-                            <div className="glass-card p-5 group hover:border-blue-300 transition-all">
-                                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl w-fit mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shadow-sm">
-                                    <Clock size={20} />
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all group">
+                                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
+                                    <Briefcase size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Toplam Çalışma</p>
                                 <p className="text-2xl font-black text-slate-800 tracking-tight">{workHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
                             </div>
 
                             {/* Overtime */}
-                            <div className="glass-card p-5 group hover:border-amber-300 transition-all">
-                                <div className="p-3 bg-amber-50 text-amber-600 rounded-xl w-fit mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-amber-200 transition-all group">
+                                <div className="p-3 bg-amber-100 text-amber-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
                                     <Timer size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fazla Mesai</p>
@@ -294,8 +297,8 @@ const Dashboard = () => {
                             </div>
 
                             {/* Leave Days */}
-                            <div className="glass-card p-5 group hover:border-purple-300 transition-all">
-                                <div className="p-3 bg-purple-50 text-purple-600 rounded-xl w-fit mb-3 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-purple-200 transition-all group">
+                                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
                                     <CalendarIcon size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">İzin</p>
@@ -303,15 +306,15 @@ const Dashboard = () => {
                             </div>
 
                             {/* Missing Days */}
-                            <div className="glass-card p-5 group hover:border-red-300 transition-all">
-                                <div className="p-3 bg-red-50 text-red-600 rounded-xl w-fit mb-3 group-hover:bg-red-500 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-red-200 transition-all group">
+                                <div className="p-3 bg-red-100 text-red-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
                                     <Activity size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Devamsızlık</p>
                                 <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.missingDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
                             </div>
                         </div>
-                    </section>
+                    </div>
                 </div>
 
                 {/* Right Column: Activity Feed & Events */}
@@ -379,18 +382,22 @@ const Dashboard = () => {
 
                     {/* Upcoming Events */}
                     <div className="glass-card p-0 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100 bg-slate-50/30">
+                        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                             <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                                 <CalendarIcon size={20} className="text-emerald-500" />
                                 Yaklaşan Etkinlikler
                             </h3>
+                            <a href="/calendar" className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                                TAKVİM
+                            </a>
                         </div>
-                        <div className="p-5">
+                        <div className="p-3">
                             <UpcomingEventsCard
                                 events={calendarEvents}
                                 loading={loadingCalendar}
                                 upcomingStartStr={upcomingStartStr}
                                 upcomingEndStr={upcomingEndStr}
+                                embedded={true}
                             />
                         </div>
                     </div>
