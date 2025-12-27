@@ -229,7 +229,7 @@ const Dashboard = () => {
         <div className="max-w-[1600px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
 
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4 animate-fade-in mb-6">
                 <div>
                     <h1 className="text-4xl font-black tracking-tight text-slate-800 leading-tight">
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 block mb-1">
@@ -237,23 +237,24 @@ const Dashboard = () => {
                         </span>
                         {user?.first_name || 'Kullanıcı'}
                     </h1>
-                    <p className="text-slate-500 font-medium text-lg mt-1">
-                        Bugün {format(new Date(), 'd MMMM EEEE', { locale: tr })}
-                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                        <p className="text-slate-500 font-medium text-lg flex items-center gap-2">
+                            <CalendarIcon size={18} className="text-slate-400" />
+                            {format(new Date(), 'd MMMM EEEE', { locale: tr })}
+                        </p>
+                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <p className="text-slate-400 font-medium text-sm flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full">
+                            <Clock size={14} />
+                            Son Giriş: {user?.last_login ? format(new Date(user.last_login), 'HH:mm', { locale: tr }) : '09:00'}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="glass-card p-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3 px-4 backdrop-blur-sm bg-white/80">
-                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                            <Clock size={20} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Son Giriş</p>
-                            <p className="text-sm font-bold text-slate-700">
-                                {user?.last_login ? format(new Date(user.last_login), 'HH:mm', { locale: tr }) : '09:00'}
-                            </p>
-                        </div>
-                    </div>
+                <div className="hidden md:block">
+                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 active:scale-95">
+                        <CheckCircle2 size={20} />
+                        Hızlı Mesai Başlat
+                    </button>
                 </div>
             </div>
 
@@ -266,8 +267,11 @@ const Dashboard = () => {
                 {/* Left Column: Monthly Stats & Charts */}
                 <div className="lg:col-span-2 space-y-8 animate-fade-in-delayed">
                     {/* Monthly Summary Section */}
-                    <div className="glass-card p-6">
-                        <div className="flex items-center justify-between mb-6">
+                    <div className="glass-card p-6 relative overflow-hidden">
+                        {/* Decorative BG */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+
+                        <div className="flex items-center justify-between mb-6 relative">
                             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <PieChart className="text-indigo-500" size={24} />
                                 Aylık Özet
@@ -277,10 +281,10 @@ const Dashboard = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
                             {/* Total Work */}
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all group">
-                                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
+                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl w-fit mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
                                     <Briefcase size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Toplam Çalışma</p>
@@ -288,8 +292,8 @@ const Dashboard = () => {
                             </div>
 
                             {/* Overtime */}
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-amber-200 transition-all group">
-                                <div className="p-3 bg-amber-100 text-amber-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
+                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all group">
+                                <div className="p-3 bg-amber-100 text-amber-600 rounded-xl w-fit mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
                                     <Timer size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fazla Mesai</p>
@@ -297,8 +301,8 @@ const Dashboard = () => {
                             </div>
 
                             {/* Leave Days */}
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-purple-200 transition-all group">
-                                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
+                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all group">
+                                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl w-fit mb-3 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
                                     <CalendarIcon size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">İzin</p>
@@ -306,8 +310,8 @@ const Dashboard = () => {
                             </div>
 
                             {/* Missing Days */}
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-red-200 transition-all group">
-                                <div className="p-3 bg-red-100 text-red-600 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-300">
+                            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all group">
+                                <div className="p-3 bg-red-100 text-red-600 rounded-xl w-fit mb-3 group-hover:bg-red-500 group-hover:text-white transition-colors duration-300">
                                     <Activity size={20} />
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Devamsızlık</p>
