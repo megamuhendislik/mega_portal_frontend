@@ -232,7 +232,7 @@ const Dashboard = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight">Ana Sayfa</h1>
-                    <p className="text-slate-500 font-medium mt-1">Hoş Geldiniz, {user?.first_name || 'Kullanıcı'} 👋</p>
+                    <p className="text-slate-500 font-medium mt-1">Hoş Geldiniz, {user?.first_name || 'Kullanıcı'}</p>
                 </div>
 
                 <div className="flex items-center gap-3">

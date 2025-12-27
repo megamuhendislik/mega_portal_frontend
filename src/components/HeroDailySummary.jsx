@@ -36,7 +36,6 @@ const HeroDailySummary = ({ summary, loading }) => {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <Zap className="text-amber-500 fill-amber-500" size={24} />
                     Bugünün Durumu
                 </h2>
                 {isWorking && (
