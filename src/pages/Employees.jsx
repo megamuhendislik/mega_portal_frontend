@@ -34,7 +34,7 @@ const INITIAL_FORM_STATE = {
     card_uid: '',
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
-    work_type: 'FULL_TIME',
+
     hired_date: new Date().toISOString().split('T')[0],
 
     // Schedule

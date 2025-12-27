@@ -200,7 +200,7 @@ const HeroDailySummary = ({ summary, loading }) => {
             </div>
         </div>
     );
-    );
+
 };
 
 export default HeroDailySummary;
