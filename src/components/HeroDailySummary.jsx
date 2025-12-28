@@ -17,8 +17,8 @@ const HeroDailySummary = ({ summary, loading }) => {
 
     // Correct Backend Field Mapping
     const totalWorkMinutes = summary.total_worked || 0;
-    const workTarget = summary.daily_expected || 480; // Default 8h if missing
-    const workPercent = Math.min(100, Math.round((totalWorkMinutes / workTarget) * 100));
+    const workTarget = (summary.daily_expected !== undefined && summary.daily_expected !== null) ? summary.daily_expected : 480;
+    const workPercent = workTarget > 0 ? Math.min(100, Math.round((totalWorkMinutes / workTarget) * 100)) : 0;
 
     const usedBreak = summary.break_used || 0;
     const breakTarget = 60; // Standard 1 hour, or calculate if needed
