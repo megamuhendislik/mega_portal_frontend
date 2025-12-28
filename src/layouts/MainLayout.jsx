@@ -16,7 +16,9 @@ import {
     Clock,
     Calendar,
     CalendarRange,
-    Flag
+    CalendarRange,
+    Flag,
+    Shield
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -111,11 +113,16 @@ const MainLayout = () => {
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'VIEW_SECTION_WORK_SCHEDULES' },
         { path: '/requests', label: 'Talepler', icon: FileText, permission: 'VIEW_SECTION_REQUESTS' },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'VIEW_SECTION_REPORTS' },
+        { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: null, adminOnly: true },
     ];
 
     const filteredNavItems = navItems.filter(item => {
         if (!user) return false;
         if (user.user?.is_superuser) return true;
+
+        // Hide Admin only items from non-superusers (unless they have explicit permission, but Health Check is critical)
+        if (item.adminOnly) return false;
+
         if (!item.permission) return true;
         return user.all_permissions?.includes(item.permission);
     });

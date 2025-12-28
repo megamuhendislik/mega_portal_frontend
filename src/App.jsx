@@ -16,6 +16,7 @@ import WorkSchedules from './pages/WorkSchedules';
 import PublicHolidays from './pages/PublicHolidays';
 import AttendanceTracking from './pages/AttendanceTracking';
 import Reports from './pages/Reports';
+import SystemHealth from './pages/admin/SystemHealth';
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -71,6 +72,7 @@ function App() {
 
             <Route path="requests" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REQUESTS"><Requests /></ProtectedRoute>} />
             <Route path="reports" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REPORTS"><Reports /></ProtectedRoute>} />
+            <Route path="admin/system-health" element={<ProtectedRoute><SystemHealth /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>
