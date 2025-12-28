@@ -96,7 +96,7 @@ const SystemHealth = () => {
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white/5 border border-white/10 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                            <Shield size={20} className="text-brand-primary" />
+                            <Shield size={20} className="text-blue-500" />
                             Kontrol Paneli
                         </h3>
 
@@ -129,7 +129,7 @@ const SystemHealth = () => {
                             className={`w-full mt-6 py-3 px-4 rounded-xl font-medium flex items-center justify-center gap-2 transition-all
                                 ${loading
                                     ? 'bg-white/5 text-gray-400 cursor-not-allowed'
-                                    : 'bg-brand-primary text-white hover:bg-brand-primary/90 hover:scale-[1.02]'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02]'
                                 }
                             `}
                         >
