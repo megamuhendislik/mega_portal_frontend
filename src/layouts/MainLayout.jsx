@@ -16,7 +16,6 @@ import {
     Clock,
     Calendar,
     CalendarRange,
-    CalendarRange,
     Flag,
     Shield
 } from 'lucide-react';
