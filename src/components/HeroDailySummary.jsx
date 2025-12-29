@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Coffee, Briefcase, Zap, Timer, CheckCircle2 } from 'lucide-react';
+import { Clock, Coffee, Briefcase, Timer, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 
 const HeroDailySummary = ({ summary, loading }) => {
