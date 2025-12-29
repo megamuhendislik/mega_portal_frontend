@@ -71,13 +71,13 @@ const AdminConsole = () => {
 
     // Components
     const StatCard = ({ label, value, icon: Icon, color }) => (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 relative overflow-hidden group hover:border-white/20 transition-all">
+        <div className="bg-white border border-slate-200 rounded-xl p-6 relative overflow-hidden group hover:border-blue-300 hover:shadow-md transition-all">
             <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}>
                 <Icon size={64} />
             </div>
             <div className="relative z-10">
-                <p className="text-gray-400 text-sm font-medium uppercase tracking-wider">{label}</p>
-                <h3 className="text-3xl font-bold text-white mt-2">{value ?? '-'}</h3>
+                <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">{label}</p>
+                <h3 className="text-3xl font-bold text-slate-900 mt-2">{value ?? '-'}</h3>
             </div>
         </div>
     );
@@ -119,15 +119,15 @@ const AdminConsole = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <Shield className="text-blue-500" size={32} />
+                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                        <Shield className="text-blue-600" size={32} />
                         Sistem Yönetim Konsolu
                     </h1>
-                    <p className="text-gray-400 mt-1">Sistem gözetimi, test ve veri inceleme merkezi</p>
+                    <p className="text-slate-500 mt-1">Sistem gözetimi, test ve veri inceleme merkezi</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-slate-900 p-1 rounded-xl flex items-center gap-1 border border-white/10">
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
                     {[
                         { id: 'overview', label: 'Genel Bakış', icon: LayoutDashboard },
                         { id: 'diagnostics', label: 'Tanı Testleri', icon: Activity },
@@ -138,8 +138,8 @@ const AdminConsole = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                                 }`}
                         >
                             <tab.icon size={16} />
@@ -210,8 +210,8 @@ const AdminConsole = () => {
                             </div>
                         </div>
                         <div className="lg:col-span-2">
-                            <div className="bg-[#0f1115] border border-white/10 rounded-xl p-6 h-full flex flex-col">
-                                <h3 className="text-gray-400 font-mono text-sm mb-4 flex items-center gap-2">
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 h-full flex flex-col">
+                                <h3 className="text-slate-400 font-mono text-sm mb-4 flex items-center gap-2">
                                     <Terminal size={14} /> SYS_DIAGNOSTIC_LOG
                                 </h3>
                                 <div className="flex-1 overflow-y-auto font-mono text-sm space-y-2 max-h-[500px] pr-2 scrollbar-thin scrollbar-thumb-gray-700">
@@ -234,12 +234,12 @@ const AdminConsole = () => {
                 {/* INSPECTOR TAB */}
                 {activeTab === 'inspector' && (
                     <div className="space-y-6 animate-fade-in">
-                        <div className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-xl border border-white/10">
-                            <span className="text-gray-400 font-medium">Model Seçin:</span>
+                        <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <span className="text-slate-600 font-medium">Model Seçin:</span>
                             <select
                                 value={inspectModel}
                                 onChange={(e) => setInspectModel(e.target.value)}
-                                className="bg-black/20 text-white border border-white/10 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="bg-slate-50 text-slate-900 border border-slate-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
                                 <option value="employee">Personel Listesi (Employees)</option>
                                 <option value="attendance">Mesai Kayıtları (Attendances)</option>
