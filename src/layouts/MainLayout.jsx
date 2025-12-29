@@ -165,7 +165,7 @@ const MainLayout = () => {
                     <div className={clsx("flex items-center gap-4 transition-all duration-300", !isSidebarOpen && !isMobile && "justify-center w-full")}>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/10 shrink-0">
                             {isSidebarOpen || isMobile ? (
-                                <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain brightness-0 invert" />
+                                <img src="/mega_logo.png" alt="Mega Portal" className="w-8 h-8 object-contain" />
                             ) : (
                                 <span className="text-white font-bold text-lg">M</span>
                             )}
