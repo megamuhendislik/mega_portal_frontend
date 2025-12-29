@@ -27,19 +27,32 @@ const INITIAL_FORM_STATE = {
     // Step 2: Corporate (Matrix)
     department: '', // Hierarchy Dept (Auto-filled)
     job_position: '',
-    reports_to: '', // Manager ID
+    secondary_job_positions: [], // List of IDs
+    reports_to: '', // Manager ID (Primary)
+    cross_manager_ids: [], // List of IDs (Cross Managers)
     functional_department: '', // Attribute (stored in secondary_departments)
+    secondary_departments: [], // Additional depts
 
     employee_code: '',
     card_uid: '',
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
+    remote_work_days: [], // ['MON', 'WED']
 
     hired_date: new Date().toISOString().split('T')[0],
 
     // Schedule
     work_schedule: '', // ID of selected schedule or '' for Custom
     weekly_schedule: {}, // Custom JSON content
+
+    // Overrides (Defaults verified)
+    shift_start: '08:00',
+    shift_end: '18:00',
+    lunch_start: '12:30',
+    lunch_end: '13:30',
+    daily_break_allowance: 30,
+    attendance_tolerance_minutes: 30,
+    attendance_rules: '', // Text description
 
     // Step 3: Contact
     phone: '',
@@ -247,6 +260,56 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     />
                 </div>
 
+                {/* 5. SECONDARY POSITIONS (Multi) */}
+                <div className="md:col-span-2">
+                    <div className="group">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Ek Pozisyonlar (Opsiyonel)</label>
+                        <div className="relative">
+                            <Briefcase className="absolute left-3 top-3 text-slate-400" size={18} />
+                            <select
+                                multiple
+                                value={formData.secondary_job_positions}
+                                onChange={e => {
+                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
+                                    handleChange('secondary_job_positions', selected);
+                                }}
+                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
+                            >
+                                {jobPositions.map(pos => (
+                                    <option key={pos.id} value={pos.id}>{pos.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-slate-400 mt-1 ml-1">Birden fazla seçim için CTRL tuşuna basılı tutunuz.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 6. CROSS MANAGERS (Multi) */}
+                <div className="md:col-span-2">
+                    <div className="group">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Çapraz Yöneticiler (Opsiyonel)</label>
+                        <div className="relative">
+                            <UserPlus className="absolute left-3 top-3 text-slate-400" size={18} />
+                            <select
+                                multiple
+                                value={formData.cross_manager_ids}
+                                onChange={e => {
+                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
+                                    handleChange('cross_manager_ids', selected);
+                                }}
+                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
+                            >
+                                {potentialManagers.map(mgr => (
+                                    <option key={mgr.id} value={mgr.id}>
+                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-slate-400 mt-1 ml-1">Birden fazla seçim için CTRL tuşuna basılı tutunuz.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div>
                     <InputField label="Personel Sicil No" value={formData.employee_code} onChange={e => handleChange('employee_code', e.target.value)} required placeholder="Örn: 2478" />
                 </div>
@@ -303,6 +366,77 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
             <div className="grid grid-cols-1 gap-6">
                 <div>
                     <InputField label="Görev Tanımı Özeti" value={formData.title} onChange={e => handleChange('title', e.target.value)} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Work Type */}
+                    <div>
+                        <SelectField
+                            label="Çalışma Şekli"
+                            value={formData.work_type}
+                            onChange={e => handleChange('work_type', e.target.value)}
+                            options={
+                                <>
+                                    <option value="FULL_TIME">Tam Zamanlı (Ofis)</option>
+                                    <option value="REMOTE">Uzaktan (Tam)</option>
+                                    <option value="HYBRID">Hibrit</option>
+                                    <option value="PART_TIME">Yarı Zamanlı</option>
+                                    <option value="FIELD">Saha</option>
+                                </>
+                            }
+                        />
+                    </div>
+
+                    {/* Remote Days (Visible if REMOTE or HYBRID) */}
+                    {(formData.work_type === 'REMOTE' || formData.work_type === 'HYBRID') && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Uzaktan Çalışma Günleri</label>
+                            <div className="flex flex-wrap gap-2">
+                                {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(day => {
+                                    const isSelected = formData.remote_work_days.includes(day);
+                                    return (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => {
+                                                const current = formData.remote_work_days;
+                                                const newDays = isSelected
+                                                    ? current.filter(d => d !== day)
+                                                    : [...current, day];
+                                                handleChange('remote_work_days', newDays);
+                                            }}
+                                            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${isSelected
+                                                ? 'bg-blue-600 text-white shadow-blue-200 shadow-lg scale-105'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                                }`}
+                                        >
+                                            {day === 'MON' ? 'Pzt' : day === 'TUE' ? 'Sal' : day === 'WED' ? 'Çar' : day === 'THU' ? 'Per' : day === 'FRI' ? 'Cum' : day === 'SAT' ? 'Cmt' : 'Paz'}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Overrides Section */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                    <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                        <Settings size={16} className="text-slate-500" />
+                        Mesai Kuralları & İstisnalar (Override)
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <InputField type="time" label="Mesai Başlangıç" value={formData.shift_start} onChange={e => handleChange('shift_start', e.target.value)} />
+                        <InputField type="time" label="Mesai Bitiş" value={formData.shift_end} onChange={e => handleChange('shift_end', e.target.value)} />
+                        <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} />
+                        <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} />
+
+                        <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} />
+                        <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} />
+                    </div>
+                    <div className="text-xs text-slate-400">
+                        * Değerler boş bırakılırsa varsayılan veya seçilen takvim kuralları geçerli olur. Mevcut varsayılanlar otomatik yüklenmiştir.
+                    </div>
                 </div>
 
                 {/* Work Schedule Section */}
@@ -485,8 +619,27 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                 </div>
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-1/3 text-slate-500 font-medium">Pozisyon</div>
-                    <div className="font-bold text-slate-800">{pos}</div>
+                    <div className="font-bold text-slate-800">
+                        {pos}
+                        {formData.secondary_job_positions?.length > 0 && <span className="text-xs text-slate-500 block">+ {formData.secondary_job_positions.length} Ek Pozisyon</span>}
+                    </div>
                 </div>
+
+                {(formData.cross_manager_ids?.length > 0) && (
+                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-indigo-50/30">
+                        <div className="w-1/3 text-slate-500 font-medium">Çapraz Yöneticiler</div>
+                        <div className="font-bold text-indigo-700">{formData.cross_manager_ids.length} Kişi Seçildi</div>
+                    </div>
+                )}
+
+                {(formData.shift_start || formData.lunch_start) && (
+                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-amber-50/30">
+                        <div className="w-1/3 text-slate-500 font-medium">Özel Kurallar</div>
+                        <div className="font-bold text-amber-700 text-sm">
+                            {formData.shift_start}-{formData.shift_end} (Mola: {formData.daily_break_allowance}dk)
+                        </div>
+                    </div>
+                )}
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-1/3 text-slate-500 font-medium">Yetkiler</div>
                     <div className="font-bold text-slate-800 flex items-center gap-2">
