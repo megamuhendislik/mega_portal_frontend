@@ -195,6 +195,7 @@ const AdminConsole = () => {
                                     <DiagnosticItem label="Veritabanı Ping" passed={diagResults?.database} loading={diagLoading && !diagResults} icon={Database} />
                                     <DiagnosticItem label="Personel CRUD" passed={diagResults?.employee} loading={diagLoading && !diagResults} icon={Users} />
                                     <DiagnosticItem label="Mesai Hesaplama" passed={diagResults?.attendance} loading={diagLoading && !diagResults} icon={Clock} />
+                                    <DiagnosticItem label="1-Dk'lık Oto-Düzeltme" passed={diagResults?.continuous} loading={diagLoading && !diagResults} icon={RefreshCw} />
                                     <DiagnosticItem label="Talep & Onay Akışı" passed={diagResults?.requests} loading={diagLoading && !diagResults} icon={FileText} />
                                     <DiagnosticItem label="Veri Temizliği" passed={diagResults?.cleanup} loading={diagLoading && !diagResults} icon={Shield} />
                                 </div>

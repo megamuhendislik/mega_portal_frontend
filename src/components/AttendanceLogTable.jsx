@@ -86,7 +86,20 @@ const AttendanceLogTable = ({ logs }) => {
                                     </div>
                                 </td>
                                 <td className="p-4">
-                                    {getStatusBadge(log.status)}
+                                    <div className="flex items-center gap-2">
+                                        {getStatusBadge(log.status)}
+                                        {log.note && (
+                                            <div className="group relative">
+                                                <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center cursor-help">
+                                                    <span className="text-xs font-bold">i</span>
+                                                </div>
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                                    {log.note}
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
