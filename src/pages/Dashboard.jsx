@@ -38,113 +38,122 @@ const Dashboard = () => {
     const upcomingStartStr = format(startOfDay(today), 'yyyy-MM-dd');
     const upcomingEndStr = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd');
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            // Fix: 'user' from useAuth seems to be the Employee object itself (based on logs having user.user nested)
-            // So we try user.employee.id first, falling back to user.id if that fails but looks like an employee
-            const employeeId = user?.employee?.id || user?.id;
-
-            console.log("DASHBOARD FETCH CHECK - Employee ID:", employeeId);
-
-            if (!employeeId) {
-                console.log("Abort Fetch: No Employee ID found.");
-                setLoadingSummaries(false);
-                setLoadingRequests(false);
-                setLoadingCalendar(false);
-                return;
+    // Custom Interval Hook
+    const useInterval = (callback, delay) => {
+        const savedCallback = React.useRef();
+        useEffect(() => { savedCallback.current = callback; }, [callback]);
+        useEffect(() => {
+            if (delay !== null) {
+                const id = setInterval(() => savedCallback.current(), delay);
+                return () => clearInterval(id);
             }
+        }, [delay]);
+    };
 
+    const fetchDashboardData = async (silent = false) => {
+        // Fix: 'user' from useAuth seems to be the Employee object itself (based on logs having user.user nested)
+        // So we try user.employee.id first, falling back to user.id if that fails but looks like an employee
+        const employeeId = user?.employee?.id || user?.id;
+
+        // console.log("DASHBOARD FETCH CHECK - Employee ID:", employeeId);
+
+        if (!employeeId) {
+            console.log("Abort Fetch: No Employee ID found.");
+            setLoadingSummaries(false);
+            setLoadingRequests(false);
+            setLoadingCalendar(false);
+            return;
+        }
+
+        if (!silent) {
             setLoadingSummaries(true);
             setLoadingRequests(true);
             setLoadingCalendar(true);
+        }
 
-            // 1. Fetch Summaries & Month Events for Stats
-            try {
-                console.log("=== DASHBOARD FETCH START ===");
-                console.log(`Fetching for Employee ID: ${employeeId}`);
+        // 1. Fetch Summaries & Month Events for Stats
+        try {
+            // console.log("=== DASHBOARD FETCH START ===");
 
-                const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
-                    api.get('/attendance/today_summary/'),
-                    api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${employeeId}`),
-                    api.get(`/calendar/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`)
-                ]);
+            const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
+                api.get('/attendance/today_summary/'),
+                api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${employeeId}`),
+                api.get(`/calendar/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`)
+            ]);
 
-                console.log("=== FETCH RESULTS ACQUIRED ===");
-                console.log("Today Result Status:", todayResult.status);
-
-                if (todayResult.status === 'fulfilled') {
-                    console.log("Today Result DATA:", todayResult.value.data);
-                    setTodaySummary(todayResult.value.data);
-                } else {
-                    console.error("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
-                    if (todayResult.reason?.response) {
-                        console.log("Error Response Status:", todayResult.reason.response.status);
-                        console.log("Error Response Data:", todayResult.reason.response.data);
-                    }
-                }
-
-                if (monthStatsResult.status === 'fulfilled') {
-                    const data = monthStatsResult.value.data;
-                    setMonthlySummary(Array.isArray(data) ? data[0] : data);
-                } else {
-                    console.log("Month Stats Failed:", monthStatsResult.reason);
-                }
-
-                if (monthEventsResult.status === 'fulfilled') {
-                    setMonthEvents(monthEventsResult.value.data.results || monthEventsResult.value.data || []);
-                }
-            } catch (err) {
-                console.error("!!! CRITICAL SUMMARY FETCH ERROR !!!", err);
-            } finally {
-                setLoadingSummaries(false);
+            if (todayResult.status === 'fulfilled') {
+                setTodaySummary(todayResult.value.data);
+            } else {
+                console.error("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
             }
 
-            // 2. Fetch Requests
-            try {
-                const [leaveRes, overtimeRes, mealRes, incomingLeaveRes, incomingAttendanceRes] = await Promise.allSettled([
-                    api.get('/leave/requests/'),
-                    api.get('/overtime-requests/'),
-                    api.get('/meal-requests/'),
-                    api.get('/leave/requests/pending_approvals/'),
-                    api.get('/attendance/pending/')
-                ]);
-
-                const getData = (res) => (res.status === 'fulfilled' ? (res.value.data.results || res.value.data || []) : []);
-
-                const leaves = getData(leaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
-                const overtimes = getData(overtimeRes).map(r => ({ ...r, type: 'OVERTIME', date: r.date }));
-                const meals = getData(mealRes).map(r => ({ ...r, type: 'MEAL', date: r.date }));
-
-                const combinedMyRequests = [...leaves, ...overtimes, ...meals].sort((a, b) => new Date(b.date) - new Date(a.date));
-                setMyRequests(combinedMyRequests.slice(0, 5)); // Just top 5
-
-                const incomingLeaves = getData(incomingLeaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
-                const incomingAttendance = getData(incomingAttendanceRes).map(r => ({ ...r, type: 'ATTENDANCE_APPROVAL', date: r.work_date }));
-
-                const combinedIncoming = [...incomingLeaves, ...incomingAttendance].sort((a, b) => new Date(b.date) - new Date(a.date));
-                setIncomingRequests(combinedIncoming);
-
-            } catch (err) {
-                console.error("Requests fetch error", err);
-            } finally {
-                setLoadingRequests(false);
+            if (monthStatsResult.status === 'fulfilled') {
+                const data = monthStatsResult.value.data;
+                setMonthlySummary(Array.isArray(data) ? data[0] : data);
             }
 
-            // 3. Fetch Upcoming Calendar Events
-            try {
-                const employeeId = user?.employee?.id || user?.id; // Re-derive for safety or use from scope if I could
-                const eventsRes = await api.get(`/calendar/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${employeeId}`);
-                const events = eventsRes.data.results || eventsRes.data || [];
-                setCalendarEvents(events.sort((a, b) => new Date(a.start) - new Date(b.start)));
-            } catch (err) {
-                console.error("Calendar fetch error", err);
-            } finally {
-                setLoadingCalendar(false);
+            if (monthEventsResult.status === 'fulfilled') {
+                setMonthEvents(monthEventsResult.value.data.results || monthEventsResult.value.data || []);
             }
-        };
+        } catch (err) {
+            console.error("!!! CRITICAL SUMMARY FETCH ERROR !!!", err);
+        } finally {
+            if (!silent) setLoadingSummaries(false);
+        }
 
+        // 2. Fetch Requests
+        try {
+            const [leaveRes, overtimeRes, mealRes, incomingLeaveRes, incomingAttendanceRes] = await Promise.allSettled([
+                api.get('/leave/requests/'),
+                api.get('/overtime-requests/'),
+                api.get('/meal-requests/'),
+                api.get('/leave/requests/pending_approvals/'),
+                api.get('/attendance/pending/')
+            ]);
+
+            const getData = (res) => (res.status === 'fulfilled' ? (res.value.data.results || res.value.data || []) : []);
+
+            const leaves = getData(leaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
+            const overtimes = getData(overtimeRes).map(r => ({ ...r, type: 'OVERTIME', date: r.date }));
+            const meals = getData(mealRes).map(r => ({ ...r, type: 'MEAL', date: r.date }));
+
+            const combinedMyRequests = [...leaves, ...overtimes, ...meals].sort((a, b) => new Date(b.date) - new Date(a.date));
+            setMyRequests(combinedMyRequests.slice(0, 5)); // Just top 5
+
+            const incomingLeaves = getData(incomingLeaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
+            const incomingAttendance = getData(incomingAttendanceRes).map(r => ({ ...r, type: 'ATTENDANCE_APPROVAL', date: r.work_date }));
+
+            const combinedIncoming = [...incomingLeaves, ...incomingAttendance].sort((a, b) => new Date(b.date) - new Date(a.date));
+            setIncomingRequests(combinedIncoming);
+
+        } catch (err) {
+            console.error("Requests fetch error", err);
+        } finally {
+            if (!silent) setLoadingRequests(false);
+        }
+
+        // 3. Fetch Upcoming Calendar Events
+        try {
+            const employeeId = user?.employee?.id || user?.id; // Re-derive for safety or use from scope if I could
+            const eventsRes = await api.get(`/calendar/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${employeeId}`);
+            const events = eventsRes.data.results || eventsRes.data || [];
+            setCalendarEvents(events.sort((a, b) => new Date(a.start) - new Date(b.start)));
+        } catch (err) {
+            console.error("Calendar fetch error", err);
+        } finally {
+            if (!silent) setLoadingCalendar(false);
+        }
+    };
+
+    useEffect(() => {
         fetchDashboardData();
     }, [user]);
+
+    // Auto-Refresh every 60 seconds
+    useInterval(() => {
+        // console.log("Auto-Refreshing Dashboard...");
+        fetchDashboardData(true); // Silent refresh
+    }, 60000);
 
     // Calculate Month Stats from Events (Leave/Missing)
     const monthStats = {
