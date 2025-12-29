@@ -83,25 +83,31 @@ const AdminConsole = () => {
     );
 
     const DiagnosticItem = ({ label, passed, icon: Icon, loading }) => {
-        let statusColor = "text-gray-500";
-        let statusIcon = <div className="w-5 h-5 rounded-full border-2 border-gray-600" />;
+        let statusColor = "text-slate-400";
+        let statusBg = "bg-slate-50";
+        let statusIcon = <div className="w-5 h-5 rounded-full border-2 border-slate-300" />;
 
         if (loading) {
-            statusColor = "text-blue-400";
+            statusColor = "text-blue-600";
+            statusBg = "bg-blue-50";
             statusIcon = <RefreshCw className="w-5 h-5 animate-spin" />;
         } else if (passed === true) {
-            statusColor = "text-green-500";
+            statusColor = "text-emerald-600";
+            statusBg = "bg-emerald-50";
             statusIcon = <CheckCircle className="w-5 h-5" />;
         } else if (passed === false) {
-            statusColor = "text-red-500";
+            statusColor = "text-red-600";
+            statusBg = "bg-red-50";
             statusIcon = <XCircle className="w-5 h-5" />;
         }
 
         return (
-            <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg border border-white/5">
+            <div className={`flex items-center justify-between p-4 rounded-xl border border-slate-200 transition-colors ${statusBg} hover:shadow-sm`}>
                 <div className="flex items-center gap-3">
-                    <Icon className="text-gray-400" size={20} />
-                    <span className="text-gray-300 font-medium">{label}</span>
+                    <div className={`p-2 rounded-lg bg-white ${statusColor} shadow-sm border border-slate-100`}>
+                        <Icon size={20} />
+                    </div>
+                    <span className="text-slate-700 font-semibold">{label}</span>
                 </div>
                 <div className={statusColor}>{statusIcon}</div>
             </div>
@@ -132,8 +138,8 @@ const AdminConsole = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <tab.icon size={16} />
@@ -180,9 +186,9 @@ const AdminConsole = () => {
                 {activeTab === 'diagnostics' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
                         <div className="lg:col-span-1 space-y-6">
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl p-6">
-                                <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                                    <Activity size={18} className="text-blue-400" />
+                            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                                <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2 text-lg">
+                                    <Activity size={20} className="text-blue-600" />
                                     Test Senaryoları
                                 </h3>
                                 <div className="space-y-3">
@@ -195,10 +201,10 @@ const AdminConsole = () => {
                                 <button
                                     onClick={runDiagnostics}
                                     disabled={diagLoading}
-                                    className={`w-full mt-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${diagLoading ? 'bg-white/5 text-gray-500' : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                    className={`w-full mt-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md ${diagLoading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg hover:scale-[1.02]'
                                         }`}
                                 >
-                                    {diagLoading ? <RefreshCw className="animate-spin" /> : <Play size={18} />}
+                                    {diagLoading ? <RefreshCw className="animate-spin" /> : <Play size={20} />}
                                     {diagLoading ? 'Test Yürütülüyor...' : 'Tam Sistem Taraması Başlat'}
                                 </button>
                             </div>
