@@ -237,16 +237,17 @@ const Dashboard = () => {
                         </span>
                         {user?.first_name || 'Kullanıcı'}
                     </h1>
-                    <div className="flex items-center gap-3 mt-2">
-                        <p className="text-slate-500 font-medium text-lg flex items-center gap-2">
-                            <CalendarIcon size={18} className="text-slate-400" />
-                            {format(new Date(), 'd MMMM EEEE', { locale: tr })}
-                        </p>
-                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                    <div className="flex gap-4">
                         <p className="text-slate-400 font-medium text-sm flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full">
                             <Clock size={14} />
-                            Son Giriş: {user?.last_login ? format(new Date(user.last_login), 'HH:mm', { locale: tr }) : '09:00'}
+                            Son Giriş: {todaySummary?.last_check_in ? format(new Date(todaySummary.last_check_in), 'HH:mm', { locale: tr }) : (user?.last_login ? format(new Date(user.last_login), 'HH:mm', { locale: tr }) : '--:--')}
                         </p>
+                        {todaySummary?.last_check_out && (
+                            <p className="text-slate-400 font-medium text-sm flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full">
+                                <Clock size={14} />
+                                Son Çıkış: {format(new Date(todaySummary.last_check_out), 'HH:mm', { locale: tr })}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -396,7 +397,7 @@ const Dashboard = () => {
                 </div>
 
             </div>
-        </div>
+        </div >
     );
 };
 
