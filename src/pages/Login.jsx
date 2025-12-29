@@ -36,7 +36,7 @@ const Login = () => {
 
                 <div className="relative z-20 flex flex-col justify-between p-12 w-full text-white">
                     <div className="flex items-center space-x-4">
-                        <img src="/logo.png" alt="Mega Portal Logo" className="h-12 w-auto object-contain bg-white/10 backdrop-blur-sm rounded-lg p-1" />
+                        <img src="/mega_logo.png" alt="Mega Portal Logo" className="h-12 w-auto object-contain bg-white/10 backdrop-blur-sm rounded-lg p-1" />
                         <span className="text-2xl font-bold tracking-tight text-white drop-shadow-md">Portal</span>
                     </div>
 
