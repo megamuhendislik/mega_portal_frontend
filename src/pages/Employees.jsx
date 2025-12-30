@@ -419,92 +419,127 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     );
 };
 
-const StepPermissions = ({ formData, handleChange, permissions, jobPositions }) => {
-    // 1. Calculate Default Permissions from Job Position -> Roles
-    const pos = jobPositions.find(p => p.id == formData.job_position);
-    const defaultRolePermissions = new Set();
+const StepPermissions = ({ formData, handleChange, permissions, jobPositions, roles }) => {
+    // Group permissions
+    const pagePermissions = permissions.filter(p => p.code.startsWith('VIEW_'));
+    const actionPermissions = permissions.filter(p => !p.code.startsWith('VIEW_'));
 
-    if (pos && pos.default_roles) {
-        pos.default_roles.forEach(role => {
-            if (role.permissions) {
-                role.permissions.forEach(perm => {
-                    defaultRolePermissions.add(perm.id);
-                });
-            }
-        });
-    }
-
-    const togglePermission = (permId) => {
-        const currentDirect = formData.direct_permissions || [];
-        if (currentDirect.includes(permId)) {
-            handleChange('direct_permissions', currentDirect.filter(id => id !== permId));
+    const toggleRole = (roleId) => {
+        const current = formData.roles || [];
+        if (current.includes(roleId)) {
+            handleChange('roles', current.filter(id => id !== roleId));
         } else {
-            handleChange('direct_permissions', [...currentDirect, permId]);
+            handleChange('roles', [...current, roleId]);
         }
     };
 
-    // Group permissions by prefix for better UI (Optional, but flat list requested "tek tek")
-    // Let's just flat list for now but with good search/filter potentially? 
-    // User asked for "tek tek" (one by one).
+    const togglePermission = (permId) => {
+        const current = formData.direct_permissions || [];
+        if (current.includes(permId)) {
+            handleChange('direct_permissions', current.filter(id => id !== permId));
+        } else {
+            handleChange('direct_permissions', [...current, permId]);
+        }
+    };
+
+    // Helper to check if a permission is already granted by a selected Role
+    const isGrantedByRole = (permId) => {
+        if (!formData.roles) return false;
+        // Find selected roles
+        const selectedRoles = roles.filter(r => formData.roles.includes(r.id));
+        // Check if any has this permission (Assuming roles have 'permissions' array populated)
+        return selectedRoles.some(r => r.permissions && r.permissions.some(p => p.id === permId));
+    };
 
     return (
         <div className="animate-fade-in-up">
             <div className="mb-6 pb-4 border-b border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800">Yetkilendirme</h3>
-                <p className="text-slate-500 text-sm">Pozisyona dayalı varsayılan yetkiler ve ek yetki tanımları.</p>
+                <h3 className="text-xl font-bold text-slate-800">Yetkilendirme ve Roller</h3>
+                <p className="text-slate-500 text-sm">Kullanıcının rollerini ve sayfa erişim yetkilerini belirleyiniz.</p>
             </div>
 
-            <div className="bg-blue-50/50 p-4 rounded-xl mb-4 border border-blue-100 flex items-start gap-3">
-                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
-                    <Key size={20} />
-                </div>
-                <div>
-                    <h4 className="font-bold text-blue-900 text-sm">Otomatik Yetki Atama</h4>
-                    <p className="text-blue-700/80 text-xs mt-1">
-                        Seçilen <strong>{pos?.name || 'Pozisyon'}</strong> pozisyonu için tanımlı rollerden gelen yetkiler otomatik olarak işaretlenmiştir ve değiştirilemez.
-                        Ekstradan yetki vermek için kutucukları işaretleyebilirsiniz.
-                    </p>
-                </div>
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[500px]">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {permissions.map(perm => {
-                    const isDefault = defaultRolePermissions.has(perm.id);
-                    const isChecked = isDefault || (formData.direct_permissions || []).includes(perm.id);
+                {/* COL 1: ROLES */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
+                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <Briefcase size={18} className="text-blue-500" /> Roller
+                    </h4>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                        {roles.map(role => {
+                            const isChecked = (formData.roles || []).includes(role.id);
+                            return (
+                                <label key={role.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
+                                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" checked={isChecked} onChange={() => toggleRole(role.id)} />
+                                    <div>
+                                        <div className="font-bold text-sm text-slate-800">{role.name}</div>
+                                        <div className="text-[10px] text-slate-400">{role.description}</div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
 
-                    return (
-                        <label
-                            key={perm.id}
-                            className={`
-                                flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none
-                                ${isChecked
-                                    ? isDefault
-                                        ? 'bg-slate-50 border-slate-200 opacity-75'
-                                        : 'bg-indigo-50 border-indigo-200 shadow-sm'
-                                    : 'bg-white border-slate-100 hover:border-slate-300'
-                                }
-                            `}
-                        >
-                            <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? (isDefault ? 'bg-slate-400 border-slate-400' : 'bg-indigo-600 border-indigo-600') : 'bg-white border-slate-300'}`}>
-                                {isChecked && <Check size={12} className="text-white" />}
-                            </div>
-                            <input
-                                type="checkbox"
-                                className="hidden"
-                                checked={isChecked}
-                                onChange={() => !isDefault && togglePermission(perm.id)}
-                                disabled={isDefault}
-                            />
-                            <div>
-                                <div className={`font-medium text-sm ${isChecked ? 'text-slate-900' : 'text-slate-600'}`}>
-                                    {perm.name}
-                                </div>
-                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">{perm.code}</div>
-                                {isDefault && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-auto mt-1 inline-block">Varsayılan</span>}
-                            </div>
-                        </label>
-                    );
-                })}
+                {/* COL 2: PAGE ACCESS */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
+                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <FileText size={18} className="text-emerald-500" /> Ekran Yetkileri
+                    </h4>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                        {pagePermissions.map(perm => {
+                            const fromRole = isGrantedByRole(perm.id);
+                            const isDirect = (formData.direct_permissions || []).includes(perm.id);
+                            const isChecked = fromRole || isDirect;
+
+                            return (
+                                <label key={perm.id} className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer ${isChecked ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-emerald-200'}`}>
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                                        checked={isChecked}
+                                        onChange={() => togglePermission(perm.id)}
+                                        disabled={fromRole}
+                                    />
+                                    <div>
+                                        <div className="font-medium text-xs text-slate-800">{perm.name}</div>
+                                        {fromRole && <span className="text-[9px] bg-blue-100 text-blue-600 px-1 rounded inline-block mt-0.5">Rolden Geliyor</span>}
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* COL 3: ACTION ACCESS */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
+                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <Key size={18} className="text-amber-500" /> İşlem Yetkileri
+                    </h4>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                        {actionPermissions.map(perm => {
+                            const fromRole = isGrantedByRole(perm.id);
+                            const isDirect = (formData.direct_permissions || []).includes(perm.id);
+                            const isChecked = fromRole || isDirect;
+
+                            return (
+                                <label key={perm.id} className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer ${isChecked ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:border-amber-200'}`}>
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1 w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                                        checked={isChecked}
+                                        onChange={() => togglePermission(perm.id)}
+                                        disabled={fromRole}
+                                    />
+                                    <div>
+                                        <div className="font-medium text-xs text-slate-800">{perm.name}</div>
+                                        {fromRole && <span className="text-[9px] bg-blue-100 text-blue-600 px-1 rounded inline-block mt-0.5">Rolden Geliyor</span>}
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </div>
     );
