@@ -960,49 +960,52 @@ const Employees = () => {
 
                     {/* Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {employees.filter(e => e.first_name.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
-                            <div key={emp.id} className="group bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative overflow-hidden">
-                                {showSettings && (
-                                    <div className="absolute top-4 right-4 z-10 animate-fade-in flex gap-2">
-                                        <button
-                                            onClick={(ev) => { ev.stopPropagation(); handleEdit(emp); }}
-                                            className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
-                                            title="Düzenle"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(ev) => { ev.stopPropagation(); handleDelete(emp.id); }}
-                                            className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
-                                            title="Sil"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                )}
+                        {employees
+                            .filter(e => e.employment_status !== 'TERMINATED')
+                            .filter(e => e.first_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                            .map(emp => (
+                                <div key={emp.id} className="group bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative overflow-hidden">
+                                    {showSettings && (
+                                        <div className="absolute top-4 right-4 z-10 animate-fade-in flex gap-2">
+                                            <button
+                                                onClick={(ev) => { ev.stopPropagation(); handleEdit(emp); }}
+                                                className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
+                                                title="Düzenle"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(ev) => { ev.stopPropagation(); handleDelete(emp.id); }}
+                                                className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
+                                                title="Sil"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    )}
 
-                                <div className="flex items-center gap-5 mb-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-50 text-blue-600 flex items-center justify-center font-bold text-xl shadow-inner">
-                                        {emp.first_name[0]}{emp.last_name[0]}
+                                    <div className="flex items-center gap-5 mb-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-50 text-blue-600 flex items-center justify-center font-bold text-xl shadow-inner">
+                                            {emp.first_name[0]}{emp.last_name[0]}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">{emp.first_name} {emp.last_name}</h3>
+                                            <p className="text-sm text-slate-500 font-medium mt-0.5">{emp.job_position?.name || 'Pozisyon Yok'}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">{emp.first_name} {emp.last_name}</h3>
-                                        <p className="text-sm text-slate-500 font-medium mt-0.5">{emp.job_position?.name || 'Pozisyon Yok'}</p>
+
+                                    <div className="space-y-2.5">
+                                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                                            <Building size={16} className="text-slate-400 shrink-0" />
+                                            <span className="truncate">{emp.department?.name || 'Departman Yok'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                                            <div className="w-4 flex justify-center shrink-0 text-slate-400">@</div>
+                                            <span className="truncate">{emp.email}</span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="space-y-2.5">
-                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                        <Building size={16} className="text-slate-400 shrink-0" />
-                                        <span className="truncate">{emp.department?.name || 'Departman Yok'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                        <div className="w-4 flex justify-center shrink-0 text-slate-400">@</div>
-                                        <span className="truncate">{emp.email}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </div>
             </div>
