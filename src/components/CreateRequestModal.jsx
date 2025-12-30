@@ -35,7 +35,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         end_date: '',
         reason: '',
         destination: '',
-        contact_phone: ''
+        contact_phone: '',
+        notify_substitutes: false
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
@@ -43,7 +44,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         date: new Date().toISOString().split('T')[0],
         start_time: '',
         end_time: '',
-        reason: ''
+        end_time: '',
+        reason: '',
+        notify_substitutes: false
     });
 
     const [mealForm, setMealForm] = useState({
@@ -70,7 +73,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 date: new Date().toISOString().split('T')[0],
                 start_time: '',
                 end_time: '',
-                reason: ''
+                end_time: '',
+                reason: '',
+                notify_substitutes: false
             });
         }
     }, [isOpen]);
@@ -278,7 +283,21 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     />
                 </div>
             </div>
-        </div>
+
+
+            <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
+                <input
+                    type="checkbox"
+                    id="notify_subs_leave"
+                    checked={leaveForm.notify_substitutes}
+                    onChange={e => setLeaveForm({ ...leaveForm, notify_substitutes: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="notify_subs_leave" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    İlgili Yöneticinin Vekillerini de Bilgilendir
+                </label>
+            </div>
+        </div >
     );
 
     const renderOvertimeForm = () => (
@@ -415,7 +434,21 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     placeholder="Fazla mesai gerekçenizi belirtiniz..."
                 ></textarea>
             </div>
-        </div>
+
+
+            <div className="flex items-center gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-100 transition-all hover:bg-amber-50">
+                <input
+                    type="checkbox"
+                    id="notify_subs_ot"
+                    checked={overtimeForm.notify_substitutes}
+                    onChange={e => setOvertimeForm({ ...overtimeForm, notify_substitutes: e.target.checked })}
+                    className="w-5 h-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                />
+                <label htmlFor="notify_subs_ot" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    İlgili Yöneticinin Vekillerini de Bilgilendir
+                </label>
+            </div>
+        </div >
     );
 
     const renderMealForm = () => (
