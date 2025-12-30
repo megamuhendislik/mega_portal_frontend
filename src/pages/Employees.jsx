@@ -51,6 +51,35 @@ const INITIAL_FORM_STATE = {
 
 // ...
 
+const InputField = ({ label, icon: Icon, className, ...props }) => (
+    <div className="group">
+        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">{label} {props.required && <span className="text-red-500">*</span>}</label>
+        <div className="relative transition-all duration-300">
+            {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />}
+            <input
+                {...props}
+                className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all shadow-sm group-hover:bg-white ${className}`}
+            />
+        </div>
+    </div>
+);
+
+const SelectField = ({ label, icon: Icon, options, className, ...props }) => (
+    <div className="group">
+        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">{label} {props.required && <span className="text-red-500">*</span>}</label>
+        <div className="relative">
+            {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />}
+            <select
+                {...props}
+                className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none appearance-none transition-all shadow-sm group-hover:bg-white cursor-pointer ${className}`}
+            >
+                {options}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+        </div>
+    </div>
+);
+
 const StepPersonal = ({ formData, handleChange }) => (
     <div className="animate-fade-in-up">
         <div className="mb-6 pb-4 border-b border-slate-100">
@@ -627,6 +656,7 @@ const Employees = () => {
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [jobPositions, setJobPositions] = useState([]);
+    const [permissions, setPermissions] = useState([]); // [RESTORED]
     const [workSchedules, setWorkSchedules] = useState([]); // Added
     const [roles, setRoles] = useState([]); // [NEW]
     const [loading, setLoading] = useState(true);
