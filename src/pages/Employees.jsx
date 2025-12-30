@@ -29,7 +29,8 @@ const INITIAL_FORM_STATE = {
     job_position: '',
     secondary_job_positions: [], // List of IDs
     reports_to: '', // Manager ID (Primary)
-    cross_manager_ids: [], // List of IDs (Cross Managers)
+    // cross_manager_ids: [], // REMOVED
+    substitutes: [], // [NEW] Substitutes
     functional_department: '', // Attribute (stored in secondary_departments)
     secondary_departments: [], // Additional depts
 
@@ -41,93 +42,14 @@ const INITIAL_FORM_STATE = {
 
     hired_date: new Date().toISOString().split('T')[0],
 
-    // Schedule
-    work_schedule: '', // ID of selected schedule or '' for Custom
-    weekly_schedule: {}, // Custom JSON content
-
-    // Overrides (Defaults verified)
-    shift_start: '08:00',
-    shift_end: '18:00',
-    lunch_start: '12:30',
-    lunch_end: '13:30',
-    daily_break_allowance: 30,
-    attendance_tolerance_minutes: 30,
-    attendance_rules: '', // Text description
-
-    // Step 3: Contact
-    phone: '',
-    phone_secondary: '',
-    address: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-
-    // Step 4: Details
-    title: '',
-    job_description: '',
-    technical_skills: [], // List of strings
-    certificates: [], // List of {name, date}
-    foreign_languages: [], // List of {name, level}
-
-    // Step 5: Permissions
-    direct_permissions: [], // List of Permission IDs
+    // ...
 
     // System
     password: '', // Default initial password
     username: '' // Will be auto-generated or manual
 };
 
-const InputField = ({ label, value, onChange, type = "text", placeholder, icon: Icon, required }) => (
-    <div className="group">
-        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1 transition-colors group-focus-within:text-blue-600">
-            {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        <div className="relative transition-all duration-300 transform group-focus-within:-translate-y-1">
-            {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />}
-            <input
-                type={type}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                className={`
-                    w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 
-                    bg-slate-50 border border-slate-200 rounded-xl 
-                    text-slate-700 font-medium placeholder:text-slate-400
-                    focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 
-                    transition-all shadow-sm group-hover:bg-white
-                `}
-            />
-        </div>
-    </div>
-);
-
-const SelectField = ({ label, value, onChange, options, icon: Icon, required, disabled, className }) => (
-    <div className="group">
-        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1 transition-colors group-focus-within:text-blue-600">
-            {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        <div className="relative transition-all duration-300 transform group-focus-within:-translate-y-1">
-            {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 z-10 transition-colors" size={18} />}
-            <select
-                value={value}
-                onChange={onChange}
-                disabled={disabled}
-                className={`
-                    w-full ${Icon ? 'pl-10' : 'pl-4'} pr-10 py-2.5 
-                    bg-slate-50 border border-slate-200 rounded-xl 
-                    text-slate-700 font-medium appearance-none
-                    focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 
-                    transition-all shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed
-                    ${className}
-                `}
-            >
-                {options}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-        </div>
-    </div>
-);
-
-// --- Step Components ---
+// ...
 
 const StepPersonal = ({ formData, handleChange }) => (
     <div className="animate-fade-in-up">
@@ -139,7 +61,15 @@ const StepPersonal = ({ formData, handleChange }) => (
             <InputField label="Ad" value={formData.first_name} onChange={e => handleChange('first_name', e.target.value)} required placeholder="Personel Adı" />
             <InputField label="Soyad" value={formData.last_name} onChange={e => handleChange('last_name', e.target.value)} required placeholder="Personel Soyadı" />
             <InputField label="TC Kimlik No" value={formData.tc_number} onChange={e => handleChange('tc_number', e.target.value)} required placeholder="11 haneli TC no" />
-            <InputField label="E-posta" value={formData.email} onChange={e => handleChange('email', e.target.value)} required type="email" placeholder="isim.soyisim@mega.com" />
+            <InputField
+                label="E-posta"
+                value={formData.email}
+                onChange={e => handleChange('email', e.target.value)}
+                required
+                type="email"
+                placeholder="isim.soyisim@megamuhendislik.com.tr"
+            />
+
             <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleChange('birth_date', e.target.value)} type="date" />
             <InputField label="Kullanıcı Adı" value={formData.username} onChange={e => handleChange('username', e.target.value)} required placeholder="kullanici.adi" />
             <InputField label="Şifre" value={formData.password} onChange={e => handleChange('password', e.target.value)} required type="text" placeholder="İlk giriş şifresi" />
@@ -284,28 +214,28 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     </div>
                 </div>
 
-                {/* 6. CROSS MANAGERS (Multi) */}
+                {/* 6. SUBSTITUTES (Vekiller) */}
                 <div className="md:col-span-2">
                     <div className="group">
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Çapraz Yöneticiler (Opsiyonel)</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Vekiller / Onay Yetkilileri (Substitutes)</label>
                         <div className="relative">
                             <UserPlus className="absolute left-3 top-3 text-slate-400" size={18} />
                             <select
                                 multiple
-                                value={formData.cross_manager_ids}
+                                value={formData.substitutes}
                                 onChange={e => {
                                     const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    handleChange('cross_manager_ids', selected);
+                                    handleChange('substitutes', selected);
                                 }}
                                 className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
                             >
-                                {potentialManagers.map(mgr => (
+                                {potentialManagers.map(mgr => ( // Re-using potentialManagers list as it contains employees
                                     <option key={mgr.id} value={mgr.id}>
-                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name}
+                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'}
                                     </option>
                                 ))}
                             </select>
-                            <p className="text-xs text-slate-400 mt-1 ml-1">Birden fazla seçim için CTRL tuşuna basılı tutunuz.</p>
+                            <p className="text-xs text-slate-400 mt-1 ml-1">Bu kişi izinli olduğunda yerine imza atabilecek kişiler. (Çoklu seçim için CTRL)</p>
                         </div>
                     </div>
                 </div>
@@ -625,10 +555,10 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     </div>
                 </div>
 
-                {(formData.cross_manager_ids?.length > 0) && (
+                {(formData.substitutes?.length > 0) && (
                     <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-indigo-50/30">
-                        <div className="w-1/3 text-slate-500 font-medium">Çapraz Yöneticiler</div>
-                        <div className="font-bold text-indigo-700">{formData.cross_manager_ids.length} Kişi Seçildi</div>
+                        <div className="w-1/3 text-slate-500 font-medium">Vekiller</div>
+                        <div className="font-bold text-indigo-700">{formData.substitutes.length} Kişi Seçildi</div>
                     </div>
                 )}
 
@@ -644,7 +574,7 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     <div className="w-1/3 text-slate-500 font-medium">Yetkiler</div>
                     <div className="font-bold text-slate-800 flex items-center gap-2">
                         <Key size={16} className="text-blue-500" />
-                        <span>{(formData.direct_permissions?.length || 0)} Ek Yetki Seçildi</span>
+                        <span>{(formData.roles?.length || 0)} Rol + {(formData.direct_permissions?.length || 0)} Ek Yetki</span>
                     </div>
                 </div>
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
@@ -663,7 +593,7 @@ const Employees = () => {
     const [departments, setDepartments] = useState([]);
     const [jobPositions, setJobPositions] = useState([]);
     const [workSchedules, setWorkSchedules] = useState([]); // Added
-    const [permissions, setPermissions] = useState([]); // All available permissions
+    const [roles, setRoles] = useState([]); // [NEW]
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -684,18 +614,20 @@ const Employees = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const [empRes, deptRes, posRes, permRes, schedRes] = await Promise.all([
+            const [empRes, deptRes, posRes, permRes, schedRes, roleRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
-                api.get('/work-schedules/')
+                api.get('/work-schedules/'),
+                api.get('/roles/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
             setJobPositions(posRes.data.results || posRes.data);
             setPermissions(permRes.data.results || permRes.data);
             setWorkSchedules(schedRes.data.results || schedRes.data);
+            setRoles(roleRes.data.results || roleRes.data);
         } catch (error) {
             console.error("Data fetch error:", error);
         } finally {
@@ -724,11 +656,19 @@ const Employees = () => {
                 }
             }
 
+            // Logic: Job Position -> Auto Roles [NEW]
+            if (field === 'job_position') {
+                const pos = jobPositions.find(p => p.id == value);
+                if (pos && pos.default_roles) {
+                    newState.roles = pos.default_roles.map(r => r.id);
+                }
+            }
+
             // Auto-generate username/email draft if creating
             if (viewMode === 'create' && (field === 'first_name' || field === 'last_name')) {
                 const username = generateUsername(newState.first_name, newState.last_name);
                 newState.username = username;
-                if (!prev.email) newState.email = `${username}@mega.com`;
+                if (!prev.email) newState.email = `${username}@megamuhendislik.com.tr`;
             }
             return newState;
         });
@@ -1113,7 +1053,7 @@ const Employees = () => {
                         {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
                         {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                         {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                        {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} />}
+                        {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} />}
                         {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                     </div>
 
