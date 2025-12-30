@@ -96,8 +96,8 @@ const Profile = () => {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${isActive
-                                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                             >
                                 <Icon size={18} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
@@ -110,7 +110,7 @@ const Profile = () => {
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-600 text-xs">
-                                {user.username.substring(0, 2).toUpperCase()}
+                                {user.username?.substring(0, 2).toUpperCase() || 'U'}
                             </div>
                             <div className="overflow-hidden">
                                 <p className="text-sm font-bold text-slate-800 truncate">{user.first_name} {user.last_name}</p>
