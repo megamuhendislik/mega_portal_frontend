@@ -1,40 +1,36 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Briefcase, Building, Calendar, MapPin, Shield, Check, X, UserPlus, Settings } from 'lucide-react';
 import api from '../services/api';
+import {
+    User, Phone, MapPin, Shield, Users, Briefcase,
+    Calendar, Save, Lock, LayoutDashboard, Building,
+    Clock, Bell
+} from 'lucide-react';
 
 const Profile = () => {
     const { user } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
+    const [activeTab, setActiveTab] = useState('general');
     const [loading, setLoading] = useState(false);
-    const [employees, setEmployees] = useState([]);
-    const [formData, setFormData] = useState({});
+    const [successMessage, setSuccessMessage] = useState('');
+    const [allEmployees, setAllEmployees] = useState([]);
 
-    // Fetch employees for substitute selection when editing starts
-    useEffect(() => {
-        if (isEditing && employees.length === 0) {
-            const fetchEmployees = async () => {
-                try {
-                    const res = await api.get('/employees/');
-                    // Filter out self
-                    setEmployees(res.data.filter(e => e.id !== user.employee.id));
-                } catch (err) {
-                    console.error('Error fetching employees:', err);
-                }
-            };
-            fetchEmployees();
-        }
-    }, [isEditing, user]);
+    const [formData, setFormData] = useState({
+        phone: '',
+        phone_secondary: '',
+        address: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        lunch_start: '',
+        lunch_end: '',
+        substitutes: []
+    });
 
     useEffect(() => {
         if (user && user.employee) {
-            // Initialize form with current data
-            // Note: user.employee.substitutes might be IDs or objects depending on serializer. 
-            // EmployeeDetailSerializer usually returns objects or IDs?
-            // Let's assume potentially objects. We need IDs for the form.
             const subs = user.employee.substitutes?.map(s => (typeof s === 'object' ? s.id : s)) || [];
-
             setFormData({
+                phone: user.phone || '',
                 phone_secondary: user.employee.phone_secondary || '',
                 address: user.employee.address || '',
                 emergency_contact_name: user.employee.emergency_contact_name || '',
@@ -44,311 +40,336 @@ const Profile = () => {
                 substitutes: subs
             });
         }
-    }, [user, isEditing]);
+    }, [user]);
+
+    // Fetch employees for substitute selection only when that tab is active
+    useEffect(() => {
+        if (activeTab === 'substitutes' && allEmployees.length === 0) {
+            api.get('/employees/')
+                .then(res => setAllEmployees(res.data.filter(e => e.id !== user.employee.id)))
+                .catch(err => console.error(err));
+        }
+    }, [activeTab]);
 
     const handleSave = async () => {
         setLoading(true);
+        setSuccessMessage('');
         try {
             await api.patch('/employees/me/', formData);
-            // Ideally refresh user context or show success
-            setIsEditing(false);
-            window.location.reload(); // Simple way to refresh context for now
+            setSuccessMessage('Bilgileriniz başarıyla güncellendi.');
+            setTimeout(() => {
+                setSuccessMessage('');
+                window.location.reload(); // Refresh to update context
+            }, 1000);
         } catch (error) {
-            console.error('Error updating profile:', error);
+            console.error('Update failed:', error);
             alert('Güncelleme sırasında bir hata oluştu.');
         } finally {
             setLoading(false);
         }
     };
 
-    if (!user) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-        );
-    }
+    if (!user) return null;
+
+    const tabs = [
+        { id: 'general', label: 'Genel Bilgiler', icon: User },
+        { id: 'contact', label: 'İletişim & Adres', icon: MapPin },
+        { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
+        { id: 'preferences', label: 'Çalışma Tercihleri', icon: Clock },
+        // { id: 'security', label: 'Güvenlik', icon: Lock } // Future implementation
+    ];
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6">
-            {/* Header Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                {/* Cover Image */}
-                <div className="h-48 bg-gradient-to-r from-slate-800 to-slate-900 relative">
-                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40"></div>
+        <div className="flex h-[calc(100vh-64px)] bg-slate-50 overflow-hidden">
+            {/* Sidebar */}
+            <div className="w-72 bg-white border-r border-slate-200 flex flex-col">
+                <div className="p-6 border-b border-slate-100">
+                    <h2 className="text-xl font-bold text-slate-800">Hesap Ayarları</h2>
+                    <p className="text-sm text-slate-500 mt-1">Profilinizi ve tercihlerinizi yönetin.</p>
                 </div>
-
-                <div className="px-8 pb-8 relative">
-                    <div className="flex flex-col md:flex-row items-end -mt-16 mb-6 relative z-10">
-                        {/* Profile Picture */}
-                        <div className="h-32 w-32 rounded-2xl bg-white p-1.5 shadow-xl">
-                            <div className="h-full w-full rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 text-4xl font-bold border border-slate-200">
-                                {user.first_name?.[0] || user.username?.[0] || 'U'}
-                            </div>
-                        </div>
-
-                        {/* Name & Role */}
-                        <div className="mt-4 md:mt-0 md:ml-6 flex-1">
-                            <h1 className="text-3xl font-bold text-slate-900">{user.first_name} {user.last_name}</h1>
-                            <div className="flex items-center space-x-4 mt-2 text-slate-600">
-                                <span className="flex items-center text-sm font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">
-                                    <Briefcase size={14} className="mr-1.5" />
-                                    {user.job_position?.name || 'Pozisyon Belirtilmemiş'}
-                                </span>
-                                <span className="flex items-center text-sm">
-                                    <MapPin size={16} className="mr-1.5 text-slate-400" />
-                                    İstanbul, TR
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="mt-6 md:mt-0 flex space-x-3">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                    {tabs.map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
                             <button
-                                onClick={() => setIsEditing(true)}
-                                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors shadow-sm"
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${isActive
+                                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    }`}
                             >
-                                Profili Düzenle
+                                <Icon size={18} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
+                                {tab.label}
                             </button>
+                        );
+                    })}
+                </nav>
+                <div className="p-4 border-t border-slate-100">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-600 text-xs">
+                                {user.username.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-sm font-bold text-slate-800 truncate">{user.first_name} {user.last_name}</p>
+                                <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Editing Modal Overlay */}
-            {isEditing && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-                            <h2 className="text-xl font-bold text-slate-800">Profili Düzenle</h2>
-                            <button onClick={() => setIsEditing(false)} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600">
-                                <X size={20} />
-                            </button>
-                        </div>
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="max-w-4xl mx-auto p-8 lg:p-12">
+                    {/* Header for Mobile/Context */}
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-bold text-slate-800">
+                            {tabs.find(t => t.id === activeTab)?.label}
+                        </h1>
+                        <p className="text-slate-500 mt-1">
+                            Bu bölümdeki bilgileri aşağıdan görüntüleyebilir veya düzenleyebilirsiniz.
+                        </p>
+                    </div>
 
-                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
-                            {/* Contact Info */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Phone size={14} /> İletişim Bilgileri
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">İkinci Telefon</label>
-                                        <input
-                                            value={formData.phone_secondary}
-                                            onChange={e => setFormData({ ...formData, phone_secondary: e.target.value })}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                                        />
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        {/* GENERAL TAB */}
+                        {activeTab === 'general' && (
+                            <div className="divide-y divide-slate-100">
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ad Soyad</label>
+                                            <div className="mt-1 font-medium text-slate-900">{user.first_name} {user.last_name}</div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Departman</label>
+                                            <div className="mt-1 font-medium text-slate-900 flex items-center gap-2">
+                                                <Building size={16} className="text-slate-400" />
+                                                {user.department?.name || '-'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">E-posta</label>
+                                            <div className="mt-1 font-medium text-slate-900">{user.email}</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Adres</label>
-                                        <input
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Unvan</label>
+                                            <div className="mt-1 font-medium text-slate-900 flex items-center gap-2">
+                                                <Briefcase size={16} className="text-slate-400" />
+                                                {user.job_position?.name || '-'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Çalışan Kodu</label>
+                                            <div className="mt-1 font-mono bg-slate-100 inline-block px-2 py-0.5 rounded text-slate-700 text-sm">
+                                                #{user.employee_code}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">İşe Başlama</label>
+                                            <div className="mt-1 font-medium text-slate-900 flex items-center gap-2">
+                                                <Calendar size={16} className="text-slate-400" />
+                                                {user.hired_date || '-'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-slate-50 text-xs text-slate-500 flex items-center gap-2">
+                                    <Shield size={14} /> Bu bilgiler İK tarafından yönetilmektedir. Değişiklik için lütfen İK ile iletişime geçiniz.
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CONTACT TAB */}
+                        {activeTab === 'contact' && (
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700">Cep Telefonu</label>
+                                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+                                            <Phone size={16} className="text-slate-400 mr-2" />
+                                            <input
+                                                value={formData.phone}
+                                                // Phone is usually managed by Admin/HR in many systems, but let's allow basic edit or at least secondary
+                                                disabled // Let's keep primary phone read-only based on general assumption, or enable if requested. Stick to secondary for now as per serializer.
+                                                className="bg-transparent w-full text-slate-500 outline-none cursor-not-allowed"
+                                                readOnly
+                                            />
+                                            <span className="text-xs text-amber-500 font-bold ml-2">İK</span>
+                                        </div>
+                                        <p className="text-xs text-slate-400">Kurumsal numara değişikliği için İK'ya başvurunuz.</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700">İkinci Telefon</label>
+                                        <div className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                                            <Phone size={16} className="text-slate-400 mr-2" />
+                                            <input
+                                                value={formData.phone_secondary}
+                                                onChange={e => setFormData({ ...formData, phone_secondary: e.target.value })}
+                                                className="bg-transparent w-full text-slate-700 outline-none font-medium"
+                                                placeholder="05..."
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-sm font-bold text-slate-700">Ev Adresi</label>
+                                        <textarea
                                             value={formData.address}
                                             onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
+                                            className="w-full bg-white border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 resize-none h-24"
+                                            placeholder="Açık adresiniz..."
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Emergency Contact */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Shield size={14} /> Acil Durum Kişisi
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Ad Soyad</label>
-                                        <input
-                                            value={formData.emergency_contact_name}
-                                            onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Telefon</label>
-                                        <input
-                                            value={formData.emergency_contact_phone}
-                                            onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Lunch Preferences */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Utensils size={14} /> Yemek ve Mola Tercihleri
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Öğle Yemeği Başlangıç</label>
-                                        <input
-                                            type="time"
-                                            value={formData.lunch_start}
-                                            onChange={e => setFormData({ ...formData, lunch_start: e.target.value })}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Öğle Yemeği Bitiş</label>
-                                        <input
-                                            type="time"
-                                            value={formData.lunch_end}
-                                            onChange={e => setFormData({ ...formData, lunch_end: e.target.value })}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                                        />
+                                <div className="border-t border-slate-100 pt-6">
+                                    <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                        <Shield size={16} className="text-red-500" />
+                                        Acil Durum Kişisi
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-slate-600">Ad Soyad</label>
+                                            <input
+                                                value={formData.emergency_contact_name}
+                                                onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-slate-600">Yakınlık / Telefon</label>
+                                            <input
+                                                value={formData.emergency_contact_phone}
+                                                onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* Substitutes */}
-                            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                                <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <UserPlus size={14} className="text-indigo-600" /> Vekillerim (Substitutes)
-                                </h3>
-                                <p className="text-xs text-indigo-700 mb-3">
-                                    İzinli olduğunuz durumlarda sizin yerinize işlem yapabilecek veya onay verebilecek kişileri buradan seçebilirsiniz.
-                                </p>
-                                <div className="relative">
-                                    <select
-                                        multiple
-                                        value={formData.substitutes}
-                                        onChange={e => {
-                                            const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                            setFormData({ ...formData, substitutes: selected });
-                                        }}
-                                        className="w-full p-3 bg-white border border-indigo-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none h-32 custom-scrollbar"
-                                    >
-                                        {employees.map(emp => (
-                                            <option key={emp.id} value={emp.id}>
-                                                {emp.first_name} {emp.last_name} — {emp.job_position?.name || 'Pozisyonsuz'}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <p className="text-xs text-slate-400 mt-2 text-right">Birden fazla seçim için CTRL (Windows) veya CMD (Mac) tuşuna basılı tutarak tıklayınız.</p>
+                        {/* SUBSTITUTES TAB */}
+                        {activeTab === 'substitutes' && (
+                            <div className="p-6">
+                                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6 flex gap-4">
+                                    <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                                        <Users size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-indigo-900 text-sm">Vekalet Sistemi</h4>
+                                        <p className="text-xs text-indigo-700/80 mt-1 leading-relaxed">
+                                            Seçtiğiniz kişiler, siz izinli olduğunuzda veya müsait olmadığınızda onay süreçlerinde sizin yetkilerinizi kullanabilir.
+                                            Bu işlem, iş sürekliliğini sağlamak adına önemlidir.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="block text-sm font-bold text-slate-700">Tanımlı Vekiller</label>
+                                    <div className="relative">
+                                        <select
+                                            multiple
+                                            value={formData.substitutes}
+                                            onChange={e => {
+                                                const selected = Array.from(e.target.selectedOptions, option => option.value);
+                                                setFormData({ ...formData, substitutes: selected });
+                                            }}
+                                            className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none h-64 custom-scrollbar shadow-sm"
+                                        >
+                                            {allEmployees.map(emp => (
+                                                <option key={emp.id} value={emp.id} className="py-2 px-2 border-b border-slate-50 hover:bg-indigo-50 cursor-pointer rounded">
+                                                    {emp.first_name} {emp.last_name} — {emp.job_position?.name || 'Pozisyonsuz'} ({emp.department?.name})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-xs text-slate-400 mt-2 text-right">
+                                            Birden fazla kişi seçmek için <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">CTRL</kbd> tuşuna basılı tutarak seçim yapınız.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-                            <button onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-50">vazgeç</button>
+                        {/* PREFERENCES TAB */}
+                        {activeTab === 'preferences' && (
+                            <div className="p-6 space-y-8">
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-2">Mesai Bilgileri</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                            <span className="block text-xs text-slate-400 mb-1">Mesai Başlangıç</span>
+                                            <span className="block font-mono font-bold text-slate-700">{user.employee?.shift_start || '09:00'}</span>
+                                        </div>
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                            <span className="block text-xs text-slate-400 mb-1">Mesai Bitiş</span>
+                                            <span className="block font-mono font-bold text-slate-700">{user.employee?.shift_end || '18:00'}</span>
+                                        </div>
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                            <span className="block text-xs text-slate-400 mb-1">Mola Hakkı</span>
+                                            <span className="block font-mono font-bold text-slate-700">{user.employee?.daily_break_allowance || '60'} dk</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-400">Bu saatler vardiya planınıza göre otomatik belirlenmektedir.</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-2">Kişisel Tercihler</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700">Öğle Yemeği Çıkış</label>
+                                            <input
+                                                type="time"
+                                                value={formData.lunch_start}
+                                                onChange={e => setFormData({ ...formData, lunch_start: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700">Öğle Yemeği Dönüş</label>
+                                            <input
+                                                type="time"
+                                                value={formData.lunch_end}
+                                                onChange={e => setFormData({ ...formData, lunch_end: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="bg-amber-50 text-amber-800 text-xs p-3 rounded-lg border border-amber-100 flex items-start gap-2">
+                                        <Bell size={14} className="mt-0.5 shrink-0" />
+                                        Yemek saatleri tercihinizdir. Yoğunluk durumunda sistem veya yöneticiniz tarafından güncellenebilir.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Bar (Only for editable tabs) */}
+                    {activeTab !== 'general' && (
+                        <div className="mt-6 flex items-center justify-between">
+                            <p className="text-sm text-slate-500">
+                                {successMessage && <span className="text-emerald-600 font-bold flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> {successMessage}</span>}
+                            </p>
                             <button
                                 onClick={handleSave}
                                 disabled={loading}
-                                className="px-8 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 flex items-center gap-2"
+                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                             >
-                                {loading ? 'Kaydediliyor...' : <><Check size={18} /> Kaydet</>}
+                                {loading ? 'Kaydediliyor...' : <><Save size={18} /> Değişiklikleri Kaydet</>}
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Right Column - Status & Meta */}
-                <div className="md:col-span-1 space-y-6 order-last md:order-first">
-                    <div className="card bg-slate-900 text-white border-none shadow-xl shadow-slate-900/10">
-                        <h3 className="text-lg font-bold mb-4 flex items-center">
-                            <Shield className="w-5 h-5 mr-2 text-blue-400" />
-                            Hesap Durumu
-                        </h3>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                                <span className="text-slate-400 text-sm">Durum</span>
-                                <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs font-bold border border-emerald-500/30">AKTİF</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                                <span className="text-slate-400 text-sm">Çalışan Kodu</span>
-                                <span className="font-mono text-slate-200">{user.employee_code}</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                                <span className="text-slate-400 text-sm">İşe Giriş</span>
-                                <span className="text-slate-200 text-sm">{user.hired_date || '-'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card">
-                        {/* Display Substitutes Info */}
-                        <div className="mb-4 pb-4 border-b border-slate-100">
-                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-1">Vekillerim</h3>
-                            <p className="text-xs text-slate-500">Sizin yerinize işlem yapabilenler.</p>
-                        </div>
-                        {user.employee?.substitutes?.length > 0 ? (
-                            <div className="space-y-2">
-                                {user.employee.substitutes.map(sub => (
-                                    <div key={typeof sub === 'object' ? sub.id : sub} className="flex items-center gap-3 p-2 rounded-lg bg-indigo-50 text-indigo-900 text-sm font-medium">
-                                        <div className="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs">
-                                            {typeof sub === 'object' ? sub.first_name?.[0] : '?'}
-                                        </div>
-                                        {typeof sub === 'object' ? `${sub.first_name} ${sub.last_name}` : 'Yükleniyor...'}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-4 text-slate-400 text-sm">Henüz vekil atanmamış.</div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Left Column - Personal Info */}
-                <div className="md:col-span-2 space-y-6">
-                    <div className="card">
-                        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center border-b border-slate-100 pb-4">
-                            <User className="w-5 h-5 mr-2 text-blue-500" />
-                            Kişisel Bilgiler
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kullanıcı Adı</label>
-                                <div className="flex items-center text-slate-700 font-medium bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <Shield className="w-4 h-4 mr-3 text-slate-400" />
-                                    {user.username}
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">E-posta Adresi</label>
-                                <div className="flex items-center text-slate-700 font-medium bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <Mail className="w-4 h-4 mr-3 text-slate-400" />
-                                    {user.email}
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Telefon Numarası</label>
-                                <div className="flex items-center text-slate-700 font-medium bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <Phone className="w-4 h-4 mr-3 text-slate-400" />
-                                    {user.phone || 'Belirtilmemiş'}
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Departman</label>
-                                <div className="flex items-center text-slate-700 font-medium bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <Building className="w-4 h-4 mr-3 text-slate-400" />
-                                    {user.department?.name || 'Belirtilmemiş'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
-
-// Simple Icon component just for this file if Utensils is missing from imports
-const Utensils = ({ size, className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-        <path d="M7 2v20" />
-        <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
-    </svg>
-);
 
 export default Profile;
