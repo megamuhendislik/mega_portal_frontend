@@ -17,7 +17,8 @@ const getStatusBadge = (status) => {
         'PENDING_MANAGER_APPROVAL': 'bg-yellow-100 text-yellow-700',
         'APPROVED': 'bg-emerald-100 text-emerald-700',
         'REJECTED': 'bg-red-100 text-red-700',
-        'AUTO_APPROVED': 'bg-emerald-50 text-emerald-600'
+        'AUTO_APPROVED': 'bg-emerald-50 text-emerald-600',
+        'CALCULATED': 'bg-slate-100 text-slate-600'
     };
 
     const labels = {
@@ -25,7 +26,8 @@ const getStatusBadge = (status) => {
         'PENDING_MANAGER_APPROVAL': 'Onay Bekliyor',
         'APPROVED': 'Onaylandı',
         'REJECTED': 'Reddedildi',
-        'AUTO_APPROVED': 'Otomatik Onay'
+        'AUTO_APPROVED': 'Otomatik Onay',
+        'CALCULATED': 'Otomatik Kapandı'
     };
 
     return (

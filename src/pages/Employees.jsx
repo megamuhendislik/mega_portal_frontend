@@ -38,6 +38,7 @@ const INITIAL_FORM_STATE = {
     card_uid: '',
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
+    uses_service: false, // [NEW] Service Usage
     remote_work_days: [], // ['MON', 'WED']
 
     hired_date: new Date().toISOString().split('T')[0],
@@ -393,6 +394,18 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} />
                         <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} />
                     </div>
+
+                    {/* Service Toggle */}
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mt-4">
+                        <div className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${formData.uses_service ? 'bg-blue-600' : 'bg-slate-300'}`} onClick={() => handleChange('uses_service', !formData.uses_service)}>
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.uses_service ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </div>
+                        <div>
+                            <span className="font-bold text-slate-700 text-sm block">Servis Kullanıyor</span>
+                            <span className="text-xs text-slate-400">İşaretlenirse, geç kalma/erken çıkmada servis toleransı uygulanır.</span>
+                        </div>
+                    </div>
+
                     <div className="text-xs text-slate-400">
                         * Değerler boş bırakılırsa varsayılan veya seçilen takvim kuralları geçerli olur. Mevcut varsayılanlar otomatik yüklenmiştir.
                     </div>
@@ -841,6 +854,7 @@ const Employees = () => {
                 card_uid: data.card_uid || '',
                 employment_status: data.employment_status,
                 work_type: data.work_type,
+                uses_service: data.uses_service || false, // [NEW]
                 hired_date: data.hired_date || '',
 
                 work_schedule: data.work_schedule?.id || '',
