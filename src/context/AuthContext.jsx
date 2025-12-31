@@ -69,9 +69,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     const hasPermission = (permissionCode) => {
-        if (!user || !user.all_permissions) return false;
-        // Superuser check if needed (backend handles it usually, but failsafe)
-        if (user.username === 'admin') return true;
+        if (!user) return false;
+
+        // Superuser Bypass (Check user.user.is_superuser because 'user' here is the Employee profile)
+        if (user.user?.is_superuser) return true;
+
+        if (!user.all_permissions) return false;
         return user.all_permissions.includes(permissionCode);
     };
 
