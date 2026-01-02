@@ -131,7 +131,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 <div
                                     className={clsx(
                                         "h-full rounded-full transition-all duration-1000 ease-out shadow-sm relative",
-                                        usedBreak > totalBreakAllowance
+                                        usedBreakSeconds > totalBreakAllowanceSeconds
                                             ? "bg-gradient-to-r from-red-500 to-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
                                             : "bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
                                     )}
