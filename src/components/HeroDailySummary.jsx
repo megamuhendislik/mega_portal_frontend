@@ -15,21 +15,17 @@ const HeroDailySummary = ({ summary, loading }) => {
         );
     }
 
-    // Correct Backend Field Mapping
-    const totalWorkMinutes = summary.total_worked || 0;
-    const workTarget = (summary.daily_expected !== undefined && summary.daily_expected !== null) ? summary.daily_expected : 480;
-    const workPercent = workTarget > 0 ? Math.min(100, Math.round((totalWorkMinutes / workTarget) * 100)) : 0;
+    // Correct Backend Field Mapping (Now Seconds)
+    const totalWorkSeconds = summary.total_worked || 0;
+    const workTargetSeconds = (summary.daily_expected !== undefined && summary.daily_expected !== null) ? summary.daily_expected : 480 * 60;
+    const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((totalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
-    const usedBreak = summary.break_used || 0;
-    const breakTarget = 60; // Standard 1 hour, or calculate if needed
-    // Backend separates allowance, but usually 60 mins is standard. 
-    // We can assume 60 or use `remaining_break` + `break_used` if available?
-    // Let's stick to 60 or 45 based on common rules, or just show Used.
-    // The backend `remaining_break` is mapped. So Total = Used + Remaining.
-    const totalBreakAllowance = (summary.remaining_break || 0) + usedBreak || 60;
-    const breakPercent = Math.min(100, Math.round((usedBreak / totalBreakAllowance) * 100));
+    const usedBreakSeconds = summary.break_used || 0;
+    // Standard 60 mins allowance = 3600 seconds
+    const totalBreakAllowanceSeconds = (summary.remaining_break || 0) + usedBreakSeconds || 3600;
+    const breakPercent = Math.min(100, Math.round((usedBreakSeconds / totalBreakAllowanceSeconds) * 100));
 
-    const overtime = summary.current_overtime || 0;
+    const overtimeSeconds = summary.current_overtime || 0;
     const isWorking = summary.is_working || false;
 
     return (
@@ -67,16 +63,16 @@ const HeroDailySummary = ({ summary, loading }) => {
 
                             <div className="flex items-baseline gap-1.5 mb-3">
                                 <span className="text-4xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor(totalWorkMinutes / 60)}
+                                    {Math.floor(totalWorkSeconds / 3600)}
                                 </span>
                                 <span className="text-base font-bold text-slate-400 uppercase">sa</span>
                                 <span className="text-4xl font-black text-slate-800 tracking-tighter ml-2">
-                                    {totalWorkMinutes % 60}
+                                    {Math.floor((totalWorkSeconds % 3600) / 60)}
                                 </span>
                                 <span className="text-base font-bold text-slate-400 uppercase">dk</span>
                             </div>
                             <p className="text-sm font-medium text-slate-400 bg-slate-50 inline-block px-3 py-1 rounded-lg border border-slate-100/50">
-                                Hedef: {Math.floor(workTarget / 60)}s {workTarget % 60}dk
+                                Hedef: {Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk
                             </p>
                         </div>
 
@@ -117,16 +113,16 @@ const HeroDailySummary = ({ summary, loading }) => {
 
                             <div className="flex items-baseline gap-1.5 mb-3">
                                 <span className="text-4xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor(usedBreak / 60)}
+                                    {Math.floor(usedBreakSeconds / 3600)}
                                 </span>
                                 <span className="text-base font-bold text-slate-400 uppercase">sa</span>
                                 <span className="text-4xl font-black text-slate-800 tracking-tighter ml-2">
-                                    {usedBreak % 60}
+                                    {Math.floor((usedBreakSeconds % 3600) / 60)}
                                 </span>
                                 <span className="text-base font-bold text-slate-400 uppercase">dk</span>
                             </div>
                             <p className="text-sm font-medium text-slate-400 bg-slate-50 inline-block px-3 py-1 rounded-lg border border-slate-100/50">
-                                Hak: {Math.floor(totalBreakAllowance / 60)}s {totalBreakAllowance % 60}dk
+                                Hak: {Math.floor(totalBreakAllowanceSeconds / 3600)}s {Math.floor((totalBreakAllowanceSeconds % 3600) / 60)}dk
                             </p>
                         </div>
 
@@ -145,9 +141,9 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 </div>
                             </div>
                             <div className="flex justify-between mt-3 text-xs font-bold tracking-wide">
-                                <span className={clsx("flex items-center gap-1", usedBreak > totalBreakAllowance ? "text-red-500" : "text-amber-600")}>
-                                    <span className={clsx("w-1.5 h-1.5 rounded-full", usedBreak > totalBreakAllowance ? "bg-red-500" : "bg-amber-500")}></span>
-                                    {usedBreak > totalBreakAllowance ? "Limit Aşıldı" : "Limit Dahilinde"}
+                                <span className={clsx("flex items-center gap-1", usedBreakSeconds > totalBreakAllowanceSeconds ? "text-red-500" : "text-amber-600")}>
+                                    <span className={clsx("w-1.5 h-1.5 rounded-full", usedBreakSeconds > totalBreakAllowanceSeconds ? "bg-red-500" : "bg-amber-500")}></span>
+                                    {usedBreakSeconds > totalBreakAllowanceSeconds ? "Limit Aşıldı" : "Limit Dahilinde"}
                                 </span>
                             </div>
                         </div>
@@ -172,7 +168,7 @@ const HeroDailySummary = ({ summary, loading }) => {
 
                             <div className="flex items-baseline gap-1.5 mb-3">
                                 <span className="text-4xl font-black text-slate-800 tracking-tighter">
-                                    {overtime}
+                                    {Math.floor(overtimeSeconds / 60)}
                                 </span>
                                 <span className="text-base font-bold text-slate-400 uppercase">dk</span>
                             </div>
@@ -182,7 +178,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                         </div>
 
                         <div className="mt-8">
-                            {overtime > 0 ? (
+                            {overtimeSeconds > 0 ? (
                                 <div className="flex items-center gap-2.5 p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-100/50 backdrop-blur-sm">
                                     <CheckCircle2 size={16} className="text-emerald-600" />
                                     <span className="text-xs font-bold text-emerald-700 tracking-wide">Mesai Tespit Edildi</span>

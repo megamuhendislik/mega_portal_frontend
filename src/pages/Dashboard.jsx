@@ -196,7 +196,7 @@ const Dashboard = () => {
         } else if (req.type === 'OVERTIME') {
             Icon = Clock;
             title = req.reason || 'Fazla Mesai';
-            subtitle = `${format(new Date(req.date), 'd MMM', { locale: tr })} - ${req.duration_minutes} dk`;
+            subtitle = `${format(new Date(req.date), 'd MMM', { locale: tr })} - ${Math.floor(req.duration_seconds / 60)} dk`;
         } else if (req.type === 'MEAL') {
             Icon = ChefHat;
             title = req.description || 'Yemek Talebi';
@@ -229,10 +229,10 @@ const Dashboard = () => {
     };
 
     // Calculate Summary Values
-    const workHours = monthlySummary ? (monthlySummary.total_minutes / 60).toFixed(1) : '0.0';
-    const overtimeHours = monthlySummary ? (monthlySummary.total_overtime / 60).toFixed(1) : '0.0';
-    const targetHours = monthlySummary ? (monthlySummary.monthly_required / 60).toFixed(1) : '0.0';
-    const netBalance = monthlySummary ? (monthlySummary.monthly_net_balance / 60).toFixed(1) : '0.0';
+    const workHours = monthlySummary ? (monthlySummary.total_seconds / 3600).toFixed(1) : '0.0';
+    const overtimeHours = monthlySummary ? (monthlySummary.total_overtime / 3600).toFixed(1) : '0.0';
+    const targetHours = monthlySummary ? (monthlySummary.monthly_required / 3600).toFixed(1) : '0.0';
+    const netBalance = monthlySummary ? (monthlySummary.monthly_net_balance / 3600).toFixed(1) : '0.0';
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
