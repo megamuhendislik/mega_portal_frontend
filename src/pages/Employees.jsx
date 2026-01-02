@@ -894,10 +894,19 @@ const Employees = () => {
         setSubmitting(true);
         try {
             // Payload Prep
+            const cleanPayload = { ...formData };
+
+            // Convert empty strings to null for optional fields
+            Object.keys(cleanPayload).forEach(key => {
+                if (cleanPayload[key] === '') {
+                    cleanPayload[key] = null;
+                }
+            });
+
             const payload = {
-                ...formData,
-                work_schedule: formData.work_schedule || null,
-                secondary_departments: formData.functional_department ? [formData.functional_department] : []
+                ...cleanPayload,
+                work_schedule: cleanPayload.work_schedule || null,
+                secondary_departments: cleanPayload.functional_department ? [cleanPayload.functional_department] : []
             };
 
             if (viewMode === 'create') {
@@ -906,8 +915,7 @@ const Employees = () => {
             } else if (viewMode === 'edit') {
                 // Update
                 // Remove readonly fields if necessary or backend handles it.
-                // Password usually handled separately but here we might allow reset if provided?
-                // For safety, remove password if empty
+                // For safety, remove password if empty/null
                 if (!payload.password) delete payload.password;
 
                 await api.patch(`/employees/${payload.id}/`, payload);
