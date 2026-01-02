@@ -1062,110 +1062,132 @@ const Employees = () => {
             </div>
 
             {/* Main Card Container */}
-            <div className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[700px] flex flex-col md:flex-row">
+            <div className={`w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[700px] flex flex-col ${viewMode === 'create' ? 'md:flex-row' : ''}`}> {/* Full width for edit */}
 
-                {/* Left Sidebar - Stepper */}
-                <div className="w-full md:w-80 bg-slate-900 text-white p-8 flex flex-col relative overflow-hidden shrink-0">
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 left-0 w-full h-full bg-slate-900 z-0">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
-                    </div>
+                {/* Left Sidebar - Stepper (Only for Wizard/Create) */}
+                {viewMode === 'create' && (
+                    <div className="w-full md:w-80 bg-slate-900 text-white p-8 flex flex-col relative overflow-hidden shrink-0">
+                        {/* Decorative Background Elements */}
+                        <div className="absolute top-0 left-0 w-full h-full bg-slate-900 z-0">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                            <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+                        </div>
 
-                    <div className="relative z-10">
-                        <div className="mb-10">
-                            <div className="flex items-center gap-3 mb-2 opacity-80">
-                                <UserPlus size={24} className="text-blue-400" />
-                                <span className="text-xs font-bold tracking-widest uppercase text-blue-200">İK YÖNETİMİ</span>
+                        <div className="relative z-10">
+                            <div className="mb-10">
+                                <div className="flex items-center gap-3 mb-2 opacity-80">
+                                    <UserPlus size={24} className="text-blue-400" />
+                                    <span className="text-xs font-bold tracking-widest uppercase text-blue-200">İK YÖNETİMİ</span>
+                                </div>
+                                <h2 className="text-3xl font-bold leading-tight">Personel<br /><span className="text-blue-400">Oluşturma</span></h2>
                             </div>
-                            <h2 className="text-3xl font-bold leading-tight">Personel<br /><span className="text-blue-400">{viewMode === 'edit' ? 'Düzenleme' : 'Oluşturma'}</span></h2>
-                        </div>
 
-                        {/* Vertical Steps */}
-                        <div className="space-y-1 relative">
-                            {/* Vertical Line */}
-                            <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
-
-                            {STEPS.map((s, idx) => {
-                                const isActive = currentStep === s.number;
-                                const isCompleted = currentStep > s.number;
-                                const Icon = s.icon;
-
-                                return (
-                                    <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
-                                        <div
-                                            className={`
-                                                w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0
-                                                ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' :
-                                                    isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' :
-                                                        'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}
-                                            `}
-                                        >
-                                            {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
+                            {/* Vertical Steps */}
+                            <div className="space-y-1 relative">
+                                <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
+                                {STEPS.map((s, idx) => {
+                                    const isActive = currentStep === s.number;
+                                    const isCompleted = currentStep > s.number;
+                                    const Icon = s.icon;
+                                    return (
+                                        <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0 ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' : isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}`}>
+                                                {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
+                                            </div>
+                                            <div>
+                                                <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>{s.title}</h4>
+                                                {isActive && <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>
-                                                {s.title}
-                                            </h4>
-                                            {isActive && (
-                                                <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
+                        <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">MEGA PORTAL v1.0 &copy; 2025</div>
                     </div>
-
-                    <div className="mt-auto relative z-10 pt-8 opacity-60 text-xs text-slate-400 text-center">
-                        MEGA PORTAL v1.0 &copy; 2025
-                    </div>
-                </div>
+                )}
 
                 {/* Right Content Area */}
-                <div className="flex-1 bg-white flex flex-col">
+                <div className="flex-1 bg-white flex flex-col h-full max-h-[calc(100vh-100px)]"> {/* Constrain height for scrolling */}
                     {/* Header */}
-                    <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
+                    <div className="px-10 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-20">
                         <div>
-                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                {STEPS[currentStep - 1].icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 })}
-                                {STEPS[currentStep - 1].title}
+                            <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                                {viewMode === 'edit' ? <Edit2 className="text-blue-600" size={28} /> : (STEPS[currentStep - 1]?.icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 }))}
+                                {viewMode === 'edit' ? 'Personel Düzenle' : STEPS[currentStep - 1]?.title}
                             </h3>
-                            <p className="text-slate-500 text-sm mt-1">Lütfen gerekli bilgileri eksiksiz doldurunuz.</p>
+                            <p className="text-slate-500 text-sm mt-1">{viewMode === 'edit' ? 'Tüm bilgileri tek ekranda güncelleyebilirsiniz.' : 'Lütfen gerekli bilgileri eksiksiz doldurunuz.'}</p>
                         </div>
                         <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                            Adım {currentStep} / {STEPS.length}
+                            {viewMode === 'edit' ? 'Hızlı Düzenleme Modu' : `Adım ${currentStep} / ${STEPS.length}`}
                         </div>
                     </div>
 
-                    {/* Scrollable Form Content */}
-                    <div className="flex-1 p-10 overflow-y-auto max-h-[600px] custom-scrollbar">
-                        {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
-                        {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
-                        {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                        {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} />}
-                        {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                    {/* Content Scroll Area */}
+                    <div className="flex-1 p-10 overflow-y-auto custom-scrollbar scroll-smooth">
+                        {viewMode === 'edit' ? (
+                            /* EDIT MODE: SINGLE PAGE SCROLL */
+                            <div className="max-w-4xl mx-auto space-y-12 pb-20">
+                                {/* Section 1: Personal */}
+                                <section id="sec-personal" className="scroll-mt-24">
+                                    {/* Re-using Step Components directly */}
+                                    {/* Note: Step components have internal headers, so we can just stack them */}
+                                    <StepPersonal formData={formData} handleChange={handleInputChange} />
+                                </section>
+
+                                {/* Section 2: Corporate */}
+                                <section id="sec-corporate" className="scroll-mt-24 pt-8 border-t border-slate-100">
+                                    <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />
+                                </section>
+
+                                {/* Section 3: Contact */}
+                                <section id="sec-contact" className="scroll-mt-24 pt-8 border-t border-slate-100">
+                                    <StepContact formData={formData} handleChange={handleInputChange} />
+                                </section>
+
+                                {/* Section 4: Details */}
+                                <section id="sec-details" className="scroll-mt-24 pt-8 border-t border-slate-100">
+                                    <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />
+                                </section>
+
+                                {/* Section 5: Permissions */}
+                                <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
+                                    <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} />
+                                </section>
+                            </div>
+                        ) : (
+                            /* CREATE WIZARD MODE */
+                            <div className="h-full">
+                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
+                                {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                                {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
+                                {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
+                                {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} />}
+                                {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center sticky bottom-0 z-20 w-full">
+                        {/* Back / Cancel Button */}
                         <button
-                            onClick={handleBack}
-                            disabled={currentStep === 1}
+                            onClick={viewMode === 'edit' ? () => setViewMode('list') : handleBack}
+                            disabled={viewMode === 'create' && currentStep === 1}
                             className={`
                                 h-12 px-6 rounded-xl font-bold flex items-center gap-2 transition-all
-                                ${currentStep === 1
+                                ${(viewMode === 'create' && currentStep === 1)
                                     ? 'text-slate-300 cursor-not-allowed'
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200'}
                             `}
                         >
                             <ArrowLeft size={20} />
-                            Geri
+                            {viewMode === 'edit' ? 'Vazgeç ve Dön' : 'Geri'}
                         </button>
 
+                        {/* Save / Next Button */}
                         <button
-                            onClick={currentStep === 6 ? handleSubmit : handleNext}
+                            onClick={viewMode === 'create' ? (currentStep === 6 ? handleSubmit : handleNext) : handleSubmit}
                             disabled={submitting}
                             className={`
                                 h-12 px-8 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95
@@ -1179,8 +1201,9 @@ const Employees = () => {
                                 </>
                             ) : (
                                 <>
-                                    {currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et'}
-                                    {currentStep !== 6 && <ArrowRight size={20} />}
+                                    {viewMode === 'edit' ? 'Değişiklikleri Kaydet' : (currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et')}
+                                    {viewMode === 'create' && currentStep !== 6 && <ArrowRight size={20} />}
+                                    {viewMode === 'edit' && <Save size={20} />}
                                 </>
                             )}
                         </button>
