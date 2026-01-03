@@ -19,6 +19,7 @@ const Attendance = () => {
     const [logs, setLogs] = useState([]);
     const [todaySummary, setTodaySummary] = useState(null);
     const [summary, setSummary] = useState({ totalWorkHours: 0, totalOvertime: 0, missingDays: 0 });
+    const [systemSettings, setSystemSettings] = useState(null);
 
     // Team Data
     const [teamMembers, setTeamMembers] = useState([]);
@@ -33,7 +34,17 @@ const Attendance = () => {
     // Initialize dates
     useEffect(() => {
         handleDateFilterChange('MONTH');
+        fetchSystemSettings();
     }, []);
+
+    const fetchSystemSettings = async () => {
+        try {
+            const res = await api.get('/settings/');
+            setSystemSettings(res.data);
+        } catch (error) {
+            console.error('Failed to load settings', error);
+        }
+    };
 
     // Initial Load & Auth Check
     useEffect(() => {
@@ -150,7 +161,17 @@ const Attendance = () => {
         let totalMinutes = 0;
         let overtimeMinutes = 0;
 
+        const startDateLimit = systemSettings?.attendance_start_date
+            ? new Date(systemSettings.attendance_start_date)
+            : null;
+
         data.forEach(log => {
+            // Check Start Date
+            if (startDateLimit) {
+                const logDate = new Date(log.work_date);
+                if (logDate < startDateLimit) return;
+            }
+
             if (log.total_minutes) totalMinutes += log.total_minutes;
             if (log.overtime_minutes) overtimeMinutes += log.overtime_minutes;
         });

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Activity, Database, Users, Calendar, AlertTriangle,
     CheckCircle, XCircle, Play, Shield, Terminal,
-    FileText, LayoutDashboard, Search, Clock, RefreshCw
+    FileText, LayoutDashboard, Search, Clock, RefreshCw, Settings, Save, Trash2
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -13,6 +13,10 @@ const AdminConsole = () => {
     // States
     const [stats, setStats] = useState(null);
     const [isStatsLoading, setIsStatsLoading] = useState(false);
+
+    // Settings State
+    const [settings, setSettings] = useState({ attendance_start_date: '' });
+    const [isSettingsLoading, setIsSettingsLoading] = useState(false);
 
     // Diagnostics State
     const [diagLoading, setDiagLoading] = useState(false);
@@ -27,7 +31,44 @@ const AdminConsole = () => {
     useEffect(() => {
         if (activeTab === 'overview') fetchStats();
         if (activeTab === 'inspector') fetchRawData(inspectModel);
+        if (activeTab === 'settings') fetchSettings();
     }, [activeTab, inspectModel]);
+
+    const fetchSettings = async () => {
+        setIsSettingsLoading(true);
+        try {
+            const res = await api.get('/settings/');
+            setSettings(res.data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSettingsLoading(false);
+        }
+    };
+
+    const updateSettings = async () => {
+        try {
+            await api.post('/settings/', settings);
+            alert('Ayarlar kaydedildi.');
+        } catch (err) {
+            alert('Kaydetme hatası: ' + err.message);
+        }
+    };
+
+    const handleResetAll = async () => {
+        if (!window.confirm("DİKKAT! TÜM MESAİ VERİLERİ SİLİNECEK.\n\nBu işlem geri alınamaz.\nEmin misiniz?")) return;
+
+        // Second check
+        const confirmText = prompt("Onaylamak için 'SIL' yazın:");
+        if (confirmText !== 'SIL') return;
+
+        try {
+            await api.post('/attendance/reset-all-data/');
+            alert('Tüm veriler başarıyla silindi.');
+        } catch (err) {
+            alert('Sıfırlama hatası: ' + (err.response?.data?.error || err.message));
+        }
+    };
 
     const fetchStats = async () => {
         setIsStatsLoading(true);
@@ -132,14 +173,15 @@ const AdminConsole = () => {
                         { id: 'overview', label: 'Genel Bakış', icon: LayoutDashboard },
                         { id: 'diagnostics', label: 'Tanı Testleri', icon: Activity },
                         { id: 'inspector', label: 'Veri Müfettişi', icon: Search },
+                        { id: 'settings', label: 'Ayarlar', icon: Settings },
                         // { id: 'simulator', label: 'Simülasyon', icon: Play },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                                 }`}
                         >
                             <tab.icon size={16} />
@@ -277,6 +319,59 @@ const AdminConsole = () => {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* SETTINGS TAB */}
+                {activeTab === 'settings' && (
+                    <div className="max-w-2xl bg-white p-8 rounded-xl border border-slate-200 shadow-sm animate-fade-in space-y-8">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <Settings className="text-blue-600" /> Sistem Ayarları
+                            </h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Sistemin Başlangıç Günü
+                                    </label>
+                                    <p className="text-xs text-slate-500 mb-2">
+                                        Bu tarihten önceki eksik ve fazla mesailer, toplam hesaplamasına dâhil edilmeyecektir.
+                                    </p>
+                                    <input
+                                        type="date"
+                                        value={settings.attendance_start_date || ''}
+                                        onChange={(e) => setSettings({ ...settings, attendance_start_date: e.target.value })}
+                                        className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                </div>
+                                <button
+                                    onClick={updateSettings}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
+                                >
+                                    <Save size={18} />
+                                    Kaydet
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="pt-8 border-t border-slate-100">
+                            <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
+                                <AlertTriangle className="text-red-600" /> Tehlikeli Bölge
+                            </h3>
+                            <div className="bg-red-50 border border-red-100 p-4 rounded-lg">
+                                <p className="text-red-800 font-medium mb-2">Tüm Mesaileri Sıfırla</p>
+                                <p className="text-red-600 text-sm mb-4">
+                                    Tüm personelin giriş-çıkış (Attendance), fazla mesai (Overtime) ve log datalarını kalıcı olarak siler.
+                                    Personel kayıtları silinmez. Geri alınamaz.
+                                </p>
+                                <button
+                                    onClick={handleResetAll}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
+                                >
+                                    <Trash2 size={18} /> (Sadece Admin) Tüm Mesaileri Sıfırla
+                                </button>
                             </div>
                         </div>
                     </div>
