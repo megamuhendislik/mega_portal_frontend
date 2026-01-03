@@ -17,13 +17,15 @@ const HeroDailySummary = ({ summary, loading }) => {
 
     // Correct Backend Field Mapping (Now Seconds)
     const totalWorkSeconds = summary.total_worked || 0;
-    const workTargetSeconds = (summary.daily_expected !== undefined && summary.daily_expected !== null) ? summary.daily_expected : 480 * 60;
+    const workTargetSeconds = (summary.daily_expected !== undefined && summary.daily_expected !== null) ? summary.daily_expected : 0;
     const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((totalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
     const usedBreakSeconds = summary.break_used || 0;
     // Standard 60 mins allowance = 3600 seconds
-    const totalBreakAllowanceSeconds = (summary.remaining_break || 0) + usedBreakSeconds || 3600;
-    const breakPercent = Math.min(100, Math.round((usedBreakSeconds / totalBreakAllowanceSeconds) * 100));
+    const totalBreakAllowanceSeconds = (summary.remaining_break || 0) + usedBreakSeconds;
+    const breakPercent = totalBreakAllowanceSeconds > 0
+        ? Math.min(100, Math.round((usedBreakSeconds / totalBreakAllowanceSeconds) * 100))
+        : 0;
 
     const overtimeSeconds = summary.current_overtime || 0;
     const isWorking = summary.is_working || false;

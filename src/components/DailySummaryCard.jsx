@@ -70,7 +70,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                         <div className="w-full bg-slate-200 rounded-full h-1 mt-3">
                             <div
                                 className={`h-1 rounded-full ${summary.remaining_break < 0 ? 'bg-red-500' : 'bg-slate-500'}`}
-                                style={{ width: `${Math.min(100, (summary.break_used / (summary.break_used + summary.remaining_break || 30)) * 100)}%` }}
+                                style={{ width: `${(summary.break_used + summary.remaining_break) > 0 ? Math.min(100, (summary.break_used / (summary.break_used + summary.remaining_break)) * 100) : 0}%` }}
                             ></div>
                         </div>
                     </div>
