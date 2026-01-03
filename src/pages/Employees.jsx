@@ -317,6 +317,22 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     // Sync customMode with parent if needed, but local toggle is fine for UI
     // Logic: If user selects "Custom" in dropdown -> set work_schedule = "" -> show Editor
 
+    // Find selected schedule to show defaults
+    const selectedSchedule = workSchedules.find(ws => ws.id == (formData.work_schedule || ''));
+
+    // Helper to get default time from schedule JSON (assuming MON as standard)
+    const getDefaultTime = (type) => {
+        if (!selectedSchedule?.schedule?.MON) return '';
+        return selectedSchedule.schedule.MON[type] || '';
+    };
+
+    const defaultShiftStart = getDefaultTime('start');
+    const defaultShiftEnd = getDefaultTime('end');
+    const defaultLunchStart = selectedSchedule?.lunch_start?.slice(0, 5) || '';
+    const defaultLunchEnd = selectedSchedule?.lunch_end?.slice(0, 5) || '';
+    const defaultBreak = selectedSchedule?.daily_break_allowance || '';
+    const defaultTolerance = selectedSchedule?.late_tolerance_minutes || '';
+
     return (
         <div className="animate-fade-in-up">
             <div className="mb-6 pb-4 border-b border-slate-100">
@@ -386,13 +402,13 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         Mesai Kuralları & İstisnalar (Override)
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <InputField type="time" label="Mesai Başlangıç" value={formData.shift_start} onChange={e => handleChange('shift_start', e.target.value)} />
-                        <InputField type="time" label="Mesai Bitiş" value={formData.shift_end} onChange={e => handleChange('shift_end', e.target.value)} />
-                        <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} />
-                        <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} />
+                        <InputField type="time" label="Mesai Başlangıç" value={formData.shift_start} onChange={e => handleChange('shift_start', e.target.value)} placeholder={defaultShiftStart} />
+                        <InputField type="time" label="Mesai Bitiş" value={formData.shift_end} onChange={e => handleChange('shift_end', e.target.value)} placeholder={defaultShiftEnd} />
+                        <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} placeholder={defaultLunchStart} />
+                        <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} placeholder={defaultLunchEnd} />
 
-                        <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} />
-                        <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} />
+                        <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} placeholder={defaultBreak} />
+                        <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} placeholder={defaultTolerance} />
                     </div>
 
                     {/* Service Toggle */}
@@ -859,6 +875,17 @@ const Employees = () => {
 
                 work_schedule: data.work_schedule?.id || '',
                 weekly_schedule: data.weekly_schedule || {},
+
+                // Schedule Overrides mapping
+                daily_break_allowance: data.daily_break_allowance || '',
+                attendance_tolerance_minutes: data.attendance_tolerance_minutes || '',
+                shift_start: data.shift_start || '',
+                shift_end: data.shift_end || '',
+                lunch_start: data.lunch_start || '',
+                lunch_end: data.lunch_end || '',
+                attendance_rules: data.attendance_rules || '',
+
+                phone: data.phone || '', // Existing lines continue...
 
                 phone: data.phone || '',
                 phone_secondary: data.phone_secondary || '',
