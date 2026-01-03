@@ -316,7 +316,7 @@ const WorkSchedules = () => {
                     onClick={() => {
                         const defaultSchedule = {};
                         DAYS.forEach(day => { defaultSchedule[day.key] = { start: '09:00', end: '18:00', is_off: day.key === 'SAT' || day.key === 'SUN' }; });
-                        setScheduleFormData({ id: null, name: '', is_default: false, lunch_start: '12:30', lunch_end: '13:30', daily_break_allowance: 30, late_tolerance_minutes: 15, schedule: defaultSchedule });
+                        setScheduleFormData({ id: null, name: '', is_default: false, lunch_start: '12:30', lunch_end: '13:30', daily_break_allowance: 30, late_tolerance_minutes: 15, service_tolerance_minutes: 0, schedule: defaultSchedule });
                         setShowScheduleModal(true);
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
@@ -359,6 +359,7 @@ const WorkSchedules = () => {
                                         lunch_end: selectedSchedule.lunch_end || '13:30',
                                         daily_break_allowance: selectedSchedule.daily_break_allowance || 30,
                                         late_tolerance_minutes: selectedSchedule.late_tolerance_minutes || 15,
+                                        service_tolerance_minutes: selectedSchedule.service_tolerance_minutes || 0,
                                         schedule: JSON.parse(JSON.stringify(selectedSchedule.schedule))
                                     });
                                     setShowScheduleModal(true);
@@ -565,6 +566,23 @@ const WorkSchedules = () => {
                                     <span className="ml-2 font-medium text-slate-700">Varsayılan Takvim</span>
                                 </div>
                             </div>
+
+                            {/* Tolerances & Break */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
+                                    <input type="number" value={scheduleFormData.daily_break_allowance} onChange={e => setScheduleFormData({ ...scheduleFormData, daily_break_allowance: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Geç Kalma Toleransı (Dk)</label>
+                                    <input type="number" value={scheduleFormData.late_tolerance_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, late_tolerance_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Servis Toleransı (Dk)</label>
+                                    <input type="number" value={scheduleFormData.service_tolerance_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, service_tolerance_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
+                                </div>
+                            </div>
+
                             {/* List of Days */}
                             <div className="space-y-3">
                                 {DAYS.map(day => {
