@@ -35,7 +35,7 @@ const INITIAL_FORM_STATE = {
     secondary_departments: [], // Additional depts
 
     employee_code: '',
-    card_uid: '',
+
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
     uses_service: false, // [NEW] Service Usage

@@ -37,7 +37,7 @@ const EmployeeDetail = () => {
         is_active: true,
 
         // Work Schedule
-        work_schedule: '', card_uid: '',
+        work_schedule: '',
         attendance_tolerance_minutes: 0, daily_break_allowance: 0,
         shift_start: '', shift_end: '',
         lunch_start: '12:30', lunch_end: '13:30',
@@ -99,7 +99,6 @@ const EmployeeDetail = () => {
                 cross_manager_ids: managers.cross_managers.map(m => m.id),
 
                 work_schedule: emp.work_schedule?.id || '',
-                card_uid: emp.card_uid || '',
                 attendance_tolerance_minutes: emp.attendance_tolerance_minutes || 0,
                 daily_break_allowance: emp.daily_break_allowance || 0,
                 shift_start: emp.shift_start || '',
@@ -380,10 +379,7 @@ const EmployeeDetail = () => {
                                                 {workSchedules.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
                                             </select>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kart ID (Card UID)</label>
-                                            <input type="text" name="card_uid" value={formData.card_uid} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dk)</label>
                                             <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
