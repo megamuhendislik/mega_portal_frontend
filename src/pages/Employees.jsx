@@ -484,6 +484,33 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                                 </div>
                             </div>
 
+                            <SelectField
+                                label="Şablondan Kopyala (İsteğe Bağlı)"
+                                value=""
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (!val) return;
+                                    const template = workSchedules.find(ws => ws.id == val);
+                                    if (template) {
+                                        if (window.confirm(`${template.name} şablonunun saatleri buraya kopyalanacak. Onaylıyor musunuz?`)) {
+                                            handleChange('weekly_schedule', JSON.parse(JSON.stringify(template.schedule)));
+                                            // Optionally copy tolerances too?
+                                            // handleChange('daily_break_allowance', template.daily_break_allowance);
+                                        }
+                                    }
+                                }}
+                                options={
+                                    <>
+                                        <option value="">Seçiniz (Kopyalamak için)...</option>
+                                        {workSchedules.map(ws => (
+                                            <option key={ws.id} value={ws.id}>
+                                                {ws.name} {ws.is_default ? '(Varsayılan)' : ''}
+                                            </option>
+                                        ))}
+                                    </>
+                                }
+                            />
+
                             <WeeklyScheduleEditor
                                 value={formData.weekly_schedule}
                                 onChange={(val) => handleChange('weekly_schedule', val)}
@@ -509,7 +536,7 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
