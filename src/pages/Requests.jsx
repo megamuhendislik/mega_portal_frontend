@@ -40,18 +40,24 @@ const Requests = () => {
 
     const fetchData = async () => {
         try {
-            const [reqRes, typesRes, overtimeRes, mealRes, incomingRes] = await Promise.all([
+            const [reqRes, typesRes, overtimeRes, mealRes, incomingLeaveRes, incomingOvertimeRes] = await Promise.all([
                 api.get('/leave/requests/'),
                 api.get('/leave/types/'),
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
-                api.get('/leave/requests/pending_approvals/')
+                api.get('/leave/requests/pending_approvals/'),
+                api.get('/overtime-requests/pending_approvals/')
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);
             setOvertimeRequests(overtimeRes.data.results || overtimeRes.data);
             setMealRequests(mealRes.data.results || mealRes.data);
-            setIncomingRequests(incomingRes.data.results || incomingRes.data);
+
+            // Merge Incoming
+            const leaves = (incomingLeaveRes.data.results || incomingLeaveRes.data).map(r => ({ ...r, type: 'LEAVE', uniqueId: `L_${r.id}` }));
+            const overtimes = (incomingOvertimeRes.data.results || incomingOvertimeRes.data).map(r => ({ ...r, type: 'OVERTIME', uniqueId: `O_${r.id}` }));
+            setIncomingRequests([...leaves, ...overtimes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+
         } catch (error) {
             console.error('Error fetching requests:', error);
         } finally {
@@ -129,25 +135,31 @@ const Requests = () => {
         }
     };
 
-    const handleApprove = async (id, notes = '') => {
+    const handleApprove = async (req, notes = '') => {
         // if (!window.confirm('Bu talebi onaylamak istediğinize emin misiniz?')) return;
         try {
-            await api.post(`/leave/requests/${id}/approve_reject/`, {
-                action: 'approve',
-                notes: notes || 'Onaylandı'
-            });
-            // Refresh lists
-            fetchData();
-            fetchData();
-            if (activeTab === 'team_history') fetchTeamHistory();
-            // alert('Talep onaylandı.');
+            let url = '';
+            if (req.type === 'LEAVE') {
+                url = `/leave/requests/${req.id}/approve_reject/`;
+            } else if (req.type === 'OVERTIME') {
+                url = `/overtime-requests/${req.id}/approve_reject/`;
+            }
+
+            if (url) {
+                await api.post(url, {
+                    action: 'approve',
+                    notes: notes || 'Onaylandı'
+                });
+                fetchData();
+                if (activeTab === 'team_history') fetchTeamHistory();
+            }
         } catch (error) {
             console.error('Error approving request:', error);
             alert('Onaylama işlemi başarısız oldu.');
         }
     };
 
-    const handleReject = async (id, reason) => {
+    const handleReject = async (req, reason) => {
         // const reason = window.prompt('Lütfen red sebebini giriniz:');
         if (reason === null) return; // Cancelled
         if (!reason) {
@@ -156,15 +168,21 @@ const Requests = () => {
         }
 
         try {
-            await api.post(`/leave/requests/${id}/approve_reject/`, {
-                action: 'reject',
-                reason: reason
-            });
-            // Refresh lists
-            fetchData();
-            fetchData();
-            if (activeTab === 'team_history') fetchTeamHistory();
-            // alert('Talep reddedildi.');
+            let url = '';
+            if (req.type === 'LEAVE') {
+                url = `/leave/requests/${req.id}/approve_reject/`;
+            } else if (req.type === 'OVERTIME') {
+                url = `/overtime-requests/${req.id}/approve_reject/`;
+            }
+
+            if (url) {
+                await api.post(url, {
+                    action: 'reject',
+                    reason: reason
+                });
+                fetchData();
+                if (activeTab === 'team_history') fetchTeamHistory();
+            }
         } catch (error) {
             console.error('Error rejecting request:', error);
             alert('Reddetme işlemi başarısız oldu.');
@@ -251,16 +269,16 @@ const Requests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {incomingRequests.map(req => (
                         <RequestCard
-                            key={req.id}
+                            key={req.uniqueId || req.id}
                             request={{
                                 ...req,
-                                leave_type_name: req.request_type_detail?.name,
-                                employee_name: req.employee_detail?.full_name
+                                leave_type_name: req.request_type_detail?.name, // For Leave
+                                employee_name: req.employee_detail?.full_name || req.employee_name // Fallback
                             }}
                             isIncoming={true}
                             statusBadge={getStatusBadge}
-                            onApprove={handleApprove}
-                            onReject={handleReject}
+                            onApprove={(id, notes) => handleApprove(req, notes)}
+                            onReject={(id, reason) => handleReject(req, reason)}
                         />
                     ))}
                 </div>
