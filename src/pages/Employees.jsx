@@ -1042,6 +1042,17 @@ const Employees = () => {
                                             <div className="w-4 flex justify-center shrink-0 text-slate-400">@</div>
                                             <span className="truncate">{emp.email}</span>
                                         </div>
+                                        {/* New Schedule Info Section */}
+                                        <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                                            <div className="bg-slate-50 p-2 rounded-lg text-center">
+                                                <div className="text-slate-400 mb-0.5">Takvim</div>
+                                                <div className="font-bold text-slate-700 truncate" title={emp.work_schedule_name}>{emp.work_schedule_name}</div>
+                                            </div>
+                                            <div className="bg-slate-50 p-2 rounded-lg text-center">
+                                                <div className="text-slate-400 mb-0.5">Tolerans / Mola</div>
+                                                <div className="font-bold text-slate-700">{emp.attendance_tolerance_minutes}dk / {emp.daily_break_allowance}dk</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
