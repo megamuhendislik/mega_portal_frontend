@@ -7,6 +7,8 @@ import TeamSelector from '../components/TeamSelector';
 import AttendanceLogTable from '../components/AttendanceLogTable';
 import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
 import TeamComparisonChart from '../components/TeamComparisonChart';
+import PersonalAttendanceChart from '../components/PersonalAttendanceChart';
+import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 
 const Attendance = () => {
     const { user } = useAuth();
@@ -140,7 +142,7 @@ const Attendance = () => {
                     setHasTeam(false);
                 }
             } catch (error) {
-                console.error("Failed to check team visibility", error);
+                console.error('Failed to check team visibility', error);
                 setHasTeam(false);
             }
         }
@@ -152,7 +154,7 @@ const Attendance = () => {
             const response = await api.get('/attendance/team_dashboard/');
             mapTeamData(response.data);
         } catch (error) {
-            console.error("Team data fetch error", error);
+            console.error('Team data fetch error', error);
         } finally {
             setLoading(false);
         }
@@ -342,6 +344,12 @@ const Attendance = () => {
                         </div>
                     </div>
 
+                    {/* Performance Visualizations */}
+                    <div className="space-y-6">
+                        <MonthlyPerformanceSummary logs={logs} startDate={startDate} endDate={endDate} />
+                        <PersonalAttendanceChart logs={logs} startDate={startDate} endDate={endDate} />
+                    </div>
+
                     {/* Logs Table */}
                     <AttendanceLogTable logs={logs} />
                 </div>
@@ -361,4 +369,3 @@ const Attendance = () => {
 };
 
 export default Attendance;
-
