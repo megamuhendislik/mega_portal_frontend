@@ -77,7 +77,9 @@ const Dashboard = () => {
 
             const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
                 api.get('/attendance/today_summary/'),
-                api.get(`/dashboard/stats/?year=${year}&month=${month}&employee_id=${employeeId}`),
+                // api.get(`/dashboard/stats/?year=${year}&month=${month}&employee_id=${employeeId}`), // OLD
+                // NEW: Use specific attendance summary for accurate targets/realized
+                api.get(`/attendance/monthly_summary/?start_date=${monthStartStr}&end_date=${monthEndStr}&employee_id=${employeeId}`),
                 api.get(`/calendar-events/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`),
             ]);
 
@@ -95,10 +97,14 @@ const Dashboard = () => {
 
             if (monthStatsResult.status === 'fulfilled') {
                 const data = monthStatsResult.value.data;
+                console.log("!!! DASHBOARD STATS RAW DATA (Attendance API) !!!", data); // Verbose Logging
                 setMonthlySummary(Array.isArray(data) ? data[0] : data);
+            } else {
+                console.error("!!! DASHBOARD STATS FAILED !!!", monthStatsResult.reason);
             }
 
             if (monthEventsResult.status === 'fulfilled') {
+                console.log("!!! CALENDAR EVENTS RAW DATA !!!", monthEventsResult.value.data); // Verbose Logging
                 setMonthEvents(monthEventsResult.value.data.results || monthEventsResult.value.data || []);
             }
         } catch (err) {
@@ -234,11 +240,19 @@ const Dashboard = () => {
         );
     };
 
-    // Calculate Summary Values
-    const workHours = monthlySummary ? (monthlySummary.total_seconds / 3600).toFixed(1) : '0.0';
-    const overtimeHours = monthlySummary ? (monthlySummary.total_overtime / 3600).toFixed(1) : '0.0';
-    const targetHours = monthlySummary ? (monthlySummary.monthly_required / 3600).toFixed(1) : '0.0';
-    const netBalance = monthlySummary ? (monthlySummary.monthly_net_balance / 3600).toFixed(1) : '0.0';
+    // Calculate Summary Values (Updated Field API Mapping)
+    // realized_normal_seconds -> Total Worked
+    const workHours = monthlySummary ? ((monthlySummary.realized_normal_seconds || 0) / 3600).toFixed(1) : '0.0';
+
+    // realized_overtime_seconds -> Overtime
+    const overtimeHours = monthlySummary ? ((monthlySummary.realized_overtime_seconds || 0) / 3600).toFixed(1) : '0.0';
+
+    // target_seconds -> Monthly Target
+    const targetHours = monthlySummary ? ((monthlySummary.target_seconds || 0) / 3600).toFixed(1) : '0.0';
+
+    // Net Balance is not direct, so we calculate: Realized - Target
+    const netBalanceSeconds = (monthlySummary?.realized_normal_seconds || 0) - (monthlySummary?.target_seconds || 0);
+    const netBalance = (netBalanceSeconds / 3600).toFixed(1);
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
