@@ -167,6 +167,7 @@ const Attendance = () => {
         const mappedMembers = data.map(m => ({
             id: m.id,
             name: m.name,
+            jobPosition: m.job_position, // Add this field
             status: m.status,
             lastActionTime: m.last_action_time,
             totalTodayMinutes: Math.floor(m.today_seconds / 60),

@@ -28,6 +28,7 @@ const TeamAttendanceOverview = ({ teamData, onMemberClick }) => {
                             <div>
                                 <p className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">
                                     {member.name}
+                                    {member.jobPosition && <span className="text-slate-500 font-normal ml-1">({member.jobPosition})</span>}
                                 </p>
                                 <div className="flex items-center gap-2 text-xs text-slate-500">
                                     <span className={clsx(
