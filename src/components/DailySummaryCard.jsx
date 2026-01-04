@@ -117,7 +117,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mola Hakkı</p>
                             <h4 className="text-xl font-bold text-slate-800 mt-1">
-                                {summary.remaining_break} <span className="text-sm font-medium text-slate-400">dk</span>
+                                {Math.floor(summary.remaining_break / 60)} <span className="text-sm font-medium text-slate-400">dk</span>
                             </h4>
                         </div>
                         <div className="bg-slate-200 p-1.5 rounded-lg text-slate-500 group-hover:bg-white group-hover:text-amber-500 transition-colors">
@@ -126,7 +126,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                     </div>
                     <div>
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 mb-1">
-                            <span>Kullanılan: {summary.break_used} dk</span>
+                            <span>Kullanılan: {Math.floor(summary.break_used / 60)} dk</span>
                         </div>
                         <div className="w-full bg-slate-200/50 rounded-full h-1.5">
                             <div
@@ -143,7 +143,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ek Mesai</p>
                             <h4 className={`text-xl font-bold mt-1 ${summary.current_overtime > 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
-                                {summary.current_overtime} <span className="text-sm font-medium text-slate-400">dk</span>
+                                {Math.floor(summary.current_overtime / 60)} <span className="text-sm font-medium text-slate-400">dk</span>
                             </h4>
                         </div>
                         <div className="bg-slate-200 p-1.5 rounded-lg text-slate-500 group-hover:bg-white group-hover:text-emerald-600 transition-colors">
