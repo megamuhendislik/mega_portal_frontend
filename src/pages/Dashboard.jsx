@@ -77,8 +77,8 @@ const Dashboard = () => {
 
             const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
                 api.get('/attendance/today_summary/'),
-                api.get(`/stats/summary/?year=${year}&month=${month}&employee_id=${employeeId}`),
-                api.get(`/calendar/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`)
+                api.get(`/dashboard/stats/?year=${year}&month=${month}&employee_id=${employeeId}`),
+                api.get(`/calendar-events/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`),
             ]);
 
             if (todayResult.status === 'fulfilled') {
@@ -104,10 +104,10 @@ const Dashboard = () => {
         // 2. Fetch Requests
         try {
             const [leaveRes, overtimeRes, mealRes, incomingLeaveRes, incomingAttendanceRes] = await Promise.allSettled([
-                api.get('/leave/requests/'),
+                api.get('/leave-requests/'),
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
-                api.get('/leave/requests/pending_approvals/'),
+                api.get('/leave-requests/pending_approvals/'),
                 api.get('/attendance/pending/')
             ]);
 
@@ -135,7 +135,7 @@ const Dashboard = () => {
         // 3. Fetch Upcoming Calendar Events
         try {
             const employeeId = user?.employee?.id || user?.id; // Re-derive for safety or use from scope if I could
-            const eventsRes = await api.get(`/calendar/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${employeeId}`);
+            const eventsRes = await api.get(`/calendar-events/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${employeeId}`);
             const events = eventsRes.data.results || eventsRes.data || [];
             setCalendarEvents(events.sort((a, b) => new Date(a.start) - new Date(b.start)));
         } catch (err) {

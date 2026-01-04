@@ -48,7 +48,7 @@ const AttendanceTracking = () => {
             const params = { year, month };
             if (selectedDept) params.department_id = selectedDept;
 
-            const res = await api.get('/stats/summary/', { params });
+            const res = await api.get('/dashboard/stats/', { params });
             const data = res.data;
             setStats(data);
 

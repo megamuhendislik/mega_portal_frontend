@@ -65,9 +65,9 @@ const CalendarPage = () => {
             console.log(`DEBUG: Fetching data for range ${viewStart} to ${viewEnd}`);
 
             const [calendarRes, attendanceRes, summaryRes] = await Promise.all([
-                api.get(`/calendar/?start=${viewStart}&end=${viewEnd}&employee_id=${selectedEmployeeId}`),
+                api.get(`/calendar-events/?start=${viewStart}&end=${viewEnd}&employee_id=${selectedEmployeeId}`),
                 api.get(`/attendance/?start_date=${viewStart}&end_date=${viewEnd}&employee_id=${selectedEmployeeId}`),
-                api.get(`/stats/summary/?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}&employee_id=${selectedEmployeeId}`)
+                api.get(`/dashboard/stats/?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}&employee_id=${selectedEmployeeId}`)
             ]);
 
             console.log('DEBUG: API Responses received');

@@ -45,7 +45,7 @@ const Requests = () => {
                 api.get('/leave/types/'),
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
-                api.get('/leave/requests/pending_approvals/'),
+                api.get('/leave-requests/pending_approvals/'),
                 api.get('/overtime-requests/pending_approvals/')
             ]);
             setRequests(reqRes.data.results || reqRes.data);
