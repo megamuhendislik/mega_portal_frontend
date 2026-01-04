@@ -182,9 +182,12 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
             ];
         }
     } else {
-        // Employee Node: Children are Subordinates
+        // Employee Node: Children are Subordinates (or Sub-Departments)
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children.map(e => ({ ...e, type: 'employee' }));
+            branchingChildren = node.children.map(child => ({
+                ...child,
+                type: child.code ? 'department' : 'employee'
+            }));
         }
     }
 
