@@ -3,14 +3,15 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import UpcomingEventsCard from '../components/UpcomingEventsCard';
 import HeroDailySummary from '../components/HeroDailySummary';
+import WeeklyPerformanceWidget from '../components/WeeklyPerformanceWidget';
+import MonthlyPerformanceWidget from '../components/MonthlyPerformanceWidget';
 import { Clock, Briefcase, Timer, Activity, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, PieChart } from 'lucide-react';
 import clsx from 'clsx';
-import { format, addDays, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 const Dashboard = () => {
     const { user } = useAuth();
-    console.log("DASHBOARD RENDER - User Object:", user);
 
     // Loading States
     const [loadingSummaries, setLoadingSummaries] = useState(true);
@@ -20,10 +21,11 @@ const Dashboard = () => {
     // Data States
     const [todaySummary, setTodaySummary] = useState(null);
     const [monthlySummary, setMonthlySummary] = useState(null);
-    const [monthEvents, setMonthEvents] = useState([]); // For leave/missing counts
+    const [weeklySummary, setWeeklySummary] = useState(null); // New
+    const [monthEvents, setMonthEvents] = useState([]);
     const [myRequests, setMyRequests] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
-    const [calendarEvents, setCalendarEvents] = useState([]); // Upcoming
+    const [calendarEvents, setCalendarEvents] = useState([]);
 
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
@@ -36,17 +38,21 @@ const Dashboard = () => {
     let monthStart, monthEnd;
 
     if (currentDay >= 26) {
-        // Current cycle started this month on 26th
         monthStart = new Date(today.getFullYear(), today.getMonth(), 26);
         monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 25);
     } else {
-        // Current cycle started previous month on 26th
         monthStart = new Date(today.getFullYear(), today.getMonth() - 1, 26);
         monthEnd = new Date(today.getFullYear(), today.getMonth(), 25);
     }
 
     const monthStartStr = format(monthStart, 'yyyy-MM-dd');
     const monthEndStr = format(monthEnd, 'yyyy-MM-dd');
+
+    // Week Dates (Monday to Sunday)
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
 
     const upcomingStartStr = format(startOfDay(today), 'yyyy-MM-dd');
     const upcomingEndStr = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd');
@@ -64,14 +70,9 @@ const Dashboard = () => {
     };
 
     const fetchDashboardData = async (silent = false) => {
-        // Fix: 'user' from useAuth seems to be the Employee object itself (based on logs having user.user nested)
-        // So we try user.employee.id first, falling back to user.id if that fails but looks like an employee
         const employeeId = user?.employee?.id || user?.id;
 
-        // console.log("DASHBOARD FETCH CHECK - Employee ID:", employeeId);
-
         if (!employeeId) {
-            console.log("Abort Fetch: No Employee ID found.");
             setLoadingSummaries(false);
             setLoadingRequests(false);
             setLoadingCalendar(false);
@@ -86,38 +87,30 @@ const Dashboard = () => {
 
         // 1. Fetch Summaries & Month Events for Stats
         try {
-            // console.log("=== DASHBOARD FETCH START ===");
-
-            const [todayResult, monthStatsResult, monthEventsResult] = await Promise.allSettled([
+            const [todayResult, monthStatsResult, weeklyStatsResult, monthEventsResult] = await Promise.allSettled([
                 api.get('/attendance/today_summary/'),
-                // api.get(`/dashboard/stats/?year=${year}&month=${month}&employee_id=${employeeId}`), // OLD
-                // NEW: Use specific attendance summary for accurate targets/realized
                 api.get(`/attendance/monthly_summary/?start_date=${monthStartStr}&end_date=${monthEndStr}&employee_id=${employeeId}`),
+                api.get(`/attendance/monthly_summary/?start_date=${weekStartStr}&end_date=${weekEndStr}&employee_id=${employeeId}`), // Reuse endpoint for week
                 api.get(`/calendar-events/?start=${monthStartStr}&end=${monthEndStr}&employee_id=${employeeId}`),
             ]);
 
             if (todayResult.status === 'fulfilled') {
                 setTodaySummary(todayResult.value.data);
-            } else {
-                console.error("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
-                if (todayResult.reason && todayResult.reason.response) {
-                    console.error("Server Error Response:", todayResult.reason.response.data);
-                    if (todayResult.reason.response.data && todayResult.reason.response.data.traceback) {
-                        console.error("SERVER TRACEBACK:", todayResult.reason.response.data.traceback);
-                    }
-                }
             }
 
             if (monthStatsResult.status === 'fulfilled') {
                 const data = monthStatsResult.value.data;
-                console.log("!!! DASHBOARD STATS RAW DATA (Attendance API) !!!", data); // Verbose Logging
                 setMonthlySummary(Array.isArray(data) ? data[0] : data);
-            } else {
-                console.error("!!! DASHBOARD STATS FAILED !!!", monthStatsResult.reason);
+            }
+
+            if (weeklyStatsResult.status === 'fulfilled') {
+                const data = weeklyStatsResult.value.data;
+                const weeklyData = Array.isArray(data) ? data[0] : data;
+                // Reuse endpoint returns monthly structure, map it if needed or use as is
+                setWeeklySummary(weeklyData);
             }
 
             if (monthEventsResult.status === 'fulfilled') {
-                console.log("!!! CALENDAR EVENTS RAW DATA !!!", monthEventsResult.value.data); // Verbose Logging
                 setMonthEvents(monthEventsResult.value.data.results || monthEventsResult.value.data || []);
             }
         } catch (err) {
@@ -143,7 +136,7 @@ const Dashboard = () => {
             const meals = getData(mealRes).map(r => ({ ...r, type: 'MEAL', date: r.date }));
 
             const combinedMyRequests = [...leaves, ...overtimes, ...meals].sort((a, b) => new Date(b.date) - new Date(a.date));
-            setMyRequests(combinedMyRequests.slice(0, 5)); // Just top 5
+            setMyRequests(combinedMyRequests.slice(0, 5));
 
             const incomingLeaves = getData(incomingLeaveRes).map(r => ({ ...r, type: 'LEAVE', date: r.start_date }));
             const incomingAttendance = getData(incomingAttendanceRes).map(r => ({ ...r, type: 'ATTENDANCE_APPROVAL', date: r.work_date }));
@@ -159,7 +152,6 @@ const Dashboard = () => {
 
         // 3. Fetch Upcoming Calendar Events
         try {
-            const employeeId = user?.employee?.id || user?.id; // Re-derive for safety or use from scope if I could
             const eventsRes = await api.get(`/calendar-events/?start=${upcomingStartStr}&end=${upcomingEndStr}&employee_id=${employeeId}`);
             const events = eventsRes.data.results || eventsRes.data || [];
             setCalendarEvents(events.sort((a, b) => new Date(a.start) - new Date(b.start)));
@@ -174,18 +166,10 @@ const Dashboard = () => {
         fetchDashboardData();
     }, [user]);
 
-    // Auto-Refresh every 60 seconds
+    // Auto-Refresh
     useInterval(() => {
-        // console.log("Auto-Refreshing Dashboard...");
-        fetchDashboardData(true); // Silent refresh
+        fetchDashboardData(true);
     }, 60000);
-
-    // Calculate Month Stats from Events (Leave/Missing)
-    const monthStats = {
-        // Filter out weekends for leave count
-        leaveDays: monthEvents.filter(e => e.type === 'LEAVE' && new Date(e.start).getDay() !== 0 && new Date(e.start).getDay() !== 6).length,
-        missingDays: monthEvents.filter(e => e.type === 'ABSENT' && new Date(e.start).getDay() !== 0 && new Date(e.start).getDay() !== 6).length
-    };
 
     const StatusBadge = ({ status }) => {
         const styles = {
@@ -253,20 +237,6 @@ const Dashboard = () => {
         );
     };
 
-    // Calculate Summary Values (Updated Field API Mapping)
-    // realized_normal_seconds -> Total Worked
-    const workHours = monthlySummary ? ((monthlySummary.realized_normal_seconds || 0) / 3600).toFixed(1) : '0.0';
-
-    // realized_overtime_seconds -> Overtime
-    const overtimeHours = monthlySummary ? ((monthlySummary.realized_overtime_seconds || 0) / 3600).toFixed(1) : '0.0';
-
-    // target_seconds -> Monthly Target
-    const targetHours = monthlySummary ? ((monthlySummary.target_seconds || 0) / 3600).toFixed(1) : '0.0';
-
-    // Net Balance is not direct, so we calculate: Realized - Target
-    const netBalanceSeconds = (monthlySummary?.realized_normal_seconds || 0) - (monthlySummary?.target_seconds || 0);
-    const netBalance = (netBalanceSeconds / 3600).toFixed(1);
-
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
 
@@ -297,59 +267,13 @@ const Dashboard = () => {
             {/* Daily Hero Summary */}
             <HeroDailySummary summary={todaySummary} loading={loadingSummaries} />
 
-            {/* Monthly Summary Section - Full Width */}
-            <div className="animate-fade-in-delayed">
-                <div className="glass-card p-6 relative overflow-hidden">
-                    {/* Decorative BG */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-
-                    <div className="flex items-center justify-between mb-6 relative">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <PieChart className="text-indigo-500" size={24} />
-                            Aylık Özet
-                        </h2>
-                        <button className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1.5 rounded-lg">
-                            Detaylı Rapor
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
-                        {/* Total Work */}
-                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
-                            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl w-fit mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                                <Briefcase size={20} />
-                            </div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Toplam Çalışma</p>
-                            <p className="text-2xl font-black text-slate-800 tracking-tight">{workHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
-                        </div>
-
-                        {/* Overtime */}
-                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all group">
-                            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl w-fit mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                                <Timer size={20} />
-                            </div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fazla Mesai</p>
-                            <p className="text-2xl font-black text-slate-800 tracking-tight">{overtimeHours} <span className="text-sm font-bold text-slate-400">sa</span></p>
-                        </div>
-
-                        {/* Leave Days */}
-                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all group">
-                            <div className="p-3 bg-purple-100 text-purple-600 rounded-xl w-fit mb-3 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                                <CalendarIcon size={20} />
-                            </div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">İzin</p>
-                            <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.leaveDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
-                        </div>
-
-                        {/* Missing Days */}
-                        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all group">
-                            <div className="p-3 bg-red-100 text-red-600 rounded-xl w-fit mb-3 group-hover:bg-red-500 group-hover:text-white transition-colors duration-300">
-                                <Activity size={20} />
-                            </div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Devamsızlık</p>
-                            <p className="text-2xl font-black text-slate-800 tracking-tight">{monthStats.missingDays} <span className="text-sm font-bold text-slate-400">Gün</span></p>
-                        </div>
-                    </div>
+            {/* Summary Widgets Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in-delayed">
+                <div className="h-full">
+                    <WeeklyPerformanceWidget summary={weeklySummary} loading={loadingSummaries} />
+                </div>
+                <div className="h-full">
+                    <MonthlyPerformanceWidget summary={monthlySummary} loading={loadingSummaries} />
                 </div>
             </div>
 
