@@ -169,7 +169,8 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
     if (isDepartment) {
         // 1. Employees (Roots of the employee tree)
         if (node.employees && node.employees.length > 0) {
-            const visibleEmployees = node.employees.filter(e => showAllEmployees || (e.rank && e.rank <= 20));
+            // Only show Executives/Managers (Rank <= 3) if toggle is OFF
+            const visibleEmployees = node.employees.filter(e => showAllEmployees || (e.rank && e.rank <= 3));
             if (visibleEmployees.length > 0) {
                 branchingChildren = [
                     ...branchingChildren,
