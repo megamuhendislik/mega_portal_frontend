@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+// Dashboard Component for Mega Portal
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import UpcomingEventsCard from '../components/UpcomingEventsCard';
