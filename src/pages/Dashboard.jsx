@@ -28,13 +28,26 @@ const Dashboard = () => {
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
 
-    // Date Calculations
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth() + 1;
 
-    const monthStartStr = format(startOfMonth(today), 'yyyy-MM-dd');
-    const monthEndStr = format(endOfMonth(today), 'yyyy-MM-dd');
+    // Date Calculations (Payroll Cycle: 26th to 25th)
+    const today = new Date();
+    const currentDay = today.getDate();
+
+    let monthStart, monthEnd;
+
+    if (currentDay >= 26) {
+        // Current cycle started this month on 26th
+        monthStart = new Date(today.getFullYear(), today.getMonth(), 26);
+        monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+    } else {
+        // Current cycle started previous month on 26th
+        monthStart = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+        monthEnd = new Date(today.getFullYear(), today.getMonth(), 25);
+    }
+
+    const monthStartStr = format(monthStart, 'yyyy-MM-dd');
+    const monthEndStr = format(monthEnd, 'yyyy-MM-dd');
+
     const upcomingStartStr = format(startOfDay(today), 'yyyy-MM-dd');
     const upcomingEndStr = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd');
 
