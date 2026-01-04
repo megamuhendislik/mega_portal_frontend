@@ -315,8 +315,18 @@ const WorkSchedules = () => {
                 <button
                     onClick={() => {
                         const defaultSchedule = {};
-                        DAYS.forEach(day => { defaultSchedule[day.key] = { start: '09:00', end: '18:00', is_off: day.key === 'SAT' || day.key === 'SUN' }; });
-                        setScheduleFormData({ id: null, name: '', is_default: false, lunch_start: '12:30', lunch_end: '13:30', daily_break_allowance: 30, late_tolerance_minutes: 15, service_tolerance_minutes: 0, schedule: defaultSchedule });
+                        DAYS.forEach(day => { defaultSchedule[day.key] = { start: '', end: '', is_off: day.key === 'SAT' || day.key === 'SUN' }; });
+                        setScheduleFormData({
+                            id: null,
+                            name: '',
+                            is_default: false,
+                            lunch_start: '',
+                            lunch_end: '',
+                            daily_break_allowance: 0,
+                            late_tolerance_minutes: 0,
+                            service_tolerance_minutes: 0,
+                            schedule: defaultSchedule
+                        });
                         setShowScheduleModal(true);
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
