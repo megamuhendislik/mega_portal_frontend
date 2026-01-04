@@ -66,7 +66,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kalan Mesai</p>
                             <h4 className="text-2xl font-black text-slate-800 mt-1">
-                                {Math.floor(summary.remaining_work / 60)}<span className="text-sm font-bold text-slate-400 ml-0.5">sa</span> {summary.remaining_work % 60}<span className="text-sm font-bold text-slate-400 ml-0.5">dk</span>
+                                {Math.floor(summary.remaining_work / 3600)}<span className="text-sm font-bold text-slate-400 ml-0.5">sa</span> {Math.ceil((summary.remaining_work % 3600) / 60)}<span className="text-sm font-bold text-slate-400 ml-0.5">dk</span>
                             </h4>
                         </div>
                         <div className="bg-slate-200 p-1.5 rounded-lg text-slate-500 group-hover:bg-white group-hover:text-indigo-600 transition-colors">
@@ -77,7 +77,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                         <div className="bg-indigo-600 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                     </div>
                     <div className="flex justify-between mt-1.5">
-                        <span className="text-[10px] font-bold text-slate-400">Hedef: {(summary.daily_expected / 60).toFixed(1)} sa</span>
+                        <span className="text-[10px] font-bold text-slate-400">Hedef: {(summary.daily_expected / 3600).toFixed(1)} sa</span>
                         <span className="text-[10px] font-bold text-indigo-600">%{progress.toFixed(0)}</span>
                     </div>
                 </div>
