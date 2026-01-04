@@ -161,95 +161,49 @@ const DepartmentNode = ({ node }) => (
 );
 
 const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
-    // Logic:
-    // If it's a Department:
-    // 1. Render Department Node
-    // 2. Render Employees (if visible) vertically stacked BELOW the Department Node (The "Stem")
-    // 3. Render Sub-Departments (children) horizontally branching below the Employees
-
-    // If it's an Employee:
-    // 1. Render Employee Node
-    // 2. Render Children (Subordinates) horizontally branching
-
     const isDepartment = node.type === 'department';
 
-    // Determine Employees to show in the Stem (Vertical)
-    let stemEmployees = [];
-    if (isDepartment && showAllEmployees && node.employees && node.employees.length > 0) {
-        stemEmployees = node.employees.map(e => ({ ...e, type: 'employee' }));
-    }
-
-    // Determine Children to show in the Branching Tree (Horizontal)
+    // Combine Employees and Sub-Departments into branching children
     let branchingChildren = [];
+
     if (isDepartment) {
-        // For Department: Children are Sub-Departments
+        // 1. Employees (Roots of the employee tree)
+        if (showAllEmployees && node.employees && node.employees.length > 0) {
+            branchingChildren = [
+                ...branchingChildren,
+                ...node.employees.map(e => ({ ...e, type: 'employee' }))
+            ];
+        }
+        // 2. Sub-Departments
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children.map(d => ({ ...d, type: 'department' }));
+            branchingChildren = [
+                ...branchingChildren,
+                ...node.children.map(d => ({ ...d, type: 'department' }))
+            ];
         }
     } else {
-        // For Employee: Children are Subordinates
+        // Employee Node: Children are Subordinates
         if (node.children && node.children.length > 0) {
             branchingChildren = node.children.map(e => ({ ...e, type: 'employee' }));
         }
     }
 
-    const hasBranchingChildren = branchingChildren.length > 0;
-    const hasStemEmployees = stemEmployees.length > 0;
+    const hasChildren = branchingChildren.length > 0;
 
     return (
         <li>
             <div className="flex flex-col items-center relative">
-                {/* 1. Main Node Card */}
+                {/* Main Node Card */}
                 {isDepartment ? (
                     <DepartmentNode node={node} />
                 ) : (
                     <EmployeeNode emp={node} onClick={onEmployeeClick} />
                 )}
-
-                {/* 2. Stem Employees (Vertical Stack beneath Department) */}
-                {hasStemEmployees && (
-                    <div className="flex flex-col items-center">
-                        {stemEmployees.map((emp, index) => (
-                            <div key={emp.id} className="flex flex-col items-center relative">
-                                {/* Connector from previous item */}
-                                <div className="w-px h-6 bg-[#cbd5e1]"></div>
-
-                                <EmployeeNode emp={emp} onClick={onEmployeeClick} />
-
-                                {/* If this is the LAST employee and there are NO branching children, don't draw bottom line yet (CSS handles li) */}
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* Critical: If we have branching children, we need a connector from the bottom of the Stack to the UL */}
-                {/* If we have Stem Employees, the connector needs to come from the last employee. 
-                    If no Stem Employees, it comes from the Department Node (handled by tree ul::before normally?)
-                    Actually, the standard CSS 'tree ul ul::before' handles the vertical line from parent UL to Child UL. 
-                    But here we expanded the Parent LI height. 
-                */}
             </div>
 
-            {/* 3. Recursive Branching Children */}
-            {hasBranchingChildren && (
-                <ul className={hasStemEmployees ? "pt-6" : ""}>
-                    {/* If we have stem employees, we need to ensure the line connects properly.
-                        The standard CSS puts a line from center top of UL up to... where?
-                        It blindly goes up. If our 'stem' pushes the content down, the line needs to reach further?
-                        Actually, 'ul { padding-top: 20px }' and '::before { height: 20px }'.
-                        If we just render UL normally, it will position itself below the DIV.
-                        The DIV grew taller. The UL is below it.
-                        The '::before' vertical line on the UL goes up 20px. 
-                        We need to bridge the gap if there is padding.
-                        Actually, flex-col simply stacks them. 
-                        We just need a small vertical line connecting the bottom of the stack to the top of the UL.
-                    */}
-                    {hasStemEmployees && (
-                        /* Manual connector to bridge the gap if needed, or rely on standard tree CSS */
-                        /* Standard tree CSS: ul::before is absolute top-0.  */
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-[#cbd5e1] -mt-6"></div>
-                    )}
-
+            {/* Recursive Branching Children */}
+            {hasChildren && (
+                <ul>
                     {branchingChildren.map(child => (
                         <TreeNode
                             key={`${child.type}-${child.id}`}
