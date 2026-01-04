@@ -1126,7 +1126,7 @@ const Employees = () => {
                                     <div className="space-y-2.5">
                                         <div className="flex items-center gap-2 text-sm text-slate-600">
                                             <Building size={16} className="text-slate-400 shrink-0" />
-                                            <span className="truncate">{emp.department?.name || 'Departman Yok'}</span>
+                                            <span className="truncate">{emp.department_name || emp.secondary_department_names || 'Departman Yok'}</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-slate-600">
                                             <div className="w-4 flex justify-center shrink-0 text-slate-400">@</div>
