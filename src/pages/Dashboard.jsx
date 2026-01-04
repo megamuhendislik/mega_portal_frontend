@@ -85,6 +85,12 @@ const Dashboard = () => {
                 setTodaySummary(todayResult.value.data);
             } else {
                 console.error("!!! TODAY RESULT FAILED !!! Reason:", todayResult.reason);
+                if (todayResult.reason && todayResult.reason.response) {
+                    console.error("Server Error Response:", todayResult.reason.response.data);
+                    if (todayResult.reason.response.data && todayResult.reason.response.data.traceback) {
+                        console.error("SERVER TRACEBACK:", todayResult.reason.response.data.traceback);
+                    }
+                }
             }
 
             if (monthStatsResult.status === 'fulfilled') {
