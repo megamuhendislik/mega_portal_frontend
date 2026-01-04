@@ -347,7 +347,19 @@ const Attendance = () => {
                             <div className="p-3 bg-blue-50 rounded-full text-blue-600"><Clock size={24} /></div>
                             <div>
                                 <p className="text-sm text-slate-500 font-bold">Toplam Çalışma</p>
-                                <h3 className="text-2xl font-black text-slate-800">{summary.totalWorkHours} Saat</h3>
+                                <div className="flex items-baseline gap-2">
+                                    <h3 className="text-2xl font-black text-slate-800">{summary.totalWorkHours}<span className="text-lg text-slate-400 font-medium">sa</span></h3>
+                                    {periodSummary && periodSummary.target_seconds > 0 && (
+                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                            / {(periodSummary.target_seconds / 3600).toFixed(1)} sa Hedef
+                                        </span>
+                                    )}
+                                </div>
+                                {periodSummary && periodSummary.target_seconds > 0 && (
+                                    <p className="text-xs text-slate-400 mt-1 font-medium">
+                                        Doldurulacak: <span className="text-slate-600 font-bold">{Math.max(0, (periodSummary.target_seconds / 3600) - summary.totalWorkHours).toFixed(1)} sa</span>
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500 flex items-center gap-4">

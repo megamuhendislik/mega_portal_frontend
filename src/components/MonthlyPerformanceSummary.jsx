@@ -87,8 +87,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             {/* Main Progress Card */}
             <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
                 <div>
-                    <h3 className="font-bold text-lg mb-1 opacity-90">Aylık Hedef</h3>
-                    <p className="text-indigo-100 text-sm mb-6">Bu ay tamamlanması gereken normal mesai.</p>
+                    <h3 className="font-bold text-lg mb-1 opacity-90">Çalışma Dönem Hedefi</h3>
+                    <p className="text-indigo-100 text-sm mb-6">Bu dönem tamamlanması gereken planlı mesai.</p>
 
                     <div className="mb-2 flex justify-between items-end">
                         <span className="text-4xl font-black">{stats.totalHours}</span>
@@ -105,7 +105,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                 <div className="flex gap-4 mt-4 pt-4 border-t border-white/10">
                     <div>
-                        <p className="text-xs text-indigo-200 uppercase font-bold tracking-wider">Kalan</p>
+                        <p className="text-xs text-indigo-200 uppercase font-bold tracking-wider">Doldurulacak</p>
                         <p className="font-bold text-lg">{stats.totalMissingHours} sa</p>
                     </div>
                     <div>
