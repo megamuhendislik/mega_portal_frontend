@@ -197,6 +197,7 @@ const Attendance = () => {
             totalTodayMinutes: Math.floor(m.today_seconds / 60),
             avatar: m.avatar,
             // Extra fields for charts/details
+            monthTarget: (m.month_target_seconds / 3600).toFixed(1),
             monthWorkedHours: (m.month_worked_seconds / 3600).toFixed(1),
             monthApprovedDTO: (m.month_approved_overtime_seconds / 60).toFixed(0), // minutes
             monthPendingDTO: (m.month_pending_overtime_seconds / 60).toFixed(0)
@@ -205,14 +206,11 @@ const Attendance = () => {
         setTeamMembers(mappedMembers);
 
         // Map Comparison Data (e.g. Worked Hours vs Approved Overtime)
-        // We can show multiple datasets or just one. Let's show Worked Hours for now.
         const comparison = mappedMembers.map(m => ({
-            label: m.name,
-            value: parseFloat(m.monthWorkedHours), // Comparing Monthly Worked Hours
-            color: '#3b82f6',
-            extraParams: {
-                overtime: parseInt(m.monthApprovedDTO)
-            }
+            name: m.name,
+            actual: parseFloat(m.monthWorkedHours),
+            target: parseFloat(m.monthTarget),
+            overtime: parseInt(m.monthApprovedDTO)
         }));
         setTeamComparison(comparison);
     };
