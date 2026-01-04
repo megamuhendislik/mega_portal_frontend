@@ -950,7 +950,7 @@ const Employees = () => {
 
                 phone: data.phone || '', // Existing lines continue...
 
-                phone: data.phone || '',
+
                 phone_secondary: data.phone_secondary || '',
                 address: data.address || '',
                 emergency_contact_name: data.emergency_contact_name || '',

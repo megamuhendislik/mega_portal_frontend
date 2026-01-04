@@ -44,7 +44,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         date: new Date().toISOString().split('T')[0],
         start_time: '',
         end_time: '',
-        end_time: '',
+
         reason: '',
         notify_substitutes: false
     });
@@ -73,7 +73,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 date: new Date().toISOString().split('T')[0],
                 start_time: '',
                 end_time: '',
-                end_time: '',
+
                 reason: '',
                 notify_substitutes: false
             });
