@@ -30,6 +30,26 @@ const WeeklyAttendanceChart = ({ logs }) => {
         return Object.values(weeks);
     }, [logs]);
 
+    // Custom Tooltip
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            const dataPoint = payload[0].payload;
+            const hours = dataPoint.total;
+            const h = Math.floor(hours);
+            const m = Math.round((hours - h) * 60);
+
+            return (
+                <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-lg text-xs z-50">
+                    <p className="font-bold text-slate-700 mb-2">{dataPoint.name}</p>
+                    <p className="text-violet-600 font-bold">
+                        Toplam: {h} sa ({m} dk)
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     return (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h3 className="text-lg font-bold text-slate-800 mb-6">Haftalık Toplamlar</h3>
@@ -39,11 +59,8 @@ const WeeklyAttendanceChart = ({ logs }) => {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} dy={10} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                        <Tooltip
-                            cursor={{ fill: '#F1F5F9' }}
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar dataKey="total" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Toplam Saat" />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9' }} />
+                        <Bar dataKey="total" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
