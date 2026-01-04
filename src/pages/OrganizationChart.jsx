@@ -168,11 +168,14 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
 
     if (isDepartment) {
         // 1. Employees (Roots of the employee tree)
-        if (showAllEmployees && node.employees && node.employees.length > 0) {
-            branchingChildren = [
-                ...branchingChildren,
-                ...node.employees.map(e => ({ ...e, type: 'employee' }))
-            ];
+        if (node.employees && node.employees.length > 0) {
+            const visibleEmployees = node.employees.filter(e => showAllEmployees || (e.rank && e.rank <= 20));
+            if (visibleEmployees.length > 0) {
+                branchingChildren = [
+                    ...branchingChildren,
+                    ...visibleEmployees.map(e => ({ ...e, type: 'employee' }))
+                ];
+            }
         }
         // 2. Sub-Departments
         if (node.children && node.children.length > 0) {
@@ -225,7 +228,7 @@ const OrganizationChart = () => {
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [showEmployees, setShowEmployees] = useState(false); // Default off to reduce clutter
+    const [showEmployees, setShowEmployees] = useState(true); // Default ON to show hierarchy heads
     const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // Zoom & Pan State
