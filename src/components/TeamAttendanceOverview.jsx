@@ -41,11 +41,33 @@ const TeamAttendanceOverview = ({ teamData, onMemberClick }) => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <p className="text-xs text-slate-400 font-medium">Bugün</p>
-                                <p className="text-sm font-bold text-slate-800 font-mono">
-                                    {Math.floor(member.totalTodayMinutes / 60)}s {member.totalTodayMinutes % 60}dk
-                                </p>
+                            <div className="flex gap-6 items-center">
+                                <div className="text-right min-w-[80px]">
+                                    <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Bugün</p>
+                                    <p className="text-sm font-bold text-slate-800 font-mono">
+                                        {Math.floor(member.totalTodayMinutes / 60)}s {member.totalTodayMinutes % 60}dk
+                                    </p>
+                                </div>
+                                <div className="text-right hidden md:block min-w-[80px]">
+                                    <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Bu Ay</p>
+                                    <p className="text-sm font-bold text-blue-600 font-mono">
+                                        {member.monthWorkedHours || 0} Sa
+                                    </p>
+                                </div>
+                                <div className="text-right hidden md:block min-w-[80px]">
+                                    <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Onaylı FM</p>
+                                    <p className="text-sm font-bold text-emerald-600 font-mono">
+                                        {member.monthApprovedDTO || 0} dk
+                                    </p>
+                                </div>
+                                {parseInt(member.monthPendingDTO) > 0 && (
+                                    <div className="text-right hidden md:block min-w-[80px]">
+                                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Bekleyen</p>
+                                        <p className="text-sm font-bold text-orange-500 font-mono">
+                                            {member.monthPendingDTO} dk
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                             <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                         </div>

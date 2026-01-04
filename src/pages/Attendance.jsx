@@ -46,18 +46,27 @@ const Attendance = () => {
         }
     };
 
+    const [hasTeam, setHasTeam] = useState(false);
+
     // Initial Load & Auth Check
     useEffect(() => {
         if (user) {
+            // Check if user has team members to decide visibility
+            checkTeamVisibility();
+
             if (activeTab === 'my_attendance') {
-                // Default to self for My Attendance
-                const empId = user.id; // User object IS the employee profile
+                const empId = user.id;
                 setSelectedEmployeeId(empId);
-            } else if (activeTab === 'team_attendance') {
-                fetchTeamData();
             }
         }
-    }, [user, activeTab]);
+    }, [user]);
+
+    // Refetch when tab changes to team
+    useEffect(() => {
+        if (activeTab === 'team_attendance' && user) {
+            fetchTeamData();
+        }
+    }, [activeTab]);
 
     // Fetch Logs when params change
     useEffect(() => {
@@ -111,50 +120,76 @@ const Attendance = () => {
             setLogs(data);
             calculateSummary(data);
         } catch (error) {
-            // console.error('Error fetching attendance:', error); // Removed as per instruction
+            // console.error('Error fetching attendance:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const checkTeamVisibility = async () => {
+        // Quick check if user is manager/admin
+        if (user?.user?.is_superuser || user?.roles?.some(r => r.key === 'MANAGER')) {
+            try {
+                // We deliberately fetch to see if we get > 0 members
+                const response = await api.get('/attendance/team_dashboard/');
+                if (response.data && response.data.length > 0) {
+                    setHasTeam(true);
+                    // Pre-load data if we are already here
+                    mapTeamData(response.data);
+                } else {
+                    setHasTeam(false);
+                }
+            } catch (error) {
+                console.error("Failed to check team visibility", error);
+                setHasTeam(false);
+            }
         }
     };
 
     const fetchTeamData = async () => {
         setLoading(true);
         try {
-            // Fetch employees managed by user (or all if admin)
-            // Note: This endpoint might need adjustment depending on backend implementation
-            const response = await api.get('/employees/');
-            // Mocking "Status" data for now by mixing basic employee info with random status
-            // In a real app, we'd need an endpoint like /attendance/team_status/
-
-            const members = response.data.results || response.data || [];
-
-            // Filter: If not admin, maybe filter? Assuming backend filters for us.
-
-            // Map to Team Data format
-            const mappedMembers = members.map(m => ({
-                id: m.id,
-                name: `${m.first_name} ${m.last_name}`,
-                status: Math.random() > 0.5 ? 'IN' : 'OUT', // Mock Status
-                lastActionTime: '09:00', // Mock Time
-                totalTodayMinutes: Math.floor(Math.random() * 500), // Mock Minutes
-                avatar: null
-            }));
-
-            setTeamMembers(mappedMembers);
-
-            // Map Comparison Data
-            const comparison = mappedMembers.map(m => ({
-                label: m.name,
-                value: m.totalTodayMinutes,
-                color: '#3b82f6'
-            }));
-            setTeamComparison(comparison);
-
+            const response = await api.get('/attendance/team_dashboard/');
+            mapTeamData(response.data);
         } catch (error) {
             console.error("Team data fetch error", error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const mapTeamData = (data) => {
+        if (!data) return;
+
+        // Backend returns: 
+        // { id, name, department, title, status, last_action_time, today_seconds, month_worked_seconds, month_approved_overtime_seconds, month_pending_overtime_seconds }
+
+        const mappedMembers = data.map(m => ({
+            id: m.id,
+            name: m.name,
+            status: m.status,
+            lastActionTime: m.last_action_time,
+            totalTodayMinutes: Math.floor(m.today_seconds / 60),
+            avatar: m.avatar,
+            // Extra fields for charts/details
+            monthWorkedHours: (m.month_worked_seconds / 3600).toFixed(1),
+            monthApprovedDTO: (m.month_approved_overtime_seconds / 60).toFixed(0), // minutes
+            monthPendingDTO: (m.month_pending_overtime_seconds / 60).toFixed(0)
+        }));
+
+        setTeamMembers(mappedMembers);
+
+        // Map Comparison Data (e.g. Worked Hours vs Approved Overtime)
+        // We can show multiple datasets or just one. Let's show Worked Hours for now.
+        const comparison = mappedMembers.map(m => ({
+            label: m.name,
+            value: parseFloat(m.monthWorkedHours), // Comparing Monthly Worked Hours
+            color: '#3b82f6',
+            extraParams: {
+                overtime: parseInt(m.monthApprovedDTO)
+            }
+        }));
+        setTeamComparison(comparison);
     };
 
     const calculateSummary = (data) => {
@@ -220,7 +255,7 @@ const Attendance = () => {
                         <User size={16} />
                         Kendi Mesaim
                     </button>
-                    {(user?.user?.is_superuser || user?.roles?.some(r => r.key === 'MANAGER')) && (
+                    {hasTeam && (
                         <button
                             onClick={() => setActiveTab('team_attendance')}
                             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
