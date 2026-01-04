@@ -22,6 +22,7 @@ const Attendance = () => {
     // Data State
     const [logs, setLogs] = useState([]);
     const [todaySummary, setTodaySummary] = useState(null);
+    const [periodSummary, setPeriodSummary] = useState(null); // Backend calculated summary for custom period
     const [summary, setSummary] = useState({ totalWorkHours: 0, totalOvertime: 0, missingDays: 0 });
     const [systemSettings, setSystemSettings] = useState(null);
 
@@ -92,8 +93,16 @@ const Attendance = () => {
             start.setDate(diff);
             end.setDate(start.getDate() + 6);
         } else if (type === 'MONTH') {
-            start.setDate(1);
-            end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            // "Payroll Month" Logic: 26th of Previous Month to 25th of Current Month
+            if (today.getDate() >= 26) {
+                // If today is 26th or later, we are in the cycle ending next month 25th
+                start = new Date(today.getFullYear(), today.getMonth(), 26);
+                end = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+            } else {
+                // If today is before 26th, we are in the cycle starting previous month 26th
+                start = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+                end = new Date(today.getFullYear(), today.getMonth(), 25);
+            }
         }
 
         if (type !== 'CUSTOM') {
@@ -123,10 +132,21 @@ const Attendance = () => {
             const data = response.data.results || response.data;
             setLogs(data);
             calculateSummary(data);
+            fetchPeriodSummary(startDate, endDate); // Fetch backend summary for target
         } catch (error) {
             // console.error('Error fetching attendance:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchPeriodSummary = async (start, end) => {
+        try {
+            const url = `/attendance/monthly_summary/?employee_id=${selectedEmployeeId || ''}&start_date=${start}&end_date=${end}`;
+            const response = await api.get(url);
+            setPeriodSummary(response.data);
+        } catch (error) {
+            console.error('Error fetching period summary:', error);
         }
     };
 
@@ -347,7 +367,7 @@ const Attendance = () => {
                     </div>
 
                     {/* Summary Section */}
-                    <MonthlyPerformanceSummary logs={logs} startDate={startDate} endDate={endDate} />
+                    <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} startDate={startDate} endDate={endDate} />
 
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

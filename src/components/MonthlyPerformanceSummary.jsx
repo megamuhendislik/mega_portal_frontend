@@ -1,9 +1,46 @@
 import React, { useMemo } from 'react';
 import { TrendingUp, Clock, AlertTriangle, Coffee, Briefcase } from 'lucide-react';
 
-const MonthlyPerformanceSummary = ({ logs }) => {
+const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
     const stats = useMemo(() => {
+        // If Period Summary from Backend is available, use it for "Target" and "Realized"
+        // This ensures 26th-25th logic matches exact backend calc
+        if (periodSummary) {
+            const targetSec = periodSummary.target_seconds || 0;
+            const realizedSec = periodSummary.realized_normal_seconds || 0;
+            const overtimeSec = periodSummary.realized_overtime_seconds || 0;
+            const missingSec = periodSummary.total_missing_seconds || 0;
+            const breakSec = periodSummary.total_break_seconds || 0;
+
+            let progressPercent = 0;
+            if (targetSec > 0) {
+                // Correct logic: Progress = Realized / Target
+                progressPercent = Math.min(100, (realizedSec / targetSec) * 100);
+            }
+
+            // Calculate other simple metrics from logs since backend summary might not have 'lateCount' or 'workDays' yet
+            // Or we can rely on logs for these specific counters
+            let lateCount = 0;
+            let workDays = 0;
+            logs.forEach(log => {
+                if (log.late_seconds > 0) lateCount++;
+                if ((log.normal_seconds || 0) > 0) workDays++;
+            });
+
+            return {
+                totalHours: (realizedSec / 3600).toFixed(1),
+                totalOvertimeHours: (overtimeSec / 3600).toFixed(1),
+                totalMissingHours: (Math.max(0, targetSec - realizedSec) / 3600).toFixed(1), // Remaining to Target
+                totalBreakHours: (breakSec / 3600).toFixed(1),
+                totalExpectedHours: (targetSec / 3600).toFixed(1),
+                progressPercent,
+                lateCount,
+                workDays
+            };
+        }
+
+        // Fallback to local calculation (Old Logic)
         let totalWorkedSec = 0;
         let totalOvertimeSec = 0;
         let totalMissingSec = 0;
