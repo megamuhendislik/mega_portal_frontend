@@ -347,14 +347,14 @@ const Attendance = () => {
                     </div>
 
                     {/* Summary Section */}
-                    <MonthlyPerformanceSummary logs={myLogs} startDate={startDate} endDate={endDate} />
+                    <MonthlyPerformanceSummary logs={logs} startDate={startDate} endDate={endDate} />
 
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        <PersonalAttendanceChart logs={myLogs} startDate={startDate} endDate={endDate} />
+                        <PersonalAttendanceChart logs={logs} startDate={startDate} endDate={endDate} />
                         <div className="space-y-6">
-                            <WeeklyAttendanceChart logs={myLogs} />
-                            <MonthlyTrendChart logs={myLogs} />
+                            <WeeklyAttendanceChart logs={logs} />
+                            <MonthlyTrendChart logs={logs} />
                         </div>
                     </div>
 
