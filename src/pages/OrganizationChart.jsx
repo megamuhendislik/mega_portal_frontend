@@ -188,10 +188,17 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
     } else {
         // Employee Node: Children are Subordinates (or Sub-Departments)
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children.map(child => ({
-                ...child,
-                type: child.code ? 'department' : 'employee'
-            }));
+            branchingChildren = node.children
+                .filter(child => {
+                    // Always show Sub-Departments (Structural)
+                    if (child.code) return true;
+                    // Filter Employees based on Toggle & Rank
+                    return showAllEmployees || (child.rank && child.rank <= 3);
+                })
+                .map(child => ({
+                    ...child,
+                    type: child.code ? 'department' : 'employee'
+                }));
         }
     }
 
