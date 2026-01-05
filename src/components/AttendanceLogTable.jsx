@@ -11,7 +11,18 @@ const formatDate = (isoString) => {
     return new Date(isoString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
 };
 
-const getStatusBadge = (status) => {
+const getStatusBadge = (log) => {
+    const status = log.status;
+
+    // Custom Check: Normal Mesai (Approved/Calculated but no overtime)
+    if (['APPROVED', 'AUTO_APPROVED', 'CALCULATED'].includes(status) && (!log.overtime_minutes || log.overtime_minutes <= 0)) {
+        return (
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                Normal Mesai
+            </span>
+        );
+    }
+
     const styles = {
         'OPEN': 'bg-blue-100 text-blue-700',
         'PENDING_MANAGER_APPROVAL': 'bg-yellow-100 text-yellow-700',
@@ -89,7 +100,7 @@ const AttendanceLogTable = ({ logs }) => {
                                 </td>
                                 <td className="p-4">
                                     <div className="flex items-center gap-2">
-                                        {getStatusBadge(log.status)}
+                                        {getStatusBadge(log)}
                                         {log.note && (
                                             <div className="group relative">
                                                 <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center cursor-help">
