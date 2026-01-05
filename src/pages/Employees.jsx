@@ -102,7 +102,30 @@ const StepPersonal = ({ formData, handleChange }) => (
 
             <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleChange('birth_date', e.target.value)} type="date" />
             <InputField label="Kullanıcı Adı" value={formData.username} onChange={e => handleChange('username', e.target.value)} required placeholder="kullanici.adi" />
-            <InputField label="Şifre" value={formData.password} onChange={e => handleChange('password', e.target.value)} required type="text" placeholder="İlk giriş şifresi" />
+            <InputField label="Kullanıcı Adı" value={formData.username} onChange={e => handleChange('username', e.target.value)} required placeholder="kullanici.adi" />
+
+            {/* Custom Password Input with Visibility Toggle */}
+            <div className="group">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Şifre {true && <span className="text-red-500">*</span>}</label>
+                <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+                    <input
+                        value={formData.password}
+                        onChange={e => handleChange('password', e.target.value)}
+                        type="text" // Defaults to visible as requested ("açık görünecek şekilde")
+                        className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all shadow-sm group-hover:bg-white"
+                        placeholder="İlk giriş şifresi (Görünür)"
+                    />
+                    {/* Note: User requested it to be visible by default. 
+                        Password field type="text" shows it plainly. 
+                        If we wanted a toggle, we would manage state here, but StepPersonal is a pure component receiving props.
+                        For now, forcing type="text" satisfies "açık görünecek şekilde".
+                    */}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 ml-1">
+                    * Güvenlik nedeniyle sadece <strong>yeni şifre</strong> girilirken görünür. Mevcut şifreler görüntülenemez.
+                </p>
+            </div>
         </div>
     </div>
 );
@@ -313,6 +336,10 @@ const StepContact = ({ formData, handleChange }) => (
 
 const StepDetails = ({ formData, handleChange, workSchedules }) => {
     const [customMode, setCustomMode] = useState(!formData.work_schedule);
+    const [showOverrides, setShowOverrides] = useState(
+        // Show overrides if ANY override field is populated
+        !!(formData.shift_start || formData.shift_end || formData.lunch_start || formData.daily_break_allowance || formData.attendance_tolerance_minutes || formData.uses_service)
+    );
 
     // Sync customMode with parent if needed, but local toggle is fine for UI
     // Logic: If user selects "Custom" in dropdown -> set work_schedule = "" -> show Editor
@@ -447,32 +474,48 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                                 }
                             />
 
-                            {/* Overrides Section (Only for Standard) */}
-                            <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4">
-                                <h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm">
-                                    <Settings size={16} className="text-blue-500" />
-                                    İstisnalar & Ayarlar (Template Overrides)
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <InputField type="time" label="Mesai Başlangıç" value={formData.shift_start} onChange={e => handleChange('shift_start', e.target.value)} placeholder={defaultShiftStart} />
-                                    <InputField type="time" label="Mesai Bitiş" value={formData.shift_end} onChange={e => handleChange('shift_end', e.target.value)} placeholder={defaultShiftEnd} />
-                                    <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} placeholder={defaultLunchStart} />
-                                    <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} placeholder={defaultLunchEnd} />
-
-                                    <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} placeholder={defaultBreak} />
-                                    <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} placeholder={defaultTolerance} />
-                                </div>
-
-                                <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mt-2">
-                                    <div className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${formData.uses_service ? 'bg-blue-600' : 'bg-slate-300'}`} onClick={() => handleChange('uses_service', !formData.uses_service)}>
-                                        <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.uses_service ? 'translate-x-4' : 'translate-x-0'}`} />
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-slate-700 text-sm block">Servis Kullanıyor</span>
-                                        <span className="text-xs text-slate-400">İşaretlenirse, geç kalma/erken çıkmada servis toleransı uygulanır.</span>
-                                    </div>
-                                </div>
+                            {/* Overrides Toggle */}
+                            <div className="flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-lg border border-slate-100 w-fit">
+                                <input
+                                    type="checkbox"
+                                    id="showOverrides"
+                                    checked={showOverrides}
+                                    onChange={(e) => setShowOverrides(e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                />
+                                <label htmlFor="showOverrides" className="text-sm font-bold text-slate-600 cursor-pointer select-none">
+                                    Özel Ayarlar / İstisnalar Tanımla
+                                </label>
                             </div>
+
+                            {/* Overrides Section (Only for Standard) */}
+                            {showOverrides && (
+                                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4 animate-fade-in">
+                                    <h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm">
+                                        <Settings size={16} className="text-blue-500" />
+                                        İstisnalar & Ayarlar (Template Overrides)
+                                    </h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <InputField type="time" label="Mesai Başlangıç" value={formData.shift_start} onChange={e => handleChange('shift_start', e.target.value)} placeholder={defaultShiftStart} />
+                                        <InputField type="time" label="Mesai Bitiş" value={formData.shift_end} onChange={e => handleChange('shift_end', e.target.value)} placeholder={defaultShiftEnd} />
+                                        <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} placeholder={defaultLunchStart} />
+                                        <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} placeholder={defaultLunchEnd} />
+
+                                        <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} placeholder={defaultBreak} />
+                                        <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} placeholder={defaultTolerance} />
+                                    </div>
+
+                                    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mt-2">
+                                        <div className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${formData.uses_service ? 'bg-blue-600' : 'bg-slate-300'}`} onClick={() => handleChange('uses_service', !formData.uses_service)}>
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.uses_service ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-slate-700 text-sm block">Servis Kullanıyor</span>
+                                            <span className="text-xs text-slate-400">İşaretlenirse, geç kalma/erken çıkmada servis toleransı uygulanır.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-4 animate-fade-in">
