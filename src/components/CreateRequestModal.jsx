@@ -40,7 +40,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
-        attendance: null,
+        potentialId: null, // Was 'attendance'
         date: new Date().toISOString().split('T')[0],
         start_time: '',
         end_time: '',
@@ -58,7 +58,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         start_time: '',
         end_time: '',
         reason: '',
-        destination: ''
+        destination: '',
+        trip_type: 'NONE', // INNER_CITY, OUT_OF_CITY
+        budget_amount: '',
+        transport_description: ''
     });
 
     useEffect(() => {
@@ -112,7 +115,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             if (selectedType === 'LEAVE') {
                 await api.post('/leave/requests/', leaveForm);
             } else if (selectedType === 'OVERTIME') {
-                await api.post('/overtime-requests/', overtimeForm);
+                if (overtimeForm.potentialId) {
+                    // Claim Existing Potential Request -> Updated to PENDING
+                    await api.patch(`/overtime-requests/${overtimeForm.potentialId}/`, {
+                        start_time: overtimeForm.start_time, // Allow editing
+                        end_time: overtimeForm.end_time,
+                        reason: overtimeForm.reason,
+                        status: 'PENDING',
+                        notify_substitutes: overtimeForm.notify_substitutes
+                    });
+                } else {
+                    // Create New Manual Request
+                    await api.post('/overtime-requests/', {
+                        ...overtimeForm,
+                        is_manual: true
+                    });
+                }
             } else if (selectedType === 'MEAL') {
                 await api.post('/meal-requests/', mealForm);
             } else if (selectedType === 'EXTERNAL_DUTY') {
@@ -120,16 +138,16 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 const typeObj = requestTypes.find(t => t.category === 'EXTERNAL_DUTY');
                 if (!typeObj) throw new Error('Dış Görev talep türü bulunamadı.');
 
-                // Format description to include time details
-                const timeDescription = `Saat: ${externalDutyForm.start_time} - ${externalDutyForm.end_time}`;
-                const fullReason = `${externalDutyForm.reason}\n\n(${timeDescription})`;
-
                 await api.post('/leave/requests/', {
                     request_type: typeObj.id,
                     start_date: externalDutyForm.date,
-                    end_date: externalDutyForm.date, // Single day assumption for now
-                    reason: fullReason,
-                    destination: externalDutyForm.destination
+                    end_date: externalDutyForm.date, // Single day assumption
+                    reason: externalDutyForm.reason,
+                    destination: externalDutyForm.destination,
+                    // New Fields
+                    trip_type: externalDutyForm.trip_type,
+                    budget_amount: externalDutyForm.budget_amount,
+                    transport_description: externalDutyForm.transport_description
                 });
             }
 
@@ -310,17 +328,17 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
                     {/* Manual Entry Option */}
-                    <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${!overtimeForm.attendance ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'bg-transparent border-slate-200 hover:bg-white hover:border-slate-300'}`}>
+                    <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${!overtimeForm.potentialId ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'bg-transparent border-slate-200 hover:bg-white hover:border-slate-300'}`}>
                         <div className="pt-0.5">
                             <input
                                 type="radio"
                                 name="overtime_selection"
                                 value=""
-                                checked={!overtimeForm.attendance}
+                                checked={!overtimeForm.potentialId}
                                 onChange={() => {
                                     setOvertimeForm(prev => ({
                                         ...prev,
-                                        attendance: null,
+                                        potentialId: null,
                                         date: new Date().toISOString().split('T')[0],
                                         start_time: '',
                                         end_time: '',
@@ -338,7 +356,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                     {/* Unclaimed Options */}
                     {unclaimedOvertime.map(u => {
-                        const isSelected = overtimeForm.attendance === u.id;
+                        const isSelected = overtimeForm.potentialId === u.id;
                         return (
                             <label key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-amber-50 border-amber-500 shadow-sm ring-1 ring-amber-500/20' : 'bg-white border-slate-200 hover:border-amber-300'}`}>
                                 <div className="pt-0.5">
@@ -348,22 +366,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                         value={u.id}
                                         checked={isSelected}
                                         onChange={() => {
-                                            // Calculate times
-                                            let st = '';
-                                            let et = '';
-                                            if (u.check_out) {
-                                                const d = new Date(u.check_out);
-                                                const s = new Date(d.getTime() - u.overtime_minutes * 60000);
-                                                const fmt = (date) => date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                                                st = fmt(s);
-                                                et = fmt(d);
-                                            }
+                                            // u is now OvertimeRequest object
                                             setOvertimeForm({
-                                                attendance: u.id,
-                                                date: u.work_date,
-                                                start_time: st,
-                                                end_time: et,
-                                                reason: ''
+                                                potentialId: u.id,
+                                                date: u.date, // field is 'date' in OvertimeRequest
+                                                start_time: u.start_time ? u.start_time.substring(0, 5) : '',
+                                                end_time: u.end_time ? u.end_time.substring(0, 5) : '',
+                                                reason: u.reason || '',
+                                                notify_substitutes: false
                                             });
                                         }}
                                         className="w-4 h-4 text-amber-600 border-slate-300 focus:ring-amber-500"
@@ -372,15 +382,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 <div className="flex-1">
                                     <div className="flex justify-between items-center mb-0.5">
                                         <span className="text-sm font-bold text-slate-700">
-                                            {new Date(u.work_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                            {new Date(u.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                                         </span>
                                         <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                                            {u.overtime_minutes} dk
+                                            {Math.round(u.duration_seconds / 60)} dk
                                         </span>
                                     </div>
                                     <div className="text-xs text-slate-500 flex items-center gap-1.5">
                                         <Clock size={12} />
-                                        {u.check_in ? new Date(u.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'} - {u.check_out ? new Date(u.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?'}
+                                        {u.start_time?.substring(0, 5)} - {u.end_time?.substring(0, 5)}
                                     </div>
                                 </div>
                             </label>
@@ -524,6 +534,44 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
                     placeholder="Örn: Müşteri ziyareti, Eğitim..."
                 />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Yeri Türü</label>
+                    <select
+                        value={externalDutyForm.trip_type}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, trip_type: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700"
+                    >
+                        <option value="NONE">Belirtilmedi</option>
+                        <option value="INNER_CITY">Şehir İçi</option>
+                        <option value="OUT_OF_CITY">Şehir Dışı</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bütçe / Ödenek</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={externalDutyForm.budget_amount}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, budget_amount: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none font-medium text-slate-700"
+                        placeholder="0.00 TL"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Ulaşım ve Konaklama Detayları</label>
+                <textarea
+                    rows="2"
+                    value={externalDutyForm.transport_description}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_description: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none font-medium text-slate-700"
+                    placeholder="Uçak, otobüs, otel vb. detayları..."
+                ></textarea>
             </div>
         </div>
     );
