@@ -83,17 +83,17 @@ const WeeklyPerformanceWidget = ({ summary, loading }) => {
             <div className="grid grid-cols-2 gap-3 mt-auto">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp size={14} className="text-amber-500" />
+                        <TrendingUp size={14} className="text-emerald-500" />
                         <span className="text-[10px] font-bold text-slate-500 uppercase">Ek Mesai</span>
                     </div>
                     <p className="text-lg font-bold text-slate-800">{overtime.toFixed(1)} <span className="text-xs text-slate-400 font-normal">sa</span></p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2 mb-1">
-                        <Clock size={14} className="text-blue-500" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">Çalışılan</span>
+                        <AlertCircle size={14} className="text-rose-500" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Geç Kalma</span>
                     </div>
-                    <p className="text-lg font-bold text-slate-800">{summary.days_worked || 0} <span className="text-xs text-slate-400 font-normal">gün</span></p>
+                    <p className="text-lg font-bold text-slate-800">{Math.floor((summary.total_late_seconds || 0) / 60)} <span className="text-xs text-slate-400 font-normal">dk</span></p>
                 </div>
             </div>
         </div>
