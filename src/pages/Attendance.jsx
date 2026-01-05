@@ -73,6 +73,48 @@ const Attendance = () => {
         }
     }, [activeTab]);
 
+    // Custom Interval Hook for Auto-Refresh
+    const useInterval = (callback, delay) => {
+        const savedCallback = React.useRef();
+        React.useEffect(() => { savedCallback.current = callback; }, [callback]);
+        React.useEffect(() => {
+            if (delay !== null) {
+                const id = setInterval(() => savedCallback.current(), delay);
+                return () => clearInterval(id);
+            }
+        }, [delay]);
+    };
+
+    // Auto-Refresh Logic (Every 30 seconds)
+    useInterval(() => {
+        if (!loading && selectedEmployeeId && startDate && endDate) {
+            // Silent refresh (don't set loading to true)
+            const refreshData = async () => {
+                try {
+                    // 1. Refresh Today Summary
+                    const summaryParams = {};
+                    if (selectedEmployeeId) summaryParams.employee_id = selectedEmployeeId;
+                    const summaryRes = await api.get('/attendance/today_summary/', { params: summaryParams });
+                    setTodaySummary(summaryRes.data);
+
+                    // 2. Refresh Logs
+                    if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
+                        const url = `/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`;
+                        const logsRes = await api.get(url);
+                        const data = logsRes.data.results || logsRes.data;
+                        setLogs(data);
+                        calculateSummary(data);
+                        // Period summary might not change that often, but let's refresh it too to be safe
+                        fetchPeriodSummary(startDate, endDate);
+                    }
+                } catch (err) {
+                    console.error("Auto-refresh error", err);
+                }
+            };
+            refreshData();
+        }
+    }, 30000);
+
     // Fetch Logs when params change
     useEffect(() => {
         if (selectedEmployeeId && startDate && endDate && (activeTab === 'my_attendance' || activeTab === 'team_detail')) {
