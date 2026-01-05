@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, TrendingUp, Clock, AlertCircle } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+// Recharts unused here
+
 
 const WeeklyPerformanceWidget = ({ summary, loading }) => {
     // Expect summary = { 
