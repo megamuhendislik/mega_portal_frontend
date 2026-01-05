@@ -5,6 +5,8 @@ import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
 
+import useInterval from '../hooks/useInterval';
+
 const Requests = () => {
     const [activeTab, setActiveTab] = useState('my_requests');
     const [requests, setRequests] = useState([]);
@@ -30,6 +32,16 @@ const Requests = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Auto-Refresh (Every 30s)
+    useInterval(() => {
+        if (!loading && !showCreateModal && !showEditOvertimeModal) {
+            fetchData();
+            if (activeTab === 'team_history') {
+                fetchTeamHistory();
+            }
+        }
+    }, 30000);
 
     // Fetch history when filter changes to HISTORY
     useEffect(() => {

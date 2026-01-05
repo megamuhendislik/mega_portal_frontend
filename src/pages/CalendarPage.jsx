@@ -7,6 +7,7 @@ import api from '../services/api';
 import { X, Clock, Calendar as CalendarIcon, Info, CheckCircle2, AlertCircle, Briefcase, Timer, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import TeamSelector from '../components/TeamSelector';
+import useInterval from '../hooks/useInterval';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -50,6 +51,15 @@ const CalendarPage = () => {
             fetchData();
         }
     }, [currentDate, selectedEmployeeId]); // Refetch when month or employee changes
+
+    // Auto-Refresh (Every 60s)
+    useInterval(() => {
+        if (!loading && selectedEmployeeId && !showModal) {
+            // fetchData already checks for selectedEmployeeId but good to be safe
+            // also avoid refreshing if modal is open (might be annoying)
+            fetchData();
+        }
+    }, 60000);
 
     const fetchData = async () => {
         console.log('DEBUG: fetchData called');

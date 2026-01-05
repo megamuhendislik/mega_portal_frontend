@@ -3,6 +3,8 @@ import { Calendar, Filter, Download, ChevronRight, Clock, AlertCircle, CheckCirc
 import api from '../services/api';
 import moment from 'moment';
 
+import useInterval from '../hooks/useInterval';
+
 const AttendanceTracking = () => {
     const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
     const [matrixData, setMatrixData] = useState(null);
@@ -32,6 +34,17 @@ const AttendanceTracking = () => {
             fetchStats();
         }
     }, [viewMode, year, month, selectedDept]);
+
+    // Auto-Refresh (Every 30s)
+    useInterval(() => {
+        if (!loading) {
+            if (viewMode === 'GRID') {
+                fetchTeamMatrix();
+            } else {
+                fetchStats();
+            }
+        }
+    }, 30000);
 
     const fetchDepartments = async () => {
         try {
