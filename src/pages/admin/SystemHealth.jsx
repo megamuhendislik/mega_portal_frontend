@@ -194,33 +194,68 @@ const AdminConsole = () => {
             {/* Content Area */}
             <div className="min-h-[600px]">
 
-                {/* OVERVIEW TAB */}
+                {/* OVERVIEW TAB - REPLACED WITH ACTION CENTER */}
                 {activeTab === 'overview' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
-                        <StatCard
-                            label="Toplam Personel"
-                            value={stats?.total_employees}
-                            icon={Users}
-                            color="text-blue-500"
-                        />
-                        <StatCard
-                            label="Bugünkü Aktif Mesai"
-                            value={stats?.attendance_today}
-                            icon={Clock}
-                            color="text-emerald-500"
-                        />
-                        <StatCard
-                            label="Bekleyen İzinler"
-                            value={stats?.pending_leave_requests}
-                            icon={FileText}
-                            color="text-amber-500"
-                        />
-                        <StatCard
-                            label="Aylık Fazla Mesai (Dk)"
-                            value={stats?.total_overtime_month}
-                            icon={Activity}
-                            color="text-purple-500"
-                        />
+                    <div className="animate-fade-in space-y-6">
+
+                        {/* Primary Action Hero */}
+                        <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-8 md:p-12 text-center text-white shadow-xl relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+                            <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+
+                            <div className="relative z-10 max-w-2xl mx-auto space-y-6">
+                                <div className="inline-flex p-4 bg-white/10 rounded-full backdrop-blur-md mb-2 ring-1 ring-white/20">
+                                    <RefreshCw size={48} className="animate-spin-slow" />
+                                </div>
+                                <h2 className="text-3xl md:text-5xl font-black tracking-tight">
+                                    Tüm Mesaileri Hesapla
+                                </h2>
+                                <p className="text-blue-100 text-lg md:text-xl font-medium leading-relaxed">
+                                    Sistemdeki tüm personelin bu ayki giriş-çıkış verilerini, mola kesintilerini ve fazla mesailerini
+                                    gerçek zamanlı kurallara göre yeniden hesaplar.
+                                </p>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm('DİKKAT: Tüm personelin bu ayki verileri yeniden hesaplanacak.\nBu işlem sistem yoğunluğuna göre biraz zaman alabilir.\n\nDevam edilsin mi?')) return;
+                                        setDiagLoading(true);
+                                        try {
+                                            const res = await api.post('/attendance/recalculate_all/');
+                                            alert(res.data.message);
+                                            setDiagLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), success: true, message: 'Toplu Hesaplama Tamamlandı', details: res.data.message }]);
+                                        } catch (err) {
+                                            alert('Hata: ' + (err.response?.data?.error || err.message));
+                                            setDiagLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), success: false, message: 'Toplu Hesaplama Hatası', details: err.message }]);
+                                        } finally {
+                                            setDiagLoading(false);
+                                        }
+                                    }}
+                                    disabled={diagLoading}
+                                    className={`
+                                        w-full md:w-auto px-8 py-4 bg-white text-blue-700 rounded-xl font-black text-lg 
+                                        shadow-lg active:scale-95 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 mx-auto
+                                        ${diagLoading ? 'opacity-70 cursor-wait' : 'hover:shadow-2xl hover:-translate-y-1'}
+                                    `}
+                                >
+                                    {diagLoading ? <RefreshCw className="animate-spin" /> : <Play fill="currentColor" />}
+                                    {diagLoading ? 'Hesaplanıyor...' : 'HESAPLAMAYI BAŞLAT'}
+                                </button>
+
+                                {diagLoading && (
+                                    <p className="text-sm text-blue-200 animate-pulse">
+                                        İşlem devam ediyor, lütfen sayfayı kapatmayın...
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Recent Stats (Mini) */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 opacity-70 hover:opacity-100 transition-opacity">
+                            <StatCard label="Personel" value={stats?.total_employees} icon={Users} color="text-slate-400" />
+                            <StatCard label="Bugün Mesai" value={stats?.attendance_today} icon={Clock} color="text-slate-400" />
+                            <StatCard label="Bekleyen" value={stats?.pending_leave_requests} icon={FileText} color="text-slate-400" />
+                            <StatCard label="Aylık FM" value={stats?.total_overtime_month} icon={Activity} color="text-slate-400" />
+                        </div>
                     </div>
                 )}
 
