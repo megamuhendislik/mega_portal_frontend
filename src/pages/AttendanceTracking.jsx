@@ -262,7 +262,7 @@ const AttendanceTracking = () => {
                                 <CheckCircle size={24} />
                             </div>
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Net Bakiye</p>
+                                <p className="text-sm text-slate-500 font-medium">Net Mesai</p>
                                 <h3 className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-orange-600'}`}>
                                     {netBalance > 0 ? '+' : ''}{formatMinutes(netBalance)}
                                 </h3>

@@ -318,8 +318,7 @@ const Attendance = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">Mesai Takibi</h2>
-                    <p className="text-slate-500 font-medium">Giriş-çıkış kayıtlarınız ve çalışma süreleriniz</p>
+                    {/* Header Removed to prevent duplication with Layout */}
                 </div>
 
                 {/* Tabs */}

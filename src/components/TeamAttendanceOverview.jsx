@@ -159,7 +159,7 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                         <div className={clsx("font-bold text-sm", isPositive ? "text-emerald-600" : "text-red-500")}>
                             {isPositive ? '+' : ''}{balance.toFixed(1)} sa
                         </div>
-                        <span className="text-[10px] text-slate-400">Net Bakiye</span>
+                        <span className="text-[10px] text-slate-400">Net Mesai</span>
                     </div>
 
                     {/* Column 5: Total Work & OT */}
@@ -267,7 +267,7 @@ const PerformanceTableView = ({ teamData }) => {
                         <tr>
                             <Th k="name" label="Çalışan" />
                             <Th k="jobPosition" label="Pozisyon" />
-                            <Th k="summaryNetBalance" label="Net Bakiye" align="right" />
+                            <Th k="summaryNetBalance" label="Net Mesai" align="right" />
                             <Th k="monthWorkedHours" label="Çalışma (Sa)" align="right" />
                             <Th k="monthTarget" label="Hedef (Sa)" align="right" />
                             <Th k="breakRatio" label="Mola Oranı" align="right" />

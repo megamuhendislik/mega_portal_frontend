@@ -53,7 +53,7 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
                 )}>
                     {isPositiveBalance ? <TrendingUp size={14} /> : <AlertCircle size={14} />}
                     <div className="text-right">
-                        <p className="text-[10px] uppercase font-bold opacity-70 leading-none mb-0.5">Net Bakiye</p>
+                        <p className="text-[10px] uppercase font-bold opacity-70 leading-none mb-0.5">Net Mesai</p>
                         <p className="text-sm font-black leading-none">{isPositiveBalance ? '+' : ''}{netBalance.toFixed(1)} sa</p>
                     </div>
                 </div>
