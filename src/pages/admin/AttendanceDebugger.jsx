@@ -105,7 +105,7 @@ const AttendanceDebugger = () => {
                             <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
                                 <Database size={16} /> Database Summary
                             </h3>
-                            {debugData.db_summary === "NO_RECORD" ? (
+                            {!debugData.db_summary || debugData.db_summary === "NO_RECORD" ? (
                                 <div className="p-4 bg-red-50 text-red-600 rounded-lg font-bold flex items-center gap-2">
                                     <AlertTriangle size={18} />
                                     No Monthly Summary Found in DB!
@@ -114,18 +114,18 @@ const AttendanceDebugger = () => {
                                 <div className="space-y-2">
                                     <div className="flex justify-between">
                                         <span className="text-slate-500">Target</span>
-                                        <span className="font-mono font-bold">{formatSeconds(debugData.db_summary.target_seconds)}</span>
+                                        <span className="font-mono font-bold">{formatSeconds(debugData.db_summary?.target_seconds || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-500">Completed</span>
-                                        <span className="font-mono font-bold text-emerald-600">{formatSeconds(debugData.db_summary.completed_seconds)}</span>
+                                        <span className="font-mono font-bold text-emerald-600">{formatSeconds(debugData.db_summary?.completed_seconds || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-500">Missing</span>
-                                        <span className="font-mono font-bold text-red-500">{formatSeconds(debugData.db_summary.missing_seconds)}</span>
+                                        <span className="font-mono font-bold text-red-500">{formatSeconds(debugData.db_summary?.missing_seconds || 0)}</span>
                                     </div>
                                     <div className="text-xs text-slate-400 mt-2 text-right">
-                                        Last Updated: {new Date(debugData.db_summary.updated_at).toLocaleString()}
+                                        Last Updated: {debugData.db_summary?.updated_at ? new Date(debugData.db_summary.updated_at).toLocaleString() : 'N/A'}
                                     </div>
                                 </div>
                             )}
@@ -137,10 +137,10 @@ const AttendanceDebugger = () => {
                             </h3>
                             <div className="flex justify-between items-center mb-4">
                                 <span className="text-slate-500">Calculated Period Target</span>
-                                <span className="font-mono font-bold text-blue-600">{formatSeconds(debugData.live_calc.target_seconds)}</span>
+                                <span className="font-mono font-bold text-blue-600">{formatSeconds(debugData.live_calc?.target_seconds || 0)}</span>
                             </div>
                             <div className="p-3 bg-blue-50 text-blue-700 text-sm rounded-lg">
-                                <strong>Comparison:</strong> If DB Target ({debugData.db_summary !== "NO_RECORD" ? formatSeconds(debugData.db_summary.target_seconds) : 'N/A'}) differs from Live Target ({formatSeconds(debugData.live_calc.target_seconds)}), you need to run "Recalculate All".
+                                <strong>Comparison:</strong> If DB Target ({debugData.db_summary && debugData.db_summary !== "NO_RECORD" ? formatSeconds(debugData.db_summary.target_seconds || 0) : 'N/A'}) differs from Live Target ({formatSeconds(debugData.live_calc?.target_seconds || 0)}), you need to run "Recalculate All".
                             </div>
                         </div>
 
