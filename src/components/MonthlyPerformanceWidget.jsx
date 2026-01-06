@@ -1,14 +1,8 @@
 import React from 'react';
-import { PieChart, Briefcase, Calendar, Star } from 'lucide-react';
+import { PieChart, Briefcase, Calendar, Star, TrendingUp, AlertCircle, Clock } from 'lucide-react';
+import clsx from 'clsx';
 
 const MonthlyPerformanceWidget = ({ summary, loading }) => {
-    // Expect summary = { 
-    //   total_worked_seconds: 500000, 
-    //   target_seconds: 600000, 
-    //   overtime_seconds: 12000, 
-    //   leave_days: 2 
-    // }
-
     if (loading) {
         return (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-pulse h-full">
@@ -21,77 +15,124 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
 
     if (!summary) return null;
 
-    const totalWorked = (summary.realized_normal_seconds || summary.total_worked_seconds || 0) / 3600;
+    // Data Extraction (Handling backend V2 response format with fallbacks)
+    const completed = (summary.completed_seconds || 0) / 3600;
+    const missing = (summary.missing_seconds || 0) / 3600;
+    const remaining = (summary.remaining_seconds || 0) / 3600;
     const target = (summary.target_seconds || 0) / 3600;
-    const overtime = (summary.realized_overtime_seconds || summary.overtime_seconds || 0) / 3600;
+    const overtime = (summary.overtime_seconds || summary.total_overtime_seconds || 0) / 3600;
+    const netBalance = (summary.net_balance_seconds || 0) / 3600;
 
-    // Progress %
-    const progress = target > 0 ? Math.min(100, (totalWorked / target) * 100) : 0;
-    const remaining = Math.max(0, target - totalWorked);
+    const isPositiveBalance = netBalance >= 0;
+
+    // Percentages for Bar
+    const totalCalc = Math.max(target, completed + missing + remaining); // Safe denominator
+    const pCompleted = totalCalc > 0 ? (completed / totalCalc) * 100 : 0;
+    const pMissing = totalCalc > 0 ? (missing / totalCalc) * 100 : 0;
+    const pRemaining = totalCalc > 0 ? (remaining / totalCalc) * 100 : 0;
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-full flex flex-col justify-between group hover:border-blue-200 transition-all cursor-default">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-full flex flex-col justify-between group hover:border-blue-200 transition-all cursor-default relative overflow-hidden">
 
-            <div className="flex justify-between items-start mb-4">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6 z-10 relative">
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                        <Briefcase size={22} />
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                        <TrendingUp size={22} />
                     </div>
                     <div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bu Ay</p>
-                        <h3 className="text-lg font-bold text-slate-800">Aylık Durum</h3>
+                        <h3 className="text-lg font-bold text-slate-800">Aylık Performans</h3>
                     </div>
                 </div>
-                {remaining === 0 ? (
-                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full uppercase">
-                        Hedef Tamam
-                    </span>
-                ) : (
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full uppercase">
-                        {Math.ceil(remaining / 9)} iş günü kaldı
-                    </span>
-                )}
-            </div>
 
-            {/* Main Stat */}
-            <div className="mb-6">
-                <div className="flex items-baseline gap-2">
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">
-                        {totalWorked.toFixed(1)}
-                    </h2>
-                    <span className="text-sm font-bold text-slate-400">/ {target.toFixed(1)} sa</span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="relative pt-3">
-                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
-                        <span>İlerleme %{progress.toFixed(0)}</span>
-                        <span>{remaining > 0 ? `-${remaining.toFixed(1)} sa` : `+${(totalWorked - target).toFixed(1)} sa`}</span>
-                    </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all duration-1000 ${remaining === 0 ? 'bg-emerald-500' : 'bg-blue-600'}`}
-                            style={{ width: `${progress}%` }}
-                        ></div>
+                {/* Net Balance Badge */}
+                <div className={clsx(
+                    "px-3 py-1.5 rounded-lg border flex items-center gap-1.5 shadow-sm",
+                    isPositiveBalance ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-red-50 border-red-100 text-red-700"
+                )}>
+                    {isPositiveBalance ? <TrendingUp size={14} /> : <AlertCircle size={14} />}
+                    <div className="text-right">
+                        <p className="text-[10px] uppercase font-bold opacity-70 leading-none mb-0.5">Net Bakiye</p>
+                        <p className="text-sm font-black leading-none">{isPositiveBalance ? '+' : ''}{netBalance.toFixed(1)} sa</p>
                     </div>
                 </div>
             </div>
 
-            {/* Mini Stats */}
-            <div className="grid grid-cols-2 gap-3 mt-auto">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Star size={14} className="text-amber-500" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">Toplam Mesai</span>
+            {/* Main Progress Bar Section */}
+            <div className="mb-8 z-10 relative">
+                <div className="flex justify-between items-end mb-2">
+                    <div>
+                        <span className="text-3xl font-black text-slate-800 tracking-tight">{completed.toFixed(1)}</span>
+                        <span className="text-sm font-bold text-slate-400 ml-1">/ {target.toFixed(0)} sa</span>
                     </div>
-                    <p className="text-lg font-bold text-slate-800">{overtime.toFixed(1)} <span className="text-xs text-slate-400 font-normal">sa</span></p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Calendar size={14} className="text-purple-500" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">İzin/Rapor</span>
+
+                {/* Stacked Bar */}
+                <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                    <div
+                        className="h-full bg-emerald-500 hover:bg-emerald-400 transition-all duration-500 relative group/segment"
+                        style={{ width: `${pCompleted}%` }}
+                    >
+                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/segment:opacity-100 transition-opacity"></div>
                     </div>
-                    <p className="text-lg font-bold text-slate-800">{summary.leave_days || 0} <span className="text-xs text-slate-400 font-normal">gün</span></p>
+                    <div
+                        className="h-full bg-red-400 hover:bg-red-300 transition-all duration-500 relative group/segment"
+                        style={{ width: `${pMissing}%` }}
+                    >
+                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/segment:opacity-100 transition-opacity"></div>
+                    </div>
+                    <div
+                        className="h-full bg-slate-200 hover:bg-slate-300 transition-all duration-500 relative group/segment"
+                        style={{ width: `${pRemaining}%` }}
+                    ></div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex justify-between mt-3 px-1">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Tamamlanan</p>
+                            <p className="text-xs font-bold text-emerald-600">{completed.toFixed(1)} sa</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-sm"></div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Eksik</p>
+                            <p className="text-xs font-bold text-red-500">{missing.toFixed(1)} sa</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-slate-300 shadow-sm"></div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Kalan</p>
+                            <p className="text-xs font-bold text-slate-500">{remaining.toFixed(1)} sa</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Stats Grid */}
+            <div className="grid grid-cols-2 gap-4 mt-auto z-10 relative">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Toplam Mesai</p>
+                        <p className="text-lg font-bold text-blue-600">{overtime.toFixed(1)} sa</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <Clock size={16} />
+                    </div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">İzinli Gün</p>
+                        <p className="text-lg font-bold text-slate-700">{summary.leave_days || 0} gün</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <Star size={16} />
+                    </div>
                 </div>
             </div>
         </div>
