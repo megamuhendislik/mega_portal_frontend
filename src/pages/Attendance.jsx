@@ -399,18 +399,18 @@ const Attendance = () => {
                                 <p className="text-sm text-slate-500 font-bold">Toplam Çalışma</p>
                                 <div className="flex items-baseline gap-2">
                                     <h3 className="text-2xl font-black text-slate-800">
-                                        {periodSummary ? (periodSummary.total_work_seconds / 3600).toFixed(1) : summary.totalWorkHours}
+                                        {periodSummary ? ((periodSummary.total_work_seconds || 0) / 3600).toFixed(1) : summary.totalWorkHours}
                                         <span className="text-lg text-slate-400 font-medium">sa</span>
                                     </h3>
-                                    {periodSummary && periodSummary.target_seconds > 0 && (
+                                    {periodSummary && (periodSummary.target_seconds || 0) > 0 && (
                                         <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                                            / {(periodSummary.target_seconds / 3600).toFixed(1)} sa Hedef
+                                            / {((periodSummary.target_seconds || 0) / 3600).toFixed(1)} sa Hedef
                                         </span>
                                     )}
                                 </div>
-                                {periodSummary && periodSummary.target_seconds > 0 && (
+                                {periodSummary && (periodSummary.target_seconds || 0) > 0 && (
                                     <p className="text-xs text-slate-400 mt-1 font-medium">
-                                        Doldurulacak: <span className="text-slate-600 font-bold">{Math.max(0, (periodSummary.target_seconds - periodSummary.total_work_seconds) / 3600).toFixed(1)} sa</span>
+                                        Doldurulacak: <span className="text-slate-600 font-bold">{Math.max(0, ((periodSummary.target_seconds || 0) - (periodSummary.total_work_seconds || 0)) / 3600).toFixed(1)} sa</span>
                                     </p>
                                 )}
                             </div>
@@ -420,7 +420,7 @@ const Attendance = () => {
                             <div>
                                 <p className="text-sm text-slate-500 font-bold">Fazla Mesai</p>
                                 <h3 className="text-2xl font-black text-slate-800">
-                                    {periodSummary ? (periodSummary.overtime_seconds / 3600).toFixed(1) : summary.totalOvertime} Saat
+                                    {periodSummary ? ((periodSummary.overtime_seconds || 0) / 3600).toFixed(1) : summary.totalOvertime} Saat
                                 </h3>
                             </div>
                         </div>
@@ -429,7 +429,7 @@ const Attendance = () => {
                             <div>
                                 <p className="text-sm text-slate-500 font-bold">Eksik Çalışma</p>
                                 <h3 className="text-2xl font-black text-slate-800">
-                                    {periodSummary ? (periodSummary.missing_seconds / 3600).toFixed(1) + ' Saat' : '-'}
+                                    {periodSummary ? ((periodSummary.missing_seconds || 0) / 3600).toFixed(1) + ' Saat' : '-'}
                                 </h3>
                             </div>
                         </div>
