@@ -180,8 +180,8 @@ const AdminConsole = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                                 }`}
                         >
                             <tab.icon size={16} />
@@ -249,6 +249,39 @@ const AdminConsole = () => {
                                 >
                                     {diagLoading ? <RefreshCw className="animate-spin" /> : <Play size={20} />}
                                     {diagLoading ? 'Test Yürütülüyor...' : 'Tam Sistem Taraması Başlat'}
+                                </button>
+                            </div>
+
+                            {/* Data Correction Tools */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mt-6">
+                                <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2 text-lg">
+                                    <RefreshCw size={20} className="text-emerald-600" />
+                                    Veri Düzeltme
+                                </h3>
+                                <p className="text-sm text-slate-500 mb-4">
+                                    Mesai hesaplamalarında tutarsızlık varsa, tüm personelin bu ayki verilerini baştan hesaplatabilirsiniz.
+                                </p>
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm('Tüm personelin bu ayki mesai verileri yeniden hesaplanacak. Bu işlem birkaç saniye sürebilir. Devam edilsin mi?')) return;
+                                        setDiagLoading(true);
+                                        try {
+                                            const res = await api.post('/attendance/recalculate_all/'); // check trailing slash
+                                            alert(res.data.message);
+                                            setDiagLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), success: true, message: 'Recalculation Complete', details: res.data.message }]);
+                                        } catch (err) {
+                                            alert('Hata: ' + (err.response?.data?.error || err.message));
+                                            setDiagLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), success: false, message: 'Recalculation Failed', details: err.message }]);
+                                        } finally {
+                                            setDiagLoading(false);
+                                        }
+                                    }}
+                                    disabled={diagLoading}
+                                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md ${diagLoading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-lg hover:scale-[1.02]'
+                                        }`}
+                                >
+                                    {diagLoading ? <RefreshCw className="animate-spin" /> : <RefreshCw size={20} />}
+                                    {diagLoading ? 'İşleniyor...' : 'Tüm Verileri Yeniden Hesapla'}
                                 </button>
                             </div>
                         </div>
