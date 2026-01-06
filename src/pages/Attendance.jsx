@@ -229,6 +229,8 @@ const Attendance = () => {
             id: m.id,
             name: m.name,
             managerId: m.manager_id,
+            leaveStatus: m.leave_status,
+            isOnLeave: m.is_on_leave,
             jobPosition: m.job_position, // Add this field
             status: m.status,
             lastActionTime: m.last_action_time,
