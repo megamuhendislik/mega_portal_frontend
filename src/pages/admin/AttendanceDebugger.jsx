@@ -99,6 +99,20 @@ const AttendanceDebugger = () => {
             {debugData && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
 
+                    {/* Error Banner */}
+                    {debugData.error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start gap-3">
+                            <AlertTriangle className="shrink-0 mt-1" />
+                            <div>
+                                <h3 className="font-bold">Debug Error</h3>
+                                <p className="text-sm">{debugData.details}</p>
+                                <pre className="text-xs bg-red-100 p-2 mt-2 rounded overflow-auto max-h-32">
+                                    {debugData.trace}
+                                </pre>
+                            </div>
+                        </div>
+                    )}
+
                     {/* High Level Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -149,9 +163,9 @@ const AttendanceDebugger = () => {
                                 <CheckCircle size={16} /> Configuration
                             </h3>
                             <ul className="space-y-2 text-sm">
-                                <li className="flex justify-between"><span className="text-slate-500">Schedule:</span> <span className="font-bold">{debugData.schedule}</span></li>
-                                <li className="flex justify-between"><span className="text-slate-500">Period:</span> <span className="font-mono text-xs">{debugData.period}</span></li>
-                                <li className="flex justify-between"><span className="text-slate-500">Leaves:</span> <span className="font-bold">{debugData.leaves.length} Found</span></li>
+                                <li className="flex justify-between"><span className="text-slate-500">Schedule:</span> <span className="font-bold">{debugData.schedule || 'Unknown'}</span></li>
+                                <li className="flex justify-between"><span className="text-slate-500">Period:</span> <span className="font-mono text-xs">{debugData.period || 'Unknown'}</span></li>
+                                <li className="flex justify-between"><span className="text-slate-500">Leaves:</span> <span className="font-bold">{(debugData.leaves || []).length} Found</span></li>
                             </ul>
                         </div>
                     </div>
@@ -173,7 +187,7 @@ const AttendanceDebugger = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {debugData.raw_logs.length === 0 ? (
+                                    {!debugData.raw_logs || debugData.raw_logs.length === 0 ? (
                                         <tr><td colSpan="5" className="p-8 text-center text-slate-400">No logs found for this period.</td></tr>
                                     ) : (
                                         debugData.raw_logs.map((log, i) => (
