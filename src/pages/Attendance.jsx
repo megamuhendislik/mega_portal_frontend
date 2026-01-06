@@ -240,7 +240,20 @@ const Attendance = () => {
             monthTarget: (m.month_target_seconds / 3600).toFixed(1),
             monthWorkedHours: (m.month_worked_seconds / 3600).toFixed(1),
             monthApprovedDTO: (m.month_approved_overtime_seconds / 60).toFixed(0), // minutes
-            monthPendingDTO: (m.month_pending_overtime_seconds / 60).toFixed(0)
+            monthPendingDTO: (m.month_pending_overtime_seconds / 60).toFixed(0),
+
+            // 3-Part Summary
+            summaryMissing: (m.summary_missing_seconds / 3600).toFixed(1),
+            summaryRemaining: (m.summary_remaining_seconds / 3600).toFixed(1),
+            summaryCompleted: (m.summary_completed_seconds / 3600).toFixed(1),
+            summaryNetBalance: (m.summary_net_balance_seconds / 3600).toFixed(1),
+            summaryTotalWork: (m.summary_total_work_seconds / 3600).toFixed(1),
+
+            // Performance Metrics
+            totalBreakMinutes: (m.performance_break_seconds / 60).toFixed(0),
+            totalLateMinutes: (m.performance_late_seconds / 60).toFixed(0),
+            totalLateCount: m.performance_late_count,
+            totalWorkedDays: m.performance_worked_days
         }));
 
         setTeamMembers(mappedMembers);
