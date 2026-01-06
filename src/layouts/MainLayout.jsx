@@ -17,7 +17,8 @@ import {
     Calendar,
     CalendarRange,
     Flag,
-    Shield
+    Shield,
+    Database
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -113,6 +114,7 @@ const MainLayout = () => {
         { path: '/requests', label: 'Talepler', icon: FileText, permission: 'VIEW_SECTION_REQUESTS' },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'VIEW_SECTION_REPORTS' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: null, adminOnly: true },
+        { path: '/debug/attendance', label: 'Debug', icon: Database, permission: null, adminOnly: true },
     ];
 
     const filteredNavItems = navItems.filter(item => {
