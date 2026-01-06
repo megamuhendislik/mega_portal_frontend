@@ -16,7 +16,6 @@ import WorkSchedules from './pages/WorkSchedules';
 import PublicHolidays from './pages/PublicHolidays';
 import AttendanceTracking from './pages/AttendanceTracking';
 import Reports from './pages/Reports';
-import Reports from './pages/Reports';
 import SystemHealth from './pages/admin/SystemHealth';
 import AttendanceDebugger from './pages/admin/AttendanceDebugger';
 
