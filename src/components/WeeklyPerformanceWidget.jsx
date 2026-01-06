@@ -27,7 +27,7 @@ const WeeklyPerformanceWidget = ({ summary, loading }) => {
     const target = (summary.target_seconds || 0) / 3600;
     const overtime = (summary.overtime_seconds || 0) / 3600;
 
-    // Progress %
+    // Progress % - Safeguard against division by zero
     const progress = target > 0 ? Math.min(100, (totalWorked / target) * 100) : 0;
     const remaining = Math.max(0, target - totalWorked);
 

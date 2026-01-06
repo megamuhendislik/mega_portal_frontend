@@ -27,9 +27,10 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
 
     // Percentages for Bar
     const totalCalc = Math.max(target, completed + missing + remaining); // Safe denominator
-    const pCompleted = totalCalc > 0 ? (completed / totalCalc) * 100 : 0;
-    const pMissing = totalCalc > 0 ? (missing / totalCalc) * 100 : 0;
-    const pRemaining = totalCalc > 0 ? (remaining / totalCalc) * 100 : 0;
+    // Explicitly check for > 0 to prevent NaN if all values are 0
+    const pCompleted = totalCalc > 0.001 ? (completed / totalCalc) * 100 : 0;
+    const pMissing = totalCalc > 0.001 ? (missing / totalCalc) * 100 : 0;
+    const pRemaining = totalCalc > 0.001 ? (remaining / totalCalc) * 100 : 0;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-full flex flex-col justify-between group hover:border-blue-200 transition-all cursor-default relative overflow-hidden">
