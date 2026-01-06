@@ -398,7 +398,10 @@ const Attendance = () => {
                             <div>
                                 <p className="text-sm text-slate-500 font-bold">Toplam Çalışma</p>
                                 <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-black text-slate-800">{summary.totalWorkHours}<span className="text-lg text-slate-400 font-medium">sa</span></h3>
+                                    <h3 className="text-2xl font-black text-slate-800">
+                                        {periodSummary ? (periodSummary.total_work_seconds / 3600).toFixed(1) : summary.totalWorkHours}
+                                        <span className="text-lg text-slate-400 font-medium">sa</span>
+                                    </h3>
                                     {periodSummary && periodSummary.target_seconds > 0 && (
                                         <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                                             / {(periodSummary.target_seconds / 3600).toFixed(1)} sa Hedef
@@ -407,7 +410,7 @@ const Attendance = () => {
                                 </div>
                                 {periodSummary && periodSummary.target_seconds > 0 && (
                                     <p className="text-xs text-slate-400 mt-1 font-medium">
-                                        Doldurulacak: <span className="text-slate-600 font-bold">{Math.max(0, (periodSummary.target_seconds / 3600) - summary.totalWorkHours).toFixed(1)} sa</span>
+                                        Doldurulacak: <span className="text-slate-600 font-bold">{Math.max(0, (periodSummary.target_seconds - periodSummary.total_work_seconds) / 3600).toFixed(1)} sa</span>
                                     </p>
                                 )}
                             </div>
@@ -416,14 +419,18 @@ const Attendance = () => {
                             <div className="p-3 bg-emerald-50 rounded-full text-emerald-600"><CheckCircle size={24} /></div>
                             <div>
                                 <p className="text-sm text-slate-500 font-bold">Fazla Mesai</p>
-                                <h3 className="text-2xl font-black text-slate-800">{summary.totalOvertime} Saat</h3>
+                                <h3 className="text-2xl font-black text-slate-800">
+                                    {periodSummary ? (periodSummary.overtime_seconds / 3600).toFixed(1) : summary.totalOvertime} Saat
+                                </h3>
                             </div>
                         </div>
                         <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500 flex items-center gap-4">
                             <div className="p-3 bg-orange-50 rounded-full text-orange-600"><AlertCircle size={24} /></div>
                             <div>
-                                <p className="text-sm text-slate-500 font-bold">Eksik Gün</p>
-                                <h3 className="text-2xl font-black text-slate-800">-</h3>
+                                <p className="text-sm text-slate-500 font-bold">Eksik Çalışma</p>
+                                <h3 className="text-2xl font-black text-slate-800">
+                                    {periodSummary ? (periodSummary.missing_seconds / 3600).toFixed(1) + ' Saat' : '-'}
+                                </h3>
                             </div>
                         </div>
                     </div>
