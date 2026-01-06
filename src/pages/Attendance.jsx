@@ -192,23 +192,18 @@ const Attendance = () => {
         }
     };
 
-    const checkTeamVisibility = async () => {
-        // Quick check if user is manager/admin
-        if (user?.user?.is_superuser || user?.roles?.some(r => r.key === 'MANAGER')) {
-            try {
-                // We deliberately fetch to see if we get > 0 members
-                const response = await api.get('/attendance/team_dashboard/');
-                if (response.data && response.data.length > 0) {
-                    setHasTeam(true);
-                    // Pre-load data if we are already here
-                    mapTeamData(response.data);
-                } else {
-                    setHasTeam(false);
-                }
-            } catch (error) {
-                console.error('Failed to check team visibility', error);
-                setHasTeam(false);
-            }
+    const checkTeamVisibility = () => {
+        if (!user) return;
+
+        // Use the flag provided by backend /me endpoint
+        // This is much faster and cleaner than trying to fetch the dashboard first
+        const canViewTeam = user.user?.is_superuser || user.has_team;
+
+        setHasTeam(canViewTeam);
+
+        // If they can't view team and are on that tab, switch back
+        if (!canViewTeam && (activeTab === 'team_attendance' || activeTab === 'team_detail')) {
+            setActiveTab('my_attendance');
         }
     };
 
@@ -233,6 +228,7 @@ const Attendance = () => {
         const mappedMembers = data.map(m => ({
             id: m.id,
             name: m.name,
+            managerId: m.manager_id,
             jobPosition: m.job_position, // Add this field
             status: m.status,
             lastActionTime: m.last_action_time,
