@@ -58,7 +58,7 @@ const StackedProgressBar = ({ completed, missing, remaining, target }) => {
     );
 };
 
-const EmployeeCard = ({ node, onMemberClick, depth = 0, expandedIds, toggleExpand }) => {
+const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleExpand }) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedIds.has(node.id);
 
@@ -66,181 +66,134 @@ const EmployeeCard = ({ node, onMemberClick, depth = 0, expandedIds, toggleExpan
     const balance = parseFloat(node.summaryNetBalance || 0);
     const isPositive = balance >= 0;
 
+    // Overtime Logic
+    const otMinutes = parseInt(node.monthApprovedDTO || 0);
+    const hasOt = otMinutes > 0;
+
     return (
-        <div className={clsx("flex flex-col transition-all duration-200", depth === 0 ? "mb-6" : "mb-4")}>
-            {/* Main Card */}
+        <>
+            {/* Main Row */}
             <div
                 onClick={() => onMemberClick(node.id)}
-                className={clsx(
-                    "relative bg-white border rounded-xl overflow-hidden transition-all cursor-pointer group z-10",
-                    depth === 0 ? "shadow-sm border-slate-200 hover:shadow-md" : "border-slate-200 hover:border-blue-300 hover:shadow-sm"
-                )}
+                className="group relative bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
             >
-                {/* Visual Depth Indicator (Left Color Bar) */}
+                {/* Visual Depth Connector (Vertical Line for Tree) */}
                 {depth > 0 && (
-                    <div className={clsx(
-                        "absolute left-0 top-0 bottom-0 w-1",
-                        depth === 1 ? "bg-blue-400" : "bg-slate-300"
-                    )}></div>
+                    <div
+                        className="absolute top-0 bottom-0 border-l border-slate-300 pointer-events-none"
+                        style={{ left: `${(depth * 32) - 16}px` }}
+                    />
+                )}
+                {/* L-Shape Connector for current node */}
+                {depth > 0 && (
+                    <div
+                        className="absolute top-1/2 -mt-px w-4 border-t border-slate-300 pointer-events-none"
+                        style={{ left: `${(depth * 32) - 16}px` }}
+                    />
                 )}
 
-                {/* Header Section */}
-                <div className={clsx("p-4 flex items-start justify-between gap-3", depth > 0 && "pl-5")}>
-                    <div className="flex items-center gap-3">
+                <div className="grid grid-cols-12 gap-4 items-center p-3">
+
+                    {/* Column 1: Employee Info (Dynamic Padding for Depth) */}
+                    <div className="col-span-4 flex items-center gap-3" style={{ paddingLeft: `${depth * 32}px` }}>
+
+                        {/* Expand Toggle Button */}
+                        <div className="w-6 shrink-0 flex justify-center">
+                            {hasChildren ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleExpand(node.id);
+                                    }}
+                                    className="p-0.5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </button>
+                            ) : <div className="w-4" />}
+                        </div>
+
+                        {/* Avatar */}
                         <div className={clsx(
-                            "w-12 h-12 rounded-full flex items-center justify-center font-bold text-base transition-colors shrink-0",
+                            "w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0",
                             node.isOnLeave ? "bg-amber-100 text-amber-600" :
                                 node.status === 'IN' ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"
                         )}>
-                            {node.avatar || <User size={20} />}
+                            {node.avatar || <User size={16} />}
                         </div>
+
                         <div className="min-w-0">
-                            <h4 className="font-bold text-slate-800 text-base leading-tight group-hover:text-blue-600 transition-colors truncate">
+                            <h4 className="font-bold text-slate-800 text-sm leading-tight truncate">
                                 {node.name}
                             </h4>
-                            <p className="text-xs text-slate-500 mt-0.5 truncate">{node.jobPosition || 'Pozisyon Yok'}</p>
-                            <div className="mt-2">
-                                <StatusBadge status={node.status} isOnLeave={node.isOnLeave} leaveStatus={node.leaveStatus} />
-                            </div>
+                            <p className="text-[11px] text-slate-500 truncate">{node.jobPosition || '-'}</p>
                         </div>
                     </div>
 
-                    {/* Expand Toggle */}
-                    {hasChildren && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                toggleExpand(node.id);
-                            }}
-                            className={clsx(
-                                "p-1.5 rounded-lg transition-colors border",
-                                isExpanded ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-white text-slate-400 border-slate-100 hover:border-slate-300"
-                            )}
-                        >
-                            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                        </button>
-                    )}
-                </div>
-
-                {/* Metrics Grid */}
-                <div className={clsx("px-4 pb-4 grid grid-cols-2 gap-3 text-sm", depth > 0 && "pl-5")}>
-                    {/* Today */}
-                    <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                        <p className="text-xs text-slate-400 font-medium mb-1">Bugün</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="font-bold text-slate-700 text-lg tabular-nums">
-                                {Math.floor(node.totalTodayMinutes / 60)}
-                            </span>
-                            <span className="text-xs text-slate-500">sa</span>
-                            <span className="font-bold text-slate-700 text-lg tabular-nums ml-1">
-                                {node.totalTodayMinutes % 60}
-                            </span>
-                            <span className="text-xs text-slate-500">dk</span>
+                    {/* Column 2: Status & Today */}
+                    <div className="col-span-2 flex flex-col justify-center">
+                        <div className="mb-1">
+                            <StatusBadge status={node.status} isOnLeave={node.isOnLeave} leaveStatus={node.leaveStatus} />
+                        </div>
+                        <div className="flex items-baseline gap-1 text-slate-500 text-xs">
+                            <span className="font-bold text-slate-700">{Math.floor(node.totalTodayMinutes / 60)}</span>s
+                            <span className="font-bold text-slate-700">{node.totalTodayMinutes % 60}</span>dk
                         </div>
                     </div>
 
-                    {/* Net Balance (Extra/Missing Total) */}
-                    <div className={clsx("rounded-lg p-2.5 border", isPositive ? "bg-emerald-50 border-emerald-100" : "bg-red-50 border-red-100")}>
-                        <p className={clsx("text-xs font-medium mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
-                            {isPositive ? 'Net Fazla' : 'Net Eksik'}
-                        </p>
-                        <div className="flex items-baseline gap-1">
-                            <span className={clsx("font-bold text-lg tabular-nums", isPositive ? "text-emerald-700" : "text-red-600")}>
-                                {isPositive ? '+' : ''}{balance.toFixed(1)}
-                            </span>
-                            <span className={clsx("text-xs", isPositive ? "text-emerald-600" : "text-red-400")}>sa</span>
+                    {/* Column 3: Monthly Progress Bar */}
+                    <div className="col-span-3">
+                        <div className="flex justify-between text-[10px] text-slate-500 mb-1 px-1">
+                            <span>Hedef: <b>{node.monthTarget}s</b></span>
+                            {node.summaryRemaining > 0 && <span>Kalan: {node.summaryRemaining}s</span>}
                         </div>
-                    </div>
-
-                    {/* Monthly Progress (3-Part Stack) */}
-                    <div className="col-span-2 bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                        <div className="flex justify-between items-end mb-2">
-                            <p className="text-xs text-slate-400 font-medium tracking-wide">AYLIK HEDEF DAĞILIMI</p>
-                            <p className="text-xs font-bold text-slate-700">{node.monthTarget} sa</p>
-                        </div>
-
                         <StackedProgressBar
                             completed={node.summaryCompleted}
                             missing={node.summaryMissing}
                             remaining={node.summaryRemaining}
                             target={node.monthTarget}
                         />
-
-                        <div className="flex justify-between text-[10px] mt-1.5">
-                            <div className="flex items-center gap-1 text-emerald-600 font-medium">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                Tamamlanan ({node.summaryCompleted}sa)
-                            </div>
-                            <div className="flex items-center gap-1 text-red-500 font-medium">
-                                <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                                Eksik ({node.summaryMissing}sa)
-                            </div>
-                            <div className="flex items-center gap-1 text-slate-400 font-medium">
-                                <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                                Kalan ({node.summaryRemaining}sa)
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Extra Overtime (Separate) */}
-                    <div className="col-span-2 flex items-center gap-4 bg-slate-50 rounded-lg p-2.5 border border-slate-100 mt-0">
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Ek Mesai (Onaylı)</p>
-                            <p className="font-bold text-emerald-600 text-sm">{node.monthApprovedDTO} dk</p>
+                    {/* Column 4: Net Balance */}
+                    <div className="col-span-1 text-right">
+                        <div className={clsx("font-bold text-sm", isPositive ? "text-emerald-600" : "text-red-500")}>
+                            {isPositive ? '+' : ''}{balance.toFixed(1)} sa
                         </div>
-                        <div className="border-l border-slate-200 pl-4">
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Toplam Çaba (Normal+Ek)</p>
-                            <p className="font-bold text-blue-600 text-sm">{node.summaryTotalWork} sa</p>
+                        <span className="text-[10px] text-slate-400">Net Bakiye</span>
+                    </div>
+
+                    {/* Column 5: Total Work & OT */}
+                    <div className="col-span-2 text-right pr-2">
+                        <div className="font-bold text-slate-700 text-sm">
+                            {node.summaryTotalWork} sa
                         </div>
+                        <div className="text-[10px] text-slate-400">Toplam Mesai</div>
+
+                        {hasOt && (
+                            <div className="mt-0.5 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded inline-block">
+                                +{otMinutes}dk Ek Mesai
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {node.lastActionTime && node.status !== 'OUT' && !node.isOnLeave && (
-                    <div className={clsx("px-4 py-2 border-t border-slate-100 bg-slate-50/50 flex items-center gap-2 text-xs text-slate-400", depth > 0 && "pl-5")}>
-                        <Clock size={12} />
-                        <span>Son Hareket: {node.lastActionTime}</span>
-                    </div>
-                )}
             </div>
 
-            {/* Subordinate Grid Connector */}
+            {/* Recursion for Children */}
             {hasChildren && isExpanded && (
-                <div className="relative pl-6 md:pl-10 ml-6 pt-4 pb-2">
-                    {/* Vertical Connector Line */}
-                    <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-300"></div>
-
-                    <div className="mb-4 flex items-center gap-2">
-                        {/* Horizontal Connector */}
-                        <div className="w-4 h-px bg-slate-300"></div>
-
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{node.name}'in Ekibi</span>
-                        <span className="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded-md font-bold">{node.children.length}</span>
-                    </div>
-
-                    {/* Grid for Children */}
-                    {/* Using fewer columns for nested levels to avoid squeezing */}
-                    <div className={clsx(
-                        "grid gap-4",
-                        depth === 0 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
-                    )}>
-                        {node.children.map(child => (
-                            <div key={child.id} className="relative">
-                                {/* Horizontal Connector to Card */}
-                                <div className="absolute top-8 -left-4 w-4 h-px bg-slate-300"></div>
-
-                                <EmployeeCard
-                                    node={child}
-                                    onMemberClick={onMemberClick}
-                                    depth={depth + 1}
-                                    expandedIds={expandedIds}
-                                    toggleExpand={toggleExpand}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <>
+                    {node.children.map(child => (
+                        <HierarchicalRow
+                            key={child.id}
+                            node={child}
+                            onMemberClick={onMemberClick}
+                            depth={depth + 1}
+                            expandedIds={expandedIds}
+                            toggleExpand={toggleExpand}
+                        />
+                    ))}
+                </>
             )}
-        </div>
+        </>
     );
 };
 
@@ -542,16 +495,29 @@ const TeamAttendanceOverview = ({ teamData, onMemberClick }) => {
                 <PerformanceTableView teamData={teamData} />
             ) : (
                 hierarchy.length > 0 ? (
-                    <div>
-                        {hierarchy.map((node) => (
-                            <EmployeeCard
-                                key={node.id}
-                                node={node}
-                                onMemberClick={onMemberClick}
-                                expandedIds={expandedIds}
-                                toggleExpand={toggleExpand}
-                            />
-                        ))}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        {/* Static Table Header */}
+                        <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <div className="col-span-4 pl-12">Çalışan</div>
+                            <div className="col-span-2">Durum / Bugün</div>
+                            <div className="col-span-3">Aylık İlerleme</div>
+                            <div className="col-span-1 text-right">Net</div>
+                            <div className="col-span-2 text-right pr-2">Toplam</div>
+                        </div>
+
+                        {/* Recursive Tree Rows */}
+                        <div className="divide-y divide-slate-50">
+                            {hierarchy.map((node) => (
+                                <HierarchicalRow
+                                    key={node.id}
+                                    node={node}
+                                    onMemberClick={onMemberClick}
+                                    depth={0}
+                                    expandedIds={expandedIds}
+                                    toggleExpand={toggleExpand}
+                                />
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
