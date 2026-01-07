@@ -1,165 +1,194 @@
 import React, { useMemo } from 'react';
-import { TrendingUp, Clock, AlertTriangle, Coffee, Briefcase } from 'lucide-react';
+import { TrendingUp, Clock, AlertTriangle, Coffee, Briefcase, MinusCircle, CheckCircle, ArrowRight } from 'lucide-react';
 
 const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
     const stats = useMemo(() => {
-        // If Period Summary from Backend is available, use it for "Target" and "Realized"
-        // This ensures 26th-25th logic matches exact backend calc
         if (periodSummary) {
             const targetSec = periodSummary.target_seconds || 0;
-            const realizedSec = periodSummary.completed_seconds || 0;
+            const realizedSec = periodSummary.completed_seconds || 0; // Normal work
             const overtimeSec = periodSummary.overtime_seconds || 0;
             const missingSec = periodSummary.missing_seconds || 0;
+            const remainingSec = periodSummary.remaining_seconds || 0;
+            const netWorkSec = periodSummary.net_work_seconds || 0; // Normal + OT
+            const netBalanceSec = periodSummary.net_balance_seconds || 0;
 
-            const breakSec = periodSummary.total_break_seconds || 0; // Use actual backend data
+            const breakSec = periodSummary.total_break_seconds || 0;
+            const lateSec = periodSummary.total_late_seconds || 0;
 
-            let progressPercent = 0;
+            // Percentages for Normal Work Breakdown (Target Base)
+            let pCompleted = 0;
+            let pMissing = 0;
+            let pRemaining = 0;
+
             if (targetSec > 0) {
-                // Correct logic: Progress = Realized / Target
-                progressPercent = Math.min(100, (realizedSec / targetSec) * 100);
+                pCompleted = Math.min(100, (realizedSec / targetSec) * 100);
+                pMissing = Math.min(100, (missingSec / targetSec) * 100);
+                // Ensure remaining fills the rest cleanly
+                // pRemaining = 100 - pCompleted - pMissing; 
+                // Better to derive from seconds to be precise visual
+                pRemaining = (remainingSec / targetSec) * 100;
             }
 
-            // Calculate other simple metrics from logs since backend summary might not have 'lateCount' or 'workDays' yet
-            // Or we can rely on logs for these specific counters
+            // Calculation for Net Progress
+            // If Net Work > Target, we are > 100%
+            const netPercent = targetSec > 0 ? (netWorkSec / targetSec) * 100 : 0;
+            const isNetPositive = netBalanceSec >= 0;
+
             let lateCount = 0;
             let workDays = 0;
             logs.forEach(log => {
-                if (log.late_seconds > 0) lateCount++;
+                // If backend sends late_seconds, we can count days with >0 late
+                if ((log.late_seconds || 0) > 0) lateCount++;
                 if ((log.normal_seconds || 0) > 0) workDays++;
             });
 
             return {
-                totalHours: (realizedSec / 3600).toFixed(1),
-                totalOvertimeHours: (overtimeSec / 3600).toFixed(1),
-                totalMissingHours: (Math.max(0, targetSec - realizedSec) / 3600).toFixed(1), // Remaining to Target
-                totalBreakHours: (breakSec / 3600).toFixed(1),
-                totalExpectedHours: (targetSec / 3600).toFixed(1),
-                progressPercent,
-                lateCount,
-                workDays
+                targetHours: (targetSec / 3600).toFixed(1),
+                completedHours: (realizedSec / 3600).toFixed(1),
+                missingHours: (missingSec / 3600).toFixed(1),
+                remainingHours: (remainingSec / 3600).toFixed(1),
+
+                overtimeHours: (overtimeSec / 3600).toFixed(1),
+                netWorkHours: (netWorkSec / 3600).toFixed(1),
+                netBalanceHours: (Math.abs(netBalanceSec) / 3600).toFixed(1),
+                isNetPositive,
+
+                breakHours: (breakSec / 3600).toFixed(1),
+                lateMinutes: Math.floor(lateSec / 60),
+
+                pCompleted,
+                pMissing,
+                pRemaining,
+                netPercent,
+                workDays,
+                lateCount
             };
         }
-
-        // Fallback to local calculation (Old Logic)
-        let totalWorkedSec = 0;
-        let totalOvertimeSec = 0;
-        let totalMissingSec = 0;
-        let totalBreakSec = 0;
-        let lateCount = 0;
-        let workDays = 0;
-
-        logs.forEach(log => {
-            const worked = log.normal_seconds || 0;
-            const ot = log.overtime_seconds || 0;
-            const missing = log.missing_seconds || 0;
-            const brk = log.break_seconds || 0;
-
-            totalWorkedSec += worked;
-            totalOvertimeSec += ot;
-            totalMissingSec += missing;
-            totalBreakSec += brk;
-
-            if (log.late_seconds > 0) lateCount++;
-            if (worked > 0) workDays++;
-        });
-
-        // Progress Calculation
-        const totalExpected = totalWorkedSec + totalMissingSec;
-        let progressPercent = 0;
-        if (totalExpected > 0) {
-            progressPercent = Math.min(100, (totalWorkedSec / totalExpected) * 100);
-        }
-
-        return {
-            totalHours: (totalWorkedSec / 3600).toFixed(1),
-            totalOvertimeHours: (totalOvertimeSec / 3600).toFixed(1),
-            totalMissingHours: (totalMissingSec / 3600).toFixed(1),
-            totalBreakHours: (totalBreakSec / 3600).toFixed(1),
-            totalExpectedHours: (totalExpected / 3600).toFixed(1),
-            progressPercent,
-            lateCount,
-            workDays
-        };
+        return null;
     }, [logs, periodSummary]);
 
+    if (!stats) return <div className="p-4 text-center text-slate-400">Veri hesaplanıyor...</div>;
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Main Progress Card */}
-            <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
-                <div>
-                    <h3 className="font-bold text-lg mb-1 opacity-90">Çalışma Dönem Hedefi</h3>
-                    <p className="text-indigo-100 text-sm mb-6">Bu dönem tamamlanması gereken planlı mesai.</p>
-
-                    <div className="mb-2 flex justify-between items-end">
-                        <span className="text-4xl font-black">{stats.totalHours}</span>
-                        <span className="text-lg opacity-80 font-medium mb-1">/ {stats.totalExpectedHours} sa</span>
+        <div className="space-y-8">
+            {/* 1. Main Breakdown: 3-Part Bar for Normal Work */}
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="flex justify-between items-end mb-4">
+                    <div>
+                        <h4 className="font-bold text-slate-800 text-lg">Normal Mesai Hedefi</h4>
+                        <p className="text-sm text-slate-500">Planlanan dönem mesaisinin gerçekleşme durumu.</p>
                     </div>
-
-                    <div className="w-full bg-black/20 rounded-full h-3 mb-2">
-                        <div
-                            className="bg-emerald-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(52,211,153,0.5)]"
-                            style={{ width: `${stats.progressPercent}%` }}
-                        ></div>
+                    <div className="text-right">
+                        <span className="text-3xl font-black text-slate-800">{stats.targetHours}</span>
+                        <span className="text-sm text-slate-400 font-bold ml-1">saat</span>
                     </div>
                 </div>
 
-                <div className="flex gap-4 mt-4 pt-4 border-t border-white/10">
-                    <div>
-                        <p className="text-xs text-indigo-200 uppercase font-bold tracking-wider">Doldurulacak</p>
-                        <p className="font-bold text-lg">{stats.totalMissingHours} sa</p>
+                {/* Multi-Segment Progress Bar */}
+                <div className="h-4 w-full bg-slate-200 rounded-full flex overflow-hidden mb-4">
+                    {/* Completed (Blue) */}
+                    <div
+                        className="bg-blue-600 h-full transition-all duration-1000"
+                        style={{ width: `${stats.pCompleted}%` }}
+                        title={`Tamamlanan: ${stats.completedHours} sa`}
+                    />
+                    {/* Missing (Red/Orange) */}
+                    <div
+                        className="bg-rose-500 h-full transition-all duration-1000 relative"
+                        style={{ width: `${stats.pMissing}%` }}
+                        title={`Eksik: ${stats.missingHours} sa`}
+                    >
+                        {/* Stripe pattern for 'Missing' to indicate 'lost' */}
+                        <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.15)_50%,rgba(255,255,255,.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem]"></div>
                     </div>
-                    <div>
-                        <p className="text-xs text-indigo-200 uppercase font-bold tracking-wider">İlerleme</p>
-                        <p className="font-bold text-lg">%{stats.progressPercent.toFixed(0)}</p>
+                    {/* Remaining (Gray/Light Blue) */}
+                    <div
+                        className="bg-slate-300 h-full transition-all duration-1000"
+                        style={{ width: `${stats.pRemaining}%` }}
+                        title={`Kalan: ${stats.remainingHours} sa`}
+                    />
+                </div>
+
+                {/* Legend / Stats Row */}
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                            <span className="text-xs font-bold text-slate-500 uppercase">Tamamlanan</span>
+                        </div>
+                        <p className="text-xl font-bold text-slate-800">{stats.completedHours} <span className="text-xs font-normal text-slate-400">sa</span></p>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-sm">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-3 h-3 rounded-full bg-rose-500"></div>
+                            <span className="text-xs font-bold text-slate-500 uppercase">Eksik/Yapılmayan</span>
+                        </div>
+                        <p className="text-xl font-bold text-rose-600">{stats.missingHours} <span className="text-xs font-normal text-slate-400">sa</span></p>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm opacity-70">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-3 h-3 rounded-full bg-slate-300"></div>
+                            <span className="text-xs font-bold text-slate-500 uppercase">Kalan Hedef</span>
+                        </div>
+                        <p className="text-xl font-bold text-slate-700">{stats.remainingHours} <span className="text-xs font-normal text-slate-400">sa</span></p>
                     </div>
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+            {/* 2. Key Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-                {/* Overtime */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                    <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-                        <TrendingUp size={24} />
-                    </div>
+                {/* Net Status Card (Biggest Focus) */}
+                <div className={`md:col-span-2 p-5 rounded-2xl border flex items-center justify-between ${stats.isNetPositive ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
                     <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Toplam Ek Mesai</p>
-                        <p className="text-2xl font-bold text-slate-800">{stats.totalOvertimeHours} <span className="text-sm text-slate-400 font-normal">saat</span></p>
+                        <h4 className={`font-bold text-sm uppercase tracking-wide mb-1 ${stats.isNetPositive ? 'text-emerald-700' : 'text-orange-700'}`}>Aylık Net Durum</h4>
+                        <p className={`text-xs mb-3 ${stats.isNetPositive ? 'text-emerald-600' : 'text-orange-600'}`}>Tamamlanan + Fazla Mesai</p>
+
+                        <div className="flex items-baseline gap-2">
+                            <span className={`text-3xl font-black ${stats.isNetPositive ? 'text-emerald-800' : 'text-orange-800'}`}>
+                                {stats.netWorkHours}
+                            </span>
+                            <span className={`text-sm font-bold ${stats.isNetPositive ? 'text-emerald-600' : 'text-orange-600'}`}>
+                                / {stats.targetHours} sa
+                            </span>
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-2">
+                            {stats.isNetPositive ? (
+                                <span className="text-xs font-bold text-white bg-emerald-500 px-2 py-0.5 rounded">+{stats.netBalanceHours} sa Fazla</span>
+                            ) : (
+                                <span className="text-xs font-bold text-white bg-orange-500 px-2 py-0.5 rounded">-{stats.netBalanceHours} sa Eksik</span>
+                            )}
+                        </div>
+                    </div>
+                    <div className={`p-4 rounded-full ${stats.isNetPositive ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
+                        {stats.isNetPositive ? <TrendingUp size={32} /> : <MinusCircle size={32} />}
                     </div>
                 </div>
 
-                {/* Work Days */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                        <Briefcase size={24} />
+                {/* Overtime Info */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <Briefcase size={20} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 uppercase">Toplam Ek Mesai</span>
                     </div>
-                    <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Çalışılan Gün</p>
-                        <p className="text-2xl font-bold text-slate-800">{stats.workDays} <span className="text-sm text-slate-400 font-normal">gün</span></p>
-                    </div>
+                    <p className="text-2xl font-black text-slate-800">{stats.overtimeHours} <span className="text-sm font-normal text-slate-400">sa</span></p>
                 </div>
 
-                {/* Breaks */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                    <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
-                        <Coffee size={24} />
+                {/* Late Info */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+                            <AlertTriangle size={20} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 uppercase">Geç Kalma</span>
                     </div>
                     <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Toplam Mola</p>
-                        <p className="text-2xl font-bold text-slate-800">{stats.totalBreakHours} <span className="text-sm text-slate-400 font-normal">saat</span></p>
-                    </div>
-                </div>
-
-                {/* Lates */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                    <div className="p-3 bg-red-50 text-red-600 rounded-xl">
-                        <AlertTriangle size={24} />
-                    </div>
-                    <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Geç Kalma</p>
-                        <p className="text-2xl font-bold text-slate-800">{stats.lateCount} <span className="text-sm text-slate-400 font-normal">kez</span></p>
+                        <p className="text-2xl font-black text-slate-800">{stats.lateMinutes} <span className="text-sm font-normal text-slate-400">dk</span></p>
+                        <p className="text-xs text-slate-400 mt-1">{stats.lateCount} kez tekrarlandı</p>
                     </div>
                 </div>
 
