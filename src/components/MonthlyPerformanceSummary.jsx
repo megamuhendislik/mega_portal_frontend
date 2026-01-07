@@ -139,31 +139,44 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             {/* 2. Key Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-                {/* Net Status Card (Biggest Focus) */}
-                <div className={`md:col-span-2 p-5 rounded-2xl border flex items-center justify-between ${stats.isNetPositive ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
+                {/* Net Status Card (Target vs Realized) */}
+                <div className={`md:col-span-2 p-5 rounded-2xl border flex items-center justify-between ${stats.isNetPositive ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
                     <div>
-                        <h4 className={`font-bold text-sm uppercase tracking-wide mb-1 ${stats.isNetPositive ? 'text-emerald-700' : 'text-orange-700'}`}>Aylık Net Durum</h4>
-                        <p className={`text-xs mb-3 ${stats.isNetPositive ? 'text-emerald-600' : 'text-orange-600'}`}>Tamamlanan + Fazla Mesai</p>
+                        <h4 className={`font-bold text-sm uppercase tracking-wide mb-1 ${stats.isNetPositive ? 'text-emerald-700' : 'text-blue-700'}`}>Aylık Gerçekleşen (Net)</h4>
+                        <p className={`text-xs mb-3 ${stats.isNetPositive ? 'text-emerald-600' : 'text-blue-600'}`}>Hedeflenen vs Yapılan (Mesai Dahil)</p>
 
                         <div className="flex items-baseline gap-2">
-                            <span className={`text-3xl font-black ${stats.isNetPositive ? 'text-emerald-800' : 'text-orange-800'}`}>
+                            <span className={`text-3xl font-black ${stats.isNetPositive ? 'text-emerald-800' : 'text-slate-800'}`}>
                                 {stats.netWorkHours}
                             </span>
-                            <span className={`text-sm font-bold ${stats.isNetPositive ? 'text-emerald-600' : 'text-orange-600'}`}>
+                            <span className="text-sm font-bold text-slate-400">
                                 / {stats.targetHours} sa
                             </span>
                         </div>
 
+                        {/* Progress Bar for Net Work */}
+                        <div className="mt-3 w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                            <div
+                                className={`h-full rounded-full transition-all duration-1000 ${stats.isNetPositive ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                                style={{ width: `${Math.min(100, stats.netPercent)}%` }}
+                            ></div>
+                        </div>
+
                         <div className="mt-2 flex items-center gap-2">
                             {stats.isNetPositive ? (
-                                <span className="text-xs font-bold text-white bg-emerald-500 px-2 py-0.5 rounded">+{stats.netBalanceHours} sa Fazla</span>
+                                <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                                    <TrendingUp size={14} />
+                                    +{stats.netBalanceHours} sa Fazla Mesai
+                                </span>
                             ) : (
-                                <span className="text-xs font-bold text-white bg-orange-500 px-2 py-0.5 rounded">-{stats.netBalanceHours} sa Eksik</span>
+                                <span className="text-xs font-bold text-slate-500">
+                                    Henüz hedefe ulaşılmadı ({stats.remainingHours} sa kaldı)
+                                </span>
                             )}
                         </div>
                     </div>
-                    <div className={`p-4 rounded-full ${stats.isNetPositive ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
-                        {stats.isNetPositive ? <TrendingUp size={32} /> : <MinusCircle size={32} />}
+                    <div className={`hidden md:flex p-4 rounded-full ${stats.isNetPositive ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                        {stats.isNetPositive ? <CheckCircle size={32} /> : <Clock size={32} />}
                     </div>
                 </div>
 
