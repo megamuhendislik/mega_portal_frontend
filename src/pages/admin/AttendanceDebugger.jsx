@@ -42,7 +42,11 @@ const AttendanceDebugger = () => {
         }
     };
 
-    const formatSeconds = (sec) => (sec / 3600).toFixed(2) + ' sa';
+    const formatDuration = (sec) => {
+        if (!sec) return '0.00 sa';
+        return (sec / 3600).toFixed(2) + ' sa';
+    };
+    const formatSeconds = formatDuration;
 
     return (
         <div className="p-8 max-w-6xl mx-auto space-y-8 pb-20">

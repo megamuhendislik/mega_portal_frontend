@@ -11,7 +11,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             const realizedSec = periodSummary.completed_seconds || 0;
             const overtimeSec = periodSummary.overtime_seconds || 0;
             const missingSec = periodSummary.missing_seconds || 0;
-            const breakSec = 0; // Model does not store break seconds in summary yet
+            const missingSec = periodSummary.missing_seconds || 0;
+            const breakSec = periodSummary.total_break_seconds || 0; // Use actual backend data
 
             let progressPercent = 0;
             if (targetSec > 0) {
