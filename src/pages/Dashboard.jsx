@@ -198,36 +198,13 @@ const Dashboard = () => {
                     <WeeklyAttendanceChart logs={logs} />
                 </div>
 
-                {/* Break Analysis (4 cols) - Replacing old Monthly Performance Widget with Break Analysis as requested */}
-                <div className="xl:col-span-4 h-[420px]">
-                    <BreakAnalysisWidget logs={logs} totalBreakSeconds={monthlySummary?.total_break_seconds} />
-                </div>
-            </div>
-
-            {/* 3. Bottom Grid: Monthly Summary & Activities */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-
-                {/* Monthly Summary (8 Cols) - Reusing the component from Attendance page */}
-                <div className="xl:col-span-8">
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                                <ArrowUpRight size={20} />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-800">Aylık Performans Özeti</h3>
-                        </div>
-                        <MonthlyPerformanceSummary logs={logs} periodSummary={monthlySummary} />
-                    </div>
-                </div>
-
-                {/* Activity / Requests (4 Cols) */}
-                <div className="xl:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                {/* Activity / Requests (4 Cols) - Moved up from bottom */}
+                <div className="xl:col-span-4 h-[420px] bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                             <FileText size={20} className="text-indigo-500" />
                             Son Aktiviteler
                         </h3>
-                        {/* Tab Switcher could go here */}
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 max-h-[300px]">
@@ -255,8 +232,20 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* 3. Bottom: Monthly Summary (Full Width) */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                        <ArrowUpRight size={20} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800">Aylık Performans Özeti</h3>
+                </div>
+                <MonthlyPerformanceSummary logs={logs} periodSummary={monthlySummary} />
+            </div>
         </div>
     );
 };
 
 export default Dashboard;
+```

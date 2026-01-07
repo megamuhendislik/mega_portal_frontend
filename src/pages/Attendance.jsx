@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
     Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2, Filter, Users, User,
-    BarChart2, Zap, Briefcase, Coffee, TrendingUp, Scale
+    BarChart2, Zap, Briefcase, Coffee, TrendingUp, Scale, AlertTriangle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import DailySummaryCard from '../components/DailySummaryCard';
 import TeamSelector from '../components/TeamSelector';
 import AttendanceLogTable from '../components/AttendanceLogTable';
 import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
 import TeamComparisonChart from '../components/TeamComparisonChart';
-import PersonalAttendanceChart from '../components/PersonalAttendanceChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
-import MonthlyTrendChart from '../components/MonthlyTrendChart';
-import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
+import { format } from 'date-fns';
 
 const Attendance = () => {
     const { user } = useAuth();
@@ -24,15 +21,12 @@ const Attendance = () => {
     // UI State
     const [activeTab, setActiveTab] = useState('my_attendance'); // 'my_attendance', 'team_attendance', 'team_detail'
     const [loading, setLoading] = useState(true);
+    const [hasTeam, setHasTeam] = useState(false);
 
     // Data State
     const [logs, setLogs] = useState([]);
     const [todaySummary, setTodaySummary] = useState(null);
-    const [periodSummary, setPeriodSummary] = useState(null); // Backend calculated summary for custom period
-    const [summary, setSummary] = useState({ totalWorkHours: 0, totalOvertime: 0, missingDays: 0 });
-    const [systemSettings, setSystemSettings] = useState(null);
-
-    // Team Data
+    const [periodSummary, setPeriodSummary] = useState(null);
     const [teamMembers, setTeamMembers] = useState([]);
     const [teamComparison, setTeamComparison] = useState([]);
 
@@ -42,92 +36,33 @@ const Attendance = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    // Initialize dates
+    // --- EFFECT: Init ---
     useEffect(() => {
         handleDateFilterChange('MONTH');
-        fetchSystemSettings();
-    }, []);
-
-    const fetchSystemSettings = async () => {
-        try {
-            const res = await api.get('/settings/');
-            setSystemSettings(res.data);
-        } catch (error) {
-            console.error('Failed to load settings', error);
-        }
-    };
-
-    const [hasTeam, setHasTeam] = useState(false);
-
-    // Initial Load & Auth Check
-    useEffect(() => {
-        if (user) {
-            // Check if user has team members to decide visibility
-            checkTeamVisibility();
-
-            if (activeTab === 'my_attendance') {
-                const empId = user.id;
-                setSelectedEmployeeId(empId);
-            }
-        }
+        checkTeamVisibility();
     }, [user]);
 
-    // Refetch when tab changes to team
+    // --- EFFECT: Load Data ---
     useEffect(() => {
-        if (activeTab === 'team_attendance' && user) {
+        if (selectedEmployeeId && startDate && endDate) {
+            if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
+                fetchAttendanceData();
+            }
+        }
+        if (activeTab === 'team_attendance') {
             fetchTeamData();
         }
-    }, [activeTab]);
-
-    // Custom Interval Hook for Auto-Refresh
-    const useInterval = (callback, delay) => {
-        const savedCallback = React.useRef();
-        React.useEffect(() => { savedCallback.current = callback; }, [callback]);
-        React.useEffect(() => {
-            if (delay !== null) {
-                const id = setInterval(() => savedCallback.current(), delay);
-                return () => clearInterval(id);
-            }
-        }, [delay]);
-    };
-
-    // Auto-Refresh Logic (Every 30 seconds)
-    useInterval(() => {
-        if (!loading && selectedEmployeeId && startDate && endDate) {
-            // Silent refresh (don't set loading to true)
-            const refreshData = async () => {
-                try {
-                    // 1. Refresh Today Summary
-                    const summaryParams = {};
-                    if (selectedEmployeeId) summaryParams.employee_id = selectedEmployeeId;
-                    const summaryRes = await api.get('/attendance/today_summary/', { params: summaryParams });
-                    setTodaySummary(summaryRes.data);
-
-                    // 2. Refresh Logs
-                    if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
-                        const url = `/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`;
-                        const logsRes = await api.get(url);
-                        const data = logsRes.data.results || logsRes.data;
-                        setLogs(data);
-                        calculateSummary(data);
-                        // Period summary might not change that often, but let's refresh it too to be safe
-                        fetchPeriodSummary(startDate, endDate);
-                    }
-                } catch (err) {
-                    console.error("Auto-refresh error", err);
-                }
-            };
-            refreshData();
-        }
-    }, 30000);
-
-    // Fetch Logs when params change
-    useEffect(() => {
-        if (selectedEmployeeId && startDate && endDate && (activeTab === 'my_attendance' || activeTab === 'team_detail')) {
-            fetchAttendance();
-            fetchTodaySummary();
-        }
     }, [selectedEmployeeId, startDate, endDate, activeTab]);
+
+    // --- HANDLERS ---
+    const checkTeamVisibility = () => {
+        if (!user) return;
+        const canViewTeam = user.user?.is_superuser || user.has_team;
+        setHasTeam(canViewTeam);
+        if (activeTab === 'my_attendance') {
+            setSelectedEmployeeId(user.id);
+        }
+    };
 
     const handleDateFilterChange = (type) => {
         setDateFilter(type);
@@ -141,13 +76,10 @@ const Attendance = () => {
             start.setDate(diff);
             end.setDate(start.getDate() + 6);
         } else if (type === 'MONTH') {
-            // "Payroll Month" Logic: 26th of Previous Month to 25th of Current Month
             if (today.getDate() >= 26) {
-                // If today is 26th or later, we are in the cycle ending next month 25th
                 start = new Date(today.getFullYear(), today.getMonth(), 26);
                 end = new Date(today.getFullYear(), today.getMonth() + 1, 25);
             } else {
-                // If today is before 26th, we are in the cycle starting previous month 26th
                 start = new Date(today.getFullYear(), today.getMonth() - 1, 26);
                 end = new Date(today.getFullYear(), today.getMonth(), 25);
             }
@@ -159,57 +91,25 @@ const Attendance = () => {
         }
     };
 
-    const fetchTodaySummary = async () => {
-        try {
-            const params = {};
-            if (selectedEmployeeId) {
-                params.employee_id = selectedEmployeeId;
-            }
-            const response = await api.get('/attendance/today_summary/', { params });
-            setTodaySummary(response.data);
-        } catch (error) {
-            console.error('Error fetching today summary:', error);
-        }
-    };
-
-    const fetchAttendance = async () => {
+    const fetchAttendanceData = async () => {
         setLoading(true);
         try {
-            const url = `/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`;
-            const response = await api.get(url);
-            const data = response.data.results || response.data;
-            setLogs(data);
-            calculateSummary(data);
-            fetchPeriodSummary(startDate, endDate); // Fetch backend summary for target
+            // 1. Fetch Logs
+            const logsRes = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
+            setLogs(logsRes.data.results || logsRes.data);
+
+            // 2. Fetch Period Summary (for Cards)
+            const sumRes = await api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
+            setPeriodSummary(sumRes.data);
+
+            // 3. Fetch Today (mostly for Team Detail context, optional)
+            const todayRes = await api.get('/attendance/today_summary/', { params: { employee_id: selectedEmployeeId } });
+            setTodaySummary(todayRes.data);
+
         } catch (error) {
-            // console.error('Error fetching attendance:', error);
+            console.error(error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchPeriodSummary = async (start, end) => {
-        try {
-            const url = `/attendance/monthly_summary/?employee_id=${selectedEmployeeId || ''}&start_date=${start}&end_date=${end}`;
-            const response = await api.get(url);
-            setPeriodSummary(response.data);
-        } catch (error) {
-            console.error('Error fetching period summary:', error);
-        }
-    };
-
-    const checkTeamVisibility = () => {
-        if (!user) return;
-
-        // Use the flag provided by backend /me endpoint
-        // This is much faster and cleaner than trying to fetch the dashboard first
-        const canViewTeam = user.user?.is_superuser || user.has_team;
-
-        setHasTeam(canViewTeam);
-
-        // If they can't view team and are on that tab, switch back
-        if (!canViewTeam && (activeTab === 'team_attendance' || activeTab === 'team_detail')) {
-            setActiveTab('my_attendance');
         }
     };
 
@@ -217,87 +117,26 @@ const Attendance = () => {
         setLoading(true);
         try {
             const response = await api.get('/attendance/team_dashboard/');
-            mapTeamData(response.data);
+            if (response.data) {
+                const mapped = response.data.map(m => ({
+                    ...m,
+                    totalTodayMinutes: Math.floor(m.today_seconds / 60),
+                    monthTarget: (m.month_target_seconds / 3600).toFixed(1),
+                    monthWorkedHours: (m.month_worked_seconds / 3600).toFixed(1),
+                }));
+                setTeamMembers(mapped);
+                setTeamComparison(mapped.map(m => ({
+                    name: m.name,
+                    actual: parseFloat(m.monthWorkedHours),
+                    target: parseFloat(m.monthTarget),
+                    overtime: parseInt((m.month_approved_overtime_seconds || 0) / 60)
+                })));
+            }
         } catch (error) {
-            console.error('Team data fetch error', error);
+            console.error(error);
         } finally {
             setLoading(false);
         }
-    };
-
-    const mapTeamData = (data) => {
-        if (!data) return;
-
-        // Backend returns: 
-        // { id, name, department, title, status, last_action_time, today_seconds, month_worked_seconds, month_approved_overtime_seconds, month_pending_overtime_seconds }
-
-        const mappedMembers = data.map(m => ({
-            id: m.id,
-            name: m.name,
-            managerId: m.manager_id,
-            leaveStatus: m.leave_status,
-            isOnLeave: m.is_on_leave,
-            jobPosition: m.job_position, // Add this field
-            status: m.status,
-            lastActionTime: m.last_action_time,
-            totalTodayMinutes: Math.floor(m.today_seconds / 60),
-            avatar: m.avatar,
-            // Extra fields for charts/details
-            monthTarget: (m.month_target_seconds / 3600).toFixed(1),
-            monthWorkedHours: (m.month_worked_seconds / 3600).toFixed(1),
-            monthApprovedDTO: (m.month_approved_overtime_seconds / 60).toFixed(0), // minutes
-            monthPendingDTO: (m.month_pending_overtime_seconds / 60).toFixed(0),
-
-            // 3-Part Summary
-            summaryMissing: (m.summary_missing_seconds / 3600).toFixed(1),
-            summaryRemaining: (m.summary_remaining_seconds / 3600).toFixed(1),
-            summaryCompleted: (m.summary_completed_seconds / 3600).toFixed(1),
-            summaryNetBalance: (m.summary_net_balance_seconds / 3600).toFixed(1),
-            summaryTotalWork: (m.summary_total_work_seconds / 3600).toFixed(1),
-
-            // Performance Metrics
-            totalBreakMinutes: (m.performance_break_seconds / 60).toFixed(0),
-            totalLateMinutes: (m.performance_late_seconds / 60).toFixed(0),
-            totalLateCount: m.performance_late_count,
-            totalWorkedDays: m.performance_worked_days
-        }));
-
-        setTeamMembers(mappedMembers);
-
-        // Map Comparison Data (e.g. Worked Hours vs Approved Overtime)
-        const comparison = mappedMembers.map(m => ({
-            name: m.name,
-            actual: parseFloat(m.monthWorkedHours),
-            target: parseFloat(m.monthTarget),
-            overtime: parseInt(m.monthApprovedDTO)
-        }));
-        setTeamComparison(comparison);
-    };
-
-    const calculateSummary = (data) => {
-        let totalMinutes = 0;
-        let overtimeMinutes = 0;
-
-        const startDateLimit = systemSettings?.attendance_start_date
-            ? new Date(systemSettings.attendance_start_date)
-            : null;
-
-        data.forEach(log => {
-            // Check Start Date
-            if (startDateLimit) {
-                const logDate = new Date(log.work_date);
-                if (logDate < startDateLimit) return;
-            }
-
-            if (log.total_minutes) totalMinutes += log.total_minutes;
-            if (log.overtime_minutes) overtimeMinutes += log.overtime_minutes;
-        });
-
-        setSummary({
-            totalWorkHours: (totalMinutes / 60).toFixed(1),
-            totalOvertime: (overtimeMinutes / 60).toFixed(1),
-            missingDays: 0
-        });
     };
 
     const handleTeamMemberClick = (id) => {
@@ -305,160 +144,155 @@ const Attendance = () => {
         setActiveTab('team_detail');
     };
 
-    const handleResetAll = async () => {
-        if (!window.confirm('DİKKAT! Tüm mesai kayıtları silinecek. Bu işlem geri alınamaz. Emin misiniz?')) { return; }
-        try {
-            setLoading(true);
-            await api.post('/attendance/reset_all/');
-            alert('Tüm kayıtlar başarıyla silindi.');
-            fetchAttendance();
-        } catch (error) {
-            alert('Hata: ' + (error.response?.data?.error || error.message));
-        } finally {
-            setLoading(false);
-        }
-    };
+    // --- RENDER HELPERS ---
+    const formatHours = (sec) => ((sec || 0) / 3600).toFixed(1);
+    const formatMin = (sec) => Math.floor((sec || 0) / 60);
 
     return (
-        <div className="space-y-6 max-w-[1600px] mx-auto pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-[1700px] mx-auto space-y-8 pb-20 px-4 md:px-8 pt-6">
+
+            {/* 1. Header & Controls */}
+            <div className="flex flex-col xl:flex-row justify-between items-end gap-6">
                 <div>
-                    {/* Header Removed to prevent duplication with Layout */}
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        {activeTab === 'team_attendance' ? 'Ekip Mesaileri' : 'Mesai Takibi'}
+                        {activeTab === 'team_detail' && (
+                            <span className="text-sm font-medium bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
+                                Detay Görünümü
+                            </span>
+                        )}
+                    </h1>
+                    <p className="text-slate-500 font-medium mt-1">
+                        {activeTab === 'team_attendance'
+                            ? 'Ekip performansını ve anlık durumunu inceleyin.'
+                            : 'Kişisel çalışma saatleri, molalar ve performans analizleri.'
+                        }
+                    </p>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex bg-slate-100 p-1 rounded-xl self-start md:self-auto">
-                    <button
-                        onClick={() => setActiveTab('my_attendance')}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'my_attendance' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <User size={16} />
-                        Kendi Mesaim
-                    </button>
-                    {hasTeam && (
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+                    {/* Tabs */}
+                    <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
                         <button
-                            onClick={() => setActiveTab('team_attendance')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            onClick={() => setActiveTab('my_attendance')}
+                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'my_attendance' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <Users size={16} />
-                            Ekip Mesaileri
+                            <User size={18} />
+                            Kendi Mesaim
                         </button>
+                        {hasTeam && (
+                            <button
+                                onClick={() => setActiveTab('team_attendance')}
+                                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Users size={18} />
+                                Ekip
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Date Filter */}
+                    {(activeTab === 'my_attendance' || activeTab === 'team_detail') && (
+                        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
+                            <button onClick={() => handleDateFilterChange('WEEK')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${dateFilter === 'WEEK' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>Hafta</button>
+                            <button onClick={() => handleDateFilterChange('MONTH')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${dateFilter === 'MONTH' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>Ay</button>
+                            <div className="h-5 w-px bg-slate-200 mx-2"></div>
+                            <div className="flex items-center gap-2 px-2">
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => { setStartDate(e.target.value); setDateFilter('CUSTOM'); }}
+                                    className="text-xs font-bold text-slate-700 outline-none w-24 bg-transparent cursor-pointer"
+                                />
+                                <span className="text-slate-300">-</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => { setEndDate(e.target.value); setDateFilter('CUSTOM'); }}
+                                    className="text-xs font-bold text-slate-700 outline-none w-24 bg-transparent cursor-pointer"
+                                />
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Content Based on Tab */}
-            {activeTab === 'my_attendance' || activeTab === 'team_detail' ? (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {/* Controls Row */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                        {/* Back Button for Detail View */}
-                        {activeTab === 'team_detail' && (
-                            <button
-                                onClick={() => setActiveTab('team_attendance')}
-                                className="text-sm font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1"
-                            >
-                                ← Listeye Dön
+            {/* ERROR / BACK BUTTON */}
+            {activeTab === 'team_detail' && (
+                <button onClick={() => setActiveTab('team_attendance')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-sm transition-colors">
+                    ← Ekip Listesine Dön
+                </button>
+            )}
+
+            {loading ? (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-4 gap-6"><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-32 rounded-2xl" /></div>
+                    <Skeleton className="h-96 rounded-2xl" />
+                </div>
+            ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+
+                    {/* 2. Key Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard
+                            title="TOPLAM ÇALIŞMA"
+                            value={`${formatHours(periodSummary?.completed_seconds)} sa`}
+                            subValue={`Hedef: ${formatHours(periodSummary?.target_seconds)} sa`}
+                            icon={Briefcase}
+                            color="indigo"
+                        />
+                        <StatCard
+                            title="TOPLAM EK MESAİ"
+                            value={`${formatHours(periodSummary?.overtime_seconds)} sa`}
+                            subLabel="Onaylı"
+                            icon={Zap}
+                            color="emerald"
+                        />
+                        <StatCard
+                            title="TOPLAM GEÇ KALMA"
+                            value={`${periodSummary?.total_late_seconds ? Math.ceil(periodSummary.total_late_seconds / 60) : 0}`} // Keeping it raw minutes for now or Count? Backend sends seconds.
+                            // Assuming we want COUNT if possible, but currently API sends 'total_late_seconds'. 
+                            // DailyService was storing duration. The summary endpoint sums seconds.
+                            // If user wants COUNT, we need to adjust backend. For now showing DURATION in MIN.
+                            subLabel="Dakika"
+                            icon={AlertTriangle}
+                            color="rose"
+                        // Note: If user insisted on 'Times' (Kez), we need 'late_count' from backend. 
+                        // For now showing duration is safer.
+                        />
+                        <StatCard
+                            title="TOPLAM MOLA"
+                            value={`${formatHours(periodSummary?.total_break_seconds)} sa`}
+                            subValue="Kullanılan"
+                            icon={Coffee}
+                            color="amber"
+                        />
+                    </div>
+
+                    {/* 3. Detailed Analysis Grid */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[420px]">
+                        <WeeklyAttendanceChart logs={logs} />
+                        <BreakAnalysisWidget logs={logs} totalBreakSeconds={periodSummary?.total_break_seconds} />
+                    </div>
+
+                    {/* 4. Logs Table */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <Clock size={20} className="text-slate-400" />
+                                Günlük Hareket Kayıtları
+                            </h3>
+                            <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">
+                                Excel İndir
                             </button>
-                        )}
-
-                        <div className="flex items-center gap-2 ml-auto">
-                            {/* Date Range Picker */}
-                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
-                                <button onClick={() => handleDateFilterChange('WEEK')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${dateFilter === 'WEEK' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Bu Hafta</button>
-                                <button onClick={() => handleDateFilterChange('MONTH')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${dateFilter === 'MONTH' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Bu Ay</button>
-                                <div className="h-4 w-px bg-slate-300 mx-1"></div>
-                                <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setDateFilter('CUSTOM'); }} className="bg-transparent text-xs font-bold text-slate-600 outline-none w-24" />
-                                <span className="text-slate-400">-</span>
-                                <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setDateFilter('CUSTOM'); }} className="bg-transparent text-xs font-bold text-slate-600 outline-none w-24" />
-                            </div>
-
-                            {/* Admin Reset */}
-                            {user?.user?.is_superuser && (
-                                <button onClick={handleResetAll} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Tüm Mesaileri Sıfırla"><Trash2 size={18} /></button>
-                            )}
                         </div>
+                        <AttendanceLogTable logs={logs} />
                     </div>
 
-                    {/* Viewing Header */}
-                    {activeTab === 'team_detail' && (
-                        <div className="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl flex items-center gap-3 text-blue-800">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center font-bold text-sm">
-                                {selectedEmployeeId}
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm">Görüntülenen Çalışan ID: {selectedEmployeeId}</p>
-                                <p className="text-xs opacity-75">Bu kullanıcının mesai detaylarını görüntülüyorsunuz.</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Today's Summary */}
-                    <DailySummaryCard summary={todaySummary} loading={loading} />
-
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500 flex items-center gap-4">
-                            <div className="p-3 bg-blue-50 rounded-full text-blue-600"><Clock size={24} /></div>
-                            <div>
-                                <p className="text-sm text-slate-500 font-bold">Toplam Çalışma</p>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-black text-slate-800">
-                                        {periodSummary ? ((periodSummary.completed_seconds || 0) / 3600).toFixed(1) : summary.totalWorkHours}
-                                        <span className="text-lg text-slate-400 font-medium">sa</span>
-                                    </h3>
-                                    {periodSummary && (periodSummary.target_seconds || 0) > 0 && (
-                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                                            / {((periodSummary.target_seconds || 0) / 3600).toFixed(1)} sa Hedef
-                                        </span>
-                                    )}
-                                </div>
-                                {periodSummary && (periodSummary.target_seconds || 0) > 0 && (
-                                    <p className="text-xs text-slate-400 mt-1 font-medium">
-                                        Doldurulacak: <span className="text-slate-600 font-bold">{Math.max(0, ((periodSummary.target_seconds || 0) - (periodSummary.completed_seconds || 0)) / 3600).toFixed(1)} sa</span>
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500 flex items-center gap-4">
-                            <div className="p-3 bg-emerald-50 rounded-full text-emerald-600"><CheckCircle size={24} /></div>
-                            <div>
-                                <p className="text-sm text-slate-500 font-bold">Fazla Mesai</p>
-                                <h3 className="text-2xl font-black text-slate-800">
-                                    {periodSummary ? ((periodSummary.overtime_seconds || 0) / 3600).toFixed(1) : summary.totalOvertime} Saat
-                                </h3>
-                            </div>
-                        </div>
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500 flex items-center gap-4">
-                            <div className="p-3 bg-orange-50 rounded-full text-orange-600"><AlertCircle size={24} /></div>
-                            <div>
-                                <p className="text-sm text-slate-500 font-bold">Eksik Çalışma</p>
-                                <h3 className="text-2xl font-black text-slate-800">
-                                    {periodSummary ? ((periodSummary.missing_seconds || 0) / 3600).toFixed(1) + ' Saat' : '-'}
-                                </h3>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Summary Section */}
-                    <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} startDate={startDate} endDate={endDate} />
-
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        <PersonalAttendanceChart logs={logs} startDate={startDate} endDate={endDate} />
-                        <div className="space-y-6">
-                            <WeeklyAttendanceChart logs={logs} />
-                            <MonthlyTrendChart logs={logs} />
-                        </div>
-                    </div>
-
-                    {/* Logs Table */}
-                    <AttendanceLogTable logs={logs} />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                    {/* Team Attendance View */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-right-4">
+                    {/* Team View */}
                     <div className="lg:col-span-2 space-y-6">
                         <TeamAttendanceOverview teamData={teamMembers} onMemberClick={handleTeamMemberClick} />
                     </div>
