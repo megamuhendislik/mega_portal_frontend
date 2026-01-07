@@ -16,7 +16,7 @@ import MonthlyTrendChart from '../components/MonthlyTrendChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
-import { Skeleton } from "@/components/ui/skeleton"; // Assuming shadcn or similar, else simple div fallback
+import Skeleton from '../components/Skeleton';
 
 const Attendance = () => {
     const { user } = useAuth();
