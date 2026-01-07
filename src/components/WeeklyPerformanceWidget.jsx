@@ -23,7 +23,7 @@ const WeeklyPerformanceWidget = ({ summary, loading }) => {
 
     if (!summary) return null;
 
-    const totalWorked = (summary.total_worked_seconds || 0) / 3600;
+    const totalWorked = (summary.completed_seconds || 0) / 3600;
     const target = (summary.target_seconds || 0) / 3600;
     const overtime = (summary.overtime_seconds || 0) / 3600;
 

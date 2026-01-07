@@ -1,49 +1,71 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { TrendingUp, Calendar } from 'lucide-react';
 
 const WeeklyAttendanceChart = ({ logs }) => {
 
-    // Aggregation Logic: Week 1, Week 2...
     const data = useMemo(() => {
         const weeks = {};
+        // Sort logs by date first to ensure order
+        const sortedLogs = [...logs].sort((a, b) => new Date(a.work_date) - new Date(b.work_date));
 
-        logs.forEach(log => {
+        sortedLogs.forEach(log => {
             const date = new Date(log.work_date);
-            // Get week number of month (simple approximation)
-            // Or just group by ISO week? 
-            // Let's group by "Week Starting Mon"
-
-            // Adjust to get Monday
             const day = date.getDay();
+            // Calculate Monday of the week
             const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(date.setDate(diff));
-            const key = `Hafta ${Math.ceil(monday.getDate() / 7)}`;
+            const monday = new Date(date);
+            monday.setDate(diff); // Use monday as date object
+
+            // Format: "Week 4" or "Hafta 4"
+            // Let's use Week Number of Year or Month. For simplicity: "dd MMM" start date
+            const key = monday.toISOString().split('T')[0];
+            const label = `Hafta ${Math.ceil(monday.getDate() / 7)}`; // Rough "Week of Month"
 
             if (!weeks[key]) {
-                weeks[key] = { name: key, total: 0, fullDate: monday.toLocaleDateString('tr-TR') };
+                weeks[key] = {
+                    name: label,
+                    fullDate: monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }),
+                    total: 0,
+                    overtime: 0
+                };
             }
 
-            const hours = (log.total_seconds || 0) / 3600;
-            weeks[key].total += hours;
+            const total = (log.total_seconds || 0) / 3600;
+            const ot = (log.overtime_seconds || 0) / 3600;
+
+            weeks[key].total += total;
+            weeks[key].overtime += ot;
         });
 
         return Object.values(weeks);
     }, [logs]);
 
-    // Custom Tooltip
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             const dataPoint = payload[0].payload;
-            const hours = dataPoint.total;
-            const h = Math.floor(hours);
-            const m = Math.round((hours - h) * 60);
-
             return (
-                <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-lg text-xs z-50">
-                    <p className="font-bold text-slate-700 mb-2">{dataPoint.name}</p>
-                    <p className="text-violet-600 font-bold">
-                        Toplam: {h} sa ({m} dk)
+                <div className="bg-white/90 backdrop-blur-md p-4 border border-violet-100 shadow-xl rounded-xl text-xs z-50 min-w-[160px]">
+                    <p className="font-bold text-slate-800 mb-1 flex items-center gap-2">
+                        <Calendar size={14} className="text-violet-500" />
+                        {dataPoint.fullDate} Başlangıçlı
                     </p>
+                    <div className="space-y-2 mt-3">
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-500 font-medium">Toplam Çalışma</span>
+                            <span className="text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-full">
+                                {dataPoint.total.toFixed(1)} sa
+                            </span>
+                        </div>
+                        {dataPoint.overtime > 0 && (
+                            <div className="flex justify-between items-center text-amber-600">
+                                <span className="font-medium">Fazla Mesai</span>
+                                <span className="font-bold bg-amber-50 px-2 py-0.5 rounded-full">
+                                    +{dataPoint.overtime.toFixed(1)} sa
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             );
         }
@@ -51,17 +73,50 @@ const WeeklyAttendanceChart = ({ logs }) => {
     };
 
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-6">Haftalık Toplamlar</h3>
-            <div className="h-[200px] w-full">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-violet-50 text-violet-600 rounded-xl">
+                    <TrendingUp size={22} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold text-slate-800 leading-tight">Haftalık Performans</h3>
+                    <p className="text-xs text-slate-400 font-medium">Haftalara göre toplam çalışma saati</p>
+                </div>
+            </div>
+
+            <div className="flex-1 min-h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} barSize={40}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9' }} />
-                        <Bar dataKey="total" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
+                    <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 500 }}
+                            dy={10}
+                        />
+                        <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 500 }}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                        <Area
+                            type="monotone"
+                            dataKey="total"
+                            stroke="#8B5CF6"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorTotal)"
+                            activeDot={{ r: 6, strokeWidth: 0, fill: '#7C3AED' }}
+                        />
+                    </AreaChart>
                 </ResponsiveContainer>
             </div>
         </div>

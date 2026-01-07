@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { User, Clock, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { User, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, ArrowUpRight, ArrowDownRight, LayoutList, LayoutGrid } from 'lucide-react';
 import clsx from 'clsx';
 
 const StatusBadge = ({ status, isOnLeave, leaveStatus }) => {
     if (isOnLeave) {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                <Calendar size={12} />
-                {leaveStatus || 'İzinde'}
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 shadow-sm">
+                <Calendar size={10} className="text-amber-500" />
+                {leaveStatus || 'İZİNDE'}
             </span>
         );
     }

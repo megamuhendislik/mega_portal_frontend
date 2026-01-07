@@ -8,10 +8,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
         // This ensures 26th-25th logic matches exact backend calc
         if (periodSummary) {
             const targetSec = periodSummary.target_seconds || 0;
-            const realizedSec = periodSummary.realized_normal_seconds || 0;
-            const overtimeSec = periodSummary.realized_overtime_seconds || 0;
-            const missingSec = periodSummary.total_missing_seconds || 0;
-            const breakSec = periodSummary.total_break_seconds || 0;
+            const realizedSec = periodSummary.completed_seconds || 0;
+            const overtimeSec = periodSummary.overtime_seconds || 0;
+            const missingSec = periodSummary.missing_seconds || 0;
+            const breakSec = 0; // Model does not store break seconds in summary yet
 
             let progressPercent = 0;
             if (targetSec > 0) {
