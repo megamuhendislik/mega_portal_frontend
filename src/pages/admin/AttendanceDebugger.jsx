@@ -134,9 +134,17 @@ const AttendanceDebugger = () => {
                                         <span className="text-slate-500">Completed</span>
                                         <span className="font-mono font-bold text-emerald-600">{formatSeconds(debugData.db_summary?.completed_seconds || 0)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Missing</span>
-                                        <span className="font-mono font-bold text-red-500">{formatSeconds(debugData.db_summary?.missing_seconds || 0)}</span>
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Missing</p>
+                                        <p className="text-2xl font-black text-rose-600">
+                                            {formatDuration(debugData.db_summary?.missing_seconds || 0)}
+                                        </p>
+                                    </div>
+                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                        <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Total Break</p>
+                                        <p className="text-2xl font-black text-amber-700">
+                                            {formatDuration(debugData.db_summary?.total_break_seconds || 0)}
+                                        </p>
                                     </div>
                                     <div className="text-xs text-slate-400 mt-2 text-right">
                                         Last Updated: {debugData.db_summary?.updated_at ? new Date(debugData.db_summary.updated_at).toLocaleString() : 'N/A'}
@@ -154,7 +162,7 @@ const AttendanceDebugger = () => {
                                 <span className="font-mono font-bold text-blue-600">{formatSeconds(debugData.live_calc?.target_seconds || 0)}</span>
                             </div>
                             <div className="p-3 bg-blue-50 text-blue-700 text-sm rounded-lg">
-                                <strong>Comparison:</strong> If DB Target ({debugData.db_summary && debugData.db_summary !== "NO_RECORD" ? formatSeconds(debugData.db_summary.target_seconds || 0) : 'N/A'}) differs from Live Target ({formatSeconds(debugData.live_calc?.target_seconds || 0)}), you need to run "Recalculate All".
+                                <strong>Comparison:</strong> If DB Target ({debugData.db_summary && debugData.db_summary !== "NO_RECORD" ? formatDuration(debugData.db_summary.target_seconds || 0) : 'N/A'}) differs from Live Target ({formatDuration(debugData.live_calc?.target_seconds || 0)}), you need to run "Recalculate All".
                             </div>
                         </div>
 
@@ -184,19 +192,21 @@ const AttendanceDebugger = () => {
                                         <th className="px-4 py-3 text-emerald-600">Normal</th>
                                         <th className="px-4 py-3 text-blue-600">Overtime</th>
                                         <th className="px-4 py-3 text-red-500">Missing</th>
+                                        <th className="px-4 py-3 text-amber-600">Break</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {!debugData.raw_logs || debugData.raw_logs.length === 0 ? (
-                                        <tr><td colSpan="5" className="p-8 text-center text-slate-400">No logs found for this period.</td></tr>
+                                        <tr><td colSpan="6" className="p-8 text-center text-slate-400">No logs found for this period.</td></tr>
                                     ) : (
                                         debugData.raw_logs.map((log, i) => (
                                             <tr key={i} className="hover:bg-slate-50">
                                                 <td className="px-4 py-3 font-mono">{log.work_date}</td>
-                                                <td className="px-4 py-3 font-bold">{log.total_seconds}</td>
+                                                <td className="px-4 py-3">{log.total_seconds}</td>
                                                 <td className="px-4 py-3 text-emerald-600">{log.normal_seconds}</td>
                                                 <td className="px-4 py-3 text-blue-600">{log.overtime_seconds}</td>
-                                                <td className="px-4 py-3 text-red-500">{log.missing_seconds}</td>
+                                                <td className="px-4 py-3 text-rose-600">{log.missing_seconds}</td>
+                                                <td className="px-4 py-3 font-bold text-amber-600">{log.break_seconds || 0}</td>
                                             </tr>
                                         ))
                                     )}

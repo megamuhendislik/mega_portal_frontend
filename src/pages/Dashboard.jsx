@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-// Dashboard Component for Mega Portal
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import UpcomingEventsCard from '../components/UpcomingEventsCard';
-import HeroDailySummary from '../components/HeroDailySummary';
-import WeeklyPerformanceWidget from '../components/WeeklyPerformanceWidget';
-import MonthlyPerformanceWidget from '../components/MonthlyPerformanceWidget';
-import { Clock, Briefcase, Timer, Activity, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, PieChart } from 'lucide-react';
+import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
+import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
+import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+import StatCard from '../components/StatCard';
+import Skeleton from '../components/Skeleton';
+import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight } from 'lucide-react';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
