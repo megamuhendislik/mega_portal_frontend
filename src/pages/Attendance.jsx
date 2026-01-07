@@ -96,11 +96,11 @@ const Attendance = () => {
         setLoading(true);
         try {
             // 1. Fetch Logs
-            const logsRes = await api.get(`/ attendance /? employee_id = ${selectedEmployeeId}& start_date=${startDate}& end_date=${endDate} `);
+            const logsRes = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             setLogs(logsRes.data.results || logsRes.data);
 
             // 2. Fetch Period Summary (for Cards)
-            const sumRes = await api.get(`/ attendance / monthly_summary /? employee_id = ${selectedEmployeeId}& start_date=${startDate}& end_date=${endDate} `);
+            const sumRes = await api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             setPeriodSummary(sumRes.data);
 
         } catch (error) {

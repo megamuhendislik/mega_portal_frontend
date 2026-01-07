@@ -71,7 +71,7 @@ const BreakAnalysisWidget = ({ logs, totalBreakSeconds }) => {
                 </div>
             </div>
 
-            <div className="flex-1 w-full min-h-[150px] z-10">
+            <div className="flex-1 w-full min-h-[150px] z-10" style={{ minWidth: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} margin={{ top: 10, right: 0, left: -25, bottom: 0 }} barGap={2}>
                         <XAxis

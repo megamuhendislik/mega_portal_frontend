@@ -99,7 +99,7 @@ const WeeklyAttendanceChart = ({ logs }) => {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-[250px] w-full">
+            <div className="flex-1 min-h-[250px] w-full" style={{ minWidth: 0 }}>
                 {data && data.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }} barSize={32}>
