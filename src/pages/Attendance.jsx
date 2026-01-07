@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2, Filter, Users, User, BarChart2 } from 'lucide-react';
+import {
+    Clock, Calendar, AlertCircle, CheckCircle, XCircle, Trash2, Filter, Users, User,
+    BarChart2, Zap, Briefcase, Coffee, TrendingUp, Scale
+} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import DailySummaryCard from '../components/DailySummaryCard';
@@ -11,6 +14,9 @@ import PersonalAttendanceChart from '../components/PersonalAttendanceChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
 import MonthlyTrendChart from '../components/MonthlyTrendChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
+import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+import StatCard from '../components/StatCard';
+import { Skeleton } from "@/components/ui/skeleton"; // Assuming shadcn or similar, else simple div fallback
 
 const Attendance = () => {
     const { user } = useAuth();
