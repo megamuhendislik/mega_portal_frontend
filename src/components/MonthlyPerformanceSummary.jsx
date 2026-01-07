@@ -169,8 +169,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                     +{stats.netBalanceHours} sa Fazla Mesai
                                 </span>
                             ) : (
-                                <span className="text-xs font-bold text-slate-500">
-                                    Henüz hedefe ulaşılmadı ({stats.remainingHours} sa kaldı)
+                                <span className="text-xs font-bold text-red-500 flex items-center gap-1">
+                                    <AlertCircle size={14} />
+                                    {/* We show it as negative explicitly if there is a deficit */}
+                                    {/* If netBalanceHours is 0 (balanced), handles nicely */}
+                                    -{stats.netBalanceHours} sa Eksik (Devamsızlık)
                                 </span>
                             )}
                         </div>

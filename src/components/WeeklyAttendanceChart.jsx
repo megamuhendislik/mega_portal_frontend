@@ -1,41 +1,46 @@
 import React, { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { TrendingUp, Calendar, AlertCircle } from 'lucide-react';
 
 const WeeklyAttendanceChart = ({ logs }) => {
 
     const data = useMemo(() => {
         const weeks = {};
-        // Sort logs by date first to ensure order
+        // Sort logs by date
         const sortedLogs = [...logs].sort((a, b) => new Date(a.work_date) - new Date(b.work_date));
+
+        // Use today's date to exclude current day from 'missing' accumulation in charts too if needed, 
+        // but backend already handles 'missing' logic.
+        // However, we want to group by week.
 
         sortedLogs.forEach(log => {
             const date = new Date(log.work_date);
             const day = date.getDay();
-            // Calculate Monday of the week
+            // Monday start
             const diff = date.getDate() - day + (day === 0 ? -6 : 1);
             const monday = new Date(date);
-            monday.setDate(diff); // Use monday as date object
+            monday.setDate(diff);
 
-            // Format: "Week 4" or "Hafta 4"
-            // Let's use Week Number of Year or Month. For simplicity: "dd MMM" start date
             const key = monday.toISOString().split('T')[0];
-            const label = `Hafta ${Math.ceil(monday.getDate() / 7)}`; // Rough "Week of Month"
+            const label = `${monday.getDate()} ${monday.toLocaleDateString('tr-TR', { month: 'short' })} `;
 
             if (!weeks[key]) {
                 weeks[key] = {
                     name: label,
-                    fullDate: monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }),
-                    total: 0,
-                    overtime: 0
+                    fullDate: monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }),
+                    normal: 0,
+                    overtime: 0,
+                    missing: 0
                 };
             }
 
-            const total = (log.total_seconds || 0) / 3600;
+            const norm = (log.normal_seconds || 0) / 3600;
             const ot = (log.overtime_seconds || 0) / 3600;
+            const miss = (log.missing_seconds || 0) / 3600;
 
-            weeks[key].total += total;
+            weeks[key].normal += norm;
             weeks[key].overtime += ot;
+            weeks[key].missing += miss;
         });
 
         return Object.values(weeks);
@@ -45,24 +50,26 @@ const WeeklyAttendanceChart = ({ logs }) => {
         if (active && payload && payload.length) {
             const dataPoint = payload[0].payload;
             return (
-                <div className="bg-white/90 backdrop-blur-md p-4 border border-violet-100 shadow-xl rounded-xl text-xs z-50 min-w-[160px]">
-                    <p className="font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        <Calendar size={14} className="text-violet-500" />
-                        {dataPoint.fullDate} Başlangıçlı
+                <div className="bg-white/95 backdrop-blur-md p-4 border border-slate-200 shadow-xl rounded-xl text-xs z-50 min-w-[180px]">
+                    <p className="font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <Calendar size={14} className="text-slate-500" />
+                        {dataPoint.fullDate} Haftası
                     </p>
-                    <div className="space-y-2 mt-3">
+                    <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                            <span className="text-slate-500 font-medium">Toplam Çalışma</span>
-                            <span className="text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-full">
-                                {dataPoint.total.toFixed(1)} sa
-                            </span>
+                            <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Normal</span>
+                            <span className="font-bold text-slate-700">{dataPoint.normal.toFixed(1)} sa</span>
                         </div>
                         {dataPoint.overtime > 0 && (
-                            <div className="flex justify-between items-center text-amber-600">
-                                <span className="font-medium">Fazla Mesai</span>
-                                <span className="font-bold bg-amber-50 px-2 py-0.5 rounded-full">
-                                    +{dataPoint.overtime.toFixed(1)} sa
-                                </span>
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Ek Mesai</span>
+                                <span className="font-bold text-emerald-600">+{dataPoint.overtime.toFixed(1)} sa</span>
+                            </div>
+                        )}
+                        {dataPoint.missing > 0 && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500"></div>Eksik</span>
+                                <span className="font-bold text-rose-600">-{dataPoint.missing.toFixed(1)} sa</span>
                             </div>
                         )}
                     </div>
@@ -74,55 +81,53 @@ const WeeklyAttendanceChart = ({ logs }) => {
 
     return (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 bg-violet-50 text-violet-600 rounded-xl">
-                    <TrendingUp size={22} />
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <TrendingUp size={22} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800 leading-tight">Haftalık Performans</h3>
+                        <p className="text-xs text-slate-400 font-medium">Çalışma, ek mesai ve eksik gün analizi.</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-lg font-bold text-slate-800 leading-tight">Haftalık Performans</h3>
-                    <p className="text-xs text-slate-400 font-medium">Haftalara göre toplam çalışma saati</p>
+                {/* Legend */}
+                <div className="flex gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Normal</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Ek</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500"></div>Eksik</div>
                 </div>
             </div>
 
             <div className="flex-1 min-h-[250px] w-full">
                 {data && data.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
+                        <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }} barSize={32}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                             <XAxis
                                 dataKey="name"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 500 }}
+                                tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
                                 dy={10}
                             />
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 500 }}
+                                tick={{ fill: '#cbd5e1', fontSize: 11 }}
                             />
-                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                            <Area
-                                type="monotone"
-                                dataKey="total"
-                                stroke="#8B5CF6"
-                                strokeWidth={3}
-                                fillOpacity={1}
-                                fill="url(#colorTotal)"
-                                activeDot={{ r: 6, strokeWidth: 0, fill: '#7C3AED' }}
-                            />
-                        </AreaChart>
+                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
+
+                            {/* Stacked Bars */}
+                            <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+                            <Bar dataKey="overtime" stackId="a" fill="#10b981" />
+                            <Bar dataKey="missing" stackId="a" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                        </BarChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                        <TrendingUp size={32} className="mb-2 opacity-50" />
-                        <span className="text-sm">Veri bulunamadı.</span>
+                    <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                        <Calendar size={48} className="mb-2 opacity-50" />
+                        <p className="text-sm font-medium">Görüntülenecek veri yok</p>
                     </div>
                 )}
             </div>
