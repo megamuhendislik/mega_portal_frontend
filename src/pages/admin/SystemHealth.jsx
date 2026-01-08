@@ -287,6 +287,56 @@ const AdminConsole = () => {
                                 </button>
                             </div>
 
+                            {/* Attendance Logic V2 Diagnostics */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mt-6">
+                                <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2 text-lg">
+                                    <Clock size={20} className="text-purple-600" />
+                                    Mesai Mantığı (V2) Testi
+                                </h3>
+                                <p className="text-sm text-slate-500 mb-4">
+                                    Sistemin V2 kurallarına (Extension, Mola İadesi, Ölü Bölge) uyumluluğunu 10 kritik senaryo ile test eder.
+                                </p>
+
+                                <button
+                                    onClick={async () => {
+                                        setDiagLoading(true);
+                                        try {
+                                            const res = await api.post('/system/health-check/run_attendance_diagnostics/');
+                                            if (res.data.success) {
+                                                alert(`Test Tamamlandı!\n${res.data.summary}`);
+                                                setDiagLogs(prev => [
+                                                    ...prev,
+                                                    {
+                                                        time: new Date().toLocaleTimeString(),
+                                                        success: true,
+                                                        message: 'V2 Logic Test Passed',
+                                                        details: res.data.summary
+                                                    },
+                                                    ...res.data.results.filter(r => r.status !== 'PASS').map(r => ({
+                                                        time: r.date,
+                                                        success: false,
+                                                        message: `FAIL: ${r.scenario}`,
+                                                        details: r.details
+                                                    }))
+                                                ]);
+                                            } else {
+                                                alert('Hata: ' + res.data.error);
+                                            }
+                                        } catch (err) {
+                                            alert('Bağlantı Hatası: ' + err.message);
+                                        } finally {
+                                            setDiagLoading(false);
+                                        }
+                                    }}
+                                    disabled={diagLoading}
+                                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md ${diagLoading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-lg hover:scale-[1.02]'
+                                        }`}
+                                >
+                                    {diagLoading ? <RefreshCw className="animate-spin" /> : <Terminal size={20} />}
+                                    {diagLoading ? 'Test Ediliyor...' : 'V2 Senaryolarını Çalıştır'}
+                                </button>
+                            </div>
+
                             {/* Data Correction Tools */}
                             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mt-6">
                                 <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2 text-lg">
