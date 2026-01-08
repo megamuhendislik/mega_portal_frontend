@@ -318,6 +318,28 @@ const AdminConsole = () => {
                                     {diagLoading ? <RefreshCw className="animate-spin" /> : <RefreshCw size={20} />}
                                     {diagLoading ? 'İşleniyor...' : 'Tüm Verileri Yeniden Hesapla'}
                                 </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm('Veritabanındaki mükerrer (duplicate) mesai kayıtları temizlenecek. Devam edilsin mi?')) return;
+                                        setDiagLoading(true);
+                                        try {
+                                            const res = await api.post('/attendance/cleanup_duplicates/');
+                                            alert(`Temizlik Tamamlandı.\nSilinen Kayıt: ${res.data.total_deleted}`);
+                                            setDiagLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), success: true, message: 'Cleanup Completed', details: `Deleted ${res.data.total_deleted} duplicates.` }]);
+                                        } catch (err) {
+                                            alert('Hata: ' + (err.response?.data?.error || err.message));
+                                            setDiagLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), success: false, message: 'Cleanup Failed', details: err.message }]);
+                                        } finally {
+                                            setDiagLoading(false);
+                                        }
+                                    }}
+                                    disabled={diagLoading}
+                                    className={`w-full py-3 mt-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md ${diagLoading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white hover:shadow-lg hover:scale-[1.02]'
+                                        }`}
+                                >
+                                    {diagLoading ? <RefreshCw className="animate-spin" /> : <Shield size={20} />}
+                                    {diagLoading ? 'Temizleniyor...' : 'Çoklu Kayıtları Temizle (Fix)'}
+                                </button>
                             </div>
                         </div>
                         <div className="lg:col-span-2">
