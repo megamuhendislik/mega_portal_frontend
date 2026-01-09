@@ -7,10 +7,7 @@ import { tr } from 'date-fns/locale';
 const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h if not provided
     const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-    // Reset to current week if logs update drastically? No, keep user navigation state.
-
     const weekData = useMemo(() => {
-        // Create 7-day array for the selected week
         const days = [];
         const start = weekStart;
 
@@ -19,19 +16,34 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
             const dateStr = format(current, 'yyyy-MM-dd');
 
             // Find Log for this day
-            const log = logs.find(l => {
-                // Determine format of log.work_date. Usually YYYY-MM-DD string
-                return l.work_date === dateStr;
-            });
+            const log = logs.find(l => l.work_date === dateStr);
+
+            // Format Times
+            let timeRange = null;
+            if (log && log.check_in && log.check_out) {
+                const inTime = format(parseISO(log.check_in), 'HH:mm');
+                const outTime = format(parseISO(log.check_out), 'HH:mm');
+                timeRange = `${inTime} - ${outTime}`;
+            } else if (log && log.check_in) {
+                const inTime = format(parseISO(log.check_in), 'HH:mm');
+                timeRange = `${inTime} - ?`;
+            }
 
             days.push({
-                name: format(current, 'dd MMM', { locale: tr }), // '09 Oca'
+                name: format(current, 'dd MMM', { locale: tr }),
                 fullDate: format(current, 'd MMMM yyyy, EEEE', { locale: tr }),
                 dateObj: current,
+
                 // Data (Hours)
                 normal: log ? (log.normal_seconds || 0) / 3600 : 0,
                 overtime: log ? (log.overtime_seconds || 0) / 3600 : 0,
                 missing: log ? (log.missing_seconds || 0) / 3600 : 0,
+
+                // Details for Tooltip
+                timeRange,
+                note: log?.note,
+                managerName: log?.approval_manager_name,
+                status: log?.status
             });
         }
         return days;
@@ -45,12 +57,22 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
         if (active && payload && payload.length) {
             const dataPoint = payload[0].payload;
             return (
-                <div className="bg-white/95 backdrop-blur-md p-4 border border-slate-200 shadow-xl rounded-xl text-xs z-50 min-w-[200px]">
-                    <p className="font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                        <Calendar size={14} className="text-slate-500" />
-                        {dataPoint.fullDate}
+                <div className="bg-white/95 backdrop-blur-md p-4 border border-slate-200 shadow-xl rounded-xl text-xs z-50 min-w-[220px]">
+                    <p className="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-2 flex justify-between items-center">
+                        <span className="flex items-center gap-2">
+                            <Calendar size={14} className="text-slate-500" />
+                            {dataPoint.fullDate}
+                        </span>
                     </p>
-                    <div className="space-y-2">
+
+                    {/* Time & Details */}
+                    {dataPoint.timeRange && (
+                        <div className="mb-3 bg-slate-50 p-2 rounded border border-slate-100 italic text-slate-600">
+                            <strong>Giriş-Çıkış:</strong> {dataPoint.timeRange}
+                        </div>
+                    )}
+
+                    <div className="space-y-1.5 mb-3">
                         <div className="flex justify-between items-center">
                             <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Normal</span>
                             <span className="font-bold text-slate-700">{dataPoint.normal.toFixed(1)} sa</span>
@@ -68,6 +90,22 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                             </div>
                         )}
                     </div>
+
+                    {/* Footer Details (Manager / Note) */}
+                    {(dataPoint.managerName || dataPoint.note) && (
+                        <div className="pt-2 border-t border-slate-100 space-y-1">
+                            {dataPoint.managerName && (
+                                <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                                    <span className="font-bold uppercase">Onaylayan:</span> {dataPoint.managerName}
+                                </div>
+                            )}
+                            {dataPoint.note && (
+                                <div className="text-[10px] text-indigo-500 bg-indigo-50 p-1.5 rounded mt-1">
+                                    "{dataPoint.note}"
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -89,9 +127,7 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                     </div>
                 </div>
 
-                {/* Navigation & Legend */}
                 <div className="flex items-center gap-4">
-                    {/* Navigation */}
                     <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-100">
                         <button onClick={handlePrevWeek} className="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-slate-500 hover:text-indigo-600">
                             <ChevronLeft size={16} />
@@ -103,8 +139,6 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                             <ChevronRight size={16} />
                         </button>
                     </div>
-
-                    {/* Legend */}
                     <div className="hidden lg:flex gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Normal</div>
                         <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Ek</div>
@@ -117,6 +151,11 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
             <div className="w-full h-[320px] min-h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weekData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }} barSize={32}>
+                        <defs>
+                            <pattern id="striped" patternUnits="userSpaceOnUse" width="4" height="4">
+                                <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="#f43f5e" strokeWidth="1" />
+                            </pattern>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                         <XAxis
                             dataKey="name"
@@ -132,7 +171,6 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
 
-                        {/* Daily Target Reference Line */}
                         {dailyTarget > 0 && (
                             <ReferenceLine
                                 y={dailyTarget}
@@ -148,10 +186,9 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                             />
                         )}
 
-                        {/* Stacked Bars */}
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
                         <Bar dataKey="overtime" stackId="a" fill="#10b981" />
-                        <Bar dataKey="missing" stackId="a" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="missing" stackId="a" fill="url(#striped)" stroke="#f43f5e" strokeWidth={0.5} radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
