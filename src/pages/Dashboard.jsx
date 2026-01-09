@@ -148,7 +148,7 @@ const Dashboard = () => {
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] uppercase font-bold text-slate-400">Son Giriş</span>
                             <span className="text-sm font-bold text-slate-700">
-                                {todaySummary?.last_check_in ? format(new Date(todaySummary.last_check_in), 'HH:mm') : '--:--'}
+                                {todaySummary?.last_check_in ? format(new Date(todaySummary.last_check_in), 'HH:mm') : 'Giriş Yok'}
                             </span>
                         </div>
                         <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -159,7 +159,7 @@ const Dashboard = () => {
             </div>
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard
                     title="BUGÜN ÇALIŞMA"
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
@@ -181,25 +181,16 @@ const Dashboard = () => {
                     icon={Zap}
                     color="emerald"
                 />
-                <StatCard
-                    title="AYLIK NET DURUM"
-                    value={`${formatHours(monthlySummary?.net_work_seconds)} / ${formatHours(monthlySummary?.target_seconds)} sa`}
-                    subValue={
-                        monthlySummary?.net_balance_seconds > 0
-                            ? `Aylık Net Ek Mesai: +${formatHours(monthlySummary?.net_balance_seconds)} sa`
-                            : `Toplam Denge: ${formatHours(monthlySummary?.net_balance_seconds)} sa`
-                    }
-                    trend={monthlySummary?.net_balance_seconds >= 0 ? 'up' : 'down'}
-                    icon={Scale}
-                    color={monthlySummary?.net_balance_seconds >= 0 ? 'emerald' : 'rose'}
-                />
             </div>
 
             {/* 2. Main Charts Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 {/* Weekly Chart (8 cols) */}
                 <div className="xl:col-span-8 h-[420px]">
-                    <WeeklyAttendanceChart logs={logs} />
+                    <WeeklyAttendanceChart
+                        logs={logs}
+                        dailyTarget={todaySummary?.daily_expected ? todaySummary.daily_expected / 3600 : 9}
+                    />
                 </div>
 
                 {/* Activity / Requests (4 Cols) - Moved up from bottom */}
