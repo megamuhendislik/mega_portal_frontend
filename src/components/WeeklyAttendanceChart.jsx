@@ -113,7 +113,8 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                 </div>
             </div>
 
-            <div className="flex-1 min-h-[250px] w-full" style={{ minWidth: 0 }}>
+            {/* Fixed height container to prevent Recharts -1 width error */}
+            <div className="w-full h-[320px] min-h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weekData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }} barSize={32}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
