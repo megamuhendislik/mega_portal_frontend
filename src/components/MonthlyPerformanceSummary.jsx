@@ -31,14 +31,17 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             }
 
             // Calculation for Net Progress
-            // If Net Work > Target, we are > 100%
+            // User Requirement: "Net Overtime" only if Total Work > Target
+            const isNetPositive = netWorkSec >= targetSec; // True only if we exceeded the monthly target
             const netPercent = targetSec > 0 ? (netWorkSec / targetSec) * 100 : 0;
-            const isNetPositive = netBalanceSec >= 0;
+
+            // Calculate absolute difference for display
+            const diffSec = netWorkSec - targetSec;
+            const diffHours = (Math.abs(diffSec) / 3600).toFixed(1);
 
             let lateCount = 0;
             let workDays = 0;
             logs.forEach(log => {
-                // If backend sends late_seconds, we can count days with >0 late
                 if ((log.late_seconds || 0) > 0) lateCount++;
                 if ((log.normal_seconds || 0) > 0) workDays++;
             });
@@ -51,7 +54,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                 overtimeHours: (overtimeSec / 3600).toFixed(1),
                 netWorkHours: (netWorkSec / 3600).toFixed(1),
-                netBalanceHours: (Math.abs(netBalanceSec) / 3600).toFixed(1),
+
+                // netBalanceHours now represents the diff from Target
+                netBalanceHours: diffHours,
                 isNetPositive,
 
                 breakHours: (breakSec / 3600).toFixed(1),
@@ -87,30 +92,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                 {/* Multi-Segment Progress Bar */}
                 <div className="h-4 w-full bg-slate-200 rounded-full flex overflow-hidden mb-4">
-                    {/* Completed (Blue) */}
-                    <div
-                        className="bg-blue-600 h-full transition-all duration-1000"
-                        style={{ width: `${stats.pCompleted}%` }}
-                        title={`Tamamlanan: ${stats.completedHours} sa`}
-                    />
-                    {/* Missing (Red/Orange) */}
-                    <div
-                        className="bg-rose-500 h-full transition-all duration-1000 relative"
-                        style={{ width: `${stats.pMissing}%` }}
-                        title={`Eksik: ${stats.missingHours} sa`}
-                    >
-                        {/* Stripe pattern for 'Missing' to indicate 'lost' */}
+                    <div className="bg-blue-600 h-full transition-all duration-1000" style={{ width: `${stats.pCompleted}%` }} title={`Tamamlanan: ${stats.completedHours} sa`} />
+                    <div className="bg-rose-500 h-full transition-all duration-1000 relative" style={{ width: `${stats.pMissing}%` }} title={`Eksik: ${stats.missingHours} sa`}>
                         <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.15)_50%,rgba(255,255,255,.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem]"></div>
                     </div>
-                    {/* Remaining (Gray/Light Blue) */}
-                    <div
-                        className="bg-slate-300 h-full transition-all duration-1000"
-                        style={{ width: `${stats.pRemaining}%` }}
-                        title={`Kalan: ${stats.remainingHours} sa`}
-                    />
+                    <div className="bg-slate-300 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} title={`Kalan: ${stats.remainingHours} sa`} />
                 </div>
 
-                {/* Legend / Stats Row */}
                 <div className="grid grid-cols-3 gap-4">
                     <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
                         <div className="flex items-center gap-2 mb-1">
@@ -166,14 +154,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             {stats.isNetPositive ? (
                                 <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
                                     <TrendingUp size={14} />
-                                    +{stats.netBalanceHours} sa Fazla Mesai
+                                    +{stats.netBalanceHours} sa Fazla Mesai (Global)
                                 </span>
                             ) : (
-                                <span className="text-xs font-bold text-red-500 flex items-center gap-1">
-                                    <AlertCircle size={14} />
-                                    {/* We show it as negative explicitly if there is a deficit */}
-                                    {/* If netBalanceHours is 0 (balanced), handles nicely */}
-                                    -{stats.netBalanceHours} sa Eksik (Devamsızlık)
+                                <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                                    <Clock size={14} />
+                                    -{stats.netBalanceHours} sa Hedefe Kalan
                                 </span>
                             )}
                         </div>
