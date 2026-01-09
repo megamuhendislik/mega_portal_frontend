@@ -46,6 +46,9 @@ const CalendarPage = () => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedEvents, setSelectedEvents] = useState([]);
 
+    // State for View Options
+    const [displayMode, setDisplayMode] = useState('STANDARD'); // 'STANDARD' | 'OVERTIME'
+
     // Initialize User
     useEffect(() => {
         if (user?.employee?.id) {
@@ -143,10 +146,18 @@ const CalendarPage = () => {
         const stats = {};
         logs.forEach(log => {
             const dateStr = moment(log.work_date).format('YYYY-MM-DD');
-            if (!stats[dateStr]) stats[dateStr] = { normal: 0, overtime: 0, missing: 0 };
-            stats[dateStr].normal += (log.normal_minutes || 0);
-            stats[dateStr].overtime += (log.overtime_minutes || 0);
-            stats[dateStr].missing += (log.missing_minutes || 0);
+            const netBalance = (log.total_minutes || 0) - (log.required_minutes || 540); // Assuming 9h standard if not avail
+
+            stats[dateStr] = {
+                normal: log.normal_minutes || 0,
+                overtime: log.overtime_minutes || 0,
+                missing: log.missing_minutes || 0,
+                check_in: log.check_in,
+                check_out: log.check_out,
+                total: log.total_minutes || 0,
+                net: netBalance,
+                log: log // Store full log for modal
+            };
         });
         setDailyStats(stats);
     };
@@ -200,10 +211,7 @@ const CalendarPage = () => {
         if (dayEvents.some(e => e.type === 'HOLIDAY')) return 'bg-violet-100 text-violet-700 font-bold';
         if (dayEvents.some(e => e.type === 'LEAVE')) return 'bg-amber-100 text-amber-700 font-bold';
         if (dayEvents.some(e => e.type === 'ABSENT')) return 'bg-red-100 text-red-700 font-bold';
-        if (dayEvents.some(e => e.type === 'OVERTIME')) return 'bg-emerald-100 text-emerald-700 font-bold';
-        // Check for normal work? We usually don't have SHIFT events unless explicitly generated. 
-        // If needed we can check logs but logs aren't fully fetched in YEAR mode to save bandwidth perhaps?
-        // Let's stick to Exception reporting for Year view generally, or simple work.
+        if (displayMode === 'OVERTIME' && dayEvents.some(e => e.type === 'OVERTIME')) return 'bg-emerald-100 text-emerald-700 font-bold';
 
         return 'hover:bg-slate-50 text-slate-700';
     };
@@ -224,6 +232,8 @@ const CalendarPage = () => {
     };
 
     const eventStyleGetter = (event) => {
+        // In Overtime Mode, we might want to hide standard shift blocks or color them differently?
+        // For now keep standard colors but maybe transparency if not relevant?
         let style = {
             backgroundColor: event.color || '#64748b',
             borderRadius: '6px',
@@ -239,6 +249,10 @@ const CalendarPage = () => {
         else if (event.type === 'ABSENT') style.backgroundColor = '#ef4444';
         else if (event.type === 'LEAVE') style.backgroundColor = '#f59e0b';
         else if (event.type === 'HOLIDAY') style.backgroundColor = '#8b5cf6';
+        else if (event.type === 'SHIFT') style.backgroundColor = '#3b82f6';
+
+        // If in Standard Mode, maybe hide "Overtime" blocks to reduce clutter? User said "mesai bilgileri olmasın"
+        // But the events are useful. Let's keep them but maybe deemphasize.
 
         return { style };
     };
@@ -330,7 +344,7 @@ const CalendarPage = () => {
                     </h2>
                     <p className="text-slate-400 text-sm mb-6">Detaylı rapor ve kayıtlar</p>
 
-                    {/* Stats Cards */}
+                    {/* Stats Cards - Only relevant in Month view anyway */}
                     <div className="space-y-3">
                         <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                             <div className="flex items-center gap-2 mb-1">
@@ -407,18 +421,28 @@ const CalendarPage = () => {
                     }}
                     selectable={true}
                     culture='tr'
-                    views={['month', 'agenda']} // Limit views to keep it simple?
+                    views={['month', 'agenda']}
                     defaultView='month'
                     components={{
                         month: {
                             dateHeader: ({ date, label }) => {
+                                // IMPORTANT conditional rendering for Overtime Stats
+                                if (displayMode !== 'OVERTIME') {
+                                    return <span className="rbc-date-cell-label font-semibold text-slate-700 px-1">{label}</span>;
+                                }
+
                                 const dateStr = moment(date).format('YYYY-MM-DD');
                                 const stats = dailyStats[dateStr];
                                 return (
-                                    <div className="flex justify-between items-start px-1">
-                                        <span className="rbc-date-cell-label font-semibold text-slate-700">{label}</span>
-                                        {stats && stats.overtime > 0 && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded">+{Math.floor(stats.overtime / 60)}s</span>}
-                                        {stats && stats.missing > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1 rounded">-{Math.floor(stats.missing / 60)}s</span>}
+                                    <div className="px-1 flex flex-col items-end">
+                                        <div className="flex justify-between w-full items-center mb-0.5">
+                                            <span className="rbc-date-cell-label font-semibold text-slate-700">{label}</span>
+                                            {stats && stats.net !== undefined && Math.abs(stats.net) > 5 && (
+                                                <span className={`text-[10px] font-bold px-1 rounded ${stats.net > 0 ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+                                                    {stats.net > 0 ? '+' : ''}{Math.floor(stats.net)}d
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             }
@@ -448,17 +472,56 @@ const CalendarPage = () => {
                 <div className="flex items-center gap-4 w-full md:w-auto">
                     <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                         <CalendarIcon className="text-blue-600" />
-                        {viewMode === 'YEAR' ? `${selectedYear} Takvimi` : `${MONTHS_TR[selectedMonth]} Detayı`}
+                        {viewMode === 'YEAR' ?
+                            <span
+                                onClick={() => { }} // Already home
+                                className="cursor-default"
+                            >
+                                {selectedYear} Takvimi
+                            </span>
+                            :
+                            <span>
+                                {MONTHS_TR[selectedMonth]}
+                                <span onClick={handleBackToYear} className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-2 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg text-lg">
+                                    {selectedYear}
+                                </span>
+                                <span className="text-lg text-slate-400 font-medium ml-2">Detayı</span>
+                            </span>
+                        }
                     </h1>
-                    {/* Year Selector (Always visible or just in YEAR mode?) */}
-                    <div className="flex bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
-                        <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
-                        <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
-                        <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronRight size={20} /></button>
-                    </div>
+
+                    {/* Year Selector */}
+                    {viewMode === 'YEAR' && (
+                        <div className="flex bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
+                            <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
+                            <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
+                            <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronRight size={20} /></button>
+                        </div>
+                    )}
                 </div>
 
-                <div className="w-full md:w-auto">
+                {/* Top Right Controls */}
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    {/* View Mode Toggle (Radio) */}
+                    <div className="bg-white p-1 rounded-xl border border-slate-200 flex items-center shadow-sm">
+                        <button
+                            onClick={() => setDisplayMode('STANDARD')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
+                                ${displayMode === 'STANDARD' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}
+                            `}
+                        >
+                            <CalendarIcon size={16} /> Standart
+                        </button>
+                        <button
+                            onClick={() => setDisplayMode('OVERTIME')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
+                                ${displayMode === 'OVERTIME' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}
+                            `}
+                        >
+                            <Timer size={16} /> Mesai Bilgisi
+                        </button>
+                    </div>
+
                     <TeamSelector
                         selectedId={selectedEmployeeId}
                         onSelect={setSelectedEmployeeId}
@@ -487,9 +550,23 @@ const CalendarPage = () => {
                                 <h3 className="text-xl font-bold text-slate-800">
                                     {moment(selectedDate).format('D MMMM YYYY, dddd')}
                                 </h3>
-                                <p className="text-sm text-slate-500 mt-1">
-                                    {selectedEvents.length} Kayıt Bulundu
-                                </p>
+                                {/* If in Overtime Mode, show Entry/Exit Info if available */}
+                                {displayMode === 'OVERTIME' && dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
+                                    <div className="flex items-center gap-4 mt-2">
+                                        <div className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                                            <span className="text-emerald-400">Giriş:</span>
+                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in
+                                                ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in).format('HH:mm')
+                                                : '--:--'}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-sm font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">
+                                            <span className="text-red-400">Çıkış:</span>
+                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out
+                                                ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out).format('HH:mm')
+                                                : '--:--'}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <button
                                 onClick={() => setShowModal(false)}
@@ -500,50 +577,79 @@ const CalendarPage = () => {
                         </div>
 
                         <div className="overflow-y-auto p-5 space-y-3 custom-scrollbar">
-                            {selectedEvents.length > 0 ? (
-                                selectedEvents.map((evt, idx) => (
-                                    <div key={idx} className={`p-4 rounded-xl border bg-white shadow-sm flex items-start gap-3 transition-all hover:shadow-md
-                                        ${evt.type === 'OVERTIME' ? 'border-emerald-100 bg-emerald-50/30' :
-                                            evt.type === 'ABSENT' ? 'border-red-100 bg-red-50/30' : 'border-slate-100'}
-                                    `}>
-                                        <div
-                                            className="w-3 h-3 rounded-full mt-1.5 shrink-0 shadow-sm"
-                                            style={{ backgroundColor: evt.color }}
-                                        />
-                                        <div className="flex-1">
-                                            <div className="font-bold text-slate-800 text-sm flex justify-between">
-                                                {evt.title}
-                                                {evt.type === 'OVERTIME' && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Ekstra</span>}
-                                            </div>
+                            {!displayMode || displayMode === 'STANDARD' ? (
+                                // STANDARD EVENT LIST
+                                selectedEvents.length > 0 ? (
+                                    selectedEvents.map((evt, idx) => (
+                                        <div key={idx} className={`p-4 rounded-xl border bg-white shadow-sm flex items-start gap-3 transition-all hover:shadow-md
+                                            ${evt.type === 'OVERTIME' ? 'border-emerald-100 bg-emerald-50/30' :
+                                                evt.type === 'ABSENT' ? 'border-red-100 bg-red-50/30' : 'border-slate-100'}
+                                        `}>
+                                            <div
+                                                className="w-3 h-3 rounded-full mt-1.5 shrink-0 shadow-sm"
+                                                style={{ backgroundColor: evt.color }}
+                                            />
+                                            <div className="flex-1">
+                                                <div className="font-bold text-slate-800 text-sm flex justify-between">
+                                                    {evt.title}
+                                                    {evt.type === 'OVERTIME' && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Ekstra</span>}
+                                                </div>
 
-                                            <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-500">
-                                                {evt.start && evt.end && !evt.allDay && (
-                                                    <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md">
-                                                        <Clock size={12} />
-                                                        {moment(evt.start).format('HH:mm')} - {moment(evt.end).format('HH:mm')}
+                                                <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-500">
+                                                    {evt.start && evt.end && !evt.allDay && (
+                                                        <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md">
+                                                            <Clock size={12} />
+                                                            {moment(evt.start).format('HH:mm')} - {moment(evt.end).format('HH:mm')}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center gap-1">
+                                                        <Info size={12} />
+                                                        {evt.type === 'SHIFT' ? 'Normal Mesai' :
+                                                            evt.type === 'OVERTIME' ? 'Fazla Mesai' :
+                                                                evt.type === 'OFF' ? 'Hafta Tatili' :
+                                                                    evt.type === 'LEAVE' ? 'İzin' :
+                                                                        evt.type === 'ABSENT' ? 'Devamsızlık' :
+                                                                            evt.type === 'HOLIDAY' ? 'Resmi Tatil' : 'Diğer'}
                                                     </div>
-                                                )}
-                                                <div className="flex items-center gap-1">
-                                                    <Info size={12} />
-                                                    {evt.type === 'SHIFT' ? 'Normal Mesai' :
-                                                        evt.type === 'OVERTIME' ? 'Fazla Mesai' :
-                                                            evt.type === 'OFF' ? 'Hafta Tatili' :
-                                                                evt.type === 'LEAVE' ? 'İzin' :
-                                                                    evt.type === 'ABSENT' ? 'Devamsızlık' :
-                                                                        evt.type === 'HOLIDAY' ? 'Resmi Tatil' : 'Diğer'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                        <CalendarIcon size={48} className="mx-auto mb-3 opacity-20" />
+                                        <p>Bu tarihte kayıt bulunamadı veya normal çalışma günü.</p>
+                                    </div>
+                                )
+                            ) : (
+                                // OVERTIME MODE DETAILS
+                                <div className="space-y-4">
+                                    {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] ? (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                                                    <span className="block text-xs uppercase font-bold text-slate-400 mb-1">Normal Süre</span>
+                                                    <span className="text-xl font-bold text-slate-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal} dk</span>
+                                                </div>
+                                                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                                                    <span className="block text-xs uppercase font-bold text-emerald-600 mb-1">Fazla Mesai</span>
+                                                    <span className="text-xl font-bold text-emerald-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime} dk</span>
+                                                </div>
+                                                <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-center">
+                                                    <span className="block text-xs uppercase font-bold text-red-600 mb-1">Eksik Süre</span>
+                                                    <span className="text-xl font-bold text-red-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing} dk</span>
+                                                </div>
+                                                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                                                    <span className="block text-xs uppercase font-bold text-blue-600 mb-1">Net Fark</span>
+                                                    <span className="text-xl font-bold text-blue-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net > 0 ? '+' : ''}{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net} dk</span>
                                                 </div>
                                             </div>
 
-                                            {evt.title && (evt.title.includes('Mola') || evt.title.includes('Break')) && (
-                                                <p className="mt-1 text-xs text-slate-400">Dinlenme süresi</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                    <CalendarIcon size={48} className="mx-auto mb-3 opacity-20" />
-                                    <p>Bu tarihte kayıt bulunamadı veya normal çalışma günü.</p>
+                                            {/* Show related events too if wanted, or simplify */}
+                                        </>
+                                    ) : (
+                                        <div className="text-center text-slate-400">Veri bulunamadı.</div>
+                                    )}
                                 </div>
                             )}
                         </div>
