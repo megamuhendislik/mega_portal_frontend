@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { startOfWeek, endOfWeek, addDays, format, isSameDay, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, addDays, format, isSameDay, parseISO, isWeekend, isBefore, startOfToday } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h if not provided
@@ -11,6 +11,8 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
         const days = [];
         const start = weekStart;
 
+        const today = startOfToday();
+
         for (let i = 0; i < 7; i++) {
             const current = addDays(start, i);
             const dateStr = format(current, 'yyyy-MM-dd');
@@ -18,8 +20,25 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
             // Find Log for this day
             const log = logs.find(l => l.work_date === dateStr);
 
-            // Format Times
-            let timeRange = null;
+            // Calculate Metrics
+            let normal = 0;
+            let overtime = 0;
+            let missing = 0;
+            let status = log?.status;
+
+            if (log) {
+                // Existing Log
+                normal = (log.normal_seconds || 0) / 3600;
+                overtime = (log.overtime_seconds || 0) / 3600;
+                missing = (log.missing_seconds || 0) / 3600;
+            } else {
+                // No Log - Heuristic for "Implicit Missing"
+                // If day is past OR today, and not weekend
+                if ((isBefore(current, today) || isSameDay(current, today)) && !isWeekend(current)) {
+                    missing = dailyTarget;
+                    // status = 'MISSING_DATA'; 
+                }
+            }
             if (log && log.check_in && log.check_out) {
                 const inTime = format(parseISO(log.check_in), 'HH:mm');
                 const outTime = format(parseISO(log.check_out), 'HH:mm');
@@ -35,15 +54,15 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                 dateObj: current,
 
                 // Data (Hours)
-                normal: log ? (log.normal_seconds || 0) / 3600 : 0,
-                overtime: log ? (log.overtime_seconds || 0) / 3600 : 0,
-                missing: log ? (log.missing_seconds || 0) / 3600 : 0,
+                normal,
+                overtime,
+                missing,
 
                 // Details for Tooltip
                 timeRange,
                 note: log?.note,
                 managerName: log?.approval_manager_name,
-                status: log?.status
+                status
             });
         }
         return days;
