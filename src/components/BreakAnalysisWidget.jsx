@@ -5,12 +5,28 @@ import { formatDate } from '../utils/dateUtils';
 
 const BreakAnalysisWidget = ({ logs, totalBreakSeconds }) => {
 
-    // Process logs for the chart
-    const data = logs.map(log => ({
-        name: new Date(log.work_date).getDate(),
-        fullDate: formatDate(log.work_date),
-        minutes: Math.floor((log.break_seconds || 0) / 60)
-    }));
+    // Process logs: Group by Date to ensure 1 Bar per Day
+    const groupedData = logs.reduce((acc, log) => {
+        const d = log.work_date; // Assuming YYYY-MM-DD
+        if (!acc[d]) {
+            acc[d] = {
+                date: d,
+                minutes: 0,
+                fullDate: formatDate(d)
+            };
+        }
+        acc[d].minutes += Math.floor((log.break_seconds || 0) / 60);
+        return acc;
+    }, {});
+
+    const data = Object.values(groupedData)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map(item => ({
+            name: new Date(item.date).getDate(), // Just Day Number for Axis? maybe confusing if months cross. Let's use formatted.
+            axisLabel: formatDate(item.date).split(' ').slice(0, 2).join(' '), // "8 Oca"
+            fullDate: item.fullDate,
+            minutes: item.minutes
+        }));
 
     // Calculate Average
     const validDays = data.filter(d => d.minutes > 0).length;
@@ -75,12 +91,12 @@ const BreakAnalysisWidget = ({ logs, totalBreakSeconds }) => {
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} margin={{ top: 10, right: 0, left: -25, bottom: 0 }} barGap={2}>
                         <XAxis
-                            dataKey="name"
+                            dataKey="axisLabel"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 10, fill: '#94A3B8' }}
+                            tick={{ fontSize: 9, fill: '#94A3B8' }}
                             dy={10}
-                            interval={data.length > 20 ? 2 : 0}
+                            interval={0} // Force show all if possible, or auto
                         />
                         <YAxis
                             axisLine={false}

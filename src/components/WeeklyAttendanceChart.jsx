@@ -5,45 +5,23 @@ import { TrendingUp, Calendar, AlertCircle } from 'lucide-react';
 const WeeklyAttendanceChart = ({ logs }) => {
 
     const data = useMemo(() => {
-        const weeks = {};
         // Sort logs by date
         const sortedLogs = [...logs].sort((a, b) => new Date(a.work_date) - new Date(b.work_date));
 
-        // Use today's date to exclude current day from 'missing' accumulation in charts too if needed, 
-        // but backend already handles 'missing' logic.
-        // However, we want to group by week.
-
-        sortedLogs.forEach(log => {
+        // Map directly to Days (1 Day = 1 Bar)
+        return sortedLogs.map(log => {
             const date = new Date(log.work_date);
-            const day = date.getDay();
-            // Monday start
-            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(date);
-            monday.setDate(diff);
+            // Turkish Date Format: "9 Oca"
+            const label = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
 
-            const key = monday.toISOString().split('T')[0];
-            const label = `${monday.getDate()} ${monday.toLocaleDateString('tr-TR', { month: 'short' })} `;
-
-            if (!weeks[key]) {
-                weeks[key] = {
-                    name: label,
-                    fullDate: monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }),
-                    normal: 0,
-                    overtime: 0,
-                    missing: 0
-                };
-            }
-
-            const norm = (log.normal_seconds || 0) / 3600;
-            const ot = (log.overtime_seconds || 0) / 3600;
-            const miss = (log.missing_seconds || 0) / 3600;
-
-            weeks[key].normal += norm;
-            weeks[key].overtime += ot;
-            weeks[key].missing += miss;
+            return {
+                name: label,
+                fullDate: date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }),
+                normal: (log.normal_seconds || 0) / 3600,
+                overtime: (log.overtime_seconds || 0) / 3600,
+                missing: (log.missing_seconds || 0) / 3600
+            };
         });
-
-        return Object.values(weeks);
     }, [logs]);
 
     const CustomTooltip = ({ active, payload, label }) => {
@@ -53,7 +31,7 @@ const WeeklyAttendanceChart = ({ logs }) => {
                 <div className="bg-white/95 backdrop-blur-md p-4 border border-slate-200 shadow-xl rounded-xl text-xs z-50 min-w-[180px]">
                     <p className="font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
                         <Calendar size={14} className="text-slate-500" />
-                        {dataPoint.fullDate} Haftası
+                        {dataPoint.fullDate}
                     </p>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
