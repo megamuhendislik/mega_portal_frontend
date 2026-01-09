@@ -18,7 +18,8 @@ import {
     CalendarRange,
     Flag,
     Shield,
-    Database
+    Database,
+    Monitor
 } from 'lucide-react';
 import clsx from 'clsx';
 
