@@ -39,6 +39,9 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                     // status = 'MISSING_DATA'; 
                 }
             }
+
+            // Format Times
+            let timeRange = null;
             if (log && log.check_in && log.check_out) {
                 const inTime = format(parseISO(log.check_in), 'HH:mm');
                 const outTime = format(parseISO(log.check_out), 'HH:mm');
