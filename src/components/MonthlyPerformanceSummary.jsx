@@ -134,7 +134,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             </div>
 
             {/* 3. Stats Grid with Colors */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Net Surplus Card */}
                 <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
@@ -168,20 +168,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
                 </div>
 
-                {/* Late Card */}
-                <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100 flex flex-col justify-between">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600">
-                            <Clock size={18} />
-                        </div>
-                        <span className="text-xs font-bold uppercase text-slate-500">Geç Kalma</span>
-                    </div>
-                    <div>
-                        <span className="text-2xl font-black text-slate-800">{stats.lateMinutes}</span>
-                        <span className="text-xs font-bold text-slate-400 ml-1">dk</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">{stats.lateCount} kez tekrarlandı</p>
-                </div>
+
             </div>
         </div>
     );
