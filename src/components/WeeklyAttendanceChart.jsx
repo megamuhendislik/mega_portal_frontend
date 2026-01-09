@@ -170,7 +170,7 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
             </div>
 
             {/* Fixed height container to prevent Recharts -1 width error */}
-            <div className="w-full h-[320px] min-h-[250px]">
+            <div className="w-full h-[320px] min-h-[250px] min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weekData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }} barSize={32}>
                         <defs>

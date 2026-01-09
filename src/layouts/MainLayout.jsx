@@ -113,6 +113,7 @@ const MainLayout = () => {
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'VIEW_SECTION_WORK_SCHEDULES' },
         { path: '/requests', label: 'Talepler', icon: FileText, permission: 'VIEW_SECTION_REQUESTS' },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'VIEW_SECTION_REPORTS' },
+        { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: null, adminOnly: true },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: null, adminOnly: true },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: null, adminOnly: true },
     ];

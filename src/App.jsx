@@ -18,6 +18,7 @@ import AttendanceTracking from './pages/AttendanceTracking';
 import Reports from './pages/Reports';
 import SystemHealth from './pages/admin/SystemHealth';
 import AttendanceDebugger from './pages/admin/AttendanceDebugger';
+import ServiceControl from './pages/ServiceControl';
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -74,6 +75,7 @@ function App() {
             <Route path="requests" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REQUESTS"><Requests /></ProtectedRoute>} />
             <Route path="reports" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REPORTS"><Reports /></ProtectedRoute>} />
             <Route path="admin/system-health" element={<ProtectedRoute><SystemHealth /></ProtectedRoute>} />
+            <Route path="admin/service-control" element={<ProtectedRoute><ServiceControl /></ProtectedRoute>} />
             <Route path="debug/attendance" element={<ProtectedRoute><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>
