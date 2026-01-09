@@ -15,10 +15,11 @@ const ServiceControl = () => {
     useEffect(() => {
         // Poll logs every 3 seconds
         const fetchLogs = async () => {
+            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
             try {
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/attendance/service-logs/`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 if (response.ok) {
@@ -40,14 +41,16 @@ const ServiceControl = () => {
         setStatus('idle');
         setMessage('');
 
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+
         try {
             // Assuming endpoint is at /attendance/recalculate-all/ (Post)
             // We need to implement this in backend views.py first as per plan.
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/attendance/recalculate-all/`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/attendance/recalculate-all/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Ensure auth
+                    'Authorization': `Bearer ${token}` // Ensure auth
                 },
                 body: JSON.stringify({ date: selectedDate })
             });
