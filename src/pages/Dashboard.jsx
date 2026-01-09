@@ -183,8 +183,12 @@ const Dashboard = () => {
                 />
                 <StatCard
                     title="AYLIK NET DURUM"
-                    value={`${monthlySummary?.net_balance_seconds > 0 ? '+' : ''}${formatHours(monthlySummary?.net_balance_seconds)} sa`}
-                    subValue="Toplam Denge"
+                    value={`${formatHours(monthlySummary?.net_work_seconds)} / ${formatHours(monthlySummary?.target_seconds)} sa`}
+                    subValue={
+                        monthlySummary?.net_balance_seconds > 0
+                            ? `Aylık Net Ek Mesai: +${formatHours(monthlySummary?.net_balance_seconds)} sa`
+                            : `Toplam Denge: ${formatHours(monthlySummary?.net_balance_seconds)} sa`
+                    }
                     trend={monthlySummary?.net_balance_seconds >= 0 ? 'up' : 'down'}
                     icon={Scale}
                     color={monthlySummary?.net_balance_seconds >= 0 ? 'emerald' : 'rose'}
