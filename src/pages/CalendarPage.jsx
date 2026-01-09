@@ -319,7 +319,14 @@ const CalendarPage = () => {
                     </button>
 
                     <h2 className="text-xl font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        {MONTHS_TR[selectedMonth]} {selectedYear}
+                        {MONTHS_TR[selectedMonth]}
+                        <span
+                            onClick={handleBackToYear}
+                            className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-1"
+                            title="Yıllık Görünüm"
+                        >
+                            {selectedYear}
+                        </span>
                     </h2>
                     <p className="text-slate-400 text-sm mb-6">Detaylı rapor ve kayıtlar</p>
 
