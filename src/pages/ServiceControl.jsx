@@ -1,13 +1,39 @@
-import React, { useState } from 'react';
-import { Calendar, Play, CheckCircle, XCircle, AlertCircle, Monitor } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Play, CheckCircle, XCircle, AlertCircle, Monitor, AlertTriangle, RefreshCw, CheckCircle2, ArrowRight, Shield, Activity } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 
 const ServiceControl = () => {
     const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState(null); // 'idle', 'success', 'error'
     const [message, setMessage] = useState('');
+    const [logs, setLogs] = useState([]);
+
+    useEffect(() => {
+        // Poll logs every 3 seconds
+        const fetchLogs = async () => {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/attendance/service-logs/`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setLogs(data);
+                }
+            } catch (error) {
+                console.error("Log fetch error:", error);
+            }
+        };
+
+        const interval = setInterval(fetchLogs, 3000);
+        fetchLogs(); // Initial call
+        return () => clearInterval(interval);
+    }, []);
 
     const handleRecalculate = async () => {
         setLoading(true);
@@ -158,7 +184,47 @@ const ServiceControl = () => {
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* Live Logs Console */}
+            <div className="bg-slate-900 rounded-xl shadow-lg border border-slate-700 overflow-hidden">
+                <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                    <h3 className="text-slate-100 font-mono text-sm font-semibold flex items-center gap-2">
+                        <Activity size={16} className="text-green-400" />
+                        CANLI SERVİS LOGLARI (Son 100 İşlem)
+                    </h3>
+                    <span className="text-xs text-slate-500 font-mono">Otomatik Yenileniyor...</span>
+                </div>
+                <div className="h-64 overflow-y-auto p-4 font-mono text-xs space-y-1 custom-scrollbar">
+                    {logs.length === 0 ? (
+                        <div className="text-slate-500 text-center py-10">Henüz log kaydı yok...</div>
+                    ) : (
+                        logs.map((log) => (
+                            <div key={log.id} className="flex gap-2 hover:bg-slate-800 p-0.5 rounded">
+                                <span className="text-slate-500 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                                <span className={clsx(
+                                    "font-bold shrink-0 w-16",
+                                    log.level === 'INFO' && "text-blue-400",
+                                    log.level === 'WARN' && "text-yellow-400",
+                                    log.level === 'ERROR' && "text-red-500"
+                                )}>{log.level}</span>
+                                <span className="text-slate-400 shrink-0 w-24">[{log.component}]</span>
+                                <span className="text-slate-300 truncate">
+                                    {log.details && log.details.original ?
+                                        <span>{log.message} <span className="text-slate-600">({JSON.stringify(log.details)})</span></span>
+                                        : log.message
+                                    }
+                                </span>
+                                {log.employee_name !== '-' && (
+                                    <span className="text-indigo-400 ml-auto shrink-0 text-[10px] bg-indigo-900/30 px-1 rounded flex items-center">
+                                        {log.employee_name}
+                                    </span>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div >
     );
 };
 
