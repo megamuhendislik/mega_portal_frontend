@@ -157,6 +157,18 @@ const CalendarPage = () => {
         const dayOfWeek = date.getDay();
         const isHoliday = holidays.has(dateStr);
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isToday = moment(date).isSame(moment(), 'day');
+
+        // Priority 1: Today
+        if (isToday) {
+            return {
+                className: 'bg-indigo-50/90 border-2 border-indigo-200',
+                style: {
+                    backgroundColor: '#e0e7ff',
+                    color: '#1e1b4b'
+                }
+            };
+        }
 
         if (isHoliday) {
             return {
