@@ -40,10 +40,13 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
             console.log("Team API Data:", response.data);
 
             // Combine: Self + Team
-            // Ensure unique IDs
             const teamData = [self, ...(Array.isArray(response.data) ? response.data : [])];
-            // Filter duplicates just in case
-            const uniqueTeam = teamData.filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i);
+
+            // Filter invalid (null/undefined/no-id) FIRST
+            const validTeam = teamData.filter(m => m && m.id);
+
+            // Ensure unique IDs
+            const uniqueTeam = validTeam.filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i);
 
             setTeam(uniqueTeam);
         } catch (error) {
