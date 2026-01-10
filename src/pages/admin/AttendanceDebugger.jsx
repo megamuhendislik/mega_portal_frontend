@@ -175,7 +175,7 @@ const AttendanceDebugger = () => {
                                 <CheckCircle size={16} /> Configuration
                             </h3>
                             <ul className="space-y-2 text-sm">
-                                <li className="flex justify-between"><span className="text-slate-500">Schedule:</span> <span className="font-bold">{debugData.schedule || 'Unknown'}</span></li>
+                                <li className="flex justify-between"><span className="text-slate-500">Schedule:</span> <span className="font-bold">{debugData.schedule?.name || 'Unknown'}</span></li>
                                 <li className="flex justify-between"><span className="text-slate-500">Period:</span> <span className="font-mono text-xs">{debugData.period || 'Unknown'}</span></li>
                                 <li className="flex justify-between"><span className="text-slate-500">Leaves:</span> <span className="font-bold">{(debugData.leaves || []).length} Found</span></li>
                             </ul>
