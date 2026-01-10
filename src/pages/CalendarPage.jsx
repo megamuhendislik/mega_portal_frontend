@@ -7,7 +7,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
 import useInterval from '../hooks/useInterval';
-import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase } from 'lucide-react';
+import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -35,7 +35,8 @@ const CalendarPage = () => {
 
     // View State
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState('month');
+    const [mode, setMode] = useState('YEAR'); // 'YEAR' | 'CALENDAR'
+    const [calendarView, setCalendarView] = useState('month'); // Internal view for big-calendar
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
@@ -43,16 +44,20 @@ const CalendarPage = () => {
     const [selectedEventData, setSelectedEventData] = useState(null);
 
     // Filter Toggle
-    const [showWorkEvents, setShowWorkEvents] = useState(false); // Default false for "Agenda Mode" focus
+    const [showWorkEvents, setShowWorkEvents] = useState(false);
 
     useEffect(() => {
-        fetchCalendarData();
-    }, [currentDate, view, showWorkEvents]);
+        // If in year mode, maybe fetch broad range or just specific buckets?
+        // For simplicity, we fetch the current view's range when in CALENDAR mode.
+        if (mode === 'CALENDAR') {
+            fetchCalendarData();
+        }
+    }, [currentDate, calendarView, showWorkEvents, mode]);
 
-    // Live Updates (Every 60s)
+    // Live Updates (Every 60s) - Only active in Calendar mode to save resources?
+    // Or keep it active if we want indicators on Year view (optional complexity).
     useInterval(() => {
-        if (!loading && !showModal) {
-            console.log("Auto-refreshing calendar...");
+        if (!loading && !showModal && mode === 'CALENDAR') {
             fetchCalendarData();
         }
     }, 60000);
@@ -64,10 +69,10 @@ const CalendarPage = () => {
             const mDate = moment(currentDate);
             let start, end;
 
-            if (view === 'month') {
+            if (calendarView === 'month') {
                 start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
                 end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
-            } else if (view === 'week') {
+            } else if (calendarView === 'week') {
                 start = mDate.clone().startOf('week').format('YYYY-MM-DD');
                 end = mDate.clone().endOf('week').format('YYYY-MM-DD');
             } else {
@@ -82,25 +87,15 @@ const CalendarPage = () => {
             const newHolidays = new Set();
 
             rawEvents.forEach(evt => {
-                // Parse Dates
                 const eventStart = new Date(evt.start);
                 const eventEnd = new Date(evt.end);
 
-                // Identify Holidays
                 if (evt.status === 'HOLIDAY') {
                     newHolidays.add(moment(eventStart).format('YYYY-MM-DD'));
                 }
 
-                // Filtering: Agenda Mode vs Work Mode
-                // Agenda Mode: Shows PERSONAL, HOLIDAY. 
-                // Work Mode: Shows ATTENDANCE, LEAVE_REQUEST, OVERTIME.
-
                 const isWorkEvent = ['ATTENDANCE', 'LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(evt.type);
                 const isPersonal = evt.type === 'PERSONAL';
-
-                // Always show Holidays? YES.
-                // Always show Personal? YES.
-                // Show Work? Only if toggled.
 
                 if (evt.status === 'HOLIDAY' || isPersonal || (showWorkEvents && isWorkEvent)) {
                     parsedEvents.push({
@@ -129,17 +124,15 @@ const CalendarPage = () => {
 
         if (event.type === 'PERSONAL') {
             if (event.is_shared && !event.is_owner) {
-                // Shared with me
-                backgroundColor = '#10b981'; // Emerald
+                backgroundColor = '#10b981';
                 borderColor = '#047857';
             } else if (event.is_shared && event.is_owner) {
-                // Shared by me
-                backgroundColor = '#8b5cf6'; // Violet
+                backgroundColor = '#8b5cf6';
             }
         }
 
         if (event.status === 'HOLIDAY') {
-            backgroundColor = '#ef4444'; // Red
+            backgroundColor = '#ef4444';
         }
 
         return {
@@ -157,27 +150,33 @@ const CalendarPage = () => {
 
     const dayPropGetter = (date) => {
         const dateStr = moment(date).format('YYYY-MM-DD');
-        const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
-
+        const dayOfWeek = date.getDay();
         const isHoliday = holidays.has(dateStr);
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Simple Default. Ideally check user.schedule
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
         if (isHoliday) {
             return {
                 className: 'bg-red-50/70',
-                style: { backgroundColor: 'rgba(254, 226, 226, 0.4)' } // Tailwind red-50
+                style: { backgroundColor: 'rgba(254, 226, 226, 0.4)' }
             };
         }
         if (isWeekend) {
             return {
                 className: 'bg-slate-50/80',
-                style: { backgroundColor: 'rgba(248, 250, 252, 0.8)' } // Tailwind slate-50
+                style: { backgroundColor: 'rgba(248, 250, 252, 0.8)' }
             };
         }
         return {};
     };
 
-    // Handlers
+    // --- Handlers ---
+
+    const handleMonthClick = (date) => {
+        setCurrentDate(date);
+        setMode('CALENDAR');
+        setCalendarView('month');
+    };
+
     const handleSelectSlot = ({ start }) => {
         setSelectedSlot(start);
         setSelectedEventData(null);
@@ -186,7 +185,6 @@ const CalendarPage = () => {
 
     const handleSelectEvent = (event) => {
         if (event.type === 'PERSONAL') {
-            // Edit Personal Event
             setSelectedEventData({
                 id: event.db_id,
                 title: event.title,
@@ -201,26 +199,24 @@ const CalendarPage = () => {
                 is_owner: event.is_owner
             });
             setShowModal(true);
-        } else {
-            // Just view info? Or ignore for now.
-            // Could add a simple popover for work events later.
         }
     };
 
     const handleModalSuccess = () => {
         setShowModal(false);
-        fetchCalendarData(); // Refresh
+        if (mode === 'CALENDAR') fetchCalendarData();
     };
 
-    // Custom Toolbar
+    // --- Sub-Components ---
+
     const CustomToolbar = (toolbar) => {
         const goToBack = () => {
             toolbar.onNavigate('PREV');
-            setCurrentDate(moment(toolbar.date).subtract(1, view === 'month' ? 'month' : 'week').toDate());
+            setCurrentDate(moment(toolbar.date).subtract(1, calendarView === 'month' ? 'month' : 'week').toDate());
         };
         const goToNext = () => {
             toolbar.onNavigate('NEXT');
-            setCurrentDate(moment(toolbar.date).add(1, view === 'month' ? 'month' : 'week').toDate());
+            setCurrentDate(moment(toolbar.date).add(1, calendarView === 'month' ? 'month' : 'week').toDate());
         };
         const goToToday = () => {
             const now = new Date();
@@ -228,13 +224,18 @@ const CalendarPage = () => {
             setCurrentDate(now);
         };
 
-        const label = () => {
-            return <span className="capitalize font-bold text-xl text-slate-800">{moment(toolbar.date).format('MMMM YYYY')}</span>;
-        };
-
         return (
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setMode('YEAR')}
+                        className="px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                        <ArrowLeft size={16} /> Yıl Görünümü
+                    </button>
+
+                    <div className="h-6 w-px bg-slate-200 mx-2"></div>
+
                     <button onClick={goToToday} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
                         Bugün
                     </button>
@@ -246,7 +247,9 @@ const CalendarPage = () => {
                             <ChevronRight size={20} />
                         </button>
                     </div>
-                    {label()}
+                    <span className="capitalize font-bold text-xl text-slate-800 ml-2">
+                        {moment(toolbar.date).format('MMMM YYYY')}
+                    </span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -255,7 +258,7 @@ const CalendarPage = () => {
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showWorkEvents ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
                         <Briefcase size={16} />
-                        {showWorkEvents ? 'İş Takvimi Açık' : 'İş Takvimi Gizli'}
+                        {showWorkEvents ? 'İş' : 'İş'}
                     </button>
 
                     <button
@@ -263,75 +266,119 @@ const CalendarPage = () => {
                         className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all active:scale-95"
                     >
                         <Plus size={20} />
-                        <span className="hidden sm:inline">Yeni Not Ekle</span>
+                        <span className="hidden sm:inline">Ekle</span>
                     </button>
                 </div>
             </div>
         );
     };
 
-    // Components for Custom Event Rendering
     const CustomEvent = ({ event }) => {
         return (
             <div className="flex items-center gap-1.5 overflow-hidden">
-                {event.type === 'PERSONAL' && event.is_shared && (
-                    <Users size={12} className="shrink-0 opacity-80" />
-                )}
-                {event.type === 'PERSONAL' && !event.is_shared && (
-                    <Lock size={12} className="shrink-0 opacity-70" />
-                )}
-                {event.reminders?.on_event && (
-                    <Bell size={10} className="shrink-0" />
-                )}
+                {event.type === 'PERSONAL' && event.is_shared && <Users size={12} className="shrink-0 opacity-80" />}
+                {event.type === 'PERSONAL' && !event.is_shared && <Lock size={12} className="shrink-0 opacity-70" />}
+                {event.reminders?.on_event && <Bell size={10} className="shrink-0" />}
                 <span className="truncate">{event.title}</span>
             </div>
         );
     };
 
+    const YearView = () => {
+        const year = currentDate.getFullYear();
+        const months = moment.months();
+
+        return (
+            <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-8 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-black text-slate-800">{year}</h2>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setCurrentDate(moment(currentDate).subtract(1, 'year').toDate())} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft /></button>
+                        <button onClick={() => setCurrentDate(moment(currentDate).add(1, 'year').toDate())} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight /></button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {months.map((monthName, index) => {
+                        const monthDate = moment().year(year).month(index);
+                        const daysInMonth = monthDate.daysInMonth();
+                        const startDay = monthDate.startOf('month').day(); // 0=Sun
+
+                        // Adjust for Monday start (Turkey)
+                        // 0(Sun) -> 6, 1(Mon) -> 0
+                        const adjustedStartDay = startDay === 0 ? 6 : startDay - 1;
+
+                        const days = [];
+                        for (let i = 0; i < adjustedStartDay; i++) days.push(null);
+                        for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+                        return (
+                            <div
+                                key={monthName}
+                                onClick={() => handleMonthClick(monthDate.toDate())}
+                                className="group cursor-pointer hover:ring-2 hover:ring-indigo-100 rounded-2xl p-4 transition-all hover:bg-slate-50 border border-transparent hover:border-indigo-200"
+                            >
+                                <h3 className="font-bold text-lg text-slate-800 mb-3 group-hover:text-indigo-600 transition-colors">{monthName}</h3>
+                                <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                                    {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
+                                        <span key={d} className="text-slate-400 font-medium py-1">{d}</span>
+                                    ))}
+                                    {days.map((d, i) => (
+                                        <div key={i} className={`py-1.5 rounded-lg ${!d ? '' : 'hover:bg-indigo-100 font-medium text-slate-600'}`}>
+                                            {d}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-8 animate-in fade-in duration-500">
-            {/* Header Area */}
-            <div className="mb-8">
+        <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+            <div className="mb-6">
                 <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                     <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                         Ajandam
                     </span>
                     <span className="text-sm font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                        Agenda Mode
+                        {mode === 'YEAR' ? 'Yıllık Görünüm' : 'Detaylı Görünüm'}
                     </span>
                 </h1>
-                <p className="text-slate-500 mt-2 font-medium">
-                    Kişisel notlarınızı, paylaşımlı etkinliklerinizi ve iş takviminizi buradan yönetebilirsiniz.
-                </p>
             </div>
 
-            {/* Calendar Container */}
-            <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-6 h-[800px]">
-                <Calendar
-                    localizer={localizer}
-                    events={events}
-                    startAccessor="start"
-                    endAccessor="end"
-                    style={{ height: '100%' }}
-                    messages={messages}
-                    date={currentDate}
-                    onNavigate={date => setCurrentDate(date)}
-                    view={view}
-                    onView={v => setView(v)}
-                    selectable
-                    onSelectSlot={handleSelectSlot}
-                    onSelectEvent={handleSelectEvent}
-                    eventPropGetter={eventPropGetter}
-                    dayPropGetter={dayPropGetter}
-                    components={{
-                        toolbar: CustomToolbar,
-                        event: CustomEvent
-                    }}
-                    popup
-                />
-            </div>
+            {mode === 'YEAR' && <YearView />}
 
-            {/* Event Modal */}
+            {mode === 'CALENDAR' && (
+                <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-6 h-[800px] animate-in zoom-in-95 duration-300">
+                    <Calendar
+                        localizer={localizer}
+                        events={events}
+                        startAccessor="start"
+                        endAccessor="end"
+                        style={{ height: '100%' }}
+                        messages={messages}
+                        date={currentDate}
+                        onNavigate={date => setCurrentDate(date)}
+                        view={calendarView}
+                        onView={v => setCalendarView(v)}
+                        selectable
+                        onSelectSlot={handleSelectSlot}
+                        onSelectEvent={handleSelectEvent}
+                        eventPropGetter={eventPropGetter}
+                        dayPropGetter={dayPropGetter}
+                        components={{
+                            toolbar: CustomToolbar,
+                            event: CustomEvent
+                        }}
+                        popup
+                    />
+                </div>
+            )}
+
             {showModal && (
                 <AgendaEventModal
                     onClose={() => setShowModal(false)}
@@ -343,7 +390,5 @@ const CalendarPage = () => {
         </div>
     );
 };
-
-
 
 export default CalendarPage;
