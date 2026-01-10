@@ -337,17 +337,50 @@ const CalendarPage = () => {
         );
     };
 
+    const Legend = () => (
+        <div className="flex flex-wrap gap-6 mt-6 p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-sm">
+            <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                <span className="text-slate-600 font-medium">Kişisel Etkinlik</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                <span className="text-slate-600 font-medium">Sizinle Paylaşılan</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-violet-500"></span>
+                <span className="text-slate-600 font-medium">Sizin Paylaştığınız</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                <span className="text-slate-600 font-medium">Resmi Tatil</span>
+            </div>
+            {showWorkEvents && (
+                <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-slate-400"></span>
+                    <span className="text-slate-600 font-medium">İş / Mesai Kaydı</span>
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-            <div className="mb-6">
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                    <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                        Ajandam
-                    </span>
-                    <span className="text-sm font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                        {mode === 'YEAR' ? 'Yıllık Görünüm' : 'Detaylı Görünüm'}
-                    </span>
-                </h1>
+            <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                            Ajandam
+                        </span>
+                        <span className="text-sm font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                            {mode === 'YEAR' ? 'Yıllık Görünüm' : 'Detaylı Görünüm'}
+                        </span>
+                    </h1>
+                    <p className="text-slate-500 mt-2 font-medium">
+                        Planlarınızı yönetin ve takip edin.
+                    </p>
+                </div>
+                <Legend />
             </div>
 
             {mode === 'YEAR' && <YearView />}
