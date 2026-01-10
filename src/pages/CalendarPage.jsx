@@ -286,7 +286,11 @@ const CalendarPage = () => {
 
     const YearView = () => {
         const year = currentDate.getFullYear();
-        const months = moment.months();
+        // Explicitly defining Turkish months to ensure localization
+        const months = [
+            'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+            'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+        ];
 
         return (
             <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-8 animate-in fade-in duration-500">
