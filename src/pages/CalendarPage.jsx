@@ -24,7 +24,12 @@ const CalendarPage = () => {
     const [viewMode, setViewMode] = useState('YEAR'); // 'YEAR' or 'MONTH'
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // 0-11
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState(user?.employee?.id || null);
+
+    useEffect(() => {
+        console.log("CalendarPage Mount. AuthUser:", user);
+        console.log("CalendarPage Mount. SelectedID:", selectedEmployeeId);
+    }, [user, selectedEmployeeId]);
 
     // Data State
     const [events, setEvents] = useState([]); // Stores events for the WHOLE YEAR or loaded range

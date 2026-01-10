@@ -9,8 +9,13 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log("TeamSelector Mount. User:", user);
         if (user?.employee?.id) {
+            console.log("Fetching team for emp:", user.employee.id);
             fetchTeam();
+        } else {
+            console.log("No user.employee.id found in AuthContext user object!");
+            setLoading(false);
         }
     }, [user]);
 
@@ -24,16 +29,23 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
                 job_position: { name: 'Ben' }
             };
 
+            console.log("Calling get_team API...");
             // Fetch primitives
             const response = await api.get(`/employees/${user.employee.id}/team/`);
+            console.log("Team API Data:", response.data);
 
             // Combine: Self + Team
-            setTeam([self, ...response.data]);
+            // Ensure unique IDs
+            const teamData = [self, ...(Array.isArray(response.data) ? response.data : [])];
+            // Filter duplicates just in case
+            const uniqueTeam = teamData.filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i);
+
+            setTeam(uniqueTeam);
         } catch (error) {
             console.error('Failed to fetch team:', error);
             // Fallback to just self if error
             setTeam([{
-                id: user.employee.id,
+                id: user?.employee?.id,
                 first_name: user?.first_name || 'Ben',
                 last_name: user?.last_name || '',
                 job_position: { name: 'Ben' }
@@ -43,7 +55,10 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
         }
     };
 
-    if (loading || team.length <= 1) return null; // Don't show if only self or loading
+    if (loading) return <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>;
+
+    // REMOVED: if (team.length <= 1) return null; 
+    // We want to verify it renders even if empty.
 
     return (
         <div className={`relative ${className}`}>
