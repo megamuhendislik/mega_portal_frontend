@@ -146,15 +146,17 @@ const CalendarPage = () => {
         const stats = {};
         logs.forEach(log => {
             const dateStr = moment(log.work_date).format('YYYY-MM-DD');
-            const netBalance = (log.total_minutes || 0) - (log.required_minutes || 540); // Assuming 9h standard if not avail
+            const totalMins = (log.total_seconds || 0) / 60;
+            const requiredMins = 540; // Default 9h
+            const netBalance = totalMins - requiredMins;
 
             stats[dateStr] = {
-                normal: log.normal_minutes || 0,
-                overtime: log.overtime_minutes || 0,
-                missing: log.missing_minutes || 0,
+                normal: (log.normal_seconds || 0) / 60,
+                overtime: (log.overtime_seconds || 0) / 60,
+                missing: (log.missing_seconds || 0) / 60,
                 check_in: log.check_in,
                 check_out: log.check_out,
-                total: log.total_minutes || 0,
+                total: totalMins,
                 net: netBalance,
                 log: log // Store full log for modal
             };
@@ -168,8 +170,8 @@ const CalendarPage = () => {
         // Logs
         const monthLogs = logs.filter(log => moment(log.work_date).isBetween(start, end, 'day', '[]'));
         monthLogs.forEach(log => {
-            totalMinutes += log.total_minutes || 0;
-            overtimeMinutes += log.overtime_minutes || 0;
+            totalMinutes += (log.total_seconds || 0) / 60;
+            overtimeMinutes += (log.overtime_seconds || 0) / 60;
         });
 
         // Events
