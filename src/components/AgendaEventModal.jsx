@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar as CalendarIcon, Clock, AlignLeft, Users, Building, Bell, Check, Lock, Globe } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
@@ -113,7 +114,7 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
         }
     };
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -130,7 +131,7 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                     {/* Header: Title & Type */}
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Başlık</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">BAŞLIK</label>
                             <input
                                 type="text"
                                 name="title"
@@ -233,7 +234,7 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
 
                             {/* Color Selector */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Etiket Rengi</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">ETİKET RENGİ</label>
                                 <div className="flex gap-3">
                                     {COLORS.map(c => (
                                         <button
@@ -352,7 +353,7 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
 
                     {/* Description */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Not / Açıklama</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">NOT / AÇIKLAMA</label>
                         <textarea
                             name="description"
                             value={formData.description}
@@ -380,7 +381,8 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

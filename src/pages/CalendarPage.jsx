@@ -258,7 +258,7 @@ const CalendarPage = () => {
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showWorkEvents ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
                         <Briefcase size={16} />
-                        {showWorkEvents ? 'İş' : 'İş'}
+                        {showWorkEvents ? 'İş Planı Açık' : 'İş Planı Gizli'}
                     </button>
 
                     <button
@@ -373,7 +373,7 @@ const CalendarPage = () => {
                             Ajandam
                         </span>
                         <span className="text-sm font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                            {mode === 'YEAR' ? 'Yıllık Görünüm' : 'Detaylı Görünüm'}
+                            {mode === 'YEAR' ? 'Yıllık Görünüm' : 'Ajanda Modu'}
                         </span>
                     </h1>
                     <p className="text-slate-500 mt-2 font-medium">
