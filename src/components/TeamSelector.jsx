@@ -8,22 +8,27 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
     const [team, setTeam] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Determine correct Employee ID (Handle structure: { employee: {id} } vs { id })
+    const employeeId = user?.employee?.id || user?.id;
+
     useEffect(() => {
         console.log("TeamSelector Mount. User:", user);
-        if (user?.employee?.id) {
-            console.log("Fetching team for emp:", user.employee.id);
+        console.log("Derived Employee ID:", employeeId);
+
+        if (employeeId) {
+            console.log("Fetching team for emp:", employeeId);
             fetchTeam();
         } else {
-            console.log("No user.employee.id found in AuthContext user object!");
+            console.log("No Employee ID found in AuthContext user object!");
             setLoading(false);
         }
-    }, [user]);
+    }, [user, employeeId]);
 
     const fetchTeam = async () => {
         try {
             // First add self
             const self = {
-                id: user.employee.id,
+                id: employeeId,
                 first_name: user?.first_name || 'Ben',
                 last_name: user?.last_name || '',
                 job_position: { name: 'Ben' }
@@ -31,7 +36,7 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
 
             console.log("Calling get_team API...");
             // Fetch primitives
-            const response = await api.get(`/employees/${user.employee.id}/team/`);
+            const response = await api.get(`/employees/${employeeId}/team/`);
             console.log("Team API Data:", response.data);
 
             // Combine: Self + Team
@@ -45,7 +50,7 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
             console.error('Failed to fetch team:', error);
             // Fallback to just self if error
             setTeam([{
-                id: user?.employee?.id,
+                id: employeeId,
                 first_name: user?.first_name || 'Ben',
                 last_name: user?.last_name || '',
                 job_position: { name: 'Ben' }

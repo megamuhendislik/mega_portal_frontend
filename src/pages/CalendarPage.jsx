@@ -24,7 +24,7 @@ const CalendarPage = () => {
     const [viewMode, setViewMode] = useState('YEAR'); // 'YEAR' or 'MONTH'
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // 0-11
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState(user?.employee?.id || null);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState(user?.employee?.id || user?.id || null);
 
     useEffect(() => {
         console.log("CalendarPage Mount. AuthUser:", user);
