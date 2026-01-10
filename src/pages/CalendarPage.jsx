@@ -7,7 +7,9 @@ import api from '../services/api';
 import { X, Clock, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Briefcase, Timer, Activity, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import TeamSelector from '../components/TeamSelector';
+import CreatePersonalEventModal from '../components/CreatePersonalEventModal'; // [NEW]
 import useInterval from '../hooks/useInterval';
+import { Plus } from 'lucide-react'; // [NEW]
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -48,6 +50,7 @@ const CalendarPage = () => {
 
     // Modal State (for Day Details)
     const [showModal, setShowModal] = useState(false);
+    const [showCreateEventModal, setShowCreateEventModal] = useState(false); // [NEW]
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedEvents, setSelectedEvents] = useState([]);
 
@@ -104,10 +107,18 @@ const CalendarPage = () => {
                 requests.push(api.get(`/dashboard/stats/?year=${selectedYear}&month=${selectedMonth + 1}&employee_id=${selectedEmployeeId}`));
             }
 
+            // Fetch Personal Events (Always, or only if user is viewing themselves? For now always for logged in user)
+            // But we only want them in the calendar if we are in AGENDA mode or maybe both?
+            // "Kişisel Takvim" implies separation. But valid to fetch.
+            requests.push(api.get('/personal-events/')); // No date filter yet, returns all
+
+
             const results = await Promise.all(requests);
             const calendarRes = results[0];
             const attendanceRes = results[1];
             const summaryRes = viewMode === 'MONTH' ? results[2] : null;
+            const personalRes = viewMode === 'MONTH' ? results[3] : results[2]; // Adjust index based on push
+
 
             console.log("--- DEBUG CALENDAR FETCH ---");
             console.log("Range:", start, "to", end);
@@ -125,7 +136,47 @@ const CalendarPage = () => {
                 title: evt.title || evt.type
             })) : [];
 
-            setEvents(processedEvents);
+            // Process Personal Events
+            let personalEvents = [];
+            if (personalRes && personalRes.data) {
+                const pResults = personalRes.data.results || personalRes.data;
+                if (Array.isArray(pResults)) {
+                    personalEvents = pResults.map(p => ({
+                        id: `personal-${p.id}`,
+                        title: p.title,
+                        start: new Date(p.start_time),
+                        end: new Date(p.end_time),
+                        allDay: p.is_all_day,
+                        color: p.color,
+                        type: 'PERSONAL',
+                        description: p.description,
+                        original: p
+                    }));
+                }
+            }
+
+            // Filter Personal Events: Only show if in AGENDA mode? 
+            // Or show in both but maybe distinct?
+            // User asked for split. Let's show Personal ONLY in Agenda, and Work ONLY in Work.
+            // But Work might include "Leave" which is personal?
+            // Let's merge them based on mode.
+
+            let finalEvents = [];
+            if (calendarMode === 'AGENDA') {
+                // Show Personal Events + Maybe Official Leaves/Holidays?
+                // Usually Agenda includes everything relevant to the person.
+                // For now, let's include Personal + Work (filtered for User)
+                // Actually user wanted "Separate".
+                // Let's show Personal Events AND Leaves/Holidays in Agenda.
+                const generalEvents = processedEvents.filter(e => ['LEAVE', 'HOLIDAY', 'SHIFT'].includes(e.type));
+                finalEvents = [...personalEvents, ...generalEvents];
+            } else {
+                // WORK mode: Show standard events (Work, Overtime, Missing, etc)
+                // Exclude Personal Events? Yes.
+                finalEvents = processedEvents;
+            }
+
+            setEvents(finalEvents);
 
             // Process Attendance (for indicators or stats)
             let logs = attendanceRes.data.results || attendanceRes.data;
@@ -273,6 +324,10 @@ const CalendarPage = () => {
             style.backgroundColor = event.status === 'APPROVED' ? '#10b981' : '#fbbf24';
             if (event.status === 'PENDING') style.border = '1px dashed #fff';
         }
+        else if (event.type === 'PERSONAL') {
+            style.backgroundColor = event.color || '#3b82f6';
+        }
+
 
         return { style };
     };
@@ -289,6 +344,7 @@ const CalendarPage = () => {
     }
 
     // --- RENDER ---
+    const [calendarMode, setCalendarMode] = useState('WORK'); // 'AGENDA' (Personal) | 'WORK' (Stats/Team)
 
     // 1. Year View
     const renderYearView = () => (
@@ -353,65 +409,67 @@ const CalendarPage = () => {
     // 2. Month View
     const renderMonthView = () => (
         <div className="flex flex-col md:flex-row gap-6 h-full animate-in slide-in-from-right-4 duration-300">
-            {/* Sidebar / Summary */}
-            <div className="w-full md:w-72 flex flex-col gap-4 shrink-0">
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center">
-                    <button onClick={handleBackToYear} className="flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 font-medium mb-4 w-full p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                        <ArrowLeft size={18} /> Yıla Dön
-                    </button>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-0.5">{MONTHS_TR[selectedMonth]}</h2>
-                    <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{selectedYear}</span>
-                </div>
+            {/* Sidebar / Summary - ONLY IN WORK MODE */}
+            {calendarMode === 'WORK' && (
+                <div className="w-full md:w-72 flex flex-col gap-4 shrink-0 animate-in slide-in-from-left-4">
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center">
+                        <button onClick={handleBackToYear} className="flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 font-medium mb-4 w-full p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                            <ArrowLeft size={18} /> Yıla Dön
+                        </button>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-0.5">{MONTHS_TR[selectedMonth]}</h2>
+                        <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{selectedYear}</span>
+                    </div>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 gap-3">
-                    <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Aylık Toplam</span>
-                        <div className="flex justify-between items-end">
-                            <div>
-                                <span className="text-3xl font-bold text-slate-800">{monthlySummary.totalWorkHours}</span>
-                                <span className="text-xs text-slate-400 ml-1">saat</span>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 gap-3">
+                        <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Aylık Toplam</span>
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <span className="text-3xl font-bold text-slate-800">{monthlySummary.totalWorkHours}</span>
+                                    <span className="text-xs text-slate-400 ml-1">saat</span>
+                                </div>
+                                <Briefcase size={20} className="text-slate-300 mb-1" />
                             </div>
-                            <Briefcase size={20} className="text-slate-300 mb-1" />
+                        </div>
+
+                        <div className="p-4 bg-white rounded-xl shadow-sm border border-emerald-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-2 z-10 relative">Fazla Mesai</span>
+                            <div className="flex justify-between items-end z-10 relative">
+                                <div>
+                                    <span className="text-3xl font-bold text-emerald-700">{monthlySummary.totalOvertime}</span>
+                                    <span className="text-xs text-emerald-500 ml-1">saat</span>
+                                </div>
+                                <Timer size={20} className="text-emerald-300 mb-1" />
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200">
+                            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-2">Net Fark</span>
+                            <div className="flex justify-between items-end">
+                                <div className={`${parseFloat(monthlySummary.netBalance) >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+                                    <span className="text-3xl font-bold">{parseFloat(monthlySummary.netBalance) > 0 ? '+' : ''}{monthlySummary.netBalance}</span>
+                                    <span className="text-xs ml-1 opacity-70">saat</span>
+                                </div>
+                                <Activity size={20} className="text-slate-300 mb-1" />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="p-4 bg-white rounded-xl shadow-sm border border-emerald-100 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
-                        <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-2 z-10 relative">Fazla Mesai</span>
-                        <div className="flex justify-between items-end z-10 relative">
-                            <div>
-                                <span className="text-3xl font-bold text-emerald-700">{monthlySummary.totalOvertime}</span>
-                                <span className="text-xs text-emerald-500 ml-1">saat</span>
-                            </div>
-                            <Timer size={20} className="text-emerald-300 mb-1" />
-                        </div>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200">
-                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-2">Net Fark</span>
-                        <div className="flex justify-between items-end">
-                            <div className={`${parseFloat(monthlySummary.netBalance) >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
-                                <span className="text-3xl font-bold">{parseFloat(monthlySummary.netBalance) > 0 ? '+' : ''}{monthlySummary.netBalance}</span>
-                                <span className="text-xs ml-1 opacity-70">saat</span>
-                            </div>
-                            <Activity size={20} className="text-slate-300 mb-1" />
+                    {/* Legend - Vertical */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 text-center">Lejant</h3>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">Normal</span>
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Mesai</span>
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">Eksik/Devamsız</span>
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">İzin</span>
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-violet-100 text-violet-700 border border-violet-200">Tatil</span>
                         </div>
                     </div>
                 </div>
-
-                {/* Legend - Vertical */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 text-center">Lejant</h3>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">Normal</span>
-                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Mesai</span>
-                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">Eksik/Devamsız</span>
-                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">İzin</span>
-                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-violet-100 text-violet-700 border border-violet-200">Tatil</span>
-                    </div>
-                </div>
-            </div>
+            )}
 
             {/* Calendar Grid */}
             <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-full min-h-[700px]">
@@ -452,8 +510,8 @@ const CalendarPage = () => {
                                             <span className="text-sm font-bold text-slate-700">{label}</span>
                                         </div>
 
-                                        {/* Stats Content - Always visible based on mode or just showing summaries if available */}
-                                        {stats ? (
+                                        {/* Stats Content - VISIBLE ONLY IF IN WORK MODE AND has stats */}
+                                        {calendarMode === 'WORK' && stats ? (
                                             <div className="flex flex-col gap-1 px-1 mt-1">
                                                 {/* Normal Time */}
                                                 {stats.normal > 0 && (
@@ -507,66 +565,90 @@ const CalendarPage = () => {
     return (
         <div className="h-screen p-6 bg-slate-50 flex flex-col">
             {/* Header / Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 shrink-0">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <CalendarIcon className="text-blue-600" />
-                        {viewMode === 'YEAR' ?
-                            <span
-                                onClick={() => { }} // Already home
-                                className="cursor-default"
-                            >
-                                {selectedYear} Takvimi
-                            </span>
-                            :
-                            <span>
-                                {MONTHS_TR[selectedMonth]}
-                                <span onClick={handleBackToYear} className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-2 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg text-lg">
-                                    {selectedYear}
-                                </span>
-                                <span className="text-lg text-slate-400 font-medium ml-2">Detayı</span>
-                            </span>
-                        }
-                    </h1>
-
-                    {/* Year Selector */}
-                    {viewMode === 'YEAR' && (
-                        <div className="flex bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
-                            <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
-                            <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
-                            <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronRight size={20} /></button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Top Right Controls */}
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    {/* View Mode Toggle (Radio) */}
-                    <div className="bg-white p-1 rounded-xl border border-slate-200 flex items-center shadow-sm">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6 shrink-0">
+                <div className="flex flex-col gap-2 w-full xl:w-auto">
+                    {/* Mode Toggles */}
+                    <div className="flex bg-slate-200 p-1 rounded-xl w-fit">
                         <button
-                            onClick={() => setDisplayMode('STANDARD')}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
-                                ${displayMode === 'STANDARD' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}
-                            `}
+                            onClick={() => setCalendarMode('AGENDA')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${calendarMode === 'AGENDA' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <CalendarIcon size={16} /> Standart
+                            <CalendarIcon size={16} className="inline mr-2" /> Kişisel Ajanda
                         </button>
                         <button
-                            onClick={() => setDisplayMode('OVERTIME')}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
-                                ${displayMode === 'OVERTIME' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}
-                            `}
+                            onClick={() => setCalendarMode('WORK')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${calendarMode === 'WORK' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <Timer size={16} /> Mesai Bilgisi
+                            <Clock size={16} className="inline mr-2" /> Çalışma Takvimi
                         </button>
                     </div>
 
-                    <TeamSelector
-                        selectedId={selectedEmployeeId}
-                        onSelect={setSelectedEmployeeId}
-                        className="w-full md:w-64"
-                    />
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                            {viewMode === 'YEAR' ?
+                                <span className="cursor-default">{selectedYear} Takvimi</span>
+                                :
+                                <span>
+                                    {MONTHS_TR[selectedMonth]}
+                                    <span onClick={handleBackToYear} className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-2 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg text-lg">
+                                        {selectedYear}
+                                    </span>
+                                </span>
+                            }
+                        </h1>
+                        {/* Year Selector */}
+                        {viewMode === 'YEAR' && (
+                            <div className="flex bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
+                                <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
+                                <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
+                                <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronRight size={20} /></button>
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Agenda Controls - Add Event Button */}
+                {calendarMode === 'AGENDA' && (
+                    <div className="flex items-center gap-2 animate-in fade-in">
+                        <button
+                            onClick={() => setShowCreateEventModal(true)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center gap-2 transition-colors"
+                        >
+                            <Plus size={18} /> Yeni Etkinlik
+                        </button>
+                    </div>
+                )}
+
+                {/* Top Right Controls - ONLY IN WORK MODE */}
+                {calendarMode === 'WORK' && (
+                    <div className="flex flex-col md:flex-row items-end md:items-center gap-4 w-full md:w-auto animate-in slide-in-from-right-4">
+                        {/* View Mode Toggle (Radio) */}
+                        <div className="bg-white p-1 rounded-xl border border-slate-200 flex items-center shadow-sm">
+                            <button
+                                onClick={() => setDisplayMode('STANDARD')}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
+                                    ${displayMode === 'STANDARD' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}
+                                `}
+                            >
+                                <CalendarIcon size={16} /> Standart
+                            </button>
+                            <button
+                                onClick={() => setDisplayMode('OVERTIME')}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
+                                    ${displayMode === 'OVERTIME' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}
+                                `}
+                            >
+                                <Timer size={16} /> Mesai Bilgisi
+                            </button>
+                        </div>
+
+                        <TeamSelector
+                            selectedId={selectedEmployeeId}
+                            onSelect={setSelectedEmployeeId}
+                            className="w-full md:w-64"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Content Area */}
@@ -581,130 +663,149 @@ const CalendarPage = () => {
             </div>
 
             {/* Detail Modal (Shared) - ENHANCED */}
-            {showModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-800">
-                                    {moment(selectedDate).format('D MMMM YYYY, dddd')}
-                                </h3>
-                                <p className="text-sm text-slate-400">Günlük Detay ve Giriş/Çıkış Hareketleri</p>
-                            </div>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400">
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto custom-scrollbar">
-                            {/* 1. Daily Stats Summary */}
-                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
-                                <div className="grid grid-cols-4 gap-4 mb-6">
-                                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
-                                        <span className="block text-xs font-bold text-blue-400 uppercase">Normal</span>
-                                        <span className="block text-lg font-bold text-blue-700">
-                                            {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal % 60}d
-                                        </span>
-                                    </div>
-                                    <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
-                                        <span className="block text-xs font-bold text-emerald-400 uppercase">Mesai</span>
-                                        <span className="block text-lg font-bold text-emerald-700">
-                                            {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime % 60}d
-                                        </span>
-                                    </div>
-                                    <div className="bg-red-50 p-3 rounded-xl border border-red-100 text-center">
-                                        <span className="block text-xs font-bold text-red-400 uppercase">Eksik</span>
-                                        <span className="block text-lg font-bold text-red-700">
-                                            {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing % 60}d
-                                        </span>
-                                    </div>
-                                    <div className={`p-3 rounded-xl border text-center ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-red-50 border-red-100'}`}>
-                                        <span className={`block text-xs font-bold uppercase ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'text-indigo-400' : 'text-red-400'}`}>Net Fark</span>
-                                        <span className={`block text-lg font-bold ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
-                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net > 0 ? '+' : ''}{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net} dk
-                                        </span>
-                                    </div>
+            {
+                showModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-800">
+                                        {moment(selectedDate).format('D MMMM YYYY, dddd')}
+                                    </h3>
+                                    <p className="text-sm text-slate-400">Günlük Detay ve Giriş/Çıkış Hareketleri</p>
                                 </div>
-                            )}
-
-                            {/* 2. Timeline / Movements */}
-                            <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                                <Clock size={16} className="text-slate-400" /> Hareket Dökümü
-                            </h4>
-                            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 mb-6">
-                                {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] ? (
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs ring-4 ring-white shadow-sm">
-                                                GİRİŞ
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-bold text-slate-700">
-                                                    {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in
-                                                        ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in).format('HH:mm:ss')
-                                                        : '--:--:--'}
-                                                </div>
-                                                <div className="text-xs text-slate-400">İlk Kart Basma</div>
-                                            </div>
-                                        </div>
-                                        <div className="h-0.5 flex-1 bg-slate-200 mx-4 relative">
-                                            <div className="absolute left-1/2 -top-2 bg-slate-100 text-slate-400 text-[10px] px-1">Çalışma Süreci</div>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-right">
-                                            <div>
-                                                <div className="text-sm font-bold text-slate-700">
-                                                    {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out
-                                                        ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out).format('HH:mm:ss')
-                                                        : '--:--:--'}
-                                                </div>
-                                                <div className="text-xs text-slate-400">Son Kart Basma</div>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs ring-4 ring-white shadow-sm">
-                                                ÇIKIŞ
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-slate-400 text-sm">Hareket kaydı bulunamadı.</div>
-                                )}
+                                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400">
+                                    <X size={20} />
+                                </button>
                             </div>
 
-                            {/* 3. Requests/Events List */}
-                            <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                                <Activity size={16} className="text-slate-400" /> Olaylar ve Talepler
-                            </h4>
-                            <div className="space-y-2">
-                                {selectedEvents.length > 0 ? (
-                                    selectedEvents.map((evt, idx) => (
-                                        <div key={idx} className={`p-3 rounded-lg border flex items-center justify-between
-                                            ${['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(evt.type) ? 'bg-amber-50 border-amber-100' : 'bg-white border-slate-100'}
-                                        `}>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#94a3b8' }}></div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-slate-700">{evt.title}</div>
-                                                    <div className="text-xs text-slate-500">{evt.type}</div>
+                            <div className="p-6 overflow-y-auto custom-scrollbar">
+                                {/* 1. Daily Stats Summary - ONLY IN WORK MODE */}
+                                {calendarMode === 'WORK' && dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
+                                    <div className="grid grid-cols-4 gap-4 mb-6">
+                                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
+                                            <span className="block text-xs font-bold text-blue-400 uppercase">Normal</span>
+                                            <span className="block text-lg font-bold text-blue-700">
+                                                {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal % 60}d
+                                            </span>
+                                        </div>
+                                        <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
+                                            <span className="block text-xs font-bold text-emerald-400 uppercase">Mesai</span>
+                                            <span className="block text-lg font-bold text-emerald-700">
+                                                {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime % 60}d
+                                            </span>
+                                        </div>
+                                        <div className="bg-red-50 p-3 rounded-xl border border-red-100 text-center">
+                                            <span className="block text-xs font-bold text-red-400 uppercase">Eksik</span>
+                                            <span className="block text-lg font-bold text-red-700">
+                                                {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing % 60}d
+                                            </span>
+                                        </div>
+                                        <div className={`p-3 rounded-xl border text-center ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-red-50 border-red-100'}`}>
+                                            <span className={`block text-xs font-bold uppercase ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'text-indigo-400' : 'text-red-400'}`}>Net Fark</span>
+                                            <span className={`block text-lg font-bold ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
+                                                {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net > 0 ? '+' : ''}{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net} dk
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 2. Timeline / Movements - ONLY IN WORK MODE */}
+                                {calendarMode === 'WORK' && (
+                                    <>
+                                        <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                            <Clock size={16} className="text-slate-400" /> Hareket Dökümü
+                                        </h4>
+                                        <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 mb-6">
+                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] ? (
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs ring-4 ring-white shadow-sm">
+                                                            GİRİŞ
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-slate-700">
+                                                                {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in
+                                                                    ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in).format('HH:mm:ss')
+                                                                    : '--:--:--'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-400">İlk Kart Basma</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-0.5 flex-1 bg-slate-200 mx-4 relative">
+                                                        <div className="absolute left-1/2 -top-2 bg-slate-100 text-slate-400 text-[10px] px-1">Çalışma Süreci</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-right">
+                                                        <div>
+                                                            <div className="text-sm font-bold text-slate-700">
+                                                                {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out
+                                                                    ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out).format('HH:mm:ss')
+                                                                    : '--:--:--'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-400">Son Kart Basma</div>
+                                                        </div>
+                                                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs ring-4 ring-white shadow-sm">
+                                                            ÇIKIŞ
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            {evt.status && (
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
-                                                    ${evt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
-                                                        evt.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}
-                                                `}>
-                                                    {evt.status}
-                                                </span>
+                                            ) : (
+                                                <div className="text-center text-slate-400 text-sm">Hareket kaydı bulunamadı.</div>
                                             )}
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="text-sm text-slate-400 italic">Kayıtlı olay yok.</div>
+                                    </>
                                 )}
+
+                                {/* 3. Requests/Events List */}
+                                <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                    <Activity size={16} className="text-slate-400" /> Olaylar ve Talepler
+                                </h4>
+                                <div className="space-y-2">
+                                    {selectedEvents.length > 0 ? (
+                                        selectedEvents.map((evt, idx) => (
+                                            <div key={idx} className={`p-3 rounded-lg border flex items-center justify-between
+                                            ${['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(evt.type) ? 'bg-amber-50 border-amber-100' : 'bg-white border-slate-100'}
+                                        `}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#94a3b8' }}></div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-700">{evt.title}</div>
+                                                        <div className="text-xs text-slate-500">{evt.type}</div>
+                                                    </div>
+                                                </div>
+                                                {evt.status && (
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                                                    ${evt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                                                            evt.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}
+                                                `}>
+                                                        {evt.status}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-sm text-slate-400 italic">Kayıtlı olay yok.</div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+            {/* Create Event Modal */}
+            {
+                showCreateEventModal && (
+                    <CreatePersonalEventModal
+                        onClose={() => setShowCreateEventModal(false)}
+                        onSuccess={() => {
+                            setShowCreateEventModal(false);
+                            fetchData(true);
+                        }}
+                        initialDate={selectedDate || new Date()}
+                    />
+                )
+            }
+        </div >
     );
 };
 

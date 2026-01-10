@@ -79,7 +79,7 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
                 >
                     {team.map(member => (
                         <option key={member.id} value={member.id}>
-                            {member.id === user.employee.id ? '👤 Ben' : `${member.first_name} ${member.last_name}`}
+                            {Number(member.id) === Number(employeeId) ? '👤 Ben' : `${member.first_name} ${member.last_name}`}
                         </option>
                     ))}
                 </select>
