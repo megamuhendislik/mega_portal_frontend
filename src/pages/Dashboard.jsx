@@ -75,7 +75,14 @@ const Dashboard = () => {
 
             if (eventsRes.status === 'fulfilled') {
                 const results = eventsRes.value.data.results || eventsRes.value.data || [];
-                setCalendarEvents(results);
+                // Filter out standard Attendance logs unless abnormal? No, just show Agenda items.
+                // Prioritize PERSONAL, HOLIDAY, REQUESTS.
+                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(e.type));
+
+                // Sort by start date
+                agendaItems.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+                setCalendarEvents(agendaItems);
             }
 
         } catch (error) {
@@ -216,10 +223,10 @@ const Dashboard = () => {
                             Yaklaşan Etkinlikler
                         </h4>
                         <div className="space-y-2">
-                            {calendarEvents.slice(0, 2).map((ev, i) => (
+                            {calendarEvents.slice(0, 4).map((ev, i) => (
                                 <div key={i} className="text-xs bg-slate-50 p-2 rounded border border-slate-100 flex justify-between">
-                                    <span className="font-bold text-slate-600">{ev.title}</span>
-                                    <span className="text-slate-400">{format(new Date(ev.start), 'd MMM')}</span>
+                                    <span className="font-bold text-slate-600 truncate max-w-[150px]" title={ev.title}>{ev.title}</span>
+                                    <span className="text-slate-400 shrink-0">{format(new Date(ev.start), 'd MMM')}</span>
                                 </div>
                             ))}
                             {calendarEvents.length === 0 && <p className="text-xs text-slate-400">Etkinlik yok.</p>}
