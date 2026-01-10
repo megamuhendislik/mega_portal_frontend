@@ -49,9 +49,9 @@ const CalendarPage = () => {
     useEffect(() => {
         // If in year mode, maybe fetch broad range or just specific buckets?
         // For simplicity, we fetch the current view's range when in CALENDAR mode.
-        if (mode === 'CALENDAR') {
-            fetchCalendarData();
-        }
+        // If in year mode, maybe fetch broad range or just specific buckets?
+        // For simplicity, we fetch the current view's range when in CALENDAR mode.
+        fetchCalendarData();
     }, [currentDate, calendarView, showWorkEvents, mode]);
 
     // Live Updates (Every 60s) - Only active in Calendar mode to save resources?
@@ -69,7 +69,11 @@ const CalendarPage = () => {
             const mDate = moment(currentDate);
             let start, end;
 
-            if (calendarView === 'month') {
+            if (mode === 'YEAR') {
+                // Fetch full year
+                start = mDate.clone().startOf('year').format('YYYY-MM-DD');
+                end = mDate.clone().endOf('year').format('YYYY-MM-DD');
+            } else if (calendarView === 'month') {
                 start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
                 end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
             } else if (calendarView === 'week') {
