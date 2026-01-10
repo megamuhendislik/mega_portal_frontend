@@ -327,11 +327,31 @@ const CalendarPage = () => {
                                     {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
                                         <span key={d} className="text-slate-400 font-medium py-1">{d}</span>
                                     ))}
-                                    {days.map((d, i) => (
-                                        <div key={i} className={`py-1.5 rounded-lg ${!d ? '' : 'hover:bg-indigo-100 font-medium text-slate-600'}`}>
-                                            {d}
-                                        </div>
-                                    ))}
+                                    {days.map((d, i) => {
+                                        if (!d) return <div key={i}></div>;
+
+                                        // Adjust index to match 0-11 for moment months
+                                        const currentDayDate = moment([year, index, d]);
+                                        const dateStr = currentDayDate.format('YYYY-MM-DD');
+                                        const isToday = currentDayDate.isSame(moment(), 'day');
+                                        const isHoliday = holidays.has(dateStr);
+
+                                        let className = "py-1.5 rounded-lg flex items-center justify-center transition-colors font-medium";
+
+                                        if (isToday) {
+                                            className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200";
+                                        } else if (isHoliday) {
+                                            className += " bg-red-50 text-red-600 font-bold ring-1 ring-red-100";
+                                        } else {
+                                            className += " text-slate-600 hover:bg-indigo-50";
+                                        }
+
+                                        return (
+                                            <div key={i} className={className}>
+                                                {d}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         );
