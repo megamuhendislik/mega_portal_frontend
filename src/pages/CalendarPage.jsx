@@ -13,8 +13,8 @@ moment.locale('tr');
 const localizer = momentLocalizer(moment);
 
 const MONTHS_TR = [
-    'Ocak', 'Åubat', 'Mart', 'Nisan', 'MayÄ±s', 'Haziran',
-    'Temmuz', 'AÄŸustos', 'EylÃ¼l', 'Ekim', 'KasÄ±m', 'AralÄ±k'
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
 ];
 
 const CalendarPage = () => {
@@ -285,13 +285,13 @@ const CalendarPage = () => {
                              ${isCurrentMonth ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-700'}
                         `}>
                             <span>{monthName}</span>
-                            <span className="opacity-0 group-hover:opacity-100 text-xs bg-white/50 px-2 py-0.5 rounded transition-opacity">AÃ§ &gt;&gt;</span>
+                            <span className="opacity-0 group-hover:opacity-100 text-xs bg-white/50 px-2 py-0.5 rounded transition-opacity">Aç &gt;&gt;</span>
                         </div>
 
                         <div className="p-4">
                             {/* Weekday Header */}
                             <div className="grid grid-cols-7 gap-1 mb-2">
-                                {['Pt', 'Sa', 'Ã‡a', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => (
+                                {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => (
                                     <div key={d} className="text-center text-[10px] text-slate-400 font-bold">{d}</div>
                                 ))}
                             </div>
@@ -334,7 +334,7 @@ const CalendarPage = () => {
                         onClick={handleBackToYear}
                         className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-medium mb-4 transition-colors"
                     >
-                        <ArrowLeft size={18} /> YÄ±llÄ±k GÃ¶rÃ¼nÃ¼me DÃ¶n
+                        <ArrowLeft size={18} /> Yıllık Görünüme Dön
                     </button>
 
                     <h2 className="text-xl font-bold text-slate-800 mb-1 flex items-center gap-2">
@@ -342,19 +342,19 @@ const CalendarPage = () => {
                         <span
                             onClick={handleBackToYear}
                             className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-1"
-                            title="YÄ±llÄ±k GÃ¶rÃ¼nÃ¼m"
+                            title="Yıllık Görünüm"
                         >
                             {selectedYear}
                         </span>
                     </h2>
-                    <p className="text-slate-400 text-sm mb-6">DetaylÄ± rapor ve kayÄ±tlar</p>
+                    <p className="text-slate-400 text-sm mb-6">Detaylı rapor ve kayıtlar</p>
 
                     {/* Stats Cards - Only relevant in Month view anyway */}
                     <div className="space-y-3">
                         <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                             <div className="flex items-center gap-2 mb-1">
                                 <Briefcase size={16} className="text-blue-600" />
-                                <span className="text-xs font-bold text-blue-800 uppercase">Toplam Ã‡alÄ±ÅŸma</span>
+                                <span className="text-xs font-bold text-blue-800 uppercase">Toplam ÇalıÅŸma</span>
                             </div>
                             <div className="text-2xl font-bold text-slate-800">{monthlySummary.totalWorkHours}<span className="text-sm text-slate-400 font-medium ml-1">sa</span></div>
                         </div>
@@ -380,11 +380,11 @@ const CalendarPage = () => {
                         <div className="grid grid-cols-2 gap-3 pt-2">
                             <div className="bg-amber-50 rounded-xl border border-amber-100 p-3 text-center">
                                 <span className="block text-xl font-bold text-slate-800">{monthlySummary.leaveDays}</span>
-                                <span className="text-xs font-bold text-amber-700 uppercase">Ä°zinli GÃ¼n</span>
+                                <span className="text-xs font-bold text-amber-700 uppercase">İzinli Gün</span>
                             </div>
                             <div className="bg-red-50 rounded-xl border border-red-100 p-3 text-center">
                                 <span className="block text-xl font-bold text-slate-800">{monthlySummary.missingDays}</span>
-                                <span className="text-xs font-bold text-red-700 uppercase">Eksik GÃ¼n</span>
+                                <span className="text-xs font-bold text-red-700 uppercase">Eksik Gün</span>
                             </div>
                         </div>
                     </div>
@@ -392,12 +392,12 @@ const CalendarPage = () => {
 
                 {/* Legend */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Renk KodlarÄ±</h3>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Renk Kodları</h3>
                     <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-slate-600">Normal</span></div>
                         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500"></div><span className="text-slate-600">Fazla Mesai</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500"></div><span className="text-slate-600">Ä°zinli</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-slate-600">DevamsÄ±z</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500"></div><span className="text-slate-600">İzinli</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-slate-600">Devamsız</span></div>
                         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-300"></div><span className="text-slate-600">Talep (Bekleyen)</span></div>
                     </div>
                 </div>
@@ -454,9 +454,9 @@ const CalendarPage = () => {
                         }
                     }}
                     messages={{
-                        today: "BugÃ¼n",
+                        today: "Bugün",
                         previous: "Geri",
-                        next: "Ä°leri",
+                        next: "İleri",
                         month: "Ay",
                         agenda: "Ajanda",
                         date: "Tarih",
@@ -490,7 +490,7 @@ const CalendarPage = () => {
                                 <span onClick={handleBackToYear} className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-2 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg text-lg">
                                     {selectedYear}
                                 </span>
-                                <span className="text-lg text-slate-400 font-medium ml-2">DetayÄ±</span>
+                                <span className="text-lg text-slate-400 font-medium ml-2">Detayı</span>
                             </span>
                         }
                     </h1>
@@ -555,7 +555,7 @@ const CalendarPage = () => {
                                 <h3 className="text-xl font-bold text-slate-800">
                                     {moment(selectedDate).format('D MMMM YYYY, dddd')}
                                 </h3>
-                                {/* Entry/Exit Info - ALWAYS show if available (User request: "tÄ±klayÄ±nca... giriÅŸ Ã§Ä±kÄ±ÅŸ") */}
+                                {/* Entry/Exit Info - ALWAYS show if available (User request: "tıklayınca... giriÅŸ çıkıÅŸ") */}
                                 {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
                                     <div className="flex items-center gap-4 mt-2">
                                         <div className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
@@ -565,7 +565,7 @@ const CalendarPage = () => {
                                                 : '--:--'}
                                         </div>
                                         <div className="flex items-center gap-1.5 text-sm font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">
-                                            <span className="text-red-400">Ã‡Ä±kÄ±ÅŸ:</span>
+                                            <span className="text-red-400">Ã‡ıkıÅŸ:</span>
                                             {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out
                                                 ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out).format('HH:mm')
                                                 : '--:--'}
@@ -599,11 +599,11 @@ const CalendarPage = () => {
                                                         {evt.title}
                                                     </div>
                                                     <div className="text-xs text-slate-500 mt-0.5">
-                                                        Durum: {evt.status === 'APPROVED' ? 'OnaylandÄ±' : evt.status === 'PENDING' ? 'Onay Bekliyor' : evt.status}
+                                                        Durum: {evt.status === 'APPROVED' ? 'Onaylandı' : evt.status === 'PENDING' ? 'Onay Bekliyor' : evt.status}
                                                     </div>
                                                 </div>
                                                 <div className={`px-2 py-1 rounded text-xs font-bold ${evt.status === 'APPROVED' ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
-                                                    {evt.status === 'APPROVED' ? 'ONAYLI' : 'BEKLÄ°YOR'}
+                                                    {evt.status === 'APPROVED' ? 'ONAYLI' : 'BEKLİYOR'}
                                                 </div>
                                             </div>
                                         ))}
@@ -615,7 +615,7 @@ const CalendarPage = () => {
                             {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                                        <span className="block text-xs uppercase font-bold text-slate-400 mb-1">Normal SÃ¼re</span>
+                                        <span className="block text-xs uppercase font-bold text-slate-400 mb-1">Normal Süre</span>
                                         <span className="text-xl font-bold text-slate-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal} dk</span>
                                     </div>
                                     <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
@@ -623,7 +623,7 @@ const CalendarPage = () => {
                                         <span className="text-xl font-bold text-emerald-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime} dk</span>
                                     </div>
                                     <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-center">
-                                        <span className="block text-xs uppercase font-bold text-red-600 mb-1">Eksik SÃ¼re</span>
+                                        <span className="block text-xs uppercase font-bold text-red-600 mb-1">Eksik Süre</span>
                                         <span className="text-xl font-bold text-red-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing} dk</span>
                                     </div>
                                     <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
@@ -643,7 +643,7 @@ const CalendarPage = () => {
                                             <div className="flex-1">
                                                 <div className="text-sm font-bold text-slate-700">{evt.title}</div>
                                                 <div className="text-xs text-slate-500">
-                                                    {evt.type === 'TOTAL_WORK' ? 'Toplam Ã‡alÄ±ÅŸma' :
+                                                    {evt.type === 'TOTAL_WORK' ? 'Toplam Çalışma' :
                                                         evt.type === 'SHIFT' ? 'Vardiya' :
                                                             evt.type}
                                                 </div>
@@ -651,7 +651,7 @@ const CalendarPage = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="text-sm text-slate-400 italic">BaÅŸka olay kaydÄ± yok.</div>
+                                    <div className="text-sm text-slate-400 italic">Başka olay kaydı yok.</div>
                                 )}
                             </div>
 
