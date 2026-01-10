@@ -104,6 +104,13 @@ const CalendarPage = () => {
             const attendanceRes = results[1];
             const summaryRes = viewMode === 'MONTH' ? results[2] : null;
 
+            console.log("--- DEBUG CALENDAR FETCH ---");
+            console.log("Range:", start, "to", end);
+            console.log("EmployeeID:", selectedEmployeeId);
+            console.log("Calendar Events Raw:", calendarRes.data);
+            console.log("Attendance Logs Raw:", attendanceRes.data);
+            if (summaryRes) console.log("Summary Stats Raw:", summaryRes.data);
+
             // Process Events
             let calEvents = calendarRes.data.results || calendarRes.data;
             const processedEvents = Array.isArray(calEvents) ? calEvents.map(evt => ({
@@ -117,6 +124,7 @@ const CalendarPage = () => {
 
             // Process Attendance (for indicators or stats)
             let logs = attendanceRes.data.results || attendanceRes.data;
+            console.log("Processed Logs Count:", Array.isArray(logs) ? logs.length : 'Not Array');
 
             // If in Month mode, update detailed stats
             if (viewMode === 'MONTH' && Array.isArray(logs)) {
