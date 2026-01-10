@@ -262,6 +262,17 @@ const CalendarPage = () => {
         return { style };
     };
 
+    // Weekend Styling
+    const dayPropGetter = (date) => {
+        const day = date.getDay();
+        if (day === 0 || day === 6) { // Sunday or Saturday
+            return {
+                className: 'bg-slate-50/70',
+            }
+        }
+        return {}
+    }
+
     // --- RENDER ---
 
     // 1. Year View
@@ -328,91 +339,76 @@ const CalendarPage = () => {
     const renderMonthView = () => (
         <div className="flex flex-col md:flex-row gap-6 h-full animate-in slide-in-from-right-4 duration-300">
             {/* Sidebar / Summary */}
-            <div className="w-full md:w-80 flex flex-col gap-6 shrink-0">
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                    <button
-                        onClick={handleBackToYear}
-                        className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-medium mb-4 transition-colors"
-                    >
-                        <ArrowLeft size={18} /> Yıllık Görünüme Dön
+            <div className="w-full md:w-72 flex flex-col gap-4 shrink-0">
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center">
+                    <button onClick={handleBackToYear} className="flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 font-medium mb-4 w-full p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                        <ArrowLeft size={18} /> Yıla Dön
                     </button>
+                    <h2 className="text-2xl font-bold text-slate-800 mb-0.5">{MONTHS_TR[selectedMonth]}</h2>
+                    <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{selectedYear}</span>
+                </div>
 
-                    <h2 className="text-xl font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        {MONTHS_TR[selectedMonth]}
-                        <span
-                            onClick={handleBackToYear}
-                            className="cursor-pointer hover:text-blue-600 hover:underline transition-colors ml-1"
-                            title="Yıllık Görünüm"
-                        >
-                            {selectedYear}
-                        </span>
-                    </h2>
-                    <p className="text-slate-400 text-sm mb-6">Detaylı rapor ve kayıtlar</p>
-
-                    {/* Stats Cards - Only relevant in Month view anyway */}
-                    <div className="space-y-3">
-                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Briefcase size={16} className="text-blue-600" />
-                                <span className="text-xs font-bold text-blue-800 uppercase">Toplam ÇalıÅŸma</span>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 gap-3">
+                    <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Aylık Toplam</span>
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <span className="text-3xl font-bold text-slate-800">{monthlySummary.totalWorkHours}</span>
+                                <span className="text-xs text-slate-400 ml-1">saat</span>
                             </div>
-                            <div className="text-2xl font-bold text-slate-800">{monthlySummary.totalWorkHours}<span className="text-sm text-slate-400 font-medium ml-1">sa</span></div>
+                            <Briefcase size={20} className="text-slate-300 mb-1" />
                         </div>
+                    </div>
 
-                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Timer size={16} className="text-emerald-600" />
-                                <span className="text-xs font-bold text-emerald-800 uppercase">Fazla Mesai</span>
+                    <div className="p-4 bg-white rounded-xl shadow-sm border border-emerald-100 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                        <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-2 z-10 relative">Fazla Mesai</span>
+                        <div className="flex justify-between items-end z-10 relative">
+                            <div>
+                                <span className="text-3xl font-bold text-emerald-700">{monthlySummary.totalOvertime}</span>
+                                <span className="text-xs text-emerald-500 ml-1">saat</span>
                             </div>
-                            <div className="text-2xl font-bold text-slate-800">{monthlySummary.totalOvertime}<span className="text-sm text-slate-400 font-medium ml-1">sa</span></div>
+                            <Timer size={20} className="text-emerald-300 mb-1" />
                         </div>
+                    </div>
 
-                        <div className={`p-4 rounded-xl border ${parseFloat(monthlySummary.netBalance) >= 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-red-50 border-red-100'}`}>
-                            <div className="flex items-center gap-2 mb-1">
-                                <Activity size={16} className={parseFloat(monthlySummary.netBalance) >= 0 ? 'text-indigo-600' : 'text-red-600'} />
-                                <span className={`text-xs font-bold uppercase ${parseFloat(monthlySummary.netBalance) >= 0 ? 'text-indigo-800' : 'text-red-800'}`}>Net Fark</span>
+                    <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200">
+                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-2">Net Fark</span>
+                        <div className="flex justify-between items-end">
+                            <div className={`${parseFloat(monthlySummary.netBalance) >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+                                <span className="text-3xl font-bold">{parseFloat(monthlySummary.netBalance) > 0 ? '+' : ''}{monthlySummary.netBalance}</span>
+                                <span className="text-xs ml-1 opacity-70">saat</span>
                             </div>
-                            <div className="text-2xl font-bold text-slate-800">
-                                {parseFloat(monthlySummary.netBalance) > 0 ? '+' : ''}{monthlySummary.netBalance}<span className="text-sm text-slate-400 font-medium ml-1">sa</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 pt-2">
-                            <div className="bg-amber-50 rounded-xl border border-amber-100 p-3 text-center">
-                                <span className="block text-xl font-bold text-slate-800">{monthlySummary.leaveDays}</span>
-                                <span className="text-xs font-bold text-amber-700 uppercase">İzinli Gün</span>
-                            </div>
-                            <div className="bg-red-50 rounded-xl border border-red-100 p-3 text-center">
-                                <span className="block text-xl font-bold text-slate-800">{monthlySummary.missingDays}</span>
-                                <span className="text-xs font-bold text-red-700 uppercase">Eksik Gün</span>
-                            </div>
+                            <Activity size={20} className="text-slate-300 mb-1" />
                         </div>
                     </div>
                 </div>
 
-                {/* Legend */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Renk Kodları</h3>
-                    <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-slate-600">Normal</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500"></div><span className="text-slate-600">Fazla Mesai</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500"></div><span className="text-slate-600">İzinli</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-slate-600">Devamsız</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-300"></div><span className="text-slate-600">Talep (Bekleyen)</span></div>
+                {/* Legend - Vertical */}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 text-center">Lejant</h3>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">Normal</span>
+                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Mesai</span>
+                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">Eksik/Devamsız</span>
+                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">İzin</span>
+                        <span className="px-2 py-1 rounded text-[10px] font-bold bg-violet-100 text-violet-700 border border-violet-200">Tatil</span>
                     </div>
                 </div>
             </div>
 
-            {/* Big Calendar */}
-            <div className="flex-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+            {/* Calendar Grid */}
+            <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-full min-h-[700px]">
                 <Calendar
                     date={new Date(selectedYear, selectedMonth, 1)}
                     localizer={localizer}
                     events={events}
                     startAccessor="start"
                     endAccessor="end"
-                    style={{ height: '100%', minHeight: '600px' }}
+                    style={{ height: '100%', minHeight: '650px' }}
                     eventPropGetter={eventStyleGetter}
+                    dayPropGetter={dayPropGetter}
                     onNavigate={handleNavigateMonth}
                     onSelectEvent={(evt) => {
                         setSelectedDate(evt.start);
@@ -426,28 +422,49 @@ const CalendarPage = () => {
                     }}
                     selectable={true}
                     culture='tr'
-                    views={['month', 'agenda']}
+                    views={['month']}
                     defaultView='month'
                     components={{
                         month: {
                             dateHeader: ({ date, label }) => {
-                                // IMPORTANT conditional rendering for Overtime Stats
-                                if (displayMode !== 'OVERTIME') {
-                                    return <span className="rbc-date-cell-label font-semibold text-slate-700 px-1">{label}</span>;
-                                }
-
                                 const dateStr = moment(date).format('YYYY-MM-DD');
                                 const stats = dailyStats[dateStr];
+
                                 return (
-                                    <div className="px-1 flex flex-col items-end w-full">
-                                        <div className="flex justify-between w-full items-start mb-0.5">
-                                            <span className="rbc-date-cell-label font-semibold text-slate-700">{label}</span>
-                                            {stats && stats.net !== undefined && Math.abs(stats.net) > 5 && (
-                                                <span className={`text-xs font-bold px-2 py-0.5 rounded shadow-sm border ${stats.net > 0 ? 'text-emerald-700 bg-emerald-100 border-emerald-200' : 'text-red-700 bg-red-100 border-red-200'}`}>
-                                                    {stats.net > 0 ? '+' : ''}{Math.floor(stats.net)}d
-                                                </span>
-                                            )}
+                                    <div className="flex flex-col h-full w-full">
+                                        {/* Date Number */}
+                                        <div className="text-right px-2 py-1">
+                                            <span className="text-sm font-bold text-slate-700">{label}</span>
                                         </div>
+
+                                        {/* Stats Content - Always visible based on mode or just showing summaries if available */}
+                                        {stats ? (
+                                            <div className="flex flex-col gap-1 px-1 mt-1">
+                                                {/* Normal Time */}
+                                                {stats.normal > 0 && (
+                                                    <div className="flex justify-between items-center text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                                                        <span>N:</span>
+                                                        <span className="font-bold">{Math.floor(stats.normal / 60)}s {stats.normal % 60}d</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Overtime */}
+                                                {stats.overtime > 0 && (
+                                                    <div className="flex justify-between items-center text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-100">
+                                                        <span>FM:</span>
+                                                        <span className="font-bold">{Math.floor(stats.overtime / 60)}s {stats.overtime % 60}d</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Missing */}
+                                                {stats.missing > 0 && (
+                                                    <div className="flex justify-between items-center text-[10px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100">
+                                                        <span>E:</span>
+                                                        <span className="font-bold">{Math.floor(stats.missing / 60)}s {stats.missing % 60}d</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null}
                                     </div>
                                 );
                             }
@@ -455,9 +472,11 @@ const CalendarPage = () => {
                     }}
                     messages={{
                         today: "Bugün",
-                        previous: "Geri",
-                        next: "İleri",
+                        previous: "<",
+                        next: ">",
                         month: "Ay",
+                        week: "Hafta",
+                        day: "Gün",
                         agenda: "Ajanda",
                         date: "Tarih",
                         time: "Saat",
@@ -549,112 +568,123 @@ const CalendarPage = () => {
             {/* Detail Modal (Shared) - ENHANCED */}
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-                        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <div>
                                 <h3 className="text-xl font-bold text-slate-800">
                                     {moment(selectedDate).format('D MMMM YYYY, dddd')}
                                 </h3>
-                                {/* Entry/Exit Info - ALWAYS show if available (User request: "tıklayınca... giriÅŸ çıkıÅŸ") */}
-                                {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <div className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-                                            <span className="text-emerald-400">GiriÅŸ:</span>
-                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in
-                                                ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in).format('HH:mm')
-                                                : '--:--'}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-sm font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">
-                                            <span className="text-red-400">Ã‡ıkıÅŸ:</span>
-                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out
-                                                ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out).format('HH:mm')
-                                                : '--:--'}
-                                        </div>
-                                    </div>
-                                )}
+                                <p className="text-sm text-slate-400">Günlük Detay ve Giriş/Çıkış Hareketleri</p>
                             </div>
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                            >
+                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400">
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="overflow-y-auto p-5 space-y-4 custom-scrollbar">
-
-                            {/* 1. Requests Section (New) */}
-                            {selectedEvents.some(e => ['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(e.type)) && (
-                                <div className="mb-4">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <Activity size={12} /> Talepler
-                                    </h4>
-                                    <div className="space-y-2">
-                                        {selectedEvents.filter(e => ['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(e.type)).map((evt, idx) => (
-                                            <div key={idx} className={`p-3 rounded-lg border flex justify-between items-center
-                                                ${evt.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}
-                                            `}>
-                                                <div>
-                                                    <div className={`font-bold text-sm ${evt.status === 'APPROVED' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                                        {evt.title}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">
-                                                        Durum: {evt.status === 'APPROVED' ? 'Onaylandı' : evt.status === 'PENDING' ? 'Onay Bekliyor' : evt.status}
-                                                    </div>
-                                                </div>
-                                                <div className={`px-2 py-1 rounded text-xs font-bold ${evt.status === 'APPROVED' ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
-                                                    {evt.status === 'APPROVED' ? 'ONAYLI' : 'BEKLİYOR'}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 2. Stats Breakdown (Only if data exists) */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar">
+                            {/* 1. Daily Stats Summary */}
                             {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                                        <span className="block text-xs uppercase font-bold text-slate-400 mb-1">Normal Süre</span>
-                                        <span className="text-xl font-bold text-slate-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal} dk</span>
+                                <div className="grid grid-cols-4 gap-4 mb-6">
+                                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
+                                        <span className="block text-xs font-bold text-blue-400 uppercase">Normal</span>
+                                        <span className="block text-lg font-bold text-blue-700">
+                                            {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].normal % 60}d
+                                        </span>
                                     </div>
-                                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                                        <span className="block text-xs uppercase font-bold text-emerald-600 mb-1">Fazla Mesai</span>
-                                        <span className="text-xl font-bold text-emerald-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime} dk</span>
+                                    <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
+                                        <span className="block text-xs font-bold text-emerald-400 uppercase">Mesai</span>
+                                        <span className="block text-lg font-bold text-emerald-700">
+                                            {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].overtime % 60}d
+                                        </span>
                                     </div>
-                                    <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-center">
-                                        <span className="block text-xs uppercase font-bold text-red-600 mb-1">Eksik Süre</span>
-                                        <span className="text-xl font-bold text-red-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing} dk</span>
+                                    <div className="bg-red-50 p-3 rounded-xl border border-red-100 text-center">
+                                        <span className="block text-xs font-bold text-red-400 uppercase">Eksik</span>
+                                        <span className="block text-lg font-bold text-red-700">
+                                            {Math.floor(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing / 60)}s {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].missing % 60}d
+                                        </span>
                                     </div>
-                                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
-                                        <span className="block text-xs uppercase font-bold text-blue-600 mb-1">Net Fark</span>
-                                        <span className="text-xl font-bold text-blue-700">{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net > 0 ? '+' : ''}{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net} dk</span>
+                                    <div className={`p-3 rounded-xl border text-center ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-red-50 border-red-100'}`}>
+                                        <span className={`block text-xs font-bold uppercase ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'text-indigo-400' : 'text-red-400'}`}>Net Fark</span>
+                                        <span className={`block text-lg font-bold ${dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
+                                            {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net > 0 ? '+' : ''}{dailyStats[moment(selectedDate).format('YYYY-MM-DD')].net} dk
+                                        </span>
                                     </div>
                                 </div>
                             )}
 
-                            {/* 3. Event List (Standard Events) */}
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2">Olaylar</h4>
-                                {selectedEvents.filter(e => !['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(e.type)).length > 0 ? (
-                                    selectedEvents.filter(e => !['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(e.type)).map((evt, idx) => (
-                                        <div key={idx} className="p-3 rounded-lg border border-slate-100 bg-white mb-2 flex items-center gap-3">
-                                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: evt.color || '#94a3b8' }}></div>
-                                            <div className="flex-1">
-                                                <div className="text-sm font-bold text-slate-700">{evt.title}</div>
-                                                <div className="text-xs text-slate-500">
-                                                    {evt.type === 'TOTAL_WORK' ? 'Toplam Çalışma' :
-                                                        evt.type === 'SHIFT' ? 'Vardiya' :
-                                                            evt.type}
+                            {/* 2. Timeline / Movements */}
+                            <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Clock size={16} className="text-slate-400" /> Hareket Dökümü
+                            </h4>
+                            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 mb-6">
+                                {dailyStats[moment(selectedDate).format('YYYY-MM-DD')] ? (
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs ring-4 ring-white shadow-sm">
+                                                GİRİŞ
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-slate-700">
+                                                    {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in
+                                                        ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_in).format('HH:mm:ss')
+                                                        : '--:--:--'}
                                                 </div>
+                                                <div className="text-xs text-slate-400">İlk Kart Basma</div>
                                             </div>
                                         </div>
-                                    ))
+                                        <div className="h-0.5 flex-1 bg-slate-200 mx-4 relative">
+                                            <div className="absolute left-1/2 -top-2 bg-slate-100 text-slate-400 text-[10px] px-1">Çalışma Süreci</div>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-right">
+                                            <div>
+                                                <div className="text-sm font-bold text-slate-700">
+                                                    {dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out
+                                                        ? moment(dailyStats[moment(selectedDate).format('YYYY-MM-DD')].check_out).format('HH:mm:ss')
+                                                        : '--:--:--'}
+                                                </div>
+                                                <div className="text-xs text-slate-400">Son Kart Basma</div>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs ring-4 ring-white shadow-sm">
+                                                ÇIKIŞ
+                                            </div>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div className="text-sm text-slate-400 italic">Başka olay kaydı yok.</div>
+                                    <div className="text-center text-slate-400 text-sm">Hareket kaydı bulunamadı.</div>
                                 )}
                             </div>
 
+                            {/* 3. Requests/Events List */}
+                            <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Activity size={16} className="text-slate-400" /> Olaylar ve Talepler
+                            </h4>
+                            <div className="space-y-2">
+                                {selectedEvents.length > 0 ? (
+                                    selectedEvents.map((evt, idx) => (
+                                        <div key={idx} className={`p-3 rounded-lg border flex items-center justify-between
+                                            ${['LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(evt.type) ? 'bg-amber-50 border-amber-100' : 'bg-white border-slate-100'}
+                                        `}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#94a3b8' }}></div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-slate-700">{evt.title}</div>
+                                                    <div className="text-xs text-slate-500">{evt.type}</div>
+                                                </div>
+                                            </div>
+                                            {evt.status && (
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                                                    ${evt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                                                        evt.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}
+                                                `}>
+                                                    {evt.status}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-sm text-slate-400 italic">Kayıtlı olay yok.</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
