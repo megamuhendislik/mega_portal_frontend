@@ -528,33 +528,42 @@ const CalendarPage = () => {
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
 
-                /* Month View Stacking Context Logic */
-                .rbc-month-row {
+                /* Month View - 3D LAYERING HACK */
+                /* Unchain Overflows */
+                .rbc-calendar, .rbc-month-view, .rbc-month-row {
                     overflow: visible !important;
                 }
+                
+                /* Create a 3D Context */
                 .rbc-row-content {
                     overflow: visible !important;
-                    isolation: isolate; /* Create new stacking context */
+                    isolation: isolate;
+                    transform-style: preserve-3d;
                     z-index: 0;
                 }
 
-                /* Header Row (1st Child) - HIGHER Z-INDEX */
+                /* Header Row (1st) - LIFT UP INTENT */
                 .rbc-row-content > .rbc-row:first-child {
-                    z-index: 50 !important;
+                    /* Lift this row significantly above the plane */
+                    transform: translateZ(10px);
+                    z-index: 1000 !important;
                     position: relative !important;
-                    pointer-events: none; /* Allow clicks to pass through empty space */
+                    pointer-events: none; 
                 }
-                /* Re-enable buttons in header */
+                
+                /* Enable clicks inside the header row */
                 .rbc-row-content > .rbc-row:first-child .rbc-date-cell button {
                     pointer-events: auto;
                 }
 
-                /* Event Rows (Subsequent Children) - LOWER Z-INDEX */
+                /* Event Rows (Others) - KEEPFLAT */
                 .rbc-row-content > .rbc-row:not(:first-child) {
+                    transform: translateZ(0px); /* Strictly at zero */
                     z-index: 10 !important;
                     position: relative !important;
                 }
 
+                /* Wrapper of cross component */
                 .rbc-date-cell {
                     overflow: visible !important;
                     position: relative;
