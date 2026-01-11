@@ -503,15 +503,22 @@ const CalendarPage = () => {
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
 
-                /* Month View Overflow Fixes */
+                /* Month View Overflow & Layering Fixes */
                 .rbc-date-cell {
                     overflow: visible !important;
+                    z-index: 50 !important; /* Bring Header Cell Content on top */
+                    position: relative;
                 }
                 .rbc-row-content {
                     overflow: visible !important;
+                    z-index: 10 !important; /* Lower than Header/Cross */
                 }
                 .rbc-month-row {
                     overflow: visible !important;
+                }
+                /* Ensure Cross Wrapper pops out */
+                .rbc-date-cell > div {
+                   position: static; /* Let inner absolute escape? No, relative is fine if z-index is high */
                 }
             `}</style>
 
