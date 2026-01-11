@@ -84,7 +84,7 @@ const CalendarPage = () => {
                 end = mDate.clone().add(1, 'day').format('YYYY-MM-DD');
             }
 
-            const response = await api.get(`/attendance/calendar-events/?start=${start}&end=${end}`);
+            const response = await api.get(`/calendar-events/?start=${start}&end=${end}`);
 
             const rawEvents = response.data || [];
             const parsedEvents = [];
