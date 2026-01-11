@@ -504,21 +504,27 @@ const CalendarPage = () => {
                 }
 
                 /* Month View Overflow & Layering Fixes */
-                .rbc-date-cell {
-                    overflow: visible !important;
-                    z-index: 50 !important; /* Bring Header Cell Content on top */
-                    position: relative;
-                }
-                .rbc-row-content {
-                    overflow: visible !important;
-                    z-index: 10 !important; /* Lower than Header/Cross */
-                }
                 .rbc-month-row {
                     overflow: visible !important;
                 }
+                .rbc-date-cell {
+                    overflow: visible !important;
+                    position: relative;
+                }
+                
+                /* CRITICAL: Force Header Row (containing Cross) to be ON TOP of Event Rows */
+                .rbc-row-content .rbc-row:nth-child(1) {
+                    z-index: 500 !important;
+                    position: relative !important;
+                }
+                .rbc-row-content .rbc-row:not(:nth-child(1)) {
+                    z-index: 10 !important;
+                    position: relative !important;
+                }
+
                 /* Ensure Cross Wrapper pops out */
                 .rbc-date-cell > div {
-                   position: static; /* Let inner absolute escape? No, relative is fine if z-index is high */
+                   position: static; 
                 }
             `}</style>
 
