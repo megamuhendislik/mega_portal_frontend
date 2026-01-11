@@ -486,13 +486,21 @@ const CalendarPage = () => {
     // --- Handlers ---
     // ...
 
-    const CustomDateHeader = ({ label, date }) => {
-        const isBeforeToday = moment(date).isBefore(moment(), 'day');
+    const CustomDateHeader = ({ label }) => {
         return (
             <div className="relative">
                 <span>{label}</span>
+            </div>
+        );
+    };
+
+    const DateCellWrapper = ({ value, children }) => {
+        const isBeforeToday = moment(value).isBefore(moment(), 'day');
+        return (
+            <div className="h-full w-full relative">
+                {children}
                 {isBeforeToday && (
-                    <div className="absolute top-[30px] left-1/2 -translate-x-1/2 z-[50] pointer-events-none opacity-90 drop-shadow-md">
+                    <div className="absolute inset-0 z-[50] flex items-center justify-center opacity-90 drop-shadow-md pointer-events-none">
                         <img
                             src="/cross.svg"
                             alt="Cross"
@@ -528,48 +536,32 @@ const CalendarPage = () => {
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
 
-                /* Month View - 3D LAYERING HACK */
-                /* Unchain Overflows */
-                .rbc-calendar, .rbc-month-view, .rbc-month-row {
-                    overflow: visible !important;
-                }
-                
-                /* Create a 3D Context */
-                .rbc-row-content {
-                    overflow: visible !important;
-                    isolation: isolate;
-                    transform-style: preserve-3d;
-                    z-index: 0;
-                }
-
-                /* Header Row (1st) - LIFT UP INTENT */
-                .rbc-row-content > .rbc-row:first-child {
-                    /* Lift this row significantly above the plane */
-                    transform: translateZ(10px);
-                    z-index: 1000 !important;
-                    position: relative !important;
-                    pointer-events: none; 
-                }
-                
-                /* Enable clicks inside the header row */
-                .rbc-row-content > .rbc-row:first-child .rbc-date-cell button {
-                    pointer-events: auto;
-                }
-
-                /* Event Rows (Others) - KEEPFLAT */
-                .rbc-row-content > .rbc-row:not(:first-child) {
-                    transform: translateZ(0px); /* Strictly at zero */
-                    z-index: 10 !important;
-                    position: relative !important;
-                }
-
-                /* Wrapper of cross component */
-                .rbc-date-cell {
-                    overflow: visible !important;
+                /* Month View - LAYER INVERSION STRATEGY */
+                .rbc-month-view {
                     position: relative;
                 }
-                .rbc-date-cell > div {
-                   position: static; 
+                
+                /* 1. BRING BACKGROUND TO FRONT (Where DateCellWrapper lives) */
+                .rbc-month-view .rbc-row-bg {
+                    z-index: 50 !important;
+                    pointer-events: none !important; /* Let clicks pass through to events */
+                    position: absolute !important;
+                    top: 0;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                }
+                
+                /* 2. PUSH EVENTS TO BACK (But keep clickable) */
+                .rbc-month-view .rbc-row-content {
+                    z-index: 10 !important;
+                    position: relative !important;
+                    pointer-events: auto !important;
+                }
+                
+                /* 3. ENSURE CELLS HAVE HEIGHT */
+                .rbc-day-bg {
+                    overflow: visible !important;
                 }
             `}</style>
 
@@ -618,7 +610,8 @@ const CalendarPage = () => {
                             event: CustomEvent,
                             month: {
                                 header: CustomDateHeader
-                            }
+                            },
+                            dateCellWrapper: DateCellWrapper
                         }}
                         popup
                     />
