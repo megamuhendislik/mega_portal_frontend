@@ -173,31 +173,33 @@ const CalendarPage = () => {
             };
         }
 
+        // Base Styles
+        let className = "";
+        let style = {};
+
         if (isHoliday) {
-            return {
-                className: 'bg-red-50/70',
-                style: { backgroundColor: 'rgba(254, 226, 226, 0.4)' }
-            };
+            className = 'bg-red-50/70';
+            style = { backgroundColor: 'rgba(254, 226, 226, 0.4)' };
+            if (isBeforeToday) className += ' grayscale-[0.4]';
+        } else if (isWeekend) {
+            className = 'bg-slate-100/80';
+            style = { backgroundColor: '#f1f5f9' }; // Plain distinct slate for weekend
         }
 
-        // Priority 2: Past Days (Grayed out)
+        // Priority 2: Past Days (Crossed Off Effect)
         if (isBeforeToday) {
-            return {
-                className: 'bg-slate-50/60 grayscale opacity-80',
-                style: {
-                    backgroundColor: '#f8fafc',
-                    color: '#cbd5e1'
-                }
+            // Append Cross Hatch to whatever background exists
+            className += ' opacity-80'; // Reduce opacity
+            style = {
+                ...style,
+                backgroundImage: 'linear-gradient(45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent), linear-gradient(-45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent)',
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
+                color: '#94a3b8' // Faded text
             };
         }
 
-        if (isWeekend) {
-            return {
-                className: 'bg-slate-50/80',
-                style: { backgroundColor: 'rgba(248, 250, 252, 0.8)' }
-            };
-        }
-        return {};
+        return { className, style };
     };
 
     // --- Handlers ---
@@ -379,21 +381,39 @@ const CalendarPage = () => {
                                         const isToday = currentDayDate.isSame(moment(), 'day');
                                         const isBeforeToday = currentDayDate.isBefore(moment(), 'day');
                                         const isHoliday = holidays.has(dateStr);
+                                        const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;
 
-                                        let className = "py-1.5 rounded-lg flex items-center justify-center transition-colors font-medium";
+                                        let className = "py-1.5 rounded-lg flex items-center justify-center transition-all font-medium relative overflow-hidden";
+                                        let style = {};
 
+                                        // 1. Base Colors
                                         if (isToday) {
                                             className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200";
                                         } else if (isHoliday) {
                                             className += " bg-red-50 text-red-600 font-bold ring-1 ring-red-100";
-                                        } else if (isBeforeToday) {
-                                            className += " text-slate-300 bg-slate-50/50"; // Gray out past days
+                                            if (isBeforeToday) className += " opacity-60 grayscale-[0.5]";
+                                        } else if (isWeekend) {
+                                            className += " bg-slate-100 text-slate-500 font-medium";
+                                            // Distinct weekend color (Gray/Slate)
                                         } else {
                                             className += " text-slate-600 hover:bg-indigo-50";
                                         }
 
+                                        // 2. Past Day Overlay ("Crossed Off")
+                                        if (isBeforeToday && !isToday) {
+                                            // Felt-tip cross hatch effect for ALL past days
+                                            style = {
+                                                backgroundImage: 'linear-gradient(45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent), linear-gradient(-45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent)',
+                                                backgroundSize: '100% 100%',
+                                                backgroundRepeat: 'no-repeat',
+                                                opacity: 0.7
+                                            };
+                                            // Ensure text is readable but faded
+                                            if (!isHoliday) className += " text-slate-400";
+                                        }
+
                                         return (
-                                            <div key={i} className={className}>
+                                            <div key={i} className={className} style={style}>
                                                 {d}
                                             </div>
                                         );
