@@ -189,15 +189,8 @@ const CalendarPage = () => {
         // Priority 2: Past Days (Crossed Off Effect)
         if (isBeforeToday) {
             // Append Cross Hatch to whatever background exists
-            className += ' opacity-80'; // Reduce opacity
-            style = {
-                ...style,
-                backgroundImage: 'url(/cross.svg)',
-                backgroundSize: 'contain',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                color: '#94a3b8' // Faded text
-            };
+            className += ' crossed-day opacity-80'; // Add class
+            style = { ...style, color: '#94a3b8' };
         }
 
         return { className, style };
@@ -402,14 +395,7 @@ const CalendarPage = () => {
 
                                         // 2. Past Day Overlay ("Crossed Off")
                                         if (isBeforeToday && !isToday) {
-                                            // Felt-tip cross hatch effect for ALL past days
-                                            style = {
-                                                backgroundImage: 'url(/cross.svg)',
-                                                backgroundSize: '80% 80%',
-                                                backgroundPosition: 'center',
-                                                backgroundRepeat: 'no-repeat',
-                                                opacity: 0.8
-                                            };
+                                            className += " crossed-day";
                                             // Ensure text is readable but faded
                                             if (!isHoliday) className += " text-slate-400";
                                         }
@@ -472,8 +458,31 @@ const CalendarPage = () => {
         </div>
     );
 
+    // --- Handlers ---
+    // ...
+
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+            <style>{`
+                .crossed-day {
+                    position: relative;
+                }
+                .crossed-day::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background-image: url('/cross.svg');
+                    background-size: 60%; /* Smaller size as requested */
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    opacity: 0.9;
+                    pointer-events: none;
+                    z-index: 10;
+                    /* Filter to turn Black SVG to Dark Red (#8B0000 approx) */
+                    filter: brightness(0) saturate(100%) invert(14%) sepia(94%) saturate(4787%) hue-rotate(356deg) brightness(93%) contrast(117%);
+                }
+            `}</style>
+
             <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
