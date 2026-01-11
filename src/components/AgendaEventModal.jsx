@@ -82,6 +82,12 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.title.trim()) {
+            alert("Lütfen bir başlık giriniz.");
+            return;
+        }
+
         setLoading(true);
 
         try {
