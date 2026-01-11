@@ -472,14 +472,13 @@ const CalendarPage = () => {
                     position: absolute;
                     inset: 0;
                     background-image: url('/cross.svg');
-                    background-size: 60%; /* Smaller size as requested */
+                    background-size: 50%;
                     background-position: center;
                     background-repeat: no-repeat;
-                    opacity: 0.9;
+                    opacity: 0.8;
                     pointer-events: none;
-                    z-index: 10;
-                    /* Filter to turn Black SVG to Dark Red (#8B0000 approx) */
-                    filter: brightness(0) saturate(100%) invert(14%) sepia(94%) saturate(4787%) hue-rotate(356deg) brightness(93%) contrast(117%);
+                    z-index: 20;
+                    filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%);
                 }
             `}</style>
 
