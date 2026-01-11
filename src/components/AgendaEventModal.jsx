@@ -232,20 +232,26 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                                 </div>
                             </div>
 
-                            {/* Color Selector */}
+                            {/* Event Type Selector (Replacing Color) */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">ETİKET RENGİ</label>
-                                <div className="flex gap-3">
-                                    {COLORS.map(c => (
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">ETKİNLİK TÜRÜ</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { name: 'Genel', value: '#3b82f6', icon: <Check size={14} /> },
+                                        { name: 'Toplantı', value: '#8b5cf6', icon: <Users size={14} /> },
+                                        { name: 'Not / Kişisel', value: '#64748b', icon: <AlignLeft size={14} /> },
+                                        { name: 'Hatırlatma', value: '#f59e0b', icon: <Bell size={14} /> },
+                                        { name: 'Acil / Önemli', value: '#ef4444', icon: <Bell size={14} /> },
+                                        { name: 'İzin / Seyahat', value: '#10b981', icon: <Globe size={14} /> },
+                                    ].map(type => (
                                         <button
-                                            key={c.value}
+                                            key={type.value}
                                             type="button"
-                                            onClick={() => setFormData(p => ({ ...p, color: c.value }))}
-                                            className={`w-8 h-8 rounded-full transition-all flex items-center justify-center ${formData.color === c.value ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-105'}`}
-                                            style={{ backgroundColor: c.value }}
-                                            title={c.name}
+                                            onClick={() => setFormData(p => ({ ...p, color: type.value }))}
+                                            className={`px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all border ${formData.color === type.value ? 'bg-indigo-50 border-indigo-200 text-indigo-700 ring-1 ring-indigo-500' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                                         >
-                                            {formData.color === c.value && <Check size={14} className="text-white/80" />}
+                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.value }}></div>
+                                            {type.name}
                                         </button>
                                     ))}
                                 </div>

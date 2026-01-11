@@ -6,6 +6,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
+import DayDetailModal from '../components/DayDetailModal';
 import useInterval from '../hooks/useInterval';
 import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 
@@ -40,6 +41,7 @@ const CalendarPage = () => {
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
+    const [showDayDetail, setShowDayDetail] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [selectedEventData, setSelectedEventData] = useState(null);
 
@@ -158,6 +160,7 @@ const CalendarPage = () => {
         const isHoliday = holidays.has(dateStr);
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isToday = moment(date).isSame(moment(), 'day');
+        const isBeforeToday = moment(date).isBefore(moment(), 'day');
 
         // Priority 1: Today
         if (isToday) {
@@ -176,6 +179,18 @@ const CalendarPage = () => {
                 style: { backgroundColor: 'rgba(254, 226, 226, 0.4)' }
             };
         }
+
+        // Priority 2: Past Days (Grayed out)
+        if (isBeforeToday) {
+            return {
+                className: 'bg-slate-50/60 grayscale opacity-80',
+                style: {
+                    backgroundColor: '#f8fafc',
+                    color: '#cbd5e1'
+                }
+            };
+        }
+
         if (isWeekend) {
             return {
                 className: 'bg-slate-50/80',
@@ -194,12 +209,13 @@ const CalendarPage = () => {
     };
 
     const handleSelectSlot = ({ start }) => {
+        // Open Detail View first
         setSelectedSlot(start);
-        setSelectedEventData(null);
-        setShowModal(true);
+        setShowDayDetail(true);
     };
 
     const handleSelectEvent = (event) => {
+        // Directly open Edit Modal for specific event
         if (event.type === 'PERSONAL') {
             setSelectedEventData({
                 id: event.db_id,
@@ -216,6 +232,17 @@ const CalendarPage = () => {
             });
             setShowModal(true);
         }
+    };
+
+    const handleDayDetailAdd = () => {
+        setShowDayDetail(false); // Close detail
+        setSelectedEventData(null); // Clear data
+        setShowModal(true); // Open Create Modal
+    };
+
+    const handleDayDetailEdit = (evt) => {
+        setShowDayDetail(false);
+        handleSelectEvent(evt);
     };
 
     const handleModalSuccess = () => {
@@ -350,6 +377,7 @@ const CalendarPage = () => {
                                         const currentDayDate = moment([year, index, d]);
                                         const dateStr = currentDayDate.format('YYYY-MM-DD');
                                         const isToday = currentDayDate.isSame(moment(), 'day');
+                                        const isBeforeToday = currentDayDate.isBefore(moment(), 'day');
                                         const isHoliday = holidays.has(dateStr);
 
                                         let className = "py-1.5 rounded-lg flex items-center justify-center transition-colors font-medium";
@@ -358,6 +386,8 @@ const CalendarPage = () => {
                                             className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200";
                                         } else if (isHoliday) {
                                             className += " bg-red-50 text-red-600 font-bold ring-1 ring-red-100";
+                                        } else if (isBeforeToday) {
+                                            className += " text-slate-300 bg-slate-50/50"; // Gray out past days
                                         } else {
                                             className += " text-slate-600 hover:bg-indigo-50";
                                         }
@@ -378,27 +408,43 @@ const CalendarPage = () => {
     };
 
     const Legend = () => (
-        <div className="flex flex-wrap gap-6 mt-6 p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-sm">
+        <div className="flex flex-wrap gap-4 mt-6 p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-xs">
             <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span className="text-slate-600 font-medium">Kişisel Etkinlik</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                <span className="text-slate-600 font-bold">Genel</span>
             </div>
             <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                <span className="text-slate-600 font-medium">Sizinle Paylaşılan</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
+                <span className="text-slate-600 font-bold">Toplantı</span>
             </div>
             <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-violet-500"></span>
-                <span className="text-slate-600 font-medium">Sizin Paylaştığınız</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                <span className="text-slate-600 font-bold">Not</span>
             </div>
             <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                <span className="text-slate-600 font-medium">Resmi Tatil</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span className="text-slate-600 font-bold">Hatırlatma</span>
             </div>
+            <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <span className="text-slate-600 font-bold">Acil / Tatil</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span className="text-slate-600 font-bold">İzin / Seyahat</span>
+            </div>
+
+            <div className="w-px h-4 bg-slate-200 mx-2"></div>
+
+            <div className="flex items-center gap-2" title="Sizinle paylaşılan etkinlikler">
+                <Globe size={14} className="text-slate-400" />
+                <span className="text-slate-500 font-medium italic">Paylaşılan</span>
+            </div>
+
             {showWorkEvents && (
-                <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-slate-400"></span>
-                    <span className="text-slate-600 font-medium">İş / Mesai Kaydı</span>
+                <div className="flex items-center gap-2 ml-auto border-l pl-4 border-slate-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                    <span className="text-slate-600 font-medium">İş Kaydı</span>
                 </div>
             )}
         </div>
@@ -450,6 +496,16 @@ const CalendarPage = () => {
                         popup
                     />
                 </div>
+            )}
+
+            {showDayDetail && (
+                <DayDetailModal
+                    date={selectedSlot}
+                    events={events}
+                    onClose={() => setShowDayDetail(false)}
+                    onAddEvent={handleDayDetailAdd}
+                    onEditEvent={handleDayDetailEdit}
+                />
             )}
 
             {showModal && (
