@@ -478,7 +478,7 @@ const CalendarPage = () => {
                     opacity: 0.9;
                     pointer-events: none;
                     z-index: 20;
-                    filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%);
+                    filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
             `}</style>
 
