@@ -192,8 +192,9 @@ const CalendarPage = () => {
             className += ' opacity-80'; // Reduce opacity
             style = {
                 ...style,
-                backgroundImage: 'linear-gradient(45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent), linear-gradient(-45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent)',
-                backgroundSize: '100% 100%',
+                backgroundImage: 'url(/cross.svg)',
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 color: '#94a3b8' // Faded text
             };
@@ -403,10 +404,11 @@ const CalendarPage = () => {
                                         if (isBeforeToday && !isToday) {
                                             // Felt-tip cross hatch effect for ALL past days
                                             style = {
-                                                backgroundImage: 'linear-gradient(45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent), linear-gradient(-45deg, transparent 48%, #cbd5e1 49%, #cbd5e1 51%, transparent 52%, transparent)',
-                                                backgroundSize: '100% 100%',
+                                                backgroundImage: 'url(/cross.svg)',
+                                                backgroundSize: '80% 80%',
+                                                backgroundPosition: 'center',
                                                 backgroundRepeat: 'no-repeat',
-                                                opacity: 0.7
+                                                opacity: 0.8
                                             };
                                             // Ensure text is readable but faded
                                             if (!isHoliday) className += " text-slate-400";
