@@ -248,17 +248,28 @@ const CalendarPage = () => {
 
     // --- Sub-Components ---
 
-    // Localization formats
-    const formats = useMemo(() => ({
-        dateFormat: 'DD',
-        dayFormat: 'DD dddd',
-        weekdayFormat: (date, culture, localizer) => localizer.format(date, 'dddd', culture),
-        monthHeaderFormat: 'MMMM YYYY',
-        dayRangeHeaderFormat: ({ start, end }, culture, localizer) =>
-            `${localizer.format(start, 'DD MMMM', culture)} - ${localizer.format(end, 'DD MMMM', culture)}`,
-        agendaDateFormat: 'DD MMMM dddd',
-        agendaTimeFormat: 'HH:mm',
-    }), []);
+    // Localization formats (Fail-safe using Native Intl)
+    const formats = useMemo(() => {
+        const trIntlDay = new Intl.DateTimeFormat('tr-TR', { weekday: 'long' });
+        const trIntlMonthYear = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' });
+        const trIntlDayMonth = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' });
+
+        return {
+            dateFormat: 'DD',
+            dayFormat: (date) => {
+                // "01 Pazartesi" format
+                const day = date.getDate().toString().padStart(2, '0');
+                const name = trIntlDay.format(date);
+                return `${day} ${name}`;
+            },
+            weekdayFormat: (date) => trIntlDay.format(date),
+            monthHeaderFormat: (date) => trIntlMonthYear.format(date),
+            dayRangeHeaderFormat: ({ start, end }) =>
+                `${trIntlDayMonth.format(start)} - ${trIntlDayMonth.format(end)}`,
+            agendaDateFormat: (date) => `${trIntlDayMonth.format(date)} ${trIntlDay.format(date)}`,
+            agendaTimeFormat: 'HH:mm',
+        };
+    }, []);
 
     const CustomToolbar = (toolbar) => {
         const goToBack = () => {
@@ -274,6 +285,8 @@ const CalendarPage = () => {
             toolbar.onNavigate('TODAY');
             setCurrentDate(now);
         };
+
+        const title = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(toolbar.date);
 
         return (
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
@@ -299,7 +312,7 @@ const CalendarPage = () => {
                         </button>
                     </div>
                     <span className="capitalize font-bold text-xl text-slate-800 ml-2">
-                        {moment(toolbar.date).locale('tr').format('MMMM YYYY')}
+                        {title}
                     </span>
                 </div>
 
