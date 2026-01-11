@@ -51,7 +51,7 @@ const CreatePersonalEventModal = ({ onClose, onSuccess, initialDate }) => {
                 color: formData.color
             };
 
-            await api.post('/attendance/personal-events/', payload);
+            await api.post('/personal-events/', payload);
             onSuccess();
         } catch (error) {
             console.error("Failed to create event:", error);

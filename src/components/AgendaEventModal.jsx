@@ -101,9 +101,9 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
             };
 
             if (initialData?.id) {
-                await api.patch(`/attendance/personal-events/${initialData.id}/`, payload);
+                await api.patch(`/personal-events/${initialData.id}/`, payload);
             } else {
-                await api.post('/attendance/personal-events/', payload);
+                await api.post('/personal-events/', payload);
             }
             onSuccess();
         } catch (error) {
