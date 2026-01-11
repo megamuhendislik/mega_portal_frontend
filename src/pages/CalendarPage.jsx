@@ -503,26 +503,37 @@ const CalendarPage = () => {
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
 
-                /* Month View Overflow & Layering Fixes */
+                /* Month View Stacking Context Logic */
                 .rbc-month-row {
                     overflow: visible !important;
                 }
-                .rbc-date-cell {
+                .rbc-row-content {
                     overflow: visible !important;
-                    position: relative;
+                    isolation: isolate; /* Create new stacking context */
+                    z-index: 0;
                 }
-                
-                /* CRITICAL: Force Header Row (containing Cross) to be ON TOP of Event Rows */
-                .rbc-row-content .rbc-row:nth-child(1) {
-                    z-index: 500 !important;
+
+                /* Header Row (1st Child) - HIGHER Z-INDEX */
+                .rbc-row-content > .rbc-row:first-child {
+                    z-index: 50 !important;
                     position: relative !important;
+                    pointer-events: none; /* Allow clicks to pass through empty space */
                 }
-                .rbc-row-content .rbc-row:not(:nth-child(1)) {
+                /* Re-enable buttons in header */
+                .rbc-row-content > .rbc-row:first-child .rbc-date-cell button {
+                    pointer-events: auto;
+                }
+
+                /* Event Rows (Subsequent Children) - LOWER Z-INDEX */
+                .rbc-row-content > .rbc-row:not(:first-child) {
                     z-index: 10 !important;
                     position: relative !important;
                 }
 
-                /* Ensure Cross Wrapper pops out */
+                .rbc-date-cell {
+                    overflow: visible !important;
+                    position: relative;
+                }
                 .rbc-date-cell > div {
                    position: static; 
                 }
@@ -552,6 +563,7 @@ const CalendarPage = () => {
                 <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-6 h-[800px] animate-in zoom-in-95 duration-300">
                     <Calendar
                         localizer={localizer}
+                        culture="tr"
                         events={events}
                         startAccessor="start"
                         endAccessor="end"
