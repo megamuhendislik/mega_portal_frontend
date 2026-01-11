@@ -461,28 +461,31 @@ const CalendarPage = () => {
     // --- Handlers ---
     // ...
 
+    const CustomDateHeader = ({ label, date }) => {
+        const isBeforeToday = moment(date).isBefore(moment(), 'day');
+        return (
+            <div className="relative">
+                <span>{label}</span>
+                {isBeforeToday && (
+                    <div className="absolute top-[30px] left-1/2 -translate-x-1/2 z-[50] pointer-events-none opacity-90 drop-shadow-md">
+                        <img
+                            src="/cross.svg"
+                            alt="Cross"
+                            className="w-16 h-16 object-contain"
+                            style={{
+                                filter: 'invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5))'
+                            }}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-            <style>{`
-                .crossed-day {
-                    position: relative;
-                }
-                .crossed-day::after {
-                    content: '';
-                    position: absolute;
-                    inset: 0;
-                    background-image: url('/cross.svg');
-                    background-size: 30%;
-                    background-position: center;
-                    background-repeat: no-repeat;
-                    opacity: 0.9;
-                    pointer-events: none;
-                    z-index: 20;
-                    filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
-                }
-            `}</style>
-
             <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                {/* ... Header content ... */}
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                         <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 bg-clip-text text-transparent">
@@ -521,12 +524,17 @@ const CalendarPage = () => {
                         dayPropGetter={dayPropGetter}
                         components={{
                             toolbar: CustomToolbar,
-                            event: CustomEvent
+                            event: CustomEvent,
+                            month: {
+                                header: CustomDateHeader
+                            }
                         }}
                         popup
                     />
                 </div>
             )}
+
+            {/* Modals ... */}
 
             {showDayDetail && (
                 <DayDetailModal
