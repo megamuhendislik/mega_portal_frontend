@@ -248,6 +248,18 @@ const CalendarPage = () => {
 
     // --- Sub-Components ---
 
+    // Localization formats
+    const formats = useMemo(() => ({
+        dateFormat: 'DD',
+        dayFormat: 'DD dddd',
+        weekdayFormat: (date, culture, localizer) => localizer.format(date, 'dddd', culture),
+        monthHeaderFormat: 'MMMM YYYY',
+        dayRangeHeaderFormat: ({ start, end }, culture, localizer) =>
+            `${localizer.format(start, 'DD MMMM', culture)} - ${localizer.format(end, 'DD MMMM', culture)}`,
+        agendaDateFormat: 'DD MMMM dddd',
+        agendaTimeFormat: 'HH:mm',
+    }), []);
+
     const CustomToolbar = (toolbar) => {
         const goToBack = () => {
             toolbar.onNavigate('PREV');
@@ -287,7 +299,7 @@ const CalendarPage = () => {
                         </button>
                     </div>
                     <span className="capitalize font-bold text-xl text-slate-800 ml-2">
-                        {moment(toolbar.date).format('MMMM YYYY')}
+                        {moment(toolbar.date).locale('tr').format('MMMM YYYY')}
                     </span>
                 </div>
 
@@ -564,6 +576,7 @@ const CalendarPage = () => {
                     <Calendar
                         localizer={localizer}
                         culture="tr"
+                        formats={formats}
                         events={events}
                         startAccessor="start"
                         endAccessor="end"
