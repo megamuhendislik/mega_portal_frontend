@@ -484,6 +484,37 @@ const CalendarPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+            <style>{`
+                /* Year View Cross Style */
+                .crossed-day {
+                    position: relative;
+                }
+                .crossed-day::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background-image: url('/cross.svg');
+                    background-size: 30%;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    opacity: 0.9;
+                    pointer-events: none;
+                    z-index: 20;
+                    filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
+                }
+
+                /* Month View Overflow Fixes */
+                .rbc-date-cell {
+                    overflow: visible !important;
+                }
+                .rbc-row-content {
+                    overflow: visible !important;
+                }
+                .rbc-month-row {
+                    overflow: visible !important;
+                }
+            `}</style>
+
             <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 {/* ... Header content ... */}
                 <div>
