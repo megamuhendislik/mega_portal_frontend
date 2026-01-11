@@ -472,10 +472,10 @@ const CalendarPage = () => {
                     position: absolute;
                     inset: 0;
                     background-image: url('/cross.svg');
-                    background-size: 50%;
+                    background-size: 30%;
                     background-position: center;
                     background-repeat: no-repeat;
-                    opacity: 0.8;
+                    opacity: 0.9;
                     pointer-events: none;
                     z-index: 20;
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%);
