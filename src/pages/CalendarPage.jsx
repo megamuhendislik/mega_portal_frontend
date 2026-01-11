@@ -528,27 +528,39 @@ const CalendarPage = () => {
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
 
-                /* Month View - RESTORED LAYERING */
-                /* Standard Layering: Backgrounds (colors) behind, Content in front. */
-                .rbc-month-view, .rbc-month-row, .rbc-row, .rbc-row-content, .rbc-date-cell {
+                /* Month View - NUCLEAR LAYERING FIX */
+                
+                /* 1. Global Overflow Unlock */
+                .rbc-calendar, .rbc-month-view, .rbc-month-row, .rbc-row, .rbc-row-content, .rbc-date-cell {
                     overflow: visible !important;
                 }
-                
-                /* HEADER ROW (Date Numbers + Cross) - Z-INDEX BOOST */
-                /* Must be higher than Event Rows */
+
+                /* 2. Target the Specific Row Containers */
+                /* The FIRST row in rbc-row-content is ALWAYS the "Header Row" (Date Numbers) */
                 .rbc-row-content > .rbc-row:first-child {
-                    z-index: 500 !important;
+                    z-index: 9999 !important; /* Forces this row (and the cross) to be on top of everything */
                     position: relative !important;
-                    pointer-events: none; /* Let clicks pass through empty space */
-                }
-                .rbc-row-content > .rbc-row:first-child .rbc-date-cell button {
-                    pointer-events: auto; /* Enable Date Click */
+                    pointer-events: none !important; /* Crucial: Let clicks pass through empty space */
                 }
 
-                /* EVENT ROWS - LOWER Z-INDEX */
+                /* 3. Re-enable pointer events for the Date Link/Button inside the Header Row */
+                .rbc-row-content > .rbc-row:first-child .rbc-date-cell button,
+                .rbc-row-content > .rbc-row:first-child .rbc-date-cell a {
+                    pointer-events: auto !important;
+                    position: relative;
+                    z-index: 10000; /* Ensure button is clickable */
+                }
+
+                /* 4. Target Event Rows (Subsequent rows) */
+                /* Force them to be visually separate but stacked BELOW row 1 */
                 .rbc-row-content > .rbc-row:not(:first-child) {
-                    z-index: 10 !important;
+                    z-index: 5 !important;
                     position: relative !important;
+                }
+                
+                /* Event cells themselves */
+                .rbc-event {
+                    z-index: auto !important; /* Rely on row z-index */
                 }
             `}</style>
 
