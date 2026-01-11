@@ -1,25 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar as CalendarIcon, Clock, AlignLeft, Users, Building, Bell, Check, Lock, Globe } from 'lucide-react';
+import { X, Clock, AlignLeft, Users, Building, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
-
-const COLORS = [
-    { name: 'Mavi', value: '#3b82f6' },
-    { name: 'Yeşil', value: '#10b981' },
-    { name: 'Kırmızı', value: '#ef4444' },
-    { name: 'Sarı', value: '#f59e0b' },
-    { name: 'Mor', value: '#8b5cf6' },
-    { name: 'Gri', value: '#64748b' },
-];
+import toast, { Toaster } from 'react-hot-toast';
 
 const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null }) => {
     const [loading, setLoading] = useState(false);
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const [groups, setGroups] = useState([]);
 
-    // Mode: 'PRIVATE' or 'SHARED'
+    // UI State
     const [shareMode, setShareMode] = useState(initialData?.shared_with?.length > 0 || initialData?.shared_departments?.length > 0 ? 'SHARED' : 'PRIVATE');
+    const [shareTab, setShareTab] = useState('EMPLOYEES'); // 'EMPLOYEES' | 'DEPARTMENTS' | 'GROUPS'
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showCreateGroup, setShowCreateGroup] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
 
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
@@ -37,22 +34,24 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
     });
 
     useEffect(() => {
-        // Load options for sharing
-        const loadOptions = async () => {
-            try {
-                const [empRes, depRes] = await Promise.all([
-                    api.get('/employees/'),
-                    api.get('/core/departments/') // Assuming this maps to DepartmentViewSet
-                ]);
-                // Handle pagination if results key exists
-                setEmployees(empRes.data.results || empRes.data);
-                setDepartments(depRes.data.results || depRes.data);
-            } catch (err) {
-                console.error("Failed to load options", err);
-            }
-        };
         loadOptions();
     }, []);
+
+    const loadOptions = async () => {
+        try {
+            const [empRes, depRes, grpRes] = await Promise.all([
+                api.get('/employees/'),
+                api.get('/core/departments/'),
+                api.get('/personal-event-groups/')
+            ]);
+            setEmployees(empRes.data.results || empRes.data);
+            setDepartments(depRes.data.results || depRes.data);
+            setGroups(grpRes.data.results || grpRes.data);
+        } catch (err) {
+            console.error("Failed to load options", err);
+            toast.error("Veriler yüklenirken hata oluştu.");
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -80,11 +79,71 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
         });
     };
 
+    // --- Group Logic ---
+    const handleCreateGroup = async () => {
+        if (!newGroupName.trim()) {
+            toast.error("Lütfen grup adı giriniz.");
+            return;
+        }
+        if (formData.shared_with.length === 0) {
+            toast.error("Lütfen gruba eklenecek kişileri seçiniz.");
+            return;
+        }
+
+        try {
+            const res = await api.post('/personal-event-groups/', {
+                name: newGroupName,
+                members: formData.shared_with
+            });
+            setGroups(prev => [...prev, res.data]);
+            setNewGroupName('');
+            setShowCreateGroup(false);
+            toast.success("Grup oluşturuldu!");
+        } catch (error) {
+            toast.error("Grup oluşturulamadı.");
+            console.error(error);
+        }
+    };
+
+    const handleSelectGroup = (group) => {
+        // Add all members of the group to shared_with
+        const memberIds = group.members;
+        setFormData(prev => {
+            const current = new Set(prev.shared_with);
+            memberIds.forEach(id => current.add(id));
+            return { ...prev, shared_with: Array.from(current) };
+        });
+        toast.success(`"${group.name}" üyeleri eklendi.`);
+    };
+
+    const handleDeleteGroup = async (groupId, e) => {
+        e.stopPropagation();
+        if (!window.confirm("Bu grubu silmek istediğinize emin misiniz?")) return;
+        try {
+            await api.delete(`/personal-event-groups/${groupId}/`);
+            setGroups(prev => prev.filter(g => g.id !== groupId));
+            toast.success("Grup silindi.");
+        } catch (error) {
+            toast.error("Silme başarısız.");
+        }
+    };
+
+    // --- Search Filter ---
+    const filteredEmployees = employees.filter(e =>
+        (e.first_name + ' ' + e.last_name).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const filteredDepartments = departments.filter(d =>
+        d.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const filteredGroups = groups.filter(g =>
+        g.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!formData.title.trim()) {
-            alert("Lütfen bir başlık giriniz.");
+            toast.error("Lütfen bir başlık giriniz.");
             return;
         }
 
@@ -108,20 +167,25 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
 
             if (initialData?.id) {
                 await api.patch(`/personal-events/${initialData.id}/`, payload);
+                toast.success("Etkinlik güncellendi.");
             } else {
                 await api.post('/personal-events/', payload);
+                toast.success("Etkinlik oluşturuldu.");
             }
-            onSuccess();
+            // Small delay to let toast show
+            setTimeout(() => {
+                onSuccess();
+            }, 800);
         } catch (error) {
             console.error("Failed to save event:", error);
-            alert("Etkinlik kaydedilirken hata oluştu: " + (error.response?.data?.detail || error.message));
-        } finally {
+            toast.error("Hata: " + (error.response?.data?.detail || error.message));
             setLoading(false);
         }
     };
 
     return createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
+            <Toaster position="top-center" reverseOrder={false} />
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -268,50 +332,146 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                         <div className="space-y-6">
 
                             {shareMode === 'SHARED' && (
-                                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-4 animate-in fade-in slide-in-from-right-4">
-                                    <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
-                                        <Users size={16} className="text-emerald-600" /> Paylaşım Ayarları
+                                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-4 animate-in fade-in slide-in-from-right-4 relative">
+                                    <h4 className="text-sm font-bold text-emerald-800 flex items-center justify-between">
+                                        <span className="flex items-center gap-2"><Users size={16} className="text-emerald-600" /> Paylaşım Ayarları</span>
+                                        {shareTab === 'EMPLOYEES' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCreateGroup(!showCreateGroup)}
+                                                className="text-xs text-emerald-600 hover:text-emerald-800 underline font-bold"
+                                            >
+                                                {showCreateGroup ? 'Kapat' : '+ seçimi grup yap'}
+                                            </button>
+                                        )}
                                     </h4>
 
-                                    {/* Departments */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-emerald-700/70 uppercase mb-1.5 flex items-center gap-1">
-                                            <Building size={12} /> Departmanlar
-                                        </label>
-                                        <div className="max-h-24 overflow-y-auto bg-white border border-emerald-200 rounded-lg p-2 text-sm space-y-1">
-                                            {departments.map(dept => (
-                                                <label key={dept.id} className="flex items-center gap-2 cursor-pointer hover:bg-emerald-50 p-1 rounded">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.shared_departments.includes(dept.id)}
-                                                        onChange={() => toggleSelection('shared_departments', dept.id)}
-                                                        className="rounded text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                                                    />
-                                                    <span className="truncate">{dept.name}</span>
-                                                </label>
-                                            ))}
-                                            {departments.length === 0 && <span className="text-slate-400 italic text-xs">Departman bulunamadı</span>}
-                                        </div>
+                                    {/* Tabs */}
+                                    <div className="flex border-b border-emerald-200">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShareTab('EMPLOYEES')}
+                                            className={`flex-1 pb-2 text-xs font-bold transition-colors ${shareTab === 'EMPLOYEES' ? 'text-emerald-700 border-b-2 border-emerald-600' : 'text-emerald-500 hover:text-emerald-700'}`}
+                                        >
+                                            Kişiler
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShareTab('GROUPS')}
+                                            className={`flex-1 pb-2 text-xs font-bold transition-colors ${shareTab === 'GROUPS' ? 'text-emerald-700 border-b-2 border-emerald-600' : 'text-emerald-500 hover:text-emerald-700'}`}
+                                        >
+                                            Gruplar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShareTab('DEPARTMENTS')}
+                                            className={`flex-1 pb-2 text-xs font-bold transition-colors ${shareTab === 'DEPARTMENTS' ? 'text-emerald-700 border-b-2 border-emerald-600' : 'text-emerald-500 hover:text-emerald-700'}`}
+                                        >
+                                            Departmanlar
+                                        </button>
                                     </div>
 
-                                    {/* Employees */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-emerald-700/70 uppercase mb-1.5 flex items-center gap-1">
-                                            <Users size={12} /> Kişiler
-                                        </label>
-                                        <div className="max-h-32 overflow-y-auto bg-white border border-emerald-200 rounded-lg p-2 text-sm space-y-1">
-                                            {employees.map(emp => (
-                                                <label key={emp.id} className="flex items-center gap-2 cursor-pointer hover:bg-emerald-50 p-1 rounded">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.shared_with.includes(emp.id)}
-                                                        onChange={() => toggleSelection('shared_with', emp.id)}
-                                                        className="rounded text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                                                    />
-                                                    <span className="truncate">{emp.first_name} {emp.last_name}</span>
-                                                </label>
-                                            ))}
+                                    {/* Create Group Form */}
+                                    {showCreateGroup && shareTab === 'EMPLOYEES' && (
+                                        <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-sm animate-in slide-in-from-top-2 mb-2">
+                                            <label className="text-xs font-bold text-slate-500 block mb-1">Seçili Kişilerden Grup Oluştur</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Grup Adı (Örn: Proje Ekibi)"
+                                                    className="flex-1 text-sm border rounded px-2 py-1"
+                                                    value={newGroupName}
+                                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCreateGroup}
+                                                    className="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-emerald-700"
+                                                >
+                                                    Kaydet
+                                                </button>
+                                            </div>
                                         </div>
+                                    )}
+
+                                    {/* Search Bar */}
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Ara..."
+                                            className="w-full pl-8 pr-3 py-2 rounded-lg border border-emerald-200 text-sm focus:ring-1 focus:ring-emerald-500"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* List Content */}
+                                    <div className="max-h-48 overflow-y-auto bg-white border border-emerald-200 rounded-lg p-2 text-sm space-y-1">
+
+                                        {/* EMPLOYEES */}
+                                        {shareTab === 'EMPLOYEES' && filteredEmployees.map(emp => (
+                                            <label key={emp.id} className="flex items-center gap-2 cursor-pointer hover:bg-emerald-50 p-1.5 rounded transition-colors group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.shared_with.includes(emp.id)}
+                                                    onChange={() => toggleSelection('shared_with', emp.id)}
+                                                    className="rounded text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                                />
+                                                <span className="truncate flex-1">{emp.first_name} {emp.last_name}</span>
+                                                {formData.shared_with.includes(emp.id) && <Check size={14} className="text-emerald-600" />}
+                                            </label>
+                                        ))}
+
+                                        {/* GROUPS */}
+                                        {shareTab === 'GROUPS' && filteredGroups.map(grp => (
+                                            <div key={grp.id} className="flex items-center justify-between hover:bg-emerald-50 p-2 rounded transition-colors border border-transparent hover:border-emerald-100">
+                                                <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={() => handleSelectGroup(grp)}>
+                                                    <Users size={14} className="text-emerald-500" />
+                                                    <span className="font-bold text-emerald-700">{grp.name}</span>
+                                                    <span className="text-xs text-slate-400">({grp.members.length} üye)</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        title="Ekle"
+                                                        onClick={() => handleSelectGroup(grp)}
+                                                        className="p-1 hover:bg-emerald-200 rounded text-emerald-600"
+                                                    >
+                                                        <Plus size={14} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        title="Sil"
+                                                        onClick={(e) => handleDeleteGroup(grp.id, e)}
+                                                        className="p-1 hover:bg-red-100 rounded text-red-500"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {shareTab === 'GROUPS' && filteredGroups.length === 0 && (
+                                            <div className="text-center p-4 text-slate-400 text-xs italic">
+                                                Grup bulunamadı. Kişiler sekmesinden seçim yaparak yeni bir grup oluşturabilirsiniz.
+                                            </div>
+                                        )}
+
+                                        {/* DEPARTMENTS */}
+                                        {shareTab === 'DEPARTMENTS' && filteredDepartments.map(dept => (
+                                            <label key={dept.id} className="flex items-center gap-2 cursor-pointer hover:bg-emerald-50 p-1.5 rounded transition-colors">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.shared_departments.includes(dept.id)}
+                                                    onChange={() => toggleSelection('shared_departments', dept.id)}
+                                                    className="rounded text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                                />
+                                                <span className="truncate">{dept.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="text-xs text-right text-emerald-600/70 font-medium">
+                                        {formData.shared_with.length} kişi seçili
                                     </div>
                                 </div>
                             )}
