@@ -275,6 +275,10 @@ const AdminConsole = () => {
                                     <DiagnosticItem label="1-Dk'lık Oto-Düzeltme" passed={diagResults?.continuous} loading={diagLoading && !diagResults} icon={RefreshCw} />
                                     <DiagnosticItem label="Talep & Onay Akışı" passed={diagResults?.requests} loading={diagLoading && !diagResults} icon={FileText} />
                                     <DiagnosticItem label="Veri Temizliği" passed={diagResults?.cleanup} loading={diagLoading && !diagResults} icon={Shield} />
+
+                                    <div className="border-t border-slate-100 my-2 pt-2"></div>
+                                    <DiagnosticItem label="Celery / Arka Plan" passed={diagResults?.celery} loading={diagLoading && !diagResults} icon={RefreshCw} />
+                                    <DiagnosticItem label="Mesai Veri Bütünlüğü" passed={diagResults?.overtime_integrity} loading={diagLoading && !diagResults} icon={Database} />
                                 </div>
                                 <button
                                     onClick={runDiagnostics}
