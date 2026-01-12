@@ -32,12 +32,9 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                 overtime = (log.overtime_seconds || 0) / 3600;
                 missing = (log.missing_seconds || 0) / 3600;
             } else {
-                // No Log - Heuristic for "Implicit Missing"
-                // If day is past OR today, and not weekend
-                if ((isBefore(current, today) || isSameDay(current, today)) && !isWeekend(current)) {
-                    missing = dailyTarget;
-                    // status = 'MISSING_DATA'; 
-                }
+                // No Log -> No Data.
+                // We rely on Backend (tasks.py / daily_service.py) to create ABSENT records.
+                // If no record exists, we show 0.
             }
 
             // Format Times
