@@ -33,8 +33,8 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                 missing = (log.missing_seconds || 0) / 3600;
             } else {
                 // No Log - Heuristic for "Implicit Missing"
-                // Only if day is PAST (not today), and not weekend
-                if (isBefore(current, today) && !isWeekend(current)) {
+                // If day is past OR today, and not weekend
+                if ((isBefore(current, today) || isSameDay(current, today)) && !isWeekend(current)) {
                     missing = dailyTarget;
                     // status = 'MISSING_DATA'; 
                 }
