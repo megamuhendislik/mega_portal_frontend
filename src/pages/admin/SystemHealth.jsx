@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../../layouts/MainLayout';
-import { api } from '../../services/api';
+import api from '../../services/api';
+
 
 // Icons
 import {
