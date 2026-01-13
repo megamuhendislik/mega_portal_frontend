@@ -179,6 +179,17 @@ function StressTestTab() {
         setLogs(['> Simülasyon başlatılıyor...', '> Test ortamı hazırlanıyor (DB Isolation)...']);
         try {
             const response = await api.post('/system/health-check/run_comprehensive_stress_test/');
+
+            if (response.data.error) {
+                setLogs(prev => [...prev, `> SERVER ERROR: ${response.data.error}`]);
+                if (response.data.logs && response.data.logs.length > 0) {
+                    setLogs(prev => [...prev, ...response.data.logs.map(l => `[SERVER LOG] ${l}`)]);
+                }
+                setLogs(prev => [...prev, `> DURUM: ${response.data.summary || 'CRASHED'}`]);
+                setIsRunning(false);
+                return;
+            }
+
             const results = response.data.results || [];
 
             // Animation Loop
