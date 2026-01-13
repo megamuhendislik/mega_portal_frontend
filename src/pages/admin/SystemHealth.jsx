@@ -28,7 +28,7 @@ export default function SystemHealth() {
     const fetchStats = async () => {
         setLoadingStats(true);
         try {
-            const response = await api.get('/admin/system-health/get_system_stats/');
+            const response = await api.get('/system/health-check/get_system_stats/');
             setStats(response.data);
         } catch (error) {
             console.error("Stats error:", error);
@@ -123,7 +123,7 @@ function DashboardTab({ stats, refresh, loading }) {
                         hazard={true}
                         onClick={async () => {
                             if (confirm('DİKKAT: Tüm Fazla Mesai taleplerini silmek üzeresiniz. Bu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
-                                await api.post('/admin/system-health/clear_requests/', { model_type: 'overtime' });
+                                await api.post('/system/health-check/clear_requests/', { model_type: 'overtime' });
                                 refresh();
                             }
                         }}
@@ -134,7 +134,7 @@ function DashboardTab({ stats, refresh, loading }) {
                         hazard={true}
                         onClick={async () => {
                             if (confirm('DİKKAT: Tüm İzin taleplerini silmek üzeresiniz. Bu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
-                                await api.post('/admin/system-health/clear_requests/', { model_type: 'leave' });
+                                await api.post('/system/health-check/clear_requests/', { model_type: 'leave' });
                                 refresh();
                             }
                         }}
@@ -178,7 +178,7 @@ function StressTestTab() {
         setIsRunning(true);
         setLogs(['> Simülasyon başlatılıyor...', '> Test ortamı hazırlanıyor (DB Isolation)...']);
         try {
-            const response = await api.post('/admin/system-health/run_comprehensive_stress_test/');
+            const response = await api.post('/system/health-check/run_comprehensive_stress_test/');
             const results = response.data.results || [];
 
             // Animation Loop
