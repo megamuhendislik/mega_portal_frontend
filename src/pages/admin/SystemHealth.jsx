@@ -183,7 +183,12 @@ function StressTestTab() {
             if (response.data.error) {
                 setLogs(prev => [...prev, `> SERVER ERROR: ${response.data.error}`]);
                 if (response.data.logs && response.data.logs.length > 0) {
-                    setLogs(prev => [...prev, ...response.data.logs.map(l => `[SERVER LOG] ${l}`)]);
+                    setLogs(prev => [...prev, ...response.data.logs.map(l => {
+                        if (typeof l === 'object') {
+                            return `[SERVER LOG] ${l.time || ''} ${l.message || ''} ${l.details ? '(' + l.details + ')' : ''}`;
+                        }
+                        return `[SERVER LOG] ${l}`;
+                    })]);
                 }
                 setLogs(prev => [...prev, `> DURUM: ${response.data.summary || 'CRASHED'}`]);
                 setIsRunning(false);
