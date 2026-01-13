@@ -158,6 +158,20 @@ function DashboardTab({ stats, refresh, loading }) {
                         <span className="text-sm font-medium text-gray-600">Gate API</span>
                         <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">LISTENING</span>
                     </div>
+                    <ActionButton
+                        label="Test Verilerini Temizle"
+                        description="Stres testi sırasında oluşturulan geçici kullanıcıları ve departmanları siler."
+                        hazard={true}
+                        onClick={async () => {
+                            if (confirm('UYARI: Tüm Stress Test verileri (Kullanıcılar, Departmanlar) silinecek.\nEmin misiniz?')) {
+                                try {
+                                    const res = await api.post('/system/health-check/cleanup_test_data/');
+                                    alert(res.data.message);
+                                    refresh();
+                                } catch (e) { alert('Hata: ' + e.message); }
+                            }
+                        }}
+                    />
                 </div>
             </div>
         </div>
@@ -176,51 +190,73 @@ function StressTestTab() {
 
     const runTest = async () => {
         setIsRunning(true);
-        setLogs(['> Simülasyon başlatılıyor...', '> Test ortamı hazırlanıyor (DB Isolation)...']);
+        setLogs(['> Simülasyon başlatılıyor...', '> Test ortamı hazırlanıyor (Async Task)...']);
+
         try {
-            const response = await api.post('/system/health-check/run_comprehensive_stress_test/');
+            // 1. Start Task
+            const startRes = await api.post('/system/health-check/run_comprehensive_stress_test/');
+            if (startRes.data.error) throw new Error(startRes.data.error);
 
-            if (response.data.error) {
-                setLogs(prev => [...prev, `> SERVER ERROR: ${response.data.error}`]);
-                if (response.data.logs && response.data.logs.length > 0) {
-                    setLogs(prev => [...prev, ...response.data.logs.map(l => {
-                        if (typeof l === 'object') {
-                            return `[SERVER LOG] ${l.time || ''} ${l.message || ''} ${l.details ? '(' + l.details + ')' : ''}`;
+            const taskId = startRes.data.task_id;
+            if (!taskId) throw new Error("Task ID alınamadı.");
+
+            setLogs(prev => [...prev, `> Görev Kuyruğa Alındı: ${taskId}`, '> Bekleniyor...']);
+
+            // 2. Poll Status
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await api.get(`/system/health-check/get_stress_test_status/?task_id=${taskId}`);
+                    const { state, logs: remoteLogs, report, error } = statusRes.data;
+
+                    if (state === 'PROGRESS' && remoteLogs) {
+                        // Replace generic logs with actual remote logs from server
+                        // For efficiency, maybe just show the last few? 
+                        // But user wants to see "streaming". 
+                        // Using a Set or just overwriting might be tricky if we want history.
+                        // Assuming remoteLogs is the FULL list from backend (as per my backend implementation).
+
+                        const formattedLogs = remoteLogs.map(l => {
+                            if (typeof l === 'object') {
+                                return `[${l.time}] ${l.message} ${l.details ? '(' + l.details + ')' : ''}`;
+                            }
+                            return l;
+                        });
+
+                        // Overwrite with server source of truth to avoid sync issues
+                        setLogs(formattedLogs);
+                    }
+
+                    if (state === 'SUCCESS') {
+                        clearInterval(pollInterval);
+                        setLogs(prev => [...prev, `> TEST TAMAMLANDI: ${report.summary}`]);
+
+                        // Append results if available in report
+                        if (report.results) {
+                            const resultLines = report.results.map(r => {
+                                const icon = r.status === 'PASS' ? '✅' : (r.status === 'FAIL' ? '❌' : '⚠️');
+                                return `${icon} [SCENARIO #${r.id}] ${r.desc} ... ${r.status}`;
+                            });
+                            setLogs(prev => [...prev, '--- SONUÇLAR ---', ...resultLines]);
                         }
-                        return `[SERVER LOG] ${l}`;
-                    })]);
+
+                        setIsRunning(false);
+                    } else if (state === 'FAILURE') {
+                        clearInterval(pollInterval);
+                        setLogs(prev => [...prev, `> KRİTİK HATA: ${error}`]);
+                        setIsRunning(false);
+                    }
+
+                } catch (e) {
+                    // Polling error (network glitch?), don't stop unless persistent? 
+                    // Stop for safety.
+                    console.error("Polling error:", e);
+                    // clearInterval(pollInterval);
+                    // setIsRunning(false);
                 }
-                setLogs(prev => [...prev, `> DURUM: ${response.data.summary || 'CRASHED'}`]);
-                setIsRunning(false);
-                return;
-            }
-
-            const results = response.data.results || [];
-
-            // Animation Loop
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i >= results.length) {
-                    clearInterval(interval);
-                    setLogs(prev => [...prev, `> TEST TAMAMLANDI: ${response.data.summary}`]);
-                    setIsRunning(false);
-                    return;
-                }
-                const res = results[i];
-                const statusIcon = res.status === 'PASS' ? '✅' : (res.status === 'FAIL' ? '❌' : '⚠️');
-                const line = `${statusIcon} [SCENARIO #${res.id}] ${res.desc} ... ${res.status}`;
-                const detail = res.detail ? `   └── ${res.detail}` : null;
-
-                setLogs(prev => {
-                    const newLogs = [...prev, line];
-                    if (detail) newLogs.push(detail);
-                    return newLogs;
-                });
-                i++;
-            }, 30); // 30ms delay for matrix effect
+            }, 1000);
 
         } catch (error) {
-            setLogs(prev => [...prev, `> KRİTİK HATA: ${error.message}`]);
+            setLogs(prev => [...prev, `> BAŞLATMA HATASI: ${error.message}`]);
             setIsRunning(false);
         }
     };
