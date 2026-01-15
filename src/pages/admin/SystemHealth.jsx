@@ -114,27 +114,62 @@ function DashboardTab({ stats, refresh, loading }) {
             <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <TrashIcon className="w-5 h-5 text-gray-400" />
-                    Veri Temizliği (Tehlikeli İşlemler)
+                    Veri Temizliği ve Yönetimi (Tehlikeli İşlemler)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ActionButton
-                        label="Tüm Fazla Mesai Taleplerini Sil"
-                        description="Onaylı/Reddedilmiş tüm FM kayıtlarını temizler."
-                        hazard={true}
+                        label="Sistemi Yeniden Hesapla"
+                        description="Mevcut giriş/çıkış verilerini koruyarak tüm puantaj hesaplamalarını yeniler."
+                        hazard={false}
                         onClick={async () => {
-                            if (confirm('DİKKAT: Tüm Fazla Mesai taleplerini silmek üzeresiniz. Bu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
-                                await api.post('/system/health-check/clear_requests/', { model_type: 'overtime' });
-                                refresh();
+                            if (confirm('Tüm geçmişi mevcut kurallara göre yeniden hesaplamak istiyor musunuz?')) {
+                                try {
+                                    const res = await api.post('/attendance/recalculate-history/');
+                                    alert(res.data.status);
+                                    refresh();
+                                } catch (e) { alert('Hata: ' + e.message); }
                             }
                         }}
                     />
+
                     <ActionButton
-                        label="Tüm İzin Taleplerini Sil"
-                        description="Tüm İzin geçmişini temizler."
+                        label="Tüm Verileri Sıfırla (Fabrika Ayarları)"
+                        description="TÜM Mesai, İzin ve Talep verilerini TAMAMEN SİLER."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('DİKKAT: Tüm İzin taleplerini silmek üzeresiniz. Bu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
-                                await api.post('/system/health-check/clear_requests/', { model_type: 'leave' });
+                            if (confirm('DİKKAT: TÜM KATILIM VERİLERİNİ SİLMEK ÜZERESİNİZ!\nBu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
+                                try {
+                                    const res = await api.post('/attendance/reset-all-data/');
+                                    alert(res.data.status);
+                                    refresh();
+                                } catch (e) { alert('Hata: ' + e.message); }
+                            }
+                        }}
+                    />
+
+                    <ActionButton
+                        label="Test Verilerini Temizle"
+                        description="Stres testi sırasında oluşturulan geçici kullanıcıları (Test User*) siler."
+                        hazard={true}
+                        onClick={async () => {
+                            if (confirm('Test kullanıcılarını silmek istiyor musunuz?')) {
+                                try {
+                                    // Using NEW Endpoint
+                                    const res = await api.post('/employees/cleanup-test-data/');
+                                    alert(res.data.status);
+                                    refresh();
+                                } catch (e) { alert('Hata: ' + e.message); }
+                            }
+                        }}
+                    />
+
+                    <ActionButton
+                        label="Tüm Fazla Mesai Taleplerini Sil"
+                        description="Sadece FM taleplerini temizler."
+                        hazard={true}
+                        onClick={async () => {
+                            if (confirm('Tüm Fazla Mesai taleplerini silmek üzeresiniz. Devam?')) {
+                                await api.post('/system/health-check/clear_requests/', { model_type: 'overtime' });
                                 refresh();
                             }
                         }}
@@ -158,20 +193,6 @@ function DashboardTab({ stats, refresh, loading }) {
                         <span className="text-sm font-medium text-gray-600">Gate API</span>
                         <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">LISTENING</span>
                     </div>
-                    <ActionButton
-                        label="Test Verilerini Temizle"
-                        description="Stres testi sırasında oluşturulan geçici kullanıcıları ve departmanları siler."
-                        hazard={true}
-                        onClick={async () => {
-                            if (confirm('UYARI: Tüm Stress Test verileri (Kullanıcılar, Departmanlar) silinecek.\nEmin misiniz?')) {
-                                try {
-                                    const res = await api.post('/system/health-check/cleanup_test_data/');
-                                    alert(res.data.message);
-                                    refresh();
-                                } catch (e) { alert('Hata: ' + e.message); }
-                            }
-                        }}
-                    />
                 </div>
             </div>
         </div>
