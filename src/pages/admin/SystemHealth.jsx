@@ -160,13 +160,25 @@ function DashboardTab({ stats, refresh, loading }) {
                         onClick={async () => {
                             if (confirm('Test kullanıcılarını silmek istiyor musunuz?')) {
                                 try {
-                                    // Using NEW Endpoint
                                     const res = await api.post('/employees/cleanup-test-data/');
-                                    alert(res.data.status);
+                                    const deletedUsers = res.data.deleted_users || [];
+
+                                    if (deletedUsers.length > 0) {
+                                        console.group("🗑️ Test Data Cleanup Report");
+                                        console.log(`Total Deleted: ${deletedUsers.length}`);
+                                        console.table(deletedUsers);
+                                        console.groupEnd();
+                                        alert(`${res.data.status}\n\nDetaylar için lütfen tarayıcı konsoluna (F12) bakın.`);
+                                    } else {
+                                        console.warn("No users matched the cleanup filter.");
+                                        alert(res.data.status);
+                                    }
+
                                     refresh();
                                 } catch (e) {
                                     const msg = e.response?.data?.error || e.response?.data?.detail || e.message;
                                     const trace = e.response?.data?.traceback ? '\n\n' + e.response.data.traceback : '';
+                                    console.error("Cleanup Error:", e);
                                     alert('Hata: ' + msg + trace);
                                 }
                             }
