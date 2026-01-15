@@ -5,36 +5,16 @@ import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
 
-import useInterval from '../hooks/useInterval';
+import useSmartPolling from '../hooks/useSmartPolling';
 
 const Requests = () => {
     const [activeTab, setActiveTab] = useState('my_requests');
-    const [requests, setRequests] = useState([]);
-    const [overtimeRequests, setOvertimeRequests] = useState([]);
-    const [mealRequests, setMealRequests] = useState([]);
-    const [incomingRequests, setIncomingRequests] = useState([]);
-    const [teamHistoryRequests, setTeamHistoryRequests] = useState([]); // Team History
-    const [requestTypes, setRequestTypes] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // ... (state)
 
-    // Modals
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
+    // ... (useEffect for initial data)
 
-    // Edit Form
-    const [editOvertimeForm, setEditOvertimeForm] = useState({
-        id: null,
-        start_time: '',
-        end_time: '',
-        reason: ''
-    });
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    // Auto-Refresh (Every 30s)
-    useInterval(() => {
+    // Auto-Refresh (Smart Polling every 30s)
+    useSmartPolling(() => {
         if (!loading && !showCreateModal && !showEditOvertimeModal) {
             fetchData();
             if (activeTab === 'team_history') {

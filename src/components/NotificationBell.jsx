@@ -3,6 +3,8 @@ import { Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
+import useSmartPolling from '../hooks/useSmartPolling';
+
 const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -10,33 +12,42 @@ const NotificationBell = () => {
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchNotifications();
-        // Poll every 30 seconds
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
-    }, []);
+    // 1. Lightweight Polling for Badge
+    const fetchUnreadCount = async () => {
+        try {
+            const response = await api.get('/notifications/unread-count/');
+            setUnreadCount(response.data.count);
+        } catch (error) {
+            // silent fail
+        }
+    };
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    useSmartPolling(fetchUnreadCount, 15000); // Poll count every 15s
 
+    // 2. Heavy Fetch for List (Only when open or initial)
     const fetchNotifications = async () => {
         try {
             const response = await api.get('/notifications/');
             const data = response.data.results || response.data;
             setNotifications(data);
+            // Sync count from full data just in case
             setUnreadCount(data.filter(n => !n.is_read).length);
         } catch (error) {
             console.error('Error fetching notifications:', error);
         }
     };
+
+    // Initial load
+    useEffect(() => {
+        fetchUnreadCount();
+    }, []);
+
+    // Fetch list when opened
+    useEffect(() => {
+        if (isOpen) {
+            fetchNotifications();
+        }
+    }, [isOpen]);
 
     const markAsRead = async (id) => {
         try {

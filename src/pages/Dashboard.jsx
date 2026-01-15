@@ -1,16 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
 import UpcomingEventsCard from '../components/UpcomingEventsCard';
-import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
-import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
-import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
-import StatCard from '../components/StatCard';
-import Skeleton from '../components/Skeleton';
-import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight } from 'lucide-react';
-import clsx from 'clsx';
-import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
-import { tr } from 'date-fns/locale';
+
+// ... (imports)
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -50,6 +44,10 @@ const Dashboard = () => {
         if (!employeeId) { setLoading(false); return; }
 
         try {
+            // NOTE: For Smart Polling, we might want to skip setting 'loading' to true on subsequent fetches?
+            // Currently fetchDashboardData sets loading=false at end, but doesn't set it to true at start (except initial state).
+            // So it's safe for background polling (won't flash skeleton).
+
             const { startStr, endStr } = getPeriodDates();
 
             const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes] = await Promise.allSettled([
@@ -92,9 +90,13 @@ const Dashboard = () => {
         }
     };
 
+    // Initial Fetch
     useEffect(() => {
         fetchDashboardData();
     }, [user]);
+
+    // Smart Polling (Every 30s)
+    useSmartPolling(fetchDashboardData, 30000);
 
     // Format Helpers
     const formatHours = (sec) => ((sec || 0) / 3600).toFixed(1);
