@@ -127,7 +127,10 @@ function DashboardTab({ stats, refresh, loading }) {
                                     const res = await api.post('/attendance/recalculate-history/');
                                     alert(res.data.status);
                                     refresh();
-                                } catch (e) { alert('Hata: ' + e.message); }
+                                } catch (e) {
+                                    const msg = e.response?.data?.error || e.response?.data?.detail || e.message;
+                                    alert('Hata: ' + msg);
+                                }
                             }
                         }}
                     />
@@ -142,7 +145,10 @@ function DashboardTab({ stats, refresh, loading }) {
                                     const res = await api.post('/attendance/reset-all-data/');
                                     alert(res.data.status);
                                     refresh();
-                                } catch (e) { alert('Hata: ' + e.message); }
+                                } catch (e) {
+                                    const msg = e.response?.data?.error || e.response?.data?.detail || e.message;
+                                    alert('Hata: ' + msg);
+                                }
                             }
                         }}
                     />
@@ -158,7 +164,11 @@ function DashboardTab({ stats, refresh, loading }) {
                                     const res = await api.post('/employees/cleanup-test-data/');
                                     alert(res.data.status);
                                     refresh();
-                                } catch (e) { alert('Hata: ' + e.message); }
+                                } catch (e) {
+                                    const msg = e.response?.data?.error || e.response?.data?.detail || e.message;
+                                    const trace = e.response?.data?.traceback ? '\n\n' + e.response.data.traceback : '';
+                                    alert('Hata: ' + msg + trace);
+                                }
                             }
                         }}
                     />
