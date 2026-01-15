@@ -4,7 +4,15 @@ import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
 import UpcomingEventsCard from '../components/UpcomingEventsCard';
 
-// ... (imports)
+import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
+import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
+import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+import StatCard from '../components/StatCard';
+import Skeleton from '../components/Skeleton';
+import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight } from 'lucide-react';
+import clsx from 'clsx';
+import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 const Dashboard = () => {
     const { user } = useAuth();
