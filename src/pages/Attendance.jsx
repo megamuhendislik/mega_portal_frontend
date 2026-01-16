@@ -216,34 +216,41 @@ const Attendance = () => {
 
                     {/* Year/Month Selectors (Only visible/active if in Monthly mode or always? User said 'ay seçilebilsin') */}
                     {/* Better UX: If I click Month Selector, it auto-switches to MONTHLY scope. */}
-                    <div className={`flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm transition-opacity duration-300 ${viewScope === 'DAILY' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        <div className="h-6 w-px bg-slate-200"></div>
+                    <div className={`flex flex-col items-end gap-1 transition-opacity duration-300 ${viewScope === 'DAILY' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                        <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="h-6 w-px bg-slate-200"></div>
 
-                        <select
-                            value={viewMonth}
-                            onChange={(e) => {
-                                setViewMonth(parseInt(e.target.value));
-                                setViewScope('MONTHLY');
-                            }}
-                            className="text-sm font-bold text-slate-700 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
-                        >
-                            {months.map((m, i) => (
-                                <option key={i} value={i}>{i + 1} - {m}</option>
-                            ))}
-                        </select>
+                            <select
+                                value={viewMonth}
+                                onChange={(e) => {
+                                    setViewMonth(parseInt(e.target.value));
+                                    setViewScope('MONTHLY');
+                                }}
+                                className="text-sm font-bold text-slate-700 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors appearance-none"
+                            >
+                                {months.map((m, i) => (
+                                    <option key={i} value={i}>{m}</option>
+                                ))}
+                            </select>
 
-                        <select
-                            value={viewYear}
-                            onChange={(e) => {
-                                setViewYear(parseInt(e.target.value));
-                                setViewScope('MONTHLY');
-                            }}
-                            className="text-sm font-bold text-slate-500 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
-                        >
-                            {years.map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
+                            <select
+                                value={viewYear}
+                                onChange={(e) => {
+                                    setViewYear(parseInt(e.target.value));
+                                    setViewScope('MONTHLY');
+                                }}
+                                className="text-sm font-bold text-slate-500 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors appearance-none"
+                            >
+                                {years.map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {viewScope === 'MONTHLY' && startDate && endDate && (
+                            <span className="text-[10px] font-medium text-slate-400">
+                                Dönem: {new Date(startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {new Date(endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                            </span>
+                        )}
                     </div>
 
                     <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
