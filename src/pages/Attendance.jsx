@@ -32,15 +32,37 @@ const Attendance = () => {
 
     // Filters
     const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
-    const [dateFilter, setDateFilter] = useState('MONTH');
+
+    // Date State (Defaults to current period)
+    const today = new Date();
+    // Logic: If today >= 26, we are in Next Month's cycle (Start 26th this month, End 25th next month)
+    // If today < 26, we are in This Month's cycle (Start 26th prev month, End 25th this month)
+    const initialMonth = today.getDate() >= 26 ? today.getMonth() + 1 : today.getMonth();
+    const initialYear = today.getDate() >= 26 && today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear();
+    // Handle wrap around 
+    const safeInitialMonth = initialMonth > 11 ? 0 : initialMonth;
+
+    const [viewYear, setViewYear] = useState(initialYear);
+    const [viewMonth, setViewMonth] = useState(safeInitialMonth); // 0-based index
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
+    const months = [
+        'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    const years = [2024, 2025, 2026, 2027];
+
     // --- EFFECT: Init ---
     useEffect(() => {
-        handleDateFilterChange('MONTH');
+        updateDateRange(viewYear, viewMonth);
         checkTeamVisibility();
     }, [user]);
+
+    // Recalculate dates when year/month changes
+    useEffect(() => {
+        updateDateRange(viewYear, viewMonth);
+    }, [viewYear, viewMonth]);
 
     // --- EFFECT: Load Data ---
     useEffect(() => {
@@ -64,34 +86,20 @@ const Attendance = () => {
         }
     };
 
-    const handleDateFilterChange = (type) => {
-        setDateFilter(type);
-        const today = new Date();
-        let start = new Date();
-        let end = new Date();
+    // Use standard 26-25 Logic
+    // Selected Month X: Start = (Month X-1) 26, End = (Month X) 25
+    const updateDateRange = (year, month) => {
+        let start, end;
 
-        if (type === 'WEEK') {
-            const day = today.getDay();
-            const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-            start.setDate(diff);
-            end.setDate(start.getDate() + 6);
-        } else if (type === 'MONTH') {
-            // If today is >= 26th, current period is This Month 26 - Next Month 25
-            // But usually "Current Month" means the period we are IN.
-            // Let's stick to standard 26-25 logic.
-            if (today.getDate() >= 26) {
-                start = new Date(today.getFullYear(), today.getMonth(), 26);
-                end = new Date(today.getFullYear(), today.getMonth() + 1, 25);
-            } else {
-                start = new Date(today.getFullYear(), today.getMonth() - 1, 26);
-                end = new Date(today.getFullYear(), today.getMonth(), 25);
-            }
-        }
+        // Target End Date: 25th of selected month
+        end = new Date(year, month, 25);
 
-        if (type !== 'CUSTOM') {
-            setStartDate(start.toISOString().split('T')[0]);
-            setEndDate(end.toISOString().split('T')[0]);
-        }
+        // Target Start Date: 26th of previous month
+        // Handle Jan case automatically by Date constructor (month - 1 handles wrap)
+        start = new Date(year, month - 1, 26);
+
+        setStartDate(format(start, 'yyyy-MM-dd'));
+        setEndDate(format(end, 'yyyy-MM-dd'));
     };
 
     const fetchAttendanceData = async () => {
@@ -174,10 +182,37 @@ const Attendance = () => {
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
                     {/* View Switcher */}
+                    {/* Year/Month Selectors */}
+                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                        <Calendar size={18} className="text-slate-400 ml-2" />
+
+                        <div className="h-6 w-px bg-slate-200"></div>
+
+                        <select
+                            value={viewMonth}
+                            onChange={(e) => setViewMonth(parseInt(e.target.value))}
+                            className="text-sm font-bold text-slate-700 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
+                        >
+                            {months.map((m, i) => (
+                                <option key={i} value={i}>{i + 1} - {m}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={viewYear}
+                            onChange={(e) => setViewYear(parseInt(e.target.value))}
+                            className="text-sm font-bold text-slate-500 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
+                        >
+                            {years.map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
                         <button
                             onClick={() => setActiveTab('my_attendance')}
-                            className={`flex - 1 sm: flex - none px - 6 py - 2.5 rounded - lg text - sm font - bold transition - all flex items - center justify - center gap - 2 ${activeTab === 'my_attendance' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'my_attendance' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
                         >
                             <User size={18} />
                             Kendi Mesaim
@@ -185,111 +220,91 @@ const Attendance = () => {
                         {hasTeam && (
                             <button
                                 onClick={() => setActiveTab('team_attendance')}
-                                className={`flex - 1 sm: flex - none px - 6 py - 2.5 rounded - lg text - sm font - bold transition - all flex items - center justify - center gap - 2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
                             >
                                 <Users size={18} />
                                 Ekip
                             </button>
                         )}
                     </div>
-
-                    {/* Date Filter */}
-                    {(activeTab === 'my_attendance' || activeTab === 'team_detail') && (
-                        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                            <button onClick={() => handleDateFilterChange('WEEK')} className={`px - 4 py - 2 rounded - lg text - xs font - bold transition - all ${dateFilter === 'WEEK' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'} `}>Hafta</button>
-                            <button onClick={() => handleDateFilterChange('MONTH')} className={`px - 4 py - 2 rounded - lg text - xs font - bold transition - all ${dateFilter === 'MONTH' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'} `}>Ay</button>
-                            <div className="h-5 w-px bg-slate-200 mx-2"></div>
-                            <div className="flex items-center gap-2 px-2">
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => { setStartDate(e.target.value); setDateFilter('CUSTOM'); }}
-                                    className="text-xs font-bold text-slate-700 outline-none w-24 bg-transparent cursor-pointer"
-                                />
-                                <span className="text-slate-300">-</span>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => { setEndDate(e.target.value); setDateFilter('CUSTOM'); }}
-                                    className="text-xs font-bold text-slate-700 outline-none w-24 bg-transparent cursor-pointer"
-                                />
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
             {/* Back Button for Team Detail */}
-            {activeTab === 'team_detail' && (
-                <button onClick={() => setActiveTab('team_attendance')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-sm transition-colors">
-                    ← Ekip Tablosuna Dön
-                </button>
-            )}
+            {
+                activeTab === 'team_detail' && (
+                    <button onClick={() => setActiveTab('team_attendance')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-sm transition-colors">
+                        ← Ekip Tablosuna Dön
+                    </button>
+                )
+            }
 
-            {loading ? (
-                <div className="space-y-6">
-                    <Skeleton className="h-48 rounded-2xl" />
-                    <div className="grid grid-cols-2 gap-6"><Skeleton className="h-64 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>
-                    <Skeleton className="h-96 rounded-2xl" />
-                </div>
-            ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-
-                    {/* 1.5. Hero Daily Summary (Today) */}
-                    <HeroDailySummary summary={todaySummary} loading={loading} />
-
-                    {/* 2. Monthly Summary Section */}
-                    {/* Includes 3-part progress bar and Net Status Card */}
-                    <div className="bg-white p-1 rounded-3xl">
-                        <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} />
+            {
+                loading ? (
+                    <div className="space-y-6">
+                        <Skeleton className="h-48 rounded-2xl" />
+                        <div className="grid grid-cols-2 gap-6"><Skeleton className="h-64 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>
+                        <Skeleton className="h-96 rounded-2xl" />
                     </div>
+                ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
 
-                    {/* 3. Charts Row */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[450px]">
-                        {/* Stacked Attendance Chart (8 Cols) */}
-                        <div className="xl:col-span-8 h-full">
-                            <WeeklyAttendanceChart logs={logs} />
+                        {/* 1.5. Hero Daily Summary (Today) */}
+                        <HeroDailySummary summary={todaySummary} loading={loading} />
+
+                        {/* 2. Monthly Summary Section */}
+                        {/* Includes 3-part progress bar and Net Status Card */}
+                        <div className="bg-white p-1 rounded-3xl">
+                            <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} />
                         </div>
 
-                        {/* Break Analysis (4 Cols) */}
-                        <div className="xl:col-span-4 h-full">
-                            <BreakAnalysisWidget
-                                logs={logs}
-                                totalBreakSeconds={periodSummary?.total_break_seconds}
-                                startDate={startDate}
-                                endDate={endDate}
-                            />
+                        {/* 3. Charts Row */}
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[450px]">
+                            {/* Stacked Attendance Chart (8 Cols) */}
+                            <div className="xl:col-span-8 h-full">
+                                <WeeklyAttendanceChart logs={logs} />
+                            </div>
+
+                            {/* Break Analysis (4 Cols) */}
+                            <div className="xl:col-span-4 h-full">
+                                <BreakAnalysisWidget
+                                    logs={logs}
+                                    totalBreakSeconds={periodSummary?.total_break_seconds}
+                                    startDate={startDate}
+                                    endDate={endDate}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 4. Detailed Logs Table */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                    <Clock size={20} className="text-slate-400" />
+                                    Detaylı Günlük Hareketler
+                                </h3>
+                                <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2">
+                                    <Download size={14} />
+                                    Excel İndir
+                                </button>
+                            </div>
+                            <AttendanceLogTable logs={logs} />
+                        </div>
+
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-right-4">
+                        {/* Team View */}
+                        <div className="lg:col-span-2 space-y-6">
+                            <TeamAttendanceOverview teamData={teamMembers} onMemberClick={handleTeamMemberClick} />
+                        </div>
+                        <div>
+                            <TeamComparisonChart data={teamComparison} />
                         </div>
                     </div>
-
-                    {/* 4. Detailed Logs Table */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                <Clock size={20} className="text-slate-400" />
-                                Detaylı Günlük Hareketler
-                            </h3>
-                            <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2">
-                                <Download size={14} />
-                                Excel İndir
-                            </button>
-                        </div>
-                        <AttendanceLogTable logs={logs} />
-                    </div>
-
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-right-4">
-                    {/* Team View */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <TeamAttendanceOverview teamData={teamMembers} onMemberClick={handleTeamMemberClick} />
-                    </div>
-                    <div>
-                        <TeamComparisonChart data={teamComparison} />
-                    </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
