@@ -44,6 +44,7 @@ const Attendance = () => {
 
     const [viewYear, setViewYear] = useState(initialYear);
     const [viewMonth, setViewMonth] = useState(safeInitialMonth); // 0-based index
+    const [viewScope, setViewScope] = useState('DAILY'); // 'DAILY' | 'MONTHLY'
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -55,14 +56,14 @@ const Attendance = () => {
 
     // --- EFFECT: Init ---
     useEffect(() => {
-        updateDateRange(viewYear, viewMonth);
+        updateDateRange(viewYear, viewMonth, viewScope);
         checkTeamVisibility();
     }, [user]);
 
-    // Recalculate dates when year/month changes
+    // Recalculate dates when year/month/scope changes
     useEffect(() => {
-        updateDateRange(viewYear, viewMonth);
-    }, [viewYear, viewMonth]);
+        updateDateRange(viewYear, viewMonth, viewScope);
+    }, [viewYear, viewMonth, viewScope]);
 
     // --- EFFECT: Load Data ---
     useEffect(() => {
@@ -86,16 +87,23 @@ const Attendance = () => {
         }
     };
 
-    // Use standard 26-25 Logic
-    // Selected Month X: Start = (Month X-1) 26, End = (Month X) 25
-    const updateDateRange = (year, month) => {
+    // Use standard 26-25 Logic OR Today Logic
+    const updateDateRange = (year, month, scope) => {
         let start, end;
 
+        if (scope === 'DAILY') {
+            const now = new Date();
+            const str = format(now, 'yyyy-MM-dd');
+            setStartDate(str);
+            setEndDate(str);
+            return;
+        }
+
+        // MONTHLY SCOPE
         // Target End Date: 25th of selected month
         end = new Date(year, month, 25);
 
         // Target Start Date: 26th of previous month
-        // Handle Jan case automatically by Date constructor (month - 1 handles wrap)
         start = new Date(year, month - 1, 26);
 
         setStartDate(format(start, 'yyyy-MM-dd'));
@@ -182,15 +190,41 @@ const Attendance = () => {
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
                     {/* View Switcher */}
-                    {/* Year/Month Selectors */}
-                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-                        <Calendar size={18} className="text-slate-400 ml-2" />
+                    {/* View Switcher (Today / Month) */}
+                    <div className="bg-slate-100 p-1 rounded-xl flex items-center">
+                        <button
+                            onClick={() => setViewScope('DAILY')}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'DAILY'
+                                ? 'bg-white text-indigo-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            Bugün
+                        </button>
+                        <button
+                            onClick={() => setViewScope('MONTHLY')}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'MONTHLY'
+                                ? 'bg-white text-indigo-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            <Calendar size={14} />
+                            Ay
+                        </button>
+                    </div>
 
+                    {/* Year/Month Selectors (Only visible/active if in Monthly mode or always? User said 'ay seçilebilsin') */}
+                    {/* Better UX: If I click Month Selector, it auto-switches to MONTHLY scope. */}
+                    <div className={`flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm transition-opacity duration-300 ${viewScope === 'DAILY' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                         <div className="h-6 w-px bg-slate-200"></div>
 
                         <select
                             value={viewMonth}
-                            onChange={(e) => setViewMonth(parseInt(e.target.value))}
+                            onChange={(e) => {
+                                setViewMonth(parseInt(e.target.value));
+                                setViewScope('MONTHLY');
+                            }}
                             className="text-sm font-bold text-slate-700 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
                         >
                             {months.map((m, i) => (
@@ -200,7 +234,10 @@ const Attendance = () => {
 
                         <select
                             value={viewYear}
-                            onChange={(e) => setViewYear(parseInt(e.target.value))}
+                            onChange={(e) => {
+                                setViewYear(parseInt(e.target.value));
+                                setViewScope('MONTHLY');
+                            }}
                             className="text-sm font-bold text-slate-500 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
                         >
                             {years.map(y => (
@@ -249,8 +286,10 @@ const Attendance = () => {
                 ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
 
-                        {/* 1.5. Hero Daily Summary (Today) */}
-                        <HeroDailySummary summary={todaySummary} loading={loading} />
+                        {/* 1.5. Hero Daily Summary (Today) - ONLY IF DAILY SCOPE */}
+                        {viewScope === 'DAILY' && (
+                            <HeroDailySummary summary={todaySummary} loading={loading} />
+                        )}
 
                         {/* 2. Monthly Summary Section */}
                         {/* Includes 3-part progress bar and Net Status Card */}
