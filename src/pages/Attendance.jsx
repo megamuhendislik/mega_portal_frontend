@@ -253,7 +253,12 @@ const Attendance = () => {
 
                         {/* Break Analysis (4 Cols) */}
                         <div className="xl:col-span-4 h-full">
-                            <BreakAnalysisWidget logs={logs} totalBreakSeconds={periodSummary?.total_break_seconds} />
+                            <BreakAnalysisWidget
+                                logs={logs}
+                                totalBreakSeconds={periodSummary?.total_break_seconds}
+                                startDate={startDate}
+                                endDate={endDate}
+                            />
                         </div>
                     </div>
 
