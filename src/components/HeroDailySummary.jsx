@@ -5,7 +5,7 @@ import clsx from 'clsx';
 const HeroDailySummary = ({ summary, loading }) => {
     console.log("HeroDailySummary Render:", { summary, loading });
 
-    if (loading || !summary) {
+    if (loading) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
                 {[1, 2, 3].map(i => (
@@ -15,20 +15,23 @@ const HeroDailySummary = ({ summary, loading }) => {
         );
     }
 
+    // Default to empty object if summary is missing (e.g. API error or not deployed yet)
+    const safeSummary = summary || {};
+
     // Correct Backend Field Mapping (Now Seconds)
-    const totalWorkSeconds = summary.total_worked || 0;
-    const workTargetSeconds = (summary.daily_expected !== undefined && summary.daily_expected !== null) ? summary.daily_expected : 0;
+    const totalWorkSeconds = safeSummary.total_worked || 0;
+    const workTargetSeconds = (safeSummary.daily_expected !== undefined && safeSummary.daily_expected !== null) ? safeSummary.daily_expected : 0;
     const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((totalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
-    const usedBreakSeconds = summary.break_used || 0;
+    const usedBreakSeconds = safeSummary.break_used || 0;
     // Standard 60 mins allowance = 3600 seconds
-    const totalBreakAllowanceSeconds = (summary.remaining_break || 0) + usedBreakSeconds;
+    const totalBreakAllowanceSeconds = (safeSummary.remaining_break || 0) + usedBreakSeconds;
     const breakPercent = totalBreakAllowanceSeconds > 0
         ? Math.min(100, Math.round((usedBreakSeconds / totalBreakAllowanceSeconds) * 100))
         : 0;
 
-    const overtimeSeconds = summary.current_overtime || 0;
-    const isWorking = summary.is_working || false;
+    const overtimeSeconds = safeSummary.current_overtime || 0;
+    const isWorking = safeSummary.is_working || false;
 
     return (
 
