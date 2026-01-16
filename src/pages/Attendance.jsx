@@ -10,6 +10,7 @@ import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
 import TeamComparisonChart from '../components/TeamComparisonChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+import HeroDailySummary from '../components/HeroDailySummary';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import Skeleton from '../components/Skeleton';
 import { format } from 'date-fns';
@@ -25,6 +26,7 @@ const Attendance = () => {
     // Data State
     const [logs, setLogs] = useState([]);
     const [periodSummary, setPeriodSummary] = useState(null);
+    const [todaySummary, setTodaySummary] = useState(null);
     const [teamMembers, setTeamMembers] = useState([]);
     const [teamComparison, setTeamComparison] = useState([]);
 
@@ -102,6 +104,13 @@ const Attendance = () => {
             // 2. Fetch Period Summary (for Cards)
             const sumRes = await api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             setPeriodSummary(sumRes.data);
+
+            // 3. Fetch Today's Summary (For Hero Widget)
+            // Only if we are viewing "My Attendance" or a specific Team Member (Detail)
+            if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
+                const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}`);
+                setTodaySummary(todayRes.data);
+            }
 
         } catch (error) {
             console.error(error);
@@ -225,6 +234,9 @@ const Attendance = () => {
                 </div>
             ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+
+                    {/* 1.5. Hero Daily Summary (Today) */}
+                    <HeroDailySummary summary={todaySummary} loading={loading} />
 
                     {/* 2. Monthly Summary Section */}
                     {/* Includes 3-part progress bar and Net Status Card */}
