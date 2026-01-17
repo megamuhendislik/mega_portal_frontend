@@ -100,6 +100,10 @@ export default function SystemHealth() {
 // --- SUB COMPONENTS ---
 
 function DashboardTab({ stats, refresh, loading }) {
+    const [recalcConsoleOpen, setRecalcConsoleOpen] = useState(false);
+    const [recalcLogs, setRecalcLogs] = useState([]);
+    const [recalcLoading, setRecalcLoading] = useState(false);
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
             {/* KPI Cards */}
@@ -118,22 +122,60 @@ function DashboardTab({ stats, refresh, loading }) {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ActionButton
-                        label="Sistemi Yeniden Hesapla"
-                        description="Mevcut giriş/çıkış verilerini koruyarak tüm puantaj hesaplamalarını yeniler."
+                        label="Sistemi Yeniden Hesapla (Detaylı Log)"
+                        description="Mevcut giriş/çıkış verilerini koruyarak tüm puantaj hesaplamalarını yeniler ve işlem loglarını döker."
                         hazard={false}
-                        onClick={async () => {
-                            if (confirm('Tüm geçmişi mevcut kurallara göre yeniden hesaplamak istiyor musunuz?')) {
-                                try {
-                                    const res = await api.post('/attendance/recalculate-history/');
-                                    alert(res.data.status);
-                                    refresh();
-                                } catch (e) {
-                                    const msg = e.response?.data?.error || e.response?.data?.detail || e.message;
-                                    alert('Hata: ' + msg);
-                                }
-                            }
-                        }}
+                        onClick={() => setRecalcConsoleOpen(true)}
                     />
+
+                    {/* Recalculate Console Modal/Area */}
+                    {recalcConsoleOpen && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-gray-900 w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700">
+                                <div className="bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
+                                    <h3 className="text-white font-mono font-bold flex items-center gap-2">
+                                        <CommandLineIcon className="w-5 h-5 text-green-400" />
+                                        RECALCULATION_LOGS.log
+                                    </h3>
+                                    <button onClick={() => setRecalcConsoleOpen(false)} className="text-gray-400 hover:text-white transition">
+                                        <XCircleIcon className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 bg-gray-950 p-4 overflow-y-auto font-mono text-xs text-green-300 space-y-1">
+                                    {recalcLogs.length === 0 && !recalcLoading && (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
+                                            <p>Log dökümü için işlemi başlatın.</p>
+                                            <button
+                                                onClick={async () => {
+                                                    setRecalcLoading(true);
+                                                    setRecalcLogs(['> Başlatılıyor...', '> Tüm personel taranıyor...']);
+                                                    try {
+                                                        const res = await api.post('/attendance/recalculate-history/', { debug_console: true });
+                                                        setRecalcLogs(prev => [...prev, ...res.data.logs, `> BİTTİ: ${res.data.status}`]);
+                                                        refresh();
+                                                    } catch (e) {
+                                                        setRecalcLogs(prev => [...prev, `> HATA: ${e.response?.data?.error || e.message}`]);
+                                                    } finally {
+                                                        setRecalcLoading(false);
+                                                    }
+                                                }}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold transition"
+                                            >
+                                                BAŞLAT (DEBUG MODE)
+                                            </button>
+                                        </div>
+                                    )}
+                                    {recalcLogs.map((l, i) => (
+                                        <div key={i} className="whitespace-pre-wrap break-all border-b border-gray-900/50 pb-0.5">
+                                            {l}
+                                        </div>
+                                    ))}
+                                    {recalcLoading && <div className="animate-pulse text-green-500 mt-2">_ İşleniyor...</div>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <ActionButton
                         label="Tüm Verileri Sıfırla (Fabrika Ayarları)"
