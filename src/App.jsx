@@ -75,10 +75,10 @@ function App() {
 
             <Route path="requests" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REQUESTS"><Requests /></ProtectedRoute>} />
             <Route path="reports" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REPORTS"><Reports /></ProtectedRoute>} />
-            <Route path="admin/system-health" element={<ProtectedRoute><SystemHealth /></ProtectedRoute>} />
-            <Route path="admin/service-control" element={<ProtectedRoute><ServiceControl /></ProtectedRoute>} />
+            <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="SYSTEM_VIEW_HEALTH"><SystemHealth /></ProtectedRoute>} />
+            <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE_SERVICES"><ServiceControl /></ProtectedRoute>} />
             <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><FiscalCalendarSettings /></ProtectedRoute>} />
-            <Route path="debug/attendance" element={<ProtectedRoute><AttendanceDebugger /></ProtectedRoute>} />
+            <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="SYSTEM_DEBUG"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>
