@@ -194,7 +194,7 @@ const Dashboard = () => {
                 <StatCard
                     title="ANLIK FAZLA MESAİ"
                     value={`${formatMin(todaySummary?.current_overtime)} dk`}
-                    subLabel="Onaylanmış/Bekleyen"
+                    subValue={`Onay: ${formatMin(todaySummary?.overtime_approved)} dk / Bekl: ${formatMin(todaySummary?.overtime_pending)} dk`}
                     icon={Zap}
                     color="emerald"
                 />
