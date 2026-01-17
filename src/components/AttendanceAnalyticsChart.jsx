@@ -56,7 +56,13 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
             </div>
             <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data} barSize={24} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+                        <defs>
+                            <pattern id="striped-analytics" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                                <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
+                                <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
+                            </pattern>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={5} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
@@ -66,7 +72,7 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
                             labelStyle={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
                             cursor={{ fill: '#f8fafc' }}
                         />
-                        {/* Dynamic Target Line - Only shows on days with target > 0 */}
+                        {/* Dynamic Target Line */}
                         <Line
                             type="step"
                             dataKey="target"
@@ -79,8 +85,8 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
                             connectNulls={false}
                         />
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal" />
-                        <Bar dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 4, 4]} name="Ek Mesai" />
-                        <Bar dataKey="missing" stackId="a" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Eksik" />
+                        <Bar dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} name="Ek Mesai" />
+                        <Bar dataKey="missing" stackId="a" fill="url(#striped-analytics)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} name="Eksik" />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
