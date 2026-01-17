@@ -21,15 +21,23 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
         for (let i = 0; i < 7; i++) {
             const current = addDays(weekStart, i);
             const dateStr = format(current, 'yyyy-MM-dd');
-            const log = logs.find(l => l.work_date === dateStr);
+
+            // AGGREGATION FIX: Filter all logs for this day and sum them
+            const dayLogs = logs.filter(l => l.work_date === dateStr);
+            const aggregated = dayLogs.reduce((acc, log) => ({
+                normal_seconds: acc.normal_seconds + (log.normal_seconds || 0),
+                overtime_seconds: acc.overtime_seconds + (log.overtime_seconds || 0),
+                missing_seconds: acc.missing_seconds + (log.missing_seconds || 0),
+                day_target_seconds: log.day_target_seconds || acc.day_target_seconds // Take first non-zero target
+            }), { normal_seconds: 0, overtime_seconds: 0, missing_seconds: 0, day_target_seconds: 0 });
 
             days.push({
                 name: format(current, 'EEE', { locale: tr }),
                 fullDate: format(current, 'd MMM yyyy', { locale: tr }),
-                normal: (log?.normal_seconds || 0) / 3600,
-                overtime: (log?.overtime_seconds || 0) / 3600,
-                missing: (log?.missing_seconds || 0) / 3600,
-                target: (log?.day_target_seconds && log.day_target_seconds > 0) ? (log.day_target_seconds / 3600) : null
+                normal: aggregated.normal_seconds / 3600,
+                overtime: aggregated.overtime_seconds / 3600,
+                missing: aggregated.missing_seconds / 3600,
+                target: (aggregated.day_target_seconds > 0) ? (aggregated.day_target_seconds / 3600) : null
             });
         }
         return days;

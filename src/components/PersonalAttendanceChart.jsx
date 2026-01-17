@@ -4,24 +4,33 @@ import { formatDate } from '../utils/dateUtils';
 import { BarChart3 } from 'lucide-react';
 
 const PersonalAttendanceChart = ({ logs }) => {
-    // Transform logs to chart data
-    const data = logs.map(log => {
-        const date = new Date(log.work_date);
-        const normal = (log.normal_seconds || 0) / 3600;
-        const missing = (log.missing_seconds || 0) / 3600;
+    // Aggregation Fix: Group logs by unique date
+    const uniqueDates = [...new Set(logs.map(l => l.work_date))];
+    const data = uniqueDates.map(dateStr => {
+        const dayLogs = logs.filter(l => l.work_date === dateStr);
+        // Sum values
+        const aggregated = dayLogs.reduce((acc, log) => ({
+            normal: acc.normal + (log.normal_seconds || 0),
+            overtime: acc.overtime + (log.overtime_seconds || 0),
+            missing: acc.missing + (log.missing_seconds || 0)
+        }), { normal: 0, overtime: 0, missing: 0 });
+
+        const date = new Date(dateStr);
+        const normal = aggregated.normal / 3600;
+        const missing = aggregated.missing / 3600;
         const target = normal + missing;
 
         return {
             name: `${date.getDate()}`,
-            fullDate: formatDate(log.work_date),
+            fullDate: formatDate(dateStr),
             normal: normal,
-            overtime: (log.overtime_seconds || 0) / 3600,
-            break: 0, // Not tracked in daily logs yet for chart needed?
-            missing: missing > 0.1 ? missing : 0, // Filter tiny noise
+            overtime: aggregated.overtime / 3600,
+            break: 0,
+            missing: missing > 0.1 ? missing : 0,
             target: target > 0 ? target : null,
             isWeekend: date.getDay() === 0 || date.getDay() === 6
         };
-    });
+    }).sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); // Ensure sorted order
 
     // Custom Tooltip with Glassmorphism
     const CustomTooltip = ({ active, payload, label }) => {
