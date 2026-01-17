@@ -240,6 +240,23 @@ function DashboardTab({ stats, refresh, loading }) {
                             }
                         }}
                     />
+
+                    <ActionButton
+                        label="Tüm Test Departman/Pozisyon Verilerini Sil"
+                        description="'Stress', 'Diagnostic', 'Test', 'Deneme' içeren tüm yapıları temizler."
+                        hazard={true}
+                        onClick={async () => {
+                            if (confirm('İçinde "Test", "Stress", "Diagnostic" geçen TÜM Departman ve Pozisyonlar silinecek.\nBu işlem geri alınamaz. Onaylıyor musunuz?')) {
+                                try {
+                                    const res = await api.post('/system/health-check/run_metadata_cleanup/');
+                                    alert(res.data.message);
+                                    refresh();
+                                } catch (e) {
+                                    alert('Hata: ' + (e.response?.data?.error || e.message));
+                                }
+                            }
+                        }}
+                    />
                 </div>
             </div>
 
