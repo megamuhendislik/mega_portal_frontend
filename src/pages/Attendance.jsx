@@ -10,7 +10,7 @@ import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
 import TeamComparisonChart from '../components/TeamComparisonChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
-import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import HeroDailySummary from '../components/HeroDailySummary';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
