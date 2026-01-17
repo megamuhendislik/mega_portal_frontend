@@ -48,7 +48,10 @@ const Dashboard = () => {
     };
 
     const fetchDashboardData = async () => {
-        const employeeId = user?.employee?.id || user?.id;
+        // Align with Attendance.jsx: use user.id
+        // const employeeId = user?.employee?.id || user?.id;
+        const employeeId = user?.id;
+
         if (!employeeId) { setLoading(false); return; }
 
         try {
