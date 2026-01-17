@@ -129,7 +129,7 @@ const TrendView = ({ data, xKey, unit = 'sa' }) => {
     );
 };
 
-const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1 }) => {
+const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1, employeeId }) => {
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
     const [loadingYearly, setLoadingYearly] = useState(false);
@@ -140,18 +140,27 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
 
         // Group by Week
         const weeks = {};
-        logs.forEach(log => {
+        // Sort logs by date first to ensure order
+        const sortedLogs = [...logs].sort((a, b) => new Date(a.work_date) - new Date(b.work_date));
+
+        if (sortedLogs.length === 0) return [];
+        const firstLogDate = new Date(sortedLogs[0].work_date);
+        const firstWeekStart = startOfWeek(firstLogDate, { weekStartsOn: 1 });
+
+        sortedLogs.forEach(log => {
             const date = new Date(log.work_date);
-            const weekNum = getWeek(date, { weekStartsOn: 1 }); // Week Number
-            // Better: use start of week date as key
             const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-            const key = format(weekStart, 'd MMM'); // e.g. "12 Ara"
 
-            if (!weeks[key]) weeks[key] = { count: 0, normal: 0, overtime: 0 };
+            // Calculate week index relative to the start of the period
+            const diffTime = Math.abs(weekStart - firstWeekStart);
+            const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+            const weekLabel = `${diffWeeks + 1}. Hafta`;
 
-            weeks[key].count += 1;
-            weeks[key].normal += (log.normal_seconds || 0) / 3600;
-            weeks[key].overtime += (log.overtime_seconds || 0) / 3600;
+            if (!weeks[weekLabel]) weeks[weekLabel] = { count: 0, normal: 0, overtime: 0 };
+
+            weeks[weekLabel].count += 1;
+            weeks[weekLabel].normal += (log.normal_seconds || 0) / 3600;
+            weeks[weekLabel].overtime += (log.overtime_seconds || 0) / 3600;
         });
 
         // Calculate Averages
@@ -164,16 +173,21 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
 
     // Check if we need to fetch yearly data
     useEffect(() => {
-        if (scope === 'YEARLY' && yearlyData.length === 0) {
+        // Reset yearly data if employee changes
+        if (scope === 'YEARLY') {
             fetchYearlyData();
+        } else {
+            // Optional: if switching back to yearly for same employee, we check if yearlyData is empty?
+            // But if employee changes, we MUST refetch.
+            // Simplest: If Scope is YEARLY, always ensure data is fresh-ish OR just rely on deps
         }
-    }, [scope, currentYear]);
+    }, [scope, currentYear, employeeId]);
 
     const fetchYearlyData = async () => {
         setLoadingYearly(true);
         try {
             // Using existing endpoint with scope param
-            const response = await api.get(`/attendance/stats/?scope=YEARLY&year=${currentYear}`);
+            const response = await api.get(`/attendance/stats/?scope=YEARLY&year=${currentYear}&employee_id=${employeeId || ''}`);
             const mapped = response.data.map(m => ({
                 name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }), // Oca, Şub
                 normal: parseFloat(m.normal_hours.toFixed(1)), // This is TOTAL for month. User asked for "Average"?
