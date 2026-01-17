@@ -112,6 +112,7 @@ const MainLayout = () => {
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: 'VIEW_SECTION_ATTENDANCE' },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: 'VIEW_SECTION_CALENDAR' },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'VIEW_SECTION_WORK_SCHEDULES' },
+        { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'CALENDAR_MANAGE_HOLIDAYS' },
         { path: '/requests', label: 'Talepler', icon: FileText, permission: 'VIEW_SECTION_REQUESTS' },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'VIEW_SECTION_REPORTS' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: null, adminOnly: true },

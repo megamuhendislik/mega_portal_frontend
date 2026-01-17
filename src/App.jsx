@@ -18,6 +18,7 @@ import AttendanceTracking from './pages/AttendanceTracking';
 import Reports from './pages/Reports';
 import SystemHealth from './pages/admin/SystemHealth';
 import AttendanceDebugger from './pages/admin/AttendanceDebugger';
+import FiscalCalendarSettings from './pages/admin/FiscalCalendarSettings';
 import ServiceControl from './pages/ServiceControl';
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
@@ -76,6 +77,7 @@ function App() {
             <Route path="reports" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REPORTS"><Reports /></ProtectedRoute>} />
             <Route path="admin/system-health" element={<ProtectedRoute><SystemHealth /></ProtectedRoute>} />
             <Route path="admin/service-control" element={<ProtectedRoute><ServiceControl /></ProtectedRoute>} />
+            <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><FiscalCalendarSettings /></ProtectedRoute>} />
             <Route path="debug/attendance" element={<ProtectedRoute><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>
