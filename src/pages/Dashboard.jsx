@@ -44,7 +44,10 @@ const Dashboard = () => {
             start = m === 0 ? new Date(y - 1, 11, 26) : new Date(y, m - 1, 26);
             end = new Date(y, m, 25);
         }
-        return { startStr: start.toISOString().split('T')[0], endStr: end.toISOString().split('T')[0] };
+        return {
+            startStr: format(start, 'yyyy-MM-dd'),
+            endStr: format(end, 'yyyy-MM-dd')
+        };
     };
 
     const fetchDashboardData = async () => {
