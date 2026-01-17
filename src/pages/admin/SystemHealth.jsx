@@ -247,12 +247,21 @@ function DashboardTab({ stats, refresh, loading }) {
                         hazard={true}
                         onClick={async () => {
                             if (confirm('İçinde "Test", "Stress", "Diagnostic" geçen TÜM Departman ve Pozisyonlar silinecek.\nBu işlem geri alınamaz. Onaylıyor musunuz?')) {
+                                setRecalcConsoleOpen(true);
+                                setRecalcLogs(['> Temizlik İşlemi Başlatılıyor...', '> Hedef: Stress, Diagnostic, Test, Deneme...']);
+                                setRecalcLoading(true);
                                 try {
+                                    // Artificial delay to show "Scanning" feel if super fast
+                                    await new Promise(r => setTimeout(r, 800));
+
                                     const res = await api.post('/system/health-check/run_metadata_cleanup/');
-                                    alert(res.data.message);
+                                    setRecalcLogs(prev => [...prev, `> İŞLEM BAŞARILI.`, `> Mesaj: ${res.data.message}`]);
                                     refresh();
                                 } catch (e) {
-                                    alert('Hata: ' + (e.response?.data?.error || e.message));
+                                    const errMsg = e.response?.data?.error || e.message;
+                                    setRecalcLogs(prev => [...prev, `> ❌ HATA: ${errMsg}`, '> Endpoint 404 ise: Backend deploy edilmemiş olabilir.']);
+                                } finally {
+                                    setRecalcLoading(false);
                                 }
                             }
                         }}
