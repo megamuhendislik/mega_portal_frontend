@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     BarChart, Bar, LineChart, Line, AreaChart, Area, ComposedChart,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
