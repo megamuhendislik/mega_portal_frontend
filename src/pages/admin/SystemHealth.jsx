@@ -65,6 +65,7 @@ export default function SystemHealth() {
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
                         { id: 'stress_test', name: 'Stres Testi & Konsol', icon: CommandLineIcon },
+                        { id: 'test_suite', name: 'Sistem Testleri (Tam Kapsam)', icon: CheckCircleIcon },
                         { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                     ].map((tab) => (
@@ -89,6 +90,7 @@ export default function SystemHealth() {
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
                 {activeTab === 'stress_test' && <StressTestTab />}
+                {activeTab === 'test_suite' && <TestSuiteTab />}
                 {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
             </div>
@@ -497,6 +499,86 @@ function SecurityTab() {
     );
 }
 
+
+function TestSuiteTab() {
+    const [running, setRunning] = useState(false);
+    const [output, setOutput] = useState(null);
+    const [error, setError] = useState(null);
+
+    const runTests = async () => {
+        setRunning(true);
+        setOutput("Testler başlatılıyor... Lütfen bekleyiniz (Bu işlem 30-60 saniye sürebilir)...\n");
+        setError(null);
+        try {
+            const res = await api.post('/system/health-check/run_regression_tests/');
+            // Append result
+            setOutput(res.data.logs || "Log çıktısı yok.");
+            if (!res.data.success) {
+                setError(`Testler Hata ile Tamamlandı (Exit Code: ${res.data.exit_code})`);
+            }
+        } catch (e) {
+            setError(e.response?.data?.error || e.message);
+            setOutput(prev => prev + `\nFATAL ERROR: ${e.message}`);
+        } finally {
+            setRunning(false);
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
+            <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Tam Kapsamlı Sistem Testi</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                    Backend üzerindeki `comprehensive_test.py` dosyasını çalıştırır.
+                    Şunları kontrol eder:
+                </p>
+                <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside mb-6">
+                    <li>Organizasyon & Yetkiler</li>
+                    <li>Token & Auth Sistemi</li>
+                    <li>Puantaj Motoru (Giriş/Çıkış)</li>
+                    <li>İzin Talepleri & Onay Mekanizması</li>
+                    <li>Escalation (Zaman Aşımı) Kuralları</li>
+                    <li>Önemli: Regression Testleri (Yeni Bug Fixler)</li>
+                </ul>
+
+                <button
+                    onClick={runTests}
+                    disabled={running}
+                    className={`w-full py-3 px-4 rounded-lg font-bold shadow-sm transition-all flex justify-center items-center gap-2
+                        ${running
+                            ? 'bg-gray-100 text-gray-400 cursor-wait'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'}
+                    `}
+                >
+                    {running ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
+                    {running ? 'TESTLER KOŞULUYOR...' : 'TESTLERİ BAŞLAT'}
+                </button>
+            </div>
+
+            <div className="lg:col-span-2">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[600px]">
+                    <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
+                        <span className="text-xs font-mono text-gray-400">root@mega-engine:~# python comprehensive_test.py</span>
+                        {error && <span className="text-xs font-bold text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">{error}</span>}
+                    </div>
+                    <div className="flex-1 p-4 overflow-y-auto font-mono text-xs md:text-sm text-gray-300 space-y-1">
+                        {!output && !running && (
+                            <div className="text-gray-600 select-none flex flex-col items-center justify-center h-full gap-2">
+                                <CommandLineIcon className="w-12 h-12 opacity-20" />
+                                <span>Çıktı bekleniyor...</span>
+                            </div>
+                        )}
+                        {output && (
+                            <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-green-400">
+                                {output}
+                            </pre>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // --- UTILS ---
 
