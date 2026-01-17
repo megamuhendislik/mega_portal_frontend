@@ -29,6 +29,7 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
                 normal: (log?.normal_seconds || 0) / 3600,
                 overtime: (log?.overtime_seconds || 0) / 3600,
                 missing: (log?.missing_seconds || 0) / 3600,
+                target: (log?.day_target_seconds && log.day_target_seconds > 0) ? (log.day_target_seconds / 3600) : null
             });
         }
         return days;
@@ -47,7 +48,7 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
             </div>
             <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} barSize={24} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <ComposedChart data={data} barSize={24} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={5} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
@@ -57,11 +58,22 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
                             labelStyle={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
                             cursor={{ fill: '#f8fafc' }}
                         />
-                        <ReferenceLine y={dailyTarget} stroke="#cbd5e1" strokeDasharray="3 3" />
+                        {/* Dynamic Target Line - Only shows on days with target > 0 */}
+                        <Line
+                            type="step"
+                            dataKey="target"
+                            stroke="#94a3b8"
+                            strokeWidth={2}
+                            strokeDasharray="4 4"
+                            dot={false}
+                            activeDot={false}
+                            name="Hedef"
+                            connectNulls={false}
+                        />
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal" />
                         <Bar dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 4, 4]} name="Ek Mesai" />
                         <Bar dataKey="missing" stackId="a" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Eksik" />
-                    </BarChart>
+                    </ComposedChart>
                 </ResponsiveContainer>
             </div>
         </div>
