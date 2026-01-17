@@ -191,8 +191,9 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                 <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <BarChart data={weekData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }} barSize={32}>
                         <defs>
-                            <pattern id="striped" patternUnits="userSpaceOnUse" width="4" height="4">
-                                <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="#f43f5e" strokeWidth="1" />
+                            <pattern id="striped" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                                <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
+                                <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
                             </pattern>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -226,8 +227,8 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                         )}
 
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
-                        <Bar dataKey="overtime" stackId="a" fill="#10b981" />
-                        <Bar dataKey="missing" stackId="a" fill="url(#striped)" stroke="#f43f5e" strokeWidth={0.5} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="missing" stackId="a" fill="url(#striped)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
