@@ -10,7 +10,8 @@ import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
 import TeamComparisonChart from '../components/TeamComparisonChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
-import MonthlyTrendChart from '../components/MonthlyTrendChart';
+import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import HeroDailySummary from '../components/HeroDailySummary';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import Skeleton from '../components/Skeleton';
@@ -308,13 +309,9 @@ const Attendance = () => {
                         {/* 3. Charts Row */}
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[450px]">
                             {/* Stacked Attendance Chart (8 Cols) */}
-                            {/* Stacked Attendance Chart (8 Cols) */}
+                            {/* Stacked Attendance Chart (8 Cols) - New Generic Analytics Component */}
                             <div className="xl:col-span-8 h-full">
-                                {viewScope === 'MONTHLY' ? (
-                                    <MonthlyTrendChart logs={logs} />
-                                ) : (
-                                    <WeeklyAttendanceChart logs={logs} />
-                                )}
+                                <AttendanceAnalyticsChart logs={logs} currentYear={viewYear} />
                             </div>
 
                             {/* Break Analysis (4 Cols) */}
