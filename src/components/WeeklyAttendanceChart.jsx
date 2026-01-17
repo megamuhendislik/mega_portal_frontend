@@ -17,35 +17,55 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
             const current = addDays(start, i);
             const dateStr = format(current, 'yyyy-MM-dd');
 
-            // Find Log for this day
-            const log = logs.find(l => l.work_date === dateStr);
+            // Find ALL logs for this day (Handle split records)
+            const dayLogs = logs.filter(l => l.work_date === dateStr);
 
-            // Calculate Metrics
+            // Calculate Metrics (Sum of all segments)
             let normal = 0;
             let overtime = 0;
             let missing = 0;
-            let status = log?.status;
 
-            if (log) {
-                // Existing Log
-                normal = (log.normal_seconds || 0) / 3600;
-                overtime = (log.overtime_seconds || 0) / 3600;
-                missing = (log.missing_seconds || 0) / 3600;
-            } else {
-                // No Log -> No Data.
-                // We rely on Backend (tasks.py / daily_service.py) to create ABSENT records.
-                // If no record exists, we show 0.
+            // For details (Taking the most relevant or combining)
+            let status = null;
+            let note = null;
+            let managerName = null;
+            let checkIns = [];
+            let checkOuts = [];
+
+            if (dayLogs.length > 0) {
+                dayLogs.forEach(log => {
+                    normal += (log.normal_seconds || 0);
+                    overtime += (log.overtime_seconds || 0);
+                    missing += (log.missing_seconds || 0);
+
+                    if (log.check_in) checkIns.push(parseISO(log.check_in));
+                    if (log.check_out) checkOuts.push(parseISO(log.check_out));
+
+                    // Priority for status/notes? maybe just take the last or first valid
+                    if (log.status) status = log.status;
+                    if (log.note) note = log.note;
+                    if (log.approval_manager_name) managerName = log.approval_manager_name;
+                });
+
+                // Convert seconds to hours
+                normal /= 3600;
+                overtime /= 3600;
+                missing /= 3600;
             }
 
-            // Format Times
+            // Format Times (Min Start - Max End)
             let timeRange = null;
-            if (log && log.check_in && log.check_out) {
-                const inTime = format(parseISO(log.check_in), 'HH:mm');
-                const outTime = format(parseISO(log.check_out), 'HH:mm');
-                timeRange = `${inTime} - ${outTime}`;
-            } else if (log && log.check_in) {
-                const inTime = format(parseISO(log.check_in), 'HH:mm');
-                timeRange = `${inTime} - ?`;
+            if (checkIns.length > 0) {
+                const earliestIn = new Date(Math.min(...checkIns));
+                const inTime = format(earliestIn, 'HH:mm');
+
+                if (checkOuts.length > 0) {
+                    const latestOut = new Date(Math.max(...checkOuts));
+                    const outTime = format(latestOut, 'HH:mm');
+                    timeRange = `${inTime} - ${outTime}`;
+                } else {
+                    timeRange = `${inTime} - ?`;
+                }
             }
 
             days.push({
@@ -60,8 +80,8 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
 
                 // Details for Tooltip
                 timeRange,
-                note: log?.note,
-                managerName: log?.approval_manager_name,
+                note: note,
+                managerName: managerName,
                 status
             });
         }
