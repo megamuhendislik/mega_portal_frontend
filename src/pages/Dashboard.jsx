@@ -82,8 +82,8 @@ const Dashboard = () => {
             if (eventsRes.status === 'fulfilled') {
                 const results = eventsRes.value.data.results || eventsRes.value.data || [];
                 // Filter out standard Attendance logs unless abnormal? No, just show Agenda items.
-                // Prioritize PERSONAL, HOLIDAY, REQUESTS.
-                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(e.type));
+                // Prioritize PERSONAL, HOLIDAY only (User requested to exclude REQUESTS from this view)
+                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY'].includes(e.type));
 
                 // Sort by start date
                 agendaItems.sort((a, b) => new Date(a.start) - new Date(b.start));
