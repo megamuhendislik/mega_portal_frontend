@@ -89,19 +89,13 @@ const Attendance = () => {
         }
     };
 
-    // Use standard 26-25 Logic OR Today Logic
+    // Use standard 26-25 Logic. ALWAYS fetch the full period.
     const updateDateRange = (year, month, scope) => {
+        // Even if scope is DAILY, we fetch the whole month to support the Charts & Analytics.
+        // The filtering for the "Daily View" table will happen in the render logic.
+
         let start, end;
 
-        if (scope === 'DAILY') {
-            const now = new Date();
-            const str = format(now, 'yyyy-MM-dd');
-            setStartDate(str);
-            setEndDate(str);
-            return;
-        }
-
-        // MONTHLY SCOPE
         // Target End Date: 25th of selected month
         end = new Date(year, month, 25);
 
@@ -337,7 +331,7 @@ const Attendance = () => {
                                     Excel İndir
                                 </button>
                             </div>
-                            <AttendanceLogTable logs={logs} />
+                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === new Date().toISOString().split('T')[0]) : logs} />
                         </div>
 
                     </div>
