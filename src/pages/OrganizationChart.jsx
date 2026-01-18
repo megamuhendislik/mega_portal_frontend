@@ -237,6 +237,7 @@ const OrganizationChart = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showEmployees, setShowEmployees] = useState(true); // Default ON to show hierarchy heads
+    const [showDebug, setShowDebug] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // Zoom & Pan State
@@ -374,6 +375,20 @@ const OrganizationChart = () => {
 
                 <div className="flex flex-wrap items-center gap-2 md:gap-4">
                     <button
+                        onClick={() => setShowDebug(!showDebug)}
+                        className={`
+                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
+                            ${showDebug
+                                ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                            }
+                        `}
+                    >
+                        <MousePointer size={16} />
+                        {showDebug ? 'Debug Kapat' : 'Debug Aç'}
+                    </button>
+
+                    <button
                         onClick={() => setShowEmployees(!showEmployees)}
                         className={`
                             flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
@@ -396,6 +411,13 @@ const OrganizationChart = () => {
                     </div>
                 </div>
             </div>
+
+            {showDebug && (
+                <div className="shrink-0 max-h-60 overflow-auto p-4 bg-slate-900 text-slate-300 font-mono text-xs rounded-xl border border-slate-700 shadow-lg m-2">
+                    <h4 className="font-bold text-amber-400 mb-2 sticky top-0 bg-slate-900 py-1 border-b border-slate-800">RAW API DATA DEBUG</h4>
+                    <pre>{JSON.stringify(treeData, null, 2)}</pre>
+                </div>
+            )}
 
             <div
                 className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
