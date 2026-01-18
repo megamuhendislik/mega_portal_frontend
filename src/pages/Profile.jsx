@@ -23,7 +23,11 @@ const Profile = () => {
         emergency_contact_phone: '',
         lunch_start: '',
         lunch_end: '',
-        substitutes: []
+        substitutes: [],
+        // Security Form (Local State)
+        old_password: '',
+        new_password: '',
+        confirm_password: ''
     });
 
     useEffect(() => {
@@ -55,15 +59,34 @@ const Profile = () => {
         setLoading(true);
         setSuccessMessage('');
         try {
-            await api.patch('/employees/me/', formData);
-            setSuccessMessage('Bilgileriniz başarıyla güncellendi.');
-            setTimeout(() => {
-                setSuccessMessage('');
-                window.location.reload(); // Refresh to update context
-            }, 1000);
+            // General Update
+            if (activeTab !== 'security') {
+                await api.patch('/employees/me/', formData);
+                setSuccessMessage('Bilgileriniz başarıyla güncellendi.');
+                setTimeout(() => {
+                    setSuccessMessage('');
+                    window.location.reload();
+                }, 1000);
+            } else {
+                // Password Change
+                if (formData.new_password !== formData.confirm_password) {
+                    alert('Yeni şifreler eşleşmiyor!');
+                    setLoading(false);
+                    return;
+                }
+                await api.post('/employees/change_password/', {
+                    old_password: formData.old_password,
+                    new_password: formData.new_password
+                });
+                setSuccessMessage('Şifreniz başarıyla değiştirildi.');
+                setFormData({ ...formData, old_password: '', new_password: '', confirm_password: '' });
+                setTimeout(() => setSuccessMessage(''), 2000);
+            }
+
         } catch (error) {
             console.error('Update failed:', error);
-            alert('Güncelleme sırasında bir hata oluştu.');
+            const msg = error.response?.data?.error || 'Güncelleme sırasında bir hata oluştu.';
+            alert(msg);
         } finally {
             setLoading(false);
         }
@@ -75,8 +98,9 @@ const Profile = () => {
         { id: 'general', label: 'Genel Bilgiler', icon: User },
         { id: 'contact', label: 'İletişim & Adres', icon: MapPin },
         { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
+        { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
         { id: 'preferences', label: 'Çalışma Tercihleri', icon: Clock },
-        // { id: 'security', label: 'Güvenlik', icon: Lock } // Future implementation
+        { id: 'security', label: 'Güvenlik', icon: Lock }
     ];
 
     return (
@@ -345,6 +369,58 @@ const Profile = () => {
                                     <div className="bg-amber-50 text-amber-800 text-xs p-3 rounded-lg border border-amber-100 flex items-start gap-2">
                                         <Bell size={14} className="mt-0.5 shrink-0" />
                                         Yemek saatleri tercihinizdir. Yoğunluk durumunda sistem veya yöneticiniz tarafından güncellenebilir.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+
+                        {/* SECURITY TAB */}
+                        {activeTab === 'security' && (
+                            <div className="p-6 space-y-8">
+                                <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex gap-4">
+                                    <div className="bg-red-100 text-red-600 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                                        <Lock size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-red-900 text-sm">Şifre Değişikliği</h4>
+                                        <p className="text-xs text-red-700/80 mt-1 leading-relaxed">
+                                            Hesap güvenliğiniz için şifrenizi düzenli aralıklarla değiştirmeniz önerilir.
+                                            Şifre değişikliği sonrası oturumunuz sonlanabilir.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6 max-w-md">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700">Mevcut Şifre</label>
+                                        <input
+                                            type="password"
+                                            value={formData.old_password}
+                                            onChange={e => setFormData({ ...formData, old_password: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-medium text-slate-700"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700">Yeni Şifre</label>
+                                        <input
+                                            type="password"
+                                            value={formData.new_password}
+                                            onChange={e => setFormData({ ...formData, new_password: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-medium text-slate-700"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700">Yeni Şifre (Tekrar)</label>
+                                        <input
+                                            type="password"
+                                            value={formData.confirm_password}
+                                            onChange={e => setFormData({ ...formData, confirm_password: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-medium text-slate-700"
+                                            placeholder="••••••••"
+                                        />
                                     </div>
                                 </div>
                             </div>

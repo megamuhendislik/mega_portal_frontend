@@ -6,8 +6,10 @@ import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
 
 import useSmartPolling from '../hooks/useSmartPolling';
+import { useAuth } from '../context/AuthContext';
 
 const Requests = () => {
+    const { hasPermission } = useAuth();
     const [activeTab, setActiveTab] = useState('my_requests');
     // ... (state)
 
@@ -410,12 +412,12 @@ const Requests = () => {
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm sticky top-4 z-30 backdrop-blur-xl bg-white/80 supports-[backdrop-filter]:bg-white/60">
                 <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {[
-                        { id: 'my_requests', label: 'İzin Taleplerim' },
-                        { id: 'overtime_requests', label: 'Fazla Mesai' },
-                        { id: 'meal_requests', label: 'Yemek' },
-                        { id: 'incoming', label: 'Onay Bekleyenler', badge: incomingRequests.length },
-                        { id: 'team_history', label: 'Ekip Geçmişi' }
-                    ].map(tab => (
+                        { id: 'my_requests', label: 'İzin Taleplerim', show: true },
+                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_VIEW') || hasPermission('REQUEST_OVERTIME_APPROVE') },
+                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('REQUEST_MEAL_VIEW') || hasPermission('REQUEST_MEAL_APPROVE') },
+                        { id: 'incoming', label: 'Onay Bekleyenler', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') },
+                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_LEAVE_VIEW') || hasPermission('ATTENDANCE_VIEW_TEAM') }
+                    ].filter(t => t.show).map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}

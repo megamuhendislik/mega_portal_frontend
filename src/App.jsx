@@ -57,7 +57,7 @@ function App() {
               <MainLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<ProtectedRoute requiredPermission="VIEW_SECTION_DASHBOARD"><Dashboard /></ProtectedRoute>} />
+            <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="profile" element={<Profile />} />
 
             <Route path="employees" element={<ProtectedRoute requiredPermission="VIEW_SECTION_EMPLOYEES"><Employees /></ProtectedRoute>} />

@@ -14,6 +14,9 @@ const EmployeeDetail = () => {
     const [loading, setLoading] = useState(true);
 
     const canEdit = hasPermission('EMPLOYEE_UPDATE'); // Check permission
+    const canEditSensitive = hasPermission('EMPLOYEE_EDIT_SENSITIVE');
+    const canChangePassword = hasPermission('EMPLOYEE_CHANGE_PASSWORD');
+    const canManageRoles = hasPermission('EMPLOYEE_MANAGE_ROLES'); // Use ACCESS_ASSIGN_PERMISSIONS if mapped, but preferably explicit
 
     // Data Sources
     const [departments, setDepartments] = useState([]);
@@ -43,7 +46,10 @@ const EmployeeDetail = () => {
         lunch_start: '12:30', lunch_end: '13:30',
 
         // Permissions
-        roles: [], direct_permissions: []
+        roles: [], direct_permissions: [],
+
+        // Password (New)
+        new_password: '',
     });
 
     const [customScheduleMode, setCustomScheduleMode] = useState(false);
@@ -108,7 +114,9 @@ const EmployeeDetail = () => {
                 weekly_schedule: emp.weekly_schedule || {},
 
                 roles: emp.roles.map(r => r.id),
-                direct_permissions: emp.direct_permissions.map(p => p.id)
+                direct_permissions: emp.direct_permissions.map(p => p.id),
+
+                new_password: '', // Reset
             });
 
             // If no work schedule is assigned, assume custom mode
@@ -141,20 +149,19 @@ const EmployeeDetail = () => {
     const handleSave = async () => {
         try {
             // Prepare payload
-            // For managers, the backend expects lists of IDs if we updated the serializer, 
-            // OR we might need to use the specific assign-manager endpoints if the main PATCH doesn't support it.
-            // Assuming the main PATCH supports these fields as per the "one-to-one" requirement implementation in backend.
-            // If not, we might need to make separate calls. 
-            // Let's assume standard DRF update behavior for now, but `primary_manager_ids` might need custom handling in backend.
-            // However, to be safe and robust:
-            // The `EmployeeUpdateSerializer` should handle these. If not, we'll fix the backend.
-
             const payload = {
                 ...formData,
                 work_schedule: formData.work_schedule || null, // Handle empty string
                 department: formData.department || null,
                 job_position: formData.job_position || null,
             };
+
+            // Handle password change
+            if (formData.new_password) {
+                payload.password = formData.new_password;
+            } else {
+                delete payload.new_password; // Don't send empty new_password field to backend if it expects 'password'
+            }
 
             await api.patch(`/employees/${id}/`, payload);
             alert('Değişiklikler başarıyla kaydedildi.');
@@ -252,11 +259,29 @@ const EmployeeDetail = () => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">TC Kimlik No</label>
-                                        <input type="text" name="tc_no" maxLength={11} value={formData.tc_no} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                name="tc_no"
+                                                maxLength={11}
+                                                value={formData.tc_no}
+                                                onChange={handleInputChange}
+                                                disabled={!canEditSensitive} // Granular check
+                                                className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${!canEditSensitive ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`}
+                                            />
+                                            {!canEditSensitive && <Shield className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />}
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
-                                        <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <input
+                                            type="date"
+                                            name="birth_date"
+                                            value={formData.birth_date}
+                                            onChange={handleInputChange}
+                                            disabled={!canEditSensitive} // Granular check
+                                            className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${!canEditSensitive ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`}
+                                        />
                                     </div>
                                     <div className="md:col-span-2">
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
@@ -348,6 +373,28 @@ const EmployeeDetail = () => {
 
                         {activeTab === 'settings' && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
+                                {/* Password Change Section (Protected) */}
+                                {canChangePassword && (
+                                    <div className="card p-6 border border-yellow-200 bg-yellow-50/30">
+                                        <h3 className="text-lg font-bold text-slate-800 border-b border-yellow-100 pb-4 mb-4 flex items-center gap-2">
+                                            <Shield size={20} className="text-yellow-600" />
+                                            Güvenlik & Şifre
+                                        </h3>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Yeni Şifre Belirle</label>
+                                            <input
+                                                type="text" // Visible as requested
+                                                name="new_password"
+                                                value={formData.new_password}
+                                                onChange={handleInputChange}
+                                                placeholder="Yeni şifre giriniz (Boş bırakılırsa değişmez)"
+                                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white"
+                                            />
+                                            <p className="text-xs text-slate-500 mt-1">Dikkat: Şifre alanını doldurup kaydederseniz kullanıcının şifresi değişecektir.</p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Work Schedule */}
                                 <div className="card p-6">
                                     <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4 flex items-center gap-2">
@@ -423,11 +470,12 @@ const EmployeeDetail = () => {
                                         <h4 className="font-semibold text-slate-700 mb-3">Roller</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {allRoles.map(role => (
-                                                <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
+                                                <label key={role.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${formData.roles.includes(role.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 hover:border-blue-300'} ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.roles.includes(role.id)}
                                                         onChange={() => toggleArrayItem('roles', role.id)}
+                                                        disabled={!canManageRoles} // Granular check
                                                         className="mt-1 rounded text-blue-600 focus:ring-blue-500"
                                                     />
                                                     <div>
@@ -437,17 +485,19 @@ const EmployeeDetail = () => {
                                                 </label>
                                             ))}
                                         </div>
+                                        {!canManageRoles && <p className="text-xs text-red-400 mt-2">* Rol yönetimi için yetkiniz bulunmamaktadır.</p>}
                                     </div>
 
                                     <div>
                                         <h4 className="font-semibold text-slate-700 mb-3">Ekstra Yetkiler</h4>
                                         <div className="h-64 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
                                             {allPermissions.map(perm => (
-                                                <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                                <label key={perm.id} className={`flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.direct_permissions.includes(perm.id)}
                                                         onChange={() => toggleArrayItem('direct_permissions', perm.id)}
+                                                        disabled={!canManageRoles} // Granular check
                                                         className="rounded text-orange-600 focus:ring-orange-500"
                                                     />
                                                     <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>

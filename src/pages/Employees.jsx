@@ -15,6 +15,13 @@ const STEPS = [
     { number: 6, title: 'Önizleme & Onay', icon: FileText }
 ];
 
+// Add Shield Icon for Sensitive Data Indicator
+const Shield = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+);
+
 const INITIAL_FORM_STATE = {
     // Step 1: Personal
     first_name: '',
@@ -81,7 +88,7 @@ const SelectField = ({ label, icon: Icon, options, className, ...props }) => (
     </div>
 );
 
-const StepPersonal = ({ formData, handleChange }) => (
+const StepPersonal = ({ formData, handleChange, canEditSensitive = true, canChangePassword = true }) => (
     <div className="animate-fade-in-up">
         <div className="mb-6 pb-4 border-b border-slate-100">
             <h3 className="text-xl font-bold text-slate-800">Kişisel Kimlik Bilgileri</h3>
@@ -90,7 +97,21 @@ const StepPersonal = ({ formData, handleChange }) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <InputField label="Ad" value={formData.first_name} onChange={e => handleChange('first_name', e.target.value)} required placeholder="Personel Adı" />
             <InputField label="Soyad" value={formData.last_name} onChange={e => handleChange('last_name', e.target.value)} required placeholder="Personel Soyadı" />
-            <InputField label="TC Kimlik No" value={formData.tc_number} onChange={e => handleChange('tc_number', e.target.value)} required placeholder="11 haneli TC no" />
+
+            {/* Sensitive Check */}
+            <div className="relative">
+                <InputField
+                    label="TC Kimlik No"
+                    value={formData.tc_number}
+                    onChange={e => handleChange('tc_number', e.target.value)}
+                    required
+                    placeholder="11 haneli TC no"
+                    disabled={!canEditSensitive}
+                    className={!canEditSensitive ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}
+                />
+                {!canEditSensitive && <div className="absolute right-3 top-9 text-slate-400"><Shield size={16} /></div>}
+            </div>
+
             <InputField
                 label="E-posta"
                 value={formData.email}
@@ -100,31 +121,36 @@ const StepPersonal = ({ formData, handleChange }) => (
                 placeholder="isim.soyisim@megamuhendislik.com.tr"
             />
 
-            <InputField label="Doğum Tarihi" value={formData.birth_date} onChange={e => handleChange('birth_date', e.target.value)} type="date" />
-            <InputField label="Kullanıcı Adı" value={formData.username} onChange={e => handleChange('username', e.target.value)} required placeholder="kullanici.adi" />
+            <InputField
+                label="Doğum Tarihi"
+                value={formData.birth_date}
+                onChange={e => handleChange('birth_date', e.target.value)}
+                type="date"
+                disabled={!canEditSensitive}
+                className={!canEditSensitive ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}
+            />
+
             <InputField label="Kullanıcı Adı" value={formData.username} onChange={e => handleChange('username', e.target.value)} required placeholder="kullanici.adi" />
 
             {/* Custom Password Input with Visibility Toggle */}
             <div className="group">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Şifre {true && <span className="text-red-500">*</span>}</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Şifre {canChangePassword && <span className="text-red-500">*</span>}</label>
                 <div className="relative">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                     <input
                         value={formData.password}
                         onChange={e => handleChange('password', e.target.value)}
-                        type="text" // Defaults to visible as requested ("açık görünecek şekilde")
-                        className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all shadow-sm group-hover:bg-white"
-                        placeholder="İlk giriş şifresi (Görünür)"
+                        type="text"
+                        disabled={!canChangePassword}
+                        className={`w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all shadow-sm group-hover:bg-white ${!canChangePassword ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        placeholder={canChangePassword ? "İlk giriş şifresi (Görünür)" : "Yetkiniz yok"}
                     />
-                    {/* Note: User requested it to be visible by default. 
-                        Password field type="text" shows it plainly. 
-                        If we wanted a toggle, we would manage state here, but StepPersonal is a pure component receiving props.
-                        For now, forcing type="text" satisfies "açık görünecek şekilde".
-                    */}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1 ml-1">
-                    * Güvenlik nedeniyle sadece <strong>yeni şifre</strong> girilirken görünür. Mevcut şifreler görüntülenemez.
-                </p>
+                {canChangePassword && (
+                    <p className="text-[10px] text-slate-400 mt-1 ml-1">
+                        * Güvenlik nedeniyle sadece <strong>yeni şifre</strong> girilirken görünür. Mevcut şifreler görüntülenemez.
+                    </p>
+                )}
             </div>
         </div>
     </div>
@@ -583,7 +609,7 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     );
 };
 
-const StepPermissions = ({ formData, handleChange, permissions, jobPositions, roles }) => {
+const StepPermissions = ({ formData, handleChange, permissions, jobPositions, roles, canManageRoles = true }) => {
     // Group permissions
     const pagePermissions = permissions.filter(p => p.code.startsWith('VIEW_'));
     const actionPermissions = permissions.filter(p => !p.code.startsWith('VIEW_'));
@@ -633,8 +659,8 @@ const StepPermissions = ({ formData, handleChange, permissions, jobPositions, ro
                         {roles.map(role => {
                             const isChecked = (formData.roles || []).includes(role.id);
                             return (
-                                <label key={role.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
-                                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" checked={isChecked} onChange={() => toggleRole(role.id)} />
+                                <label key={role.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:border-blue-300'} ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" checked={isChecked} onChange={() => toggleRole(role.id)} disabled={!canManageRoles} />
                                     <div>
                                         <div className="font-bold text-sm text-slate-800">{role.name}</div>
                                         <div className="text-[10px] text-slate-400">{role.description}</div>
@@ -663,7 +689,7 @@ const StepPermissions = ({ formData, handleChange, permissions, jobPositions, ro
                                         className="mt-1 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                                         checked={isChecked}
                                         onChange={() => togglePermission(perm.id)}
-                                        disabled={fromRole}
+                                        disabled={!canManageRoles || fromRole}
                                     />
                                     <div>
                                         <div className="font-medium text-xs text-slate-800">{perm.name}</div>
@@ -693,7 +719,7 @@ const StepPermissions = ({ formData, handleChange, permissions, jobPositions, ro
                                         className="mt-1 w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
                                         checked={isChecked}
                                         onChange={() => togglePermission(perm.id)}
-                                        disabled={fromRole}
+                                        disabled={!canManageRoles || fromRole}
                                     />
                                     <div>
                                         <div className="font-medium text-xs text-slate-800">{perm.name}</div>
@@ -1078,13 +1104,32 @@ const Employees = () => {
     if (loading) return <div className="flex justify-center items-center h-screen bg-slate-50"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
     if (viewMode === 'list') {
+        // Grouping Logic
+        const filteredEmployees = employees
+            .filter(e => e.employment_status !== 'TERMINATED')
+            .filter(e =>
+                (e.first_name + ' ' + e.last_name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (e.job_position?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .filter(e => !departmentFilter || (e.department?.id || e.department) == departmentFilter);
+
+        const groupedEmployees = filteredEmployees.reduce((acc, emp) => {
+            const deptName = emp.department?.name || emp.department_name || 'Departmanı Yok';
+            if (!acc[deptName]) acc[deptName] = [];
+            acc[deptName].push(emp);
+            return acc;
+        }, {});
+
+        // Sort departments alphabetically
+        const sortedDepartments = Object.keys(groupedEmployees).sort();
+
         return (
             <div className="min-h-screen bg-slate-50/50 p-6 md:p-8 animate-fade-in">
                 <div className="max-w-[1600px] mx-auto">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Personel</h1>
+                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Personel Yönetimi</h1>
                             <p className="text-slate-500 mt-1">Süper Admin / İK Yönetimi</p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1104,8 +1149,6 @@ const Employees = () => {
                                 </button>
                             )}
 
-
-
                             {hasPermission('EMPLOYEE_CREATE') && (
                                 <button
                                     onClick={handleAddNew}
@@ -1118,77 +1161,162 @@ const Employees = () => {
                     </div>
 
                     {/* Filter Bar */}
-                    <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 mb-8 max-w-2xl">
-                        <div className="relative">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row gap-4 items-center">
+                        <div className="relative flex-1 w-full">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                             <input
-                                placeholder="İsim, unvan veya departman ile ara..."
-                                className="w-full pl-12 pr-4 py-3 bg-transparent text-slate-700 placeholder:text-slate-400 focus:outline-none font-medium"
+                                placeholder="İsim, unvan ile ara..."
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
+                        <div className="relative w-full md:w-72">
+                            <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <select
+                                value={departmentFilter}
+                                onChange={e => setDepartmentFilter(e.target.value)}
+                                className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
+                            >
+                                <option value="">Tüm Departmanlar</option>
+                                {departments.map(d => (
+                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        </div>
                     </div>
 
-                    {/* Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {employees
-                            .filter(e => e.employment_status !== 'TERMINATED')
-                            .filter(e => e.first_name.toLowerCase().includes(searchTerm.toLowerCase()))
-                            .map(emp => (
-                                <div key={emp.id} className="group bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative overflow-hidden">
-                                    {showSettings && (
-                                        <div className="absolute top-4 right-4 z-10 animate-fade-in flex gap-2">
-                                            <button
-                                                onClick={(ev) => { ev.stopPropagation(); handleEdit(emp); }}
-                                                className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
-                                                title="Düzenle"
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button
-                                                onClick={(ev) => { ev.stopPropagation(); handleDelete(emp.id); }}
-                                                className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
-                                                title="Sil"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
+                    {/* Table View */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
+                                        <th className="px-6 py-4">Personel</th>
+                                        <th className="px-6 py-4">Pozisyon & İletişim</th>
+                                        <th className="px-6 py-4">Takvim & Saatler</th>
+                                        <th className="px-6 py-4 text-right">Durum & İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {sortedDepartments.map(deptName => (
+                                        <React.Fragment key={deptName}>
+                                            {/* Department Header */}
+                                            <tr className="bg-slate-50/50">
+                                                <td colSpan="4" className="px-6 py-3 border-y border-slate-100">
+                                                    <div className="flex items-center gap-2 font-bold text-slate-700 text-sm">
+                                                        <div className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center">
+                                                            <Building size={14} />
+                                                        </div>
+                                                        {deptName}
+                                                        <span className="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-100">
+                                                            {groupedEmployees[deptName].length} Kişi
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* Employees */}
+                                            {groupedEmployees[deptName].map(emp => (
+                                                <tr key={emp.id} className="group hover:bg-blue-50/30 transition-colors">
+                                                    <td className="px-6 py-4 align-top">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                                                                {emp.first_name[0]}{emp.last_name[0]}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{emp.first_name} {emp.last_name}</div>
+                                                                <div className="text-xs text-slate-500 font-mono mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded inline-block">#{emp.employee_code}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 align-top">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                                                <Briefcase size={14} className="text-slate-400" />
+                                                                {emp.job_position?.name || '-'}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                                <div className="w-3.5 flex justify-center text-slate-300">@</div>
+                                                                {emp.email}
+                                                            </div>
+                                                            {emp.phone && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                                    <Phone size={14} className="text-slate-300" />
+                                                                    {emp.phone}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 align-top">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <div className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 w-fit">
+                                                                {emp.work_schedule_name || 'Varsayılan'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 flex items-center gap-1">
+                                                                <span className="font-mono">{emp.shift_start?.slice(0, 5)} - {emp.shift_end?.slice(0, 5)}</span>
+                                                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                                                <span>Mola: {emp.daily_break_allowance}dk</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 align-top text-right">
+                                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {showSettings && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleEdit(emp)}
+                                                                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                                                                        title="Düzenle"
+                                                                    >
+                                                                        <Edit2 size={18} />
+                                                                    </button>
+
+                                                                    {hasPermission('EMPLOYEE_DELETE') && (
+                                                                        <button
+                                                                            onClick={() => handleDelete(emp.id)}
+                                                                            className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                                                                            title="Sil"
+                                                                        >
+                                                                            <Trash2 size={18} />
+                                                                        </button>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                            {!showSettings && (
+                                                                <button
+                                                                    onClick={() => handleEdit(emp)}
+                                                                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 text-xs font-bold transition-colors"
+                                                                >
+                                                                    Detay
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {/* Status Indicator */}
+                                                        <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${emp.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${emp.is_active ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                                            {emp.is_active ? 'Aktif' : 'Pasif'}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    ))}
+
+                                    {sortedDepartments.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
+                                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+                                                    <Search size={32} />
+                                                </div>
+                                                <p className="font-medium">Kayıt bulunamadı.</p>
+                                                <p className="text-sm mt-1">Arama kriterlerinizi değiştirerek tekrar deneyiniz.</p>
+                                            </td>
+                                        </tr>
                                     )}
-
-                                    <div className="flex items-center gap-5 mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-50 text-blue-600 flex items-center justify-center font-bold text-xl shadow-inner">
-                                            {emp.first_name[0]}{emp.last_name[0]}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">{emp.first_name} {emp.last_name}</h3>
-                                            <p className="text-sm text-slate-500 font-medium mt-0.5">{emp.job_position?.name || 'Pozisyon Yok'}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2.5">
-                                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                                            <Building size={16} className="text-slate-400 shrink-0" />
-                                            <span className="truncate">{emp.department_name || emp.secondary_department_names || 'Departman Yok'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                                            <div className="w-4 flex justify-center shrink-0 text-slate-400">@</div>
-                                            <span className="truncate">{emp.email}</span>
-                                        </div>
-                                        {/* New Schedule Info Section */}
-                                        <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                                            <div className="bg-slate-50 p-2 rounded-lg text-center">
-                                                <div className="text-slate-400 mb-0.5">Takvim</div>
-                                                <div className="font-bold text-slate-700 truncate" title={emp.work_schedule_name}>{emp.work_schedule_name}</div>
-                                            </div>
-                                            <div className="bg-slate-50 p-2 rounded-lg text-center">
-                                                <div className="text-slate-400 mb-0.5">Tolerans / Mola</div>
-                                                <div className="font-bold text-slate-700">{emp.attendance_tolerance_minutes}dk / {emp.daily_break_allowance}dk</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1284,7 +1412,12 @@ const Employees = () => {
                                 <section id="sec-personal" className="scroll-mt-24">
                                     {/* Re-using Step Components directly */}
                                     {/* Note: Step components have internal headers, so we can just stack them */}
-                                    <StepPersonal formData={formData} handleChange={handleInputChange} />
+                                    <StepPersonal
+                                        formData={formData}
+                                        handleChange={handleInputChange}
+                                        canEditSensitive={hasPermission('EMPLOYEE_EDIT_SENSITIVE')}
+                                        canChangePassword={hasPermission('EMPLOYEE_CHANGE_PASSWORD')}
+                                    />
                                 </section>
 
                                 {/* Section 2: Corporate */}
@@ -1304,17 +1437,17 @@ const Employees = () => {
 
                                 {/* Section 5: Permissions */}
                                 <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
-                                    <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} />
+                                    <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={hasPermission('EMPLOYEE_MANAGE_ROLES')} />
                                 </section>
                             </div>
                         ) : (
                             /* CREATE WIZARD MODE */
                             <div className="h-full">
-                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} />}
+                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={true} canChangePassword={true} />}
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                                {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} />}
+                                {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={hasPermission('EMPLOYEE_MANAGE_ROLES')} />}
                                 {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                             </div>
                         )}
