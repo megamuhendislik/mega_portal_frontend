@@ -11,9 +11,25 @@ import { useAuth } from '../context/AuthContext';
 const Requests = () => {
     const { hasPermission } = useAuth();
     const [activeTab, setActiveTab] = useState('my_requests');
-    // ... (state)
+    const [loading, setLoading] = useState(true);
+    const [requests, setRequests] = useState([]);
+    const [requestTypes, setRequestTypes] = useState([]);
+    const [overtimeRequests, setOvertimeRequests] = useState([]);
+    const [mealRequests, setMealRequests] = useState([]);
+    const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
+    const [incomingRequests, setIncomingRequests] = useState([]);
+    const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
 
-    // ... (useEffect for initial data)
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
+    const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
+
+    useEffect(() => {
+        fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
 
     // Auto-Refresh (Smart Polling every 30s)
     useSmartPolling(() => {

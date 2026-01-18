@@ -609,10 +609,39 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     );
 };
 
-const StepPermissions = ({ formData, handleChange, permissions, jobPositions, roles, canManageRoles = true }) => {
-    // Group permissions
-    const pagePermissions = permissions.filter(p => p.code.startsWith('VIEW_'));
-    const actionPermissions = permissions.filter(p => !p.code.startsWith('VIEW_'));
+const PERMISSION_CATEGORIES = [
+    {
+        id: 'menu',
+        label: 'Menü Erişimi',
+        icon: FileText,
+        color: 'text-emerald-500',
+        filter: (code) => code.startsWith('VIEW_SECTION_')
+    },
+    {
+        id: 'requests',
+        label: 'Talep & Mesai',
+        icon: CalendarRange,
+        color: 'text-blue-500',
+        filter: (code) => code.startsWith('REQUEST_') || code.startsWith('ATTENDANCE_') || code.startsWith('CALENDAR_') || code.startsWith('WORK_SCHEDULE_')
+    },
+    {
+        id: 'hr',
+        label: 'İK & Organizasyon',
+        icon: UserPlus,
+        color: 'text-purple-500',
+        filter: (code) => code.startsWith('EMPLOYEE_') || code.startsWith('ORG_') || code.startsWith('DEPARTMENT_') || code.startsWith('JOB_POSITION_')
+    },
+    {
+        id: 'system',
+        label: 'Sistem & Admin',
+        icon: Settings,
+        color: 'text-amber-500',
+        filter: (code) => code.startsWith('SYSTEM_') || code.startsWith('SETTINGS_') || code.startsWith('ACCESS_') || code.startsWith('PROJECT_')
+    }
+];
+
+const StepPermissions = ({ formData, handleChange, permissions, roles, canManageRoles = true }) => {
+    const [activeTab, setActiveTab] = useState('menu');
 
     const toggleRole = (roleId) => {
         const current = formData.roles || [];
@@ -637,33 +666,38 @@ const StepPermissions = ({ formData, handleChange, permissions, jobPositions, ro
         if (!formData.roles) return false;
         // Find selected roles
         const selectedRoles = roles.filter(r => formData.roles.includes(r.id));
-        // Check if any has this permission (Assuming roles have 'permissions' array populated)
+        // Check if any has this permission
         return selectedRoles.some(r => r.permissions && r.permissions.some(p => p.id === permId));
     };
+
+    // Filter permissions for the active tab
+    const activeCategory = PERMISSION_CATEGORIES.find(c => c.id === activeTab);
+    const tabPermissions = permissions.filter(p => activeCategory.filter(p.code));
 
     return (
         <div className="animate-fade-in-up">
             <div className="mb-6 pb-4 border-b border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800">Yetkilendirme ve Roller</h3>
-                <p className="text-slate-500 text-sm">Kullanıcının rollerini ve sayfa erişim yetkilerini belirleyiniz.</p>
+                <p className="text-slate-500 text-sm">Kullanıcının rollerini ve detaylı erişim yetkilerini belirleyiniz.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[500px]">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[500px]">
 
-                {/* COL 1: ROLES */}
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
+                {/* COL 1: ROLES (Presets) */}
+                <div className="lg:col-span-1 bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
                     <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <Briefcase size={18} className="text-blue-500" /> Roller
+                        <Briefcase size={18} className="text-indigo-500" /> Roller (Paket)
                     </h4>
+                    <p className="text-xs text-slate-400 mb-3">Roller, önceden tanımlı yetki gruplarıdır. Rol seçtiğinizde ilgili yetkiler otomatik tanımlanır.</p>
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
                         {roles.map(role => {
                             const isChecked = (formData.roles || []).includes(role.id);
                             return (
-                                <label key={role.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:border-blue-300'} ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" checked={isChecked} onChange={() => toggleRole(role.id)} disabled={!canManageRoles} />
+                                <label key={role.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-slate-200 hover:border-indigo-200'} ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                                    <input type="checkbox" className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" checked={isChecked} onChange={() => toggleRole(role.id)} disabled={!canManageRoles} />
                                     <div>
                                         <div className="font-bold text-sm text-slate-800">{role.name}</div>
-                                        <div className="text-[10px] text-slate-400">{role.description}</div>
+                                        <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{role.description}</div>
                                     </div>
                                 </label>
                             );
@@ -671,63 +705,69 @@ const StepPermissions = ({ formData, handleChange, permissions, jobPositions, ro
                     </div>
                 </div>
 
-                {/* COL 2: PAGE ACCESS */}
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
-                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <FileText size={18} className="text-emerald-500" /> Ekran Yetkileri
-                    </h4>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                        {pagePermissions.map(perm => {
-                            const fromRole = isGrantedByRole(perm.id);
-                            const isDirect = (formData.direct_permissions || []).includes(perm.id);
-                            const isChecked = fromRole || isDirect;
-
+                {/* COL 2: GRANULAR PERMISSIONS */}
+                <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 flex flex-col shadow-sm">
+                    {/* Tabs */}
+                    <div className="flex border-b border-slate-100 overflow-x-auto">
+                        {PERMISSION_CATEGORIES.map(cat => {
+                            const Icon = cat.icon;
+                            const isActive = activeTab === cat.id;
                             return (
-                                <label key={perm.id} className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer ${isChecked ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-emerald-200'}`}>
-                                    <input
-                                        type="checkbox"
-                                        className="mt-1 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
-                                        checked={isChecked}
-                                        onChange={() => togglePermission(perm.id)}
-                                        disabled={!canManageRoles || fromRole}
-                                    />
-                                    <div>
-                                        <div className="font-medium text-xs text-slate-800">{perm.name}</div>
-                                        {fromRole && <span className="text-[9px] bg-blue-100 text-blue-600 px-1 rounded inline-block mt-0.5">Rolden Geliyor</span>}
-                                    </div>
-                                </label>
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setActiveTab(cat.id)}
+                                    className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 whitespace-nowrap ${isActive ? `border-blue-500 text-slate-800 bg-blue-50/30` : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                                >
+                                    <Icon size={18} className={isActive ? cat.color : 'text-slate-400'} />
+                                    {cat.label}
+                                </button>
                             );
                         })}
                     </div>
-                </div>
 
-                {/* COL 3: ACTION ACCESS */}
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
-                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <Key size={18} className="text-amber-500" /> İşlem Yetkileri
-                    </h4>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                        {actionPermissions.map(perm => {
-                            const fromRole = isGrantedByRole(perm.id);
-                            const isDirect = (formData.direct_permissions || []).includes(perm.id);
-                            const isChecked = fromRole || isDirect;
+                    {/* Permissions Grid */}
+                    <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {tabPermissions.length === 0 && (
+                                <p className="col-span-2 text-center text-slate-400 py-10 italic">Bu kategoride yetki bulunamadı.</p>
+                            )}
+                            {tabPermissions.map(perm => {
+                                const fromRole = isGrantedByRole(perm.id);
+                                const isDirect = (formData.direct_permissions || []).includes(perm.id);
+                                const isChecked = fromRole || isDirect;
 
-                            return (
-                                <label key={perm.id} className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer ${isChecked ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 hover:border-amber-200'}`}>
-                                    <input
-                                        type="checkbox"
-                                        className="mt-1 w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
-                                        checked={isChecked}
-                                        onChange={() => togglePermission(perm.id)}
-                                        disabled={!canManageRoles || fromRole}
-                                    />
-                                    <div>
-                                        <div className="font-medium text-xs text-slate-800">{perm.name}</div>
-                                        {fromRole && <span className="text-[9px] bg-blue-100 text-blue-600 px-1 rounded inline-block mt-0.5">Rolden Geliyor</span>}
-                                    </div>
-                                </label>
-                            );
-                        })}
+                                return (
+                                    <label key={perm.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? (fromRole ? 'bg-slate-50 border-slate-200' : 'bg-blue-50 border-blue-200 shadow-sm') : 'bg-white border-slate-100 hover:border-slate-300'}`}>
+                                        <div className="mt-0.5">
+                                            <input
+                                                type="checkbox"
+                                                className={`w-4 h-4 rounded focus:ring-blue-500 ${fromRole ? 'text-slate-400 bg-slate-200' : 'text-blue-600'}`}
+                                                checked={isChecked}
+                                                onChange={() => togglePermission(perm.id)}
+                                                disabled={!canManageRoles || fromRole}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className={`font-bold text-sm ${isChecked ? 'text-slate-800' : 'text-slate-600'}`}>{perm.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">{perm.code}</div>
+
+                                            {fromRole && (
+                                                <div className="mt-1 flex items-center gap-1 text-[10px] text-indigo-600 font-bold bg-indigo-50 w-fit px-1.5 py-0.5 rounded">
+                                                    <Briefcase size={10} /> Rolden Tanımlı
+                                                </div>
+                                            )}
+                                        </div>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded"></div> Doğrudan Yetki</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-100 border border-slate-300 rounded"></div> Rolden Gelen (Kaldırılamaz)</div>
+                        </div>
+                        <div>Top. {tabPermissions.length} yetki listeleniyor</div>
                     </div>
                 </div>
             </div>
