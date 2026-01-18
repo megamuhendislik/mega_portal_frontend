@@ -8,7 +8,7 @@ import Profile from './pages/Profile';
 import Employees from './pages/Employees';
 import EmployeeDetail from './pages/EmployeeDetail';
 import OrganizationChart from './pages/OrganizationChart';
-import Projects from './pages/Projects';
+
 import Requests from './pages/Requests';
 import Attendance from './pages/Attendance';
 import CalendarPage from './pages/CalendarPage';
@@ -64,7 +64,7 @@ function App() {
             <Route path="employees/:id" element={<ProtectedRoute requiredPermission="VIEW_SECTION_EMPLOYEES"><EmployeeDetail /></ProtectedRoute>} />
 
             <Route path="organization-chart" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ORG_CHART"><OrganizationChart /></ProtectedRoute>} />
-            <Route path="projects" element={<ProtectedRoute requiredPermission="VIEW_SECTION_PROJECTS"><Projects /></ProtectedRoute>} />
+
 
             <Route path="attendance" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ATTENDANCE"><Attendance /></ProtectedRoute>} />
             <Route path="attendance-tracking" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ATTENDANCE"><AttendanceTracking /></ProtectedRoute>} />

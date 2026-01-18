@@ -108,7 +108,7 @@ const MainLayout = () => {
         { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: 'VIEW_SECTION_DASHBOARD' },
         { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'VIEW_SECTION_EMPLOYEES' },
         { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'VIEW_SECTION_ORG_CHART' },
-        { path: '/projects', label: 'Projeler', icon: Briefcase, permission: 'VIEW_SECTION_PROJECTS' },
+
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: 'VIEW_SECTION_ATTENDANCE' },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: 'VIEW_SECTION_CALENDAR' },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'VIEW_SECTION_WORK_SCHEDULES' },
