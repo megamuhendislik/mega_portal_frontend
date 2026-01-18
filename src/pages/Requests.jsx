@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils, CheckCircle2, XCircle, AlertCircle, Users } from 'lucide-react';
+import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils, CheckCircle2, XCircle, AlertCircle, Users, CreditCard } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
@@ -34,23 +34,28 @@ const Requests = () => {
 
     const fetchData = async () => {
         try {
-            const [reqRes, typesRes, overtimeRes, mealRes, incomingLeaveRes, incomingOvertimeRes] = await Promise.all([
+            const [reqRes, typesRes, overtimeRes, mealRes, cardlessRes, incomingLeaveRes, incomingOvertimeRes, incomingCardlessRes] = await Promise.all([
                 api.get('/leave/requests/'),
                 api.get('/leave/types/'),
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
+                api.get('/cardless-entry-requests/'), // Fetch List
                 api.get('/leave-requests/pending_approvals/'),
-                api.get('/overtime-requests/pending_approvals/')
+                api.get('/overtime-requests/pending_approvals/'),
+                api.get('/cardless-entry-requests/pending_approvals/') // Fetch Pending
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);
             setOvertimeRequests(overtimeRes.data.results || overtimeRes.data);
             setMealRequests(mealRes.data.results || mealRes.data);
+            setCardlessEntryRequests(cardlessRes.data.results || cardlessRes.data);
 
             // Merge Incoming
             const leaves = (incomingLeaveRes.data.results || incomingLeaveRes.data).map(r => ({ ...r, type: 'LEAVE', uniqueId: `L_${r.id}` }));
             const overtimes = (incomingOvertimeRes.data.results || incomingOvertimeRes.data).map(r => ({ ...r, type: 'OVERTIME', uniqueId: `O_${r.id}` }));
-            setIncomingRequests([...leaves, ...overtimes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+            const cardless = (incomingCardlessRes.data.results || incomingCardlessRes.data).map(r => ({ ...r, type: 'CARDLESS_ENTRY', uniqueId: `C_${r.id}` }));
+
+            setIncomingRequests([...leaves, ...overtimes, ...cardless].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
 
         } catch (error) {
             console.error('Error fetching requests:', error);
@@ -121,6 +126,8 @@ const Requests = () => {
                 await api.delete(`/overtime-requests/${req.id}/`);
             } else if (type === 'MEAL') {
                 await api.delete(`/meal-requests/${req.id}/`);
+            } else if (type === 'CARDLESS_ENTRY') {
+                await api.delete(`/cardless-entry-requests/${req.id}/`);
             }
             fetchData();
         } catch (error) {
@@ -137,6 +144,8 @@ const Requests = () => {
                 url = `/leave/requests/${req.id}/approve_reject/`;
             } else if (req.type === 'OVERTIME') {
                 url = `/overtime-requests/${req.id}/approve_reject/`;
+            } else if (req.type === 'CARDLESS_ENTRY') {
+                url = `/cardless-entry-requests/${req.id}/approve/`;
             }
 
             if (url) {
@@ -167,6 +176,8 @@ const Requests = () => {
                 url = `/leave/requests/${req.id}/approve_reject/`;
             } else if (req.type === 'OVERTIME') {
                 url = `/overtime-requests/${req.id}/approve_reject/`;
+            } else if (req.type === 'CARDLESS_ENTRY') {
+                url = `/cardless-entry-requests/${req.id}/reject/`;
             }
 
             if (url) {
@@ -298,6 +309,21 @@ const Requests = () => {
                     ))}
                 </div>
             );
+        } else if (activeTab === 'cardless_entry_requests') {
+            if (cardlessEntryRequests.length === 0) return <EmptyState title="Kartsız Giriş Yok" desc="Henüz oluşturulmuş bir kartsız giriş talebiniz bulunmuyor." />;
+            content = (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                    {cardlessEntryRequests.map(req => (
+                        <RequestCard
+                            key={req.id}
+                            request={req}
+                            type="CARDLESS_ENTRY"
+                            statusBadge={getStatusBadge}
+                            onDelete={(r) => handleDeleteRequest(r, 'CARDLESS_ENTRY')}
+                        />
+                    ))}
+                </div>
+            );
         } else if (activeTab === 'incoming') {
             if (incomingRequests.length === 0) return <EmptyState title="Onay Bekleyen Talep Yok" desc="Şu anda onayınızı bekleyen herhangi bir talep bulunmuyor." />;
 
@@ -415,7 +441,8 @@ const Requests = () => {
                         { id: 'my_requests', label: 'İzin Taleplerim', show: true },
                         { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_VIEW') || hasPermission('REQUEST_OVERTIME_APPROVE') },
                         { id: 'meal_requests', label: 'Yemek', show: hasPermission('REQUEST_MEAL_VIEW') || hasPermission('REQUEST_MEAL_APPROVE') },
-                        { id: 'incoming', label: 'Onay Bekleyenler', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') },
+                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_CARDLESS_ENTRY_VIEW') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') },
+                        { id: 'incoming', label: 'Onay Bekleyenler', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') },
                         { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_LEAVE_VIEW') || hasPermission('ATTENDANCE_VIEW_TEAM') }
                     ].filter(t => t.show).map(tab => (
                         <button

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft, Briefcase } from 'lucide-react';
+import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft, Briefcase, CreditCard } from 'lucide-react';
 import api from '../services/api';
 
 const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData }) => {
@@ -62,6 +62,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         trip_type: 'NONE', // INNER_CITY, OUT_OF_CITY
         budget_amount: '',
         transport_description: ''
+    });
+
+    const [cardlessEntryForm, setCardlessEntryForm] = useState({
+        date: new Date().toISOString().split('T')[0],
+        check_in_time: '',
+        check_out_time: '',
+        reason: ''
     });
 
     useEffect(() => {
@@ -149,6 +156,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     budget_amount: externalDutyForm.budget_amount,
                     transport_description: externalDutyForm.transport_description
                 });
+            } else if (selectedType === 'CARDLESS_ENTRY') {
+                await api.post('/cardless-entry-requests/', cardlessEntryForm);
             }
 
             onSuccess();
@@ -223,6 +232,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     <p className="text-sm text-slate-500">Bugün için yemek tercihi veya talebi.</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <ChevronRight size={18} />
+                </div>
+            </button>
+
+            <button
+                onClick={() => handleTypeSelect('CARDLESS_ENTRY')}
+                className="group relative p-5 bg-white border border-slate-200 rounded-2xl hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/10 transition-all text-left flex items-center gap-5"
+            >
+                <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform shrink-0">
+                    <CreditCard size={28} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-0.5">Kartsız Giriş</h3>
+                    <p className="text-sm text-slate-500">Kartınızı unuttuysanız manuel giriş/çıkış talebi oluşturun.</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
                     <ChevronRight size={18} />
                 </div>
             </button>
@@ -627,6 +652,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             {selectedType === 'OVERTIME' && renderOvertimeForm()}
                             {selectedType === 'MEAL' && renderMealForm()}
                             {selectedType === 'EXTERNAL_DUTY' && renderExternalDutyForm()}
+                            {selectedType === 'CARDLESS_ENTRY' && renderCardlessEntryForm()}
                         </form>
                     )}
                 </div>
@@ -649,7 +675,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-amber-500 hover:bg-amber-600' :
                                         selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
-                                            'bg-emerald-600 hover:bg-emerald-700'}
+                                            selectedType === 'CARDLESS_ENTRY' ? 'bg-purple-600 hover:bg-purple-700' :
+                                                'bg-emerald-600 hover:bg-emerald-700'}
                                 ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
                             `}
                         >

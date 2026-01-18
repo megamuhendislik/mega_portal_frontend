@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard } from 'lucide-react';
 
 const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming }) => {
     // Helper to format dates
@@ -22,15 +22,17 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
             case 'LEAVE': return <FileText className="text-blue-600" size={24} />;
             case 'OVERTIME': return <Clock className="text-amber-600" size={24} />;
             case 'MEAL': return <div className="text-2xl">🍽️</div>;
+            case 'CARDLESS_ENTRY': return <CreditCard className="text-purple-600" size={24} />;
             default: return <FileText className="text-slate-500" size={24} />;
         }
     };
 
     const getTitle = () => {
-        if (isIncoming) return request.leave_type_name || 'İzin Talebi';
+        if (isIncoming) return request.leave_type_name || (type === 'CARDLESS_ENTRY' ? 'Kartsız Giriş' : 'İzin Talebi');
         if (type === 'LEAVE') return request.leave_type_name || 'İzin Talebi';
         if (type === 'OVERTIME') return 'Fazla Mesai';
         if (type === 'MEAL') return 'Yemek Talebi';
+        if (type === 'CARDLESS_ENTRY') return 'Kartsız Giriş';
         return 'Talep';
     };
 
@@ -58,7 +60,7 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
 
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${type === 'LEAVE' ? 'bg-blue-50' : type === 'OVERTIME' ? 'bg-amber-50' : 'bg-emerald-50'}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${type === 'LEAVE' ? 'bg-blue-50' : type === 'OVERTIME' ? 'bg-amber-50' : type === 'CARDLESS_ENTRY' ? 'bg-purple-50' : 'bg-emerald-50'}`}>
                         {getIcon()}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -91,6 +93,9 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                     )}
                     {type === 'MEAL' && (
                         <span className="font-medium">{formatDate(request.date)}</span>
+                    )}
+                    {type === 'CARDLESS_ENTRY' && (
+                        <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.check_in_time)} - {formatTime(request.check_out_time)}</span>
                     )}
                 </div>
 
