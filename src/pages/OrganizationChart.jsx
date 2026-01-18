@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer } from 'lucide-react';
 import api from '../services/api';
+import DebugConsole from '../components/DebugConsole';
 
 // Simple Modal Component for Employee Details
 const EmployeeDetailModal = ({ employee, onClose }) => {
@@ -413,10 +414,7 @@ const OrganizationChart = () => {
             </div>
 
             {showDebug && (
-                <div className="shrink-0 max-h-60 overflow-auto p-4 bg-slate-900 text-slate-300 font-mono text-xs rounded-xl border border-slate-700 shadow-lg m-2">
-                    <h4 className="font-bold text-amber-400 mb-2 sticky top-0 bg-slate-900 py-1 border-b border-slate-800">RAW API DATA DEBUG</h4>
-                    <pre>{JSON.stringify(treeData, null, 2)}</pre>
-                </div>
+                <DebugConsole treeData={treeData} />
             )}
 
             <div
