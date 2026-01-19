@@ -13,7 +13,8 @@ import {
     XCircleIcon,
     ExclamationTriangleIcon,
     CommandLineIcon,
-    TrashIcon
+    TrashIcon,
+    KeyIcon
 } from '@heroicons/react/24/outline';
 
 export default function SystemHealth() {
@@ -64,8 +65,9 @@ export default function SystemHealth() {
                 <nav className="flex space-x-1 overflow-x-auto p-2" aria-label="Tabs">
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
+                        { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
                         { id: 'stress_test', name: 'Stres Testi & Konsol', icon: CommandLineIcon },
-                        { id: 'test_suite', name: 'Sistem Testleri (Tam Kapsam)', icon: CheckCircleIcon },
+                        { id: 'test_suite', name: 'Sistem Testleri', icon: CheckCircleIcon },
                         { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                     ].map((tab) => (
@@ -89,6 +91,7 @@ export default function SystemHealth() {
             {/* CONTENT AREA */}
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
+                {activeTab === 'permissions' && <PermissionsTab />}
                 {activeTab === 'stress_test' && <StressTestTab />}
                 {activeTab === 'test_suite' && <TestSuiteTab />}
                 {activeTab === 'logs' && <ServiceLogsTab />}
@@ -100,6 +103,138 @@ export default function SystemHealth() {
 }
 
 // --- SUB COMPONENTS ---
+
+function PermissionsTab() {
+    const [report, setReport] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        runScan();
+    }, []);
+
+    const runScan = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/system/health-check/check-permissions/');
+            setReport(res.data);
+        } catch (e) {
+            console.error("Scan error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading && !report) return <div className="p-12 text-center text-gray-500 animate-pulse">Yetki taraması yapılıyor...</div>;
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
+            {/* LEFT: STATUS CARD */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-lg ${report?.status === 'healthy' ? 'bg-green-50' : 'bg-red-50'}`}>
+                            <KeyIcon className={`w-8 h-8 ${report?.status === 'healthy' ? 'text-green-600' : 'text-red-600'}`} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800">Yetki Sistemi Sağlığı</h3>
+                            <p className={`text-sm font-bold ${report?.status === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
+                                {report?.status === 'healthy' ? 'VERİTABANI KATEGORİLERİ DOĞRU' : 'KATEGORİ HATASI MEVCUT'}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={runScan}
+                        className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition"
+                        title="Taramayı Yenile"
+                    >
+                        <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex justify-between p-3 bg-gray-50 rounded text-sm items-center">
+                        <span className="text-gray-600">Toplam Tanımlı Yetki</span>
+                        <span className="text-gray-900 font-bold text-lg">{report?.total || 0}</span>
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="text-xs font-bold text-gray-400 uppercase mb-3">Kategori Dağılımı</h4>
+                        <div className="space-y-2">
+                            {report?.breakdown?.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-sm">
+                                    <span className="text-gray-600 flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${item.category === 'MENU' ? 'bg-green-500' : (item.category === 'OTHER' ? 'bg-red-500' : 'bg-blue-300')}`}></span>
+                                        {item.category || 'TANIMSIZ'}
+                                    </span>
+                                    <span className="font-mono font-bold text-gray-700">{item.count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ISSUES ALERT */}
+                    {report?.issues?.length > 0 && (
+                        <div className="bg-red-50 border border-red-100 p-4 rounded-lg mt-4">
+                            <h4 className="text-red-800 font-bold text-sm mb-2 flex items-center gap-2">
+                                <ExclamationTriangleIcon className="w-4 h-4" /> Tespit Edilen Sorunlar
+                            </h4>
+                            <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+                                {report.issues.map((issue, i) => <li key={i}>{issue}</li>)}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* RIGHT: DETAILS */}
+            <div className="space-y-6">
+                {/* 1. Menu Permission Check */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-md font-bold text-gray-800 mb-2">Menü Erişim Yetkileri (Frontend)</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                        "Yetkilendirme ve Roller" sayfasında "Menü Erişimi" sekmesinde görünecek yetkiler.
+                    </p>
+
+                    {report?.menu_count > 0 ? (
+                        <div className="flex items-center gap-3 text-green-700 bg-green-50 p-4 rounded-lg border border-green-100">
+                            <CheckCircleIcon className="w-6 h-6" />
+                            <div>
+                                <div className="font-bold">Doğrulanmış {report.menu_count} Adet Yetki Mevcut</div>
+                                <div className="text-xs opacity-80">"MENU" kategorisinde kayıtlı.</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 text-red-700 bg-red-50 p-4 rounded-lg border border-red-100">
+                            <XCircleIcon className="w-6 h-6" />
+                            <div>
+                                <div className="font-bold">Kategori Hatası!</div>
+                                <div className="text-xs opacity-80">Menü yetkileri veritabanında "MENU" olarak etiketlenmemiş.</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 2. Uncategorized */}
+                {report?.uncategorized_count > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-md font-bold text-gray-800 mb-2">Kategorisiz Yetkiler (OTHER)</h3>
+                        <p className="text-xs text-gray-500 mb-4">
+                            Bu yetkiler "Diğer" kategorisinde kalmış olabilir.
+                        </p>
+                        <div className="bg-gray-50 p-3 rounded font-mono text-xs text-gray-600 max-h-40 overflow-y-auto">
+                            {report.uncategorized_samples.map((u, i) => (
+                                <div key={i} className="border-b border-gray-200 pb-1 mb-1 last:border-0">
+                                    {u.code} <span className="text-gray-400">({u.name})</span>
+                                </div>
+                            ))}
+                            {report.uncategorized_count > 5 && <div className="pt-2 text-center text-gray-400 italic">... ve {report.uncategorized_count - 5} daha fazla</div>}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function DashboardTab({ stats, refresh, loading }) {
     const [recalcConsoleOpen, setRecalcConsoleOpen] = useState(false);
@@ -316,6 +451,7 @@ function DashboardTab({ stats, refresh, loading }) {
 }
 
 function StressTestTab() {
+
     const [isRunning, setIsRunning] = useState(false);
     const [logs, setLogs] = useState([]);
     const consoleEndRef = useRef(null);
@@ -522,155 +658,34 @@ function ServiceLogsTab() {
 }
 
 function SecurityTab() {
-    const [report, setReport] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [fixing, setFixing] = useState(false);
-
-    useEffect(() => {
-        runScan();
-    }, []);
-
-    const runScan = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/system/health-check/check-permissions/');
-            setReport(res.data);
-        } catch (e) {
-            console.error("Scan error", e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const runFix = async () => {
-        if (!confirm("Eksik veya hatalı kategorize edilmiş yetkiler onarılacak. Devam edilsin mi?")) return;
-        setFixing(true);
-        try {
-            // Trigger the backend command logic? 
-            // Currently I don't have a direct 'fix' endpoint, but 'init_section_permissions' fixes it.
-            // I will implement a 'fix_permissions' endpoint or valid hack.
-            // For now, let's just re-scan as I fixed it manually via command line earlier.
-            // Wait, I should add a fix endpoint if I want it to be button-click.
-            // But the user just wants to SEE it.
-
-            // Let's assume the scan IS the fix source of truth for now.
-            // If report shows issues, tell user to contact admin or run command?
-            // "Yetkileri Onar" button triggers the same scan for now, or just notify.
-            alert("Sistem yöneticisi tarafından 'python manage.py init_section_permissions' komutu çalıştırılmalıdır. (Otomatik onarım yakında eklenecek)");
-        } finally {
-            setFixing(false);
-        }
-    };
-
-    if (loading && !report) return <div className="p-12 text-center text-gray-500 animate-pulse">Güvenlik taraması yapılıyor...</div>;
-
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
-            {/* LEFT: STATUS CARD */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-lg ${report?.status === 'healthy' ? 'bg-green-50' : 'bg-red-50'}`}>
-                            <ShieldCheckIcon className={`w-8 h-8 ${report?.status === 'healthy' ? 'text-green-600' : 'text-red-600'}`} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-800">Güvenlik & Yetki Durumu</h3>
-                            <p className={`text-sm font-bold ${report?.status === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
-                                {report?.status === 'healthy' ? 'SİSTEM GÜVENLİ (HEALTHY)' : 'KRİTİK SORUNLAR VAR'}
-                            </p>
-                        </div>
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-green-50 rounded-lg">
+                        <ShieldCheckIcon className="w-8 h-8 text-green-600" />
                     </div>
-                    <button
-                        onClick={runScan}
-                        className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition"
-                        title="Taramayı Yenile"
-                    >
-                        <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-800">Güvenlik Durumu</h3>
+                        <p className="text-gray-500 text-sm">Katman 1 Koruma Aktif</p>
+                    </div>
                 </div>
-
-                <div className="space-y-4">
-                    <div className="flex justify-between p-3 bg-gray-50 rounded text-sm items-center">
-                        <span className="text-gray-600">Toplam Yetki Sayısı</span>
-                        <span className="text-gray-900 font-bold text-lg">{report?.total || 0}</span>
+                <div className="space-y-3">
+                    <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
+                        <span className="text-gray-600">API Yetkilendirme</span>
+                        <span className="text-green-600 font-bold">AKTİF (JWT)</span>
                     </div>
-
-                    <div className="border-t border-gray-100 pt-4">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase mb-3">Kategori Dağılımı</h4>
-                        <div className="space-y-2">
-                            {report?.breakdown?.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm">
-                                    <span className="text-gray-600 flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${item.category === 'MENU' ? 'bg-green-500' : (item.category === 'OTHER' ? 'bg-red-500' : 'bg-blue-300')}`}></span>
-                                        {item.category || 'TANIMSIZ'}
-                                    </span>
-                                    <span className="font-mono font-bold text-gray-700">{item.count}</span>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
+                        <span className="text-gray-600">Kapı Şifreleme (Fernet)</span>
+                        <span className="text-green-600 font-bold">AKTİF</span>
                     </div>
-
-                    {/* ISSUES ALERT */}
-                    {report?.issues?.length > 0 && (
-                        <div className="bg-red-50 border border-red-100 p-4 rounded-lg mt-4">
-                            <h4 className="text-red-800 font-bold text-sm mb-2 flex items-center gap-2">
-                                <ExclamationTriangleIcon className="w-4 h-4" /> Tespit Edilen Sorunlar
-                            </h4>
-                            <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
-                                {report.issues.map((issue, i) => <li key={i}>{issue}</li>)}
-                            </ul>
-                        </div>
-                    )}
                 </div>
-            </div>
-
-            {/* RIGHT: DETAILS */}
-            <div className="space-y-6">
-                {/* 1. Menu Permission Check */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-md font-bold text-gray-800 mb-2">Menü Erişim Yetkileri</h3>
-                    <p className="text-xs text-gray-500 mb-4">
-                        "Yetkilendirme ve Roller" sayfasında "Menü Erişimi" sekmesinde görünecek yetkiler.
-                    </p>
-
-                    {report?.menu_count > 0 ? (
-                        <div className="flex items-center gap-3 text-green-700 bg-green-50 p-4 rounded-lg border border-green-100">
-                            <CheckCircleIcon className="w-6 h-6" />
-                            <div>
-                                <div className="font-bold">Doğrulanmış {report.menu_count} Adet Yetki Mevcut</div>
-                                <div className="text-xs opacity-80">Frontend "Menü Erişimi" sekmesinde listelenebilir.</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-3 text-red-700 bg-red-50 p-4 rounded-lg border border-red-100">
-                            <XCircleIcon className="w-6 h-6" />
-                            <div>
-                                <div className="font-bold">Kategori Hatası!</div>
-                                <div className="text-xs opacity-80">Menü yetkileri veritabanında "MENU" olarak etiketlenmemiş.</div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* 2. Uncategorized */}
-                {report?.uncategorized_count > 0 && (
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <h3 className="text-md font-bold text-gray-800 mb-2">Kategorisiz Yetkiler (OTHER)</h3>
-                        <p className="text-xs text-gray-500 mb-4">
-                            Bu yetkiler "Diğer" kategorisinde kalmış olabilir.
-                        </p>
-                        <div className="bg-gray-50 p-3 rounded font-mono text-xs text-gray-600 max-h-40 overflow-y-auto">
-                            {report.uncategorized_samples.map((u, i) => (
-                                <div key={i} className="border-b border-gray-200 pb-1 mb-1 last:border-0">
-                                    {u.code} <span className="text-gray-400">({u.name})</span>
-                                </div>
-                            ))}
-                            {report.uncategorized_count > 5 && <div className="pt-2 text-center text-gray-400 italic">... ve {report.uncategorized_count - 5} daha fazla</div>}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
+    );
+}
+
+
     );
 }
 
