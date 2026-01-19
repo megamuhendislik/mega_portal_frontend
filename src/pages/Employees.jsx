@@ -453,38 +453,6 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                     )}
                 </div>
 
-                {/* Annual Leave Settings */}
-                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4">
-                    <h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm">
-                        <Briefcase size={16} className="text-blue-500" />
-                        Yıllık İzin Ayarları
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <InputField
-                            type="number"
-                            label="Yıllık İzin Hakkı (Gün)"
-                            value={formData.annual_leave_entitlement}
-                            onChange={e => handleChange('annual_leave_entitlement', e.target.value)}
-                            placeholder="0"
-                        />
-                        <InputField
-                            type="number"
-                            label="Kullanılan İzin (Gün)"
-                            value={formData.annual_leave_used}
-                            onChange={e => handleChange('annual_leave_used', e.target.value)}
-                            placeholder="0"
-                        />
-                        <InputField
-                            type="number"
-                            label="Avans Limiti (Gün)"
-                            value={formData.annual_leave_advance_limit}
-                            onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
-                            placeholder="10"
-                            className="border-blue-200 focus:border-blue-400"
-                        />
-                    </div>
-                </div>
-
                 {/* Schedule System Selection */}
                 <div className="space-y-4">
                     <h4 className="font-bold text-slate-700 flex items-center gap-2">
