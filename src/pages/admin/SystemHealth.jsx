@@ -242,6 +242,23 @@ function DashboardTab({ stats, refresh, loading }) {
                     />
 
                     <ActionButton
+                        label="TÜM TALEPLERİ SİL (İzin, Mesai, Yemek...)"
+                        description="Sistemdeki TÜM talep kayıtlarını (İzin, Mesai, Yemek, Kartsız Giriş) siler."
+                        hazard={true}
+                        onClick={async () => {
+                            if (confirm('DİKKAT: Sistemdeki TÜM talepleri silmek üzeresiniz!\nBu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
+                                try {
+                                    const res = await api.post('/system/health-check/clear_requests/', { model_type: 'all' });
+                                    alert(res.data.message);
+                                    refresh();
+                                } catch (e) {
+                                    alert('Hata: ' + (e.response?.data?.error || e.message));
+                                }
+                            }
+                        }}
+                    />
+
+                    <ActionButton
                         label="Tüm Test Departman/Pozisyon Verilerini Sil"
                         description="'Stress', 'Diagnostic', 'Test', 'Deneme' içeren tüm yapıları temizler."
                         hazard={true}
