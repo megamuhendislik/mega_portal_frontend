@@ -1,4 +1,7 @@
-// ... (Imports)
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check } from 'lucide-react';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 // ... (Inside Component)
