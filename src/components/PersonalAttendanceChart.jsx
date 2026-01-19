@@ -91,7 +91,7 @@ const PersonalAttendanceChart = ({ logs }) => {
             </div>
 
             <div className="h-[350px] w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <ComposedChart
                         data={data}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

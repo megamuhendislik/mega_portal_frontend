@@ -49,8 +49,8 @@ const TeamComparisonChart = ({ data }) => {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-[400px] w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="w-full h-[500px] min-h-[400px]">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <BarChart
                         layout="vertical"
                         data={sortedData}

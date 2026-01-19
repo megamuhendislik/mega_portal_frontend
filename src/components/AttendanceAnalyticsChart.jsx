@@ -54,8 +54,8 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
                     <button onClick={() => setWeekStart(d => addDays(d, 7))} className="p-1 hover:bg-white rounded shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"><ChevronRight size={16} /></button>
                 </div>
             </div>
-            <div className="flex-1 min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-1 w-full min-h-[300px]">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
                         <defs>
                             <pattern id="striped-analytics" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
@@ -97,8 +97,8 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
 // Sub-component for Trends (Line Chart)
 const TrendView = ({ data, xKey, unit = 'sa' }) => {
     return (
-        <div className="h-full flex-1 min-h-0 pt-4">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="h-full w-full flex-1 min-h-[300px] pt-4">
+            <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis

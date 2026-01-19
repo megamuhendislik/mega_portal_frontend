@@ -66,8 +66,8 @@ const MonthlyTrendChart = ({ logs }) => {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-[250px] w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-1 w-full min-h-[300px]">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                         <XAxis
