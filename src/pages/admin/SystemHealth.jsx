@@ -124,6 +124,25 @@ function DashboardTab({ stats, refresh, loading }) {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ActionButton
+                        label="Hata Taraması (Regression Scan)"
+                        description="Sistemde bilinen hataların (False Pending, Ghost Records) kalıntılarını tarar."
+                        hazard={false}
+                        onClick={async () => {
+                            try {
+                                const res = await api.get('/system/health-check/detect_regression_artifacts/');
+                                const rep = res.data.report;
+                                const msg = `TRAMA SONUCU (${res.data.status.toUpperCase()}):\n\n` +
+                                    `False Pending: ${rep.false_pending_count}\n` +
+                                    `Ghost Records: ${rep.ghost_record_count}\n\n` +
+                                    (rep.details.length > 0 ? "Detaylar:\n" + rep.details.join('\n') : "Sistem Temiz.");
+                                alert(msg);
+                            } catch (e) {
+                                alert("Tarama Hatası: " + (e.response?.data?.error || e.message));
+                            }
+                        }}
+                    />
+
+                    <ActionButton
                         label="Sistemi Yeniden Hesapla (Detaylı Log)"
                         description="Mevcut giriş/çıkış verilerini koruyarak tüm puantaj hesaplamalarını yeniler ve işlem loglarını döker."
                         hazard={false}
