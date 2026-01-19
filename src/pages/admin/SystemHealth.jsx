@@ -686,8 +686,7 @@ function SecurityTab() {
 }
 
 
-    );
-}
+
 
 
 function TestSuiteTab() {
