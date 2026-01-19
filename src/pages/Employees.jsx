@@ -274,6 +274,32 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     />
                 </div>
 
+                {/* 5. SECONDARY DEPARTMENTS (Multi) [NEW] */}
+                <div className="md:col-span-2">
+                    <div className="group">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">İkincil Departmanlar (Opsiyonel)</label>
+                        <div className="relative">
+                            <Building className="absolute left-3 top-3 text-slate-400" size={18} />
+                            <select
+                                multiple
+                                value={formData.secondary_departments}
+                                onChange={e => {
+                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
+                                    handleChange('secondary_departments', selected);
+                                }}
+                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
+                            >
+                                {departments.map(dept => (
+                                    <option key={dept.id} value={dept.id}>
+                                        {dept.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-slate-400 mt-1 ml-1">Kişinin bağlı olduğu diğer birimler/gruplar.</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* 5. SECONDARY POSITIONS (Multi) */}
                 <div className="md:col-span-2">
                     <div className="group">
@@ -620,28 +646,28 @@ const PERMISSION_CATEGORIES = [
         label: 'Menü Erişimi',
         icon: FileText,
         color: 'text-emerald-500',
-        filter: (code) => code.startsWith('VIEW_SECTION_')
+        filter: (p) => p.category === 'MENU' || p.code.startsWith('VIEW_SECTION_')
     },
     {
         id: 'requests',
         label: 'Talep & Mesai',
         icon: CalendarRange,
         color: 'text-blue-500',
-        filter: (code) => code.startsWith('REQUEST_') || code.startsWith('ATTENDANCE_') || code.startsWith('CALENDAR_') || code.startsWith('WORK_SCHEDULE_')
+        filter: (p) => p.category === 'REQUEST' || p.code.startsWith('REQUEST_') || p.code.startsWith('ATTENDANCE_') || p.code.startsWith('CALENDAR_') || p.code.startsWith('WORK_SCHEDULE_')
     },
     {
         id: 'hr',
         label: 'İK & Organizasyon',
         icon: UserPlus,
         color: 'text-purple-500',
-        filter: (code) => code.startsWith('EMPLOYEE_') || code.startsWith('ORG_') || code.startsWith('DEPARTMENT_') || code.startsWith('JOB_POSITION_')
+        filter: (p) => p.category === 'HR_ORG' || p.code.startsWith('EMPLOYEE_') || p.code.startsWith('ORG_') || p.code.startsWith('DEPARTMENT_') || p.code.startsWith('JOB_POSITION_')
     },
     {
         id: 'system',
         label: 'Sistem & Admin',
         icon: Settings,
         color: 'text-amber-500',
-        filter: (code) => code.startsWith('SYSTEM_') || code.startsWith('SETTINGS_') || code.startsWith('ACCESS_') || code.startsWith('PROJECT_')
+        filter: (p) => p.category === 'SYSTEM' || p.code.startsWith('SYSTEM_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('ACCESS_') || p.code.startsWith('PROJECT_')
     }
 ];
 
@@ -677,7 +703,7 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
 
     // Filter permissions for the active tab
     const activeCategory = PERMISSION_CATEGORIES.find(c => c.id === activeTab);
-    const tabPermissions = permissions.filter(p => activeCategory.filter(p.code));
+    const tabPermissions = permissions.filter(p => activeCategory.filter(p));
 
     return (
         <div className="animate-fade-in-up">
@@ -1115,7 +1141,11 @@ const Employees = () => {
             const payload = {
                 ...cleanPayload,
                 work_schedule: cleanPayload.work_schedule || null,
-                secondary_departments: cleanPayload.functional_department ? [cleanPayload.functional_department] : []
+                // Merge functional_department into secondary_departments if exists
+                secondary_departments: [
+                    ...(cleanPayload.secondary_departments || []).map(d => parseInt(d)),
+                    cleanPayload.functional_department ? parseInt(cleanPayload.functional_department) : null
+                ].filter((v, i, a) => v && a.indexOf(v) === i) // Unique and non-null
             };
 
             if (viewMode === 'create') {
