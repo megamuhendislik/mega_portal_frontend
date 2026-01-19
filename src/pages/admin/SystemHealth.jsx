@@ -217,17 +217,42 @@ function PermissionsTab() {
                 {/* 2. Uncategorized */}
                 {report?.uncategorized_count > 0 && (
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <h3 className="text-md font-bold text-gray-800 mb-2">Kategorisiz Yetkiler (OTHER)</h3>
-                        <p className="text-xs text-gray-500 mb-4">
-                            Bu yetkiler "Diğer" kategorisinde kalmış olabilir.
-                        </p>
-                        <div className="bg-gray-50 p-3 rounded font-mono text-xs text-gray-600 max-h-40 overflow-y-auto">
-                            {report.uncategorized_samples.map((u, i) => (
-                                <div key={i} className="border-b border-gray-200 pb-1 mb-1 last:border-0">
-                                    {u.code} <span className="text-gray-400">({u.name})</span>
-                                </div>
-                            ))}
-                            {report.uncategorized_count > 5 && <div className="pt-2 text-center text-gray-400 italic">... ve {report.uncategorized_count - 5} daha fazla</div>}
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 className="text-md font-bold text-gray-800">Kategorisiz Yetkiler (OTHER)</h3>
+                                <p className="text-xs text-gray-500">
+                                    Bu yetkiler "Diğer" kategorisinde kalmış olabilir.
+                                </p>
+                            </div>
+                            <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                {report.uncategorized_count} Adet
+                            </span>
+                        </div>
+
+                        <div className="bg-gray-50 p-0 rounded-lg border border-gray-200 overflow-hidden">
+                            <div className="max-h-[400px] overflow-y-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-gray-100 text-gray-500 font-semibold sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-2 border-b">Kod (Code)</th>
+                                            <th className="px-4 py-2 border-b">İsim (Name)</th>
+                                            <th className="px-4 py-2 border-b">Açıklama</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {(report.uncategorized_list || report.uncategorized_samples || []).map((u, i) => (
+                                            <tr key={i} className="hover:bg-white transition-colors">
+                                                <td className="px-4 py-2 font-mono text-indigo-600">{u.code}</td>
+                                                <td className="px-4 py-2 font-medium text-gray-700">{u.name}</td>
+                                                <td className="px-4 py-2 text-gray-500 italic">{u.description || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="bg-gray-100 px-4 py-2 text-[10px] text-gray-400 text-center border-t border-gray-200">
+                                Tüm liste gösteriliyor.
+                            </div>
                         </div>
                     </div>
                 )}
