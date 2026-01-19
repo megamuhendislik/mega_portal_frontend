@@ -54,7 +54,12 @@ const INITIAL_FORM_STATE = {
 
     // System
     password: '', // Default initial password
-    username: '' // Will be auto-generated or manual
+    username: '', // Will be auto-generated or manual
+
+    // Annual Leave
+    annual_leave_entitlement: 0,
+    annual_leave_used: 0,
+    annual_leave_advance_limit: 0
 };
 
 // ...
@@ -446,6 +451,38 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Annual Leave Settings */}
+                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4">
+                    <h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm">
+                        <Briefcase size={16} className="text-blue-500" />
+                        Yıllık İzin Ayarları
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <InputField
+                            type="number"
+                            label="Yıllık İzin Hakkı (Gün)"
+                            value={formData.annual_leave_entitlement}
+                            onChange={e => handleChange('annual_leave_entitlement', e.target.value)}
+                            placeholder="0"
+                        />
+                        <InputField
+                            type="number"
+                            label="Kullanılan İzin (Gün)"
+                            value={formData.annual_leave_used}
+                            onChange={e => handleChange('annual_leave_used', e.target.value)}
+                            placeholder="0"
+                        />
+                        <InputField
+                            type="number"
+                            label="Avans Limiti (Gün)"
+                            value={formData.annual_leave_advance_limit}
+                            onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
+                            placeholder="10"
+                            className="border-blue-200 focus:border-blue-400"
+                        />
+                    </div>
                 </div>
 
                 {/* Schedule System Selection */}
@@ -1044,6 +1081,11 @@ const Employees = () => {
                 work_type: data.work_type,
                 uses_service: data.uses_service || false, // [NEW]
                 hired_date: data.hired_date || '',
+
+                // Annual Leave
+                annual_leave_entitlement: data.annual_leave_entitlement || 0,
+                annual_leave_used: data.annual_leave_used || 0,
+                annual_leave_advance_limit: data.annual_leave_advance_limit || 0,
 
                 work_schedule: data.work_schedule?.id || '',
                 weekly_schedule: data.weekly_schedule || {},

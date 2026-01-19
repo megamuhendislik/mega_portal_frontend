@@ -1,7 +1,170 @@
-import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
-import { X, Calendar, Clock, Utensils, FileText, ChevronRight, Check, AlertCircle, ArrowLeft, Briefcase, CreditCard } from 'lucide-react';
-import api from '../services/api';
+// ... (Imports)
+import { useAuth } from '../context/AuthContext';
+
+// ... (Inside Component)
+const { user } = useAuth();
+
+// Helper to calculate balance
+const getLeaveBalance = () => {
+    if (!user) return null;
+    const ent = user.annual_leave_entitlement || 0;
+    const used = user.annual_leave_used || 0;
+    const limit = user.annual_leave_advance_limit || 0;
+    const remaining = ent - used;
+    const available = remaining + limit;
+    return { ent, used, limit, remaining, available };
+};
+
+// Helper to calculate duration in days
+const calculateDuration = () => {
+    if (!leaveForm.start_date || !leaveForm.end_date) return 0;
+    const start = new Date(leaveForm.start_date);
+    const end = new Date(leaveForm.end_date);
+    if (isNaN(start) || isNaN(end)) return 0;
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+};
+
+const renderLeaveForm = () => {
+    const balance = getLeaveBalance();
+    const duration = calculateDuration();
+    const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+    const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE'; // Ensure code matches backend
+
+    const isInsufficient = isAnnualLeave && balance && (duration > balance.available);
+
+    return (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            {/* Balance Info Box */}
+            {isAnnualLeave && balance && (
+                <div className={`p-4 rounded-xl border ${isInsufficient ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'} transition-colors`}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Briefcase size={18} className={isInsufficient ? 'text-red-600' : 'text-blue-600'} />
+                        <h4 className={`font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>Yıllık İzin Bakiyesi</h4>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="bg-white/60 p-2 rounded-lg">
+                            <span className="block text-xs text-slate-500">Hak Edilen</span>
+                            <span className="block font-bold text-slate-700">{balance.ent} gün</span>
+                        </div>
+                        <div className="bg-white/60 p-2 rounded-lg">
+                            <span className="block text-xs text-slate-500">Kullanılan</span>
+                            <span className="block font-bold text-slate-700">{balance.used} gün</span>
+                        </div>
+                        <div className="bg-white/60 p-2 rounded-lg">
+                            <span className="block text-xs text-slate-500">Avans</span>
+                            <span className="block font-bold text-slate-700">{balance.limit} gün</span>
+                        </div>
+                        <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-blue-100 ring-1 ring-blue-200'}`}>
+                            <span className={`block text-xs ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>Kullanılabilir</span>
+                            <span className={`block font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>{balance.available} gün</span>
+                        </div>
+                    </div>
+                    {isInsufficient && (
+                        <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1">
+                            <AlertCircle size={12} />
+                            Talep edilen süre ({duration} gün) bakiyenizi aşıyor!
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">İzin Türü <span className="text-red-500">*</span></label>
+                <select
+                    required
+                    value={leaveForm.request_type}
+                    onChange={e => setLeaveForm({ ...leaveForm, request_type: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                >
+                    <option value="">Seçiniz</option>
+                    {requestTypes.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç <span className="text-red-500">*</span></label>
+                    <input
+                        required
+                        type="date"
+                        value={leaveForm.start_date}
+                        onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş <span className="text-red-500">*</span></label>
+                    <input
+                        required
+                        type="date"
+                        value={leaveForm.end_date}
+                        onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                </div>
+            </div>
+
+            {/* Duration Display */}
+            {leaveForm.start_date && leaveForm.end_date && (
+                <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
+                    <span>Toplam Süre:</span>
+                    <span className="font-bold text-slate-700">{calculateDuration()} Gün</span>
+                </div>
+            )}
+
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
+                <textarea
+                    required
+                    rows="3"
+                    value={leaveForm.reason}
+                    onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    placeholder="İzin gerekçenizi detaylıca belirtiniz..."
+                ></textarea>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer</label>
+                    <input
+                        value={leaveForm.destination}
+                        onChange={e => setLeaveForm({ ...leaveForm, destination: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                        placeholder="Opsiyonel"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">İletişim Telefonu</label>
+                    <input
+                        value={leaveForm.contact_phone}
+                        onChange={e => setLeaveForm({ ...leaveForm, contact_phone: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                        placeholder="Opsiyonel"
+                    />
+                </div>
+            </div>
+
+
+            <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
+                <input
+                    type="checkbox"
+                    id="notify_subs_leave"
+                    checked={leaveForm.notify_substitutes}
+                    onChange={e => setLeaveForm({ ...leaveForm, notify_substitutes: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="notify_subs_leave" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    İlgili Yöneticinin Vekillerini de Bilgilendir
+                </label>
+            </div>
+        </div >
+    );
+};
 
 const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData }) => {
     const [step, setStep] = useState(1);
