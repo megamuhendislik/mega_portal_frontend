@@ -230,23 +230,11 @@ function DashboardTab({ stats, refresh, loading }) {
                     />
 
                     <ActionButton
-                        label="Tüm Fazla Mesai Taleplerini Sil"
-                        description="Sadece FM taleplerini temizler."
+                        label="TÜM İzin ve Mesai Taleplerini Sil"
+                        description="Sistemdeki TÜM talep kayıtlarını (İzin, Fazla Mesai, Yemek, Kartsız Giriş) kalıcı olarak siler."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('Tüm Fazla Mesai taleplerini silmek üzeresiniz. Devam?')) {
-                                await api.post('/system/health-check/clear_requests/', { model_type: 'overtime' });
-                                refresh();
-                            }
-                        }}
-                    />
-
-                    <ActionButton
-                        label="TÜM TALEPLERİ SİL (İzin, Mesai, Yemek...)"
-                        description="Sistemdeki TÜM talep kayıtlarını (İzin, Mesai, Yemek, Kartsız Giriş) siler."
-                        hazard={true}
-                        onClick={async () => {
-                            if (confirm('DİKKAT: Sistemdeki TÜM talepleri silmek üzeresiniz!\nBu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
+                            if (confirm('DİKKAT: Sistemdeki TÜM talepleri (İzin, FM, Yemek, vb.) silmek üzeresiniz!\nBu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
                                 try {
                                     const res = await api.post('/system/health-check/clear_requests/', { model_type: 'all' });
                                     alert(res.data.message);
