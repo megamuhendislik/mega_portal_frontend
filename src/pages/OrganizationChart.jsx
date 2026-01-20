@@ -82,7 +82,7 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
     );
 };
 
-const EmployeeNode = ({ emp, onClick }) => (
+const EmployeeNode = ({ emp, onClick, showTags }) => (
     <div
         className={`
             relative z - 10 p - 2 rounded - lg border shadow - sm transition - all hover: shadow - md bg - white min - w - [160px] text - center cursor - pointer group
@@ -111,7 +111,7 @@ w - 8 h - 8 rounded - full flex items - center justify - center text - xs font -
                 )}
             </div>
 
-            {emp.functional_groups && emp.functional_groups.length > 0 && (
+            {showTags && emp.functional_groups && emp.functional_groups.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
                     {emp.functional_groups.slice(0, 2).map((group, idx) => (
                         <span key={idx} className="text-[6px] px-1 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
@@ -162,7 +162,7 @@ w - 8 h - 8 rounded - lg flex items - center justify - center shadow - sm
     </div>
 );
 
-const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
     const isDepartment = node.type === 'department';
 
     // Combine Sub-Departments into branching children (Tree Structure)
@@ -203,7 +203,7 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
                 {isDepartment ? (
                     <DepartmentNode node={node} />
                 ) : (
-                    <EmployeeNode emp={node} onClick={onEmployeeClick} />
+                    <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} />
                 )}
 
                 {/* VISUAL IMPROVEMENT: Render Employees as a GRID here, under the specific Dept, 
@@ -224,6 +224,7 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
                                     key={`emp-grid-${emp.id}`}
                                     emp={emp}
                                     onClick={onEmployeeClick}
+                                    showTags={showTags}
                                 />
                             ))}
                         </div>
@@ -239,6 +240,7 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
                             key={`${child.type}-${child.id}`}
                             node={child}
                             showAllEmployees={showAllEmployees}
+                            showTags={showTags}
                             onEmployeeClick={onEmployeeClick}
                         />
                     ))}
@@ -253,6 +255,7 @@ const OrganizationChart = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showEmployees, setShowEmployees] = useState(true); // Default ON to show hierarchy heads
+    const [showTags, setShowTags] = useState(false); // Default OFF
     const [showDebug, setShowDebug] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
 
@@ -405,6 +408,20 @@ const OrganizationChart = () => {
                     </button>
 
                     <button
+                        onClick={() => setShowTags(!showTags)}
+                        className={`
+                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
+                            ${showTags
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }
+                        `}
+                    >
+                        <Building size={16} />
+                        {showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}
+                    </button>
+
+                    <button
                         onClick={() => setShowEmployees(!showEmployees)}
                         className={`
                             flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - xs md: text - sm font - medium transition - colors border shadow - sm whitespace - nowrap
@@ -464,6 +481,7 @@ const OrganizationChart = () => {
                                     key={node.id}
                                     node={{ ...node, type: node.type || 'department' }}
                                     showAllEmployees={showEmployees}
+                                    showTags={showTags}
                                     onEmployeeClick={setSelectedEmployee}
                                 />
                             ))}
