@@ -60,25 +60,25 @@ function App() {
             <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="profile" element={<Profile />} />
 
-            <Route path="employees" element={<ProtectedRoute requiredPermission="VIEW_SECTION_EMPLOYEES"><Employees /></ProtectedRoute>} />
-            <Route path="employees/:id" element={<ProtectedRoute requiredPermission="VIEW_SECTION_EMPLOYEES"><EmployeeDetail /></ProtectedRoute>} />
+            <Route path="employees" element={<ProtectedRoute requiredPermission="EMPLOYEE_VIEW_LIST"><Employees /></ProtectedRoute>} />
+            <Route path="employees/:id" element={<ProtectedRoute requiredPermission="EMPLOYEE_VIEW_DETAIL"><EmployeeDetail /></ProtectedRoute>} />
 
-            <Route path="organization-chart" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ORG_CHART"><OrganizationChart /></ProtectedRoute>} />
+            <Route path="organization-chart" element={<ProtectedRoute><OrganizationChart /></ProtectedRoute>} />
 
 
-            <Route path="attendance" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ATTENDANCE"><Attendance /></ProtectedRoute>} />
-            <Route path="attendance-tracking" element={<ProtectedRoute requiredPermission="VIEW_SECTION_ATTENDANCE"><AttendanceTracking /></ProtectedRoute>} />
+            <Route path="attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+            <Route path="attendance-tracking" element={<ProtectedRoute requiredPermission="ATTENDANCE_VIEW_TEAM"><AttendanceTracking /></ProtectedRoute>} />
 
-            <Route path="calendar" element={<ProtectedRoute requiredPermission="VIEW_SECTION_CALENDAR"><CalendarPage /></ProtectedRoute>} />
-            <Route path="work-schedules" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><WorkSchedules /></ProtectedRoute>} />
-            <Route path="public-holidays" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><PublicHolidays /></ProtectedRoute>} />
+            <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+            <Route path="work-schedules" element={<ProtectedRoute requiredPermission="SCHEDULE_MANAGE"><WorkSchedules /></ProtectedRoute>} />
+            <Route path="public-holidays" element={<ProtectedRoute requiredPermission="SETTINGS_MANAGE_HOLIDAYS"><PublicHolidays /></ProtectedRoute>} />
 
-            <Route path="requests" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REQUESTS"><Requests /></ProtectedRoute>} />
-            <Route path="reports" element={<ProtectedRoute requiredPermission="VIEW_SECTION_REPORTS"><Reports /></ProtectedRoute>} />
-            <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="SYSTEM_VIEW_HEALTH"><SystemHealth /></ProtectedRoute>} />
-            <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE_SERVICES"><ServiceControl /></ProtectedRoute>} />
-            <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="CALENDAR_MANAGE_HOLIDAYS"><FiscalCalendarSettings /></ProtectedRoute>} />
-            <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="SYSTEM_DEBUG"><AttendanceDebugger /></ProtectedRoute>} />
+            <Route path="requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+            <Route path="reports" element={<ProtectedRoute requiredPermission="REPORT_VIEW_ALL"><Reports /></ProtectedRoute>} />
+            <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><SystemHealth /></ProtectedRoute>} />
+            <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><ServiceControl /></ProtectedRoute>} />
+            <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="ATTENDANCE_MANAGE_FISCAL"><FiscalCalendarSettings /></ProtectedRoute>} />
+            <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -105,19 +105,19 @@ const MainLayout = () => {
     };
 
     const navItems = [
-        { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: 'VIEW_SECTION_DASHBOARD' },
-        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'VIEW_SECTION_EMPLOYEES' },
-        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'VIEW_SECTION_ORG_CHART' },
+        { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: null },
+        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'EMPLOYEE_VIEW_LIST' },
+        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: null },
 
-        { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: 'VIEW_SECTION_ATTENDANCE' },
-        { path: '/calendar', label: 'Takvim', icon: Calendar, permission: 'VIEW_SECTION_CALENDAR' },
-        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'VIEW_SECTION_WORK_SCHEDULES' },
-        { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'CALENDAR_MANAGE_HOLIDAYS' },
-        { path: '/requests', label: 'Talepler', icon: FileText, permission: 'VIEW_SECTION_REQUESTS' },
-        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'VIEW_SECTION_REPORTS' },
-        { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: null, adminOnly: true },
-        { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: null, adminOnly: true },
-        { path: '/debug/attendance', label: 'Debug', icon: Database, permission: null, adminOnly: true },
+        { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: null },
+        { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
+        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'SCHEDULE_MANAGE' },
+        { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'ATTENDANCE_MANAGE_FISCAL' },
+        { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
+        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'REPORT_VIEW_ALL' },
+        { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'SYSTEM_MANAGE' },
+        { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'SYSTEM_MANAGE' },
+        { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'SYSTEM_MANAGE' },
     ];
 
     const filteredNavItems = navItems.filter(item => {

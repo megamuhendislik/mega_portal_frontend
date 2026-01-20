@@ -309,14 +309,26 @@ const Attendance = () => {
                             </div>
 
                             {/* Break Analysis (4 Cols) */}
-                            <div className="xl:col-span-4 h-full">
-                                <BreakAnalysisWidget
-                                    logs={logs}
-                                    totalBreakSeconds={periodSummary?.total_break_seconds}
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                />
-                            </div>
+                            {hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS') && (
+                                <div className="xl:col-span-4 h-full">
+                                    {(activeTab === 'my_attendance' || hasPermission('ATTENDANCE_VIEW_OTHERS_BREAKS')) ? (
+                                        <BreakAnalysisWidget
+                                            logs={logs}
+                                            totalBreakSeconds={periodSummary?.total_break_seconds}
+                                            startDate={startDate}
+                                            endDate={endDate}
+                                        />
+                                    ) : (
+                                        <div className="h-full bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
+                                                <Users size={24} />
+                                            </div>
+                                            <h3 className="font-bold text-slate-700">Erişim Kısıtlı</h3>
+                                            <p className="text-sm text-slate-500 mt-1">Bu personelin mola analizlerini görme yetkiniz yok.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* 4. Detailed Logs Table */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
+import { useAuth } from '../context/AuthContext';
 
 // Simple Modal Component for Employee Details
 const EmployeeDetailModal = ({ employee, onClose }) => {
@@ -84,12 +85,12 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 const EmployeeNode = ({ emp, onClick }) => (
     <div
         className={`
-            relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:shadow-md bg-white min-w-[160px] text-center cursor-pointer group
+            relative z - 10 p - 2 rounded - lg border shadow - sm transition - all hover: shadow - md bg - white min - w - [160px] text - center cursor - pointer group
             ${emp.is_secondary
                 ? 'border-amber-200 bg-amber-50 hover:border-amber-300'
                 : 'border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100'
             }
-        `}
+`}
         onClick={(e) => {
             e.stopPropagation();
             if (onClick) onClick(emp);
@@ -97,9 +98,9 @@ const EmployeeNode = ({ emp, onClick }) => (
     >
         <div className="flex flex-col items-center gap-1">
             <div className={`
-                w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-1
+w - 8 h - 8 rounded - full flex items - center justify - center text - xs font - bold mb - 1
                 ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}
-            `}>
+`}>
                 {emp.name.charAt(0)}
             </div>
 
@@ -137,18 +138,18 @@ const EmployeeNode = ({ emp, onClick }) => (
 const DepartmentNode = ({ node }) => (
     <div
         className={`
-            relative z-10 p-4 rounded-2xl border shadow-sm transition-all hover:shadow-xl bg-white min-w-[220px] max-w-[260px] text-center cursor-pointer
-            border-slate-200 hover:border-blue-400 group
-        `}
+            relative z - 10 p - 4 rounded - 2xl border shadow - sm transition - all hover: shadow - xl bg - white min - w - [220px] max - w - [260px] text - center cursor - pointer
+border - slate - 200 hover: border - blue - 400 group
+    `}
         onClick={(e) => {
             e.stopPropagation();
         }}
     >
         <div className="flex flex-col items-center gap-2">
             <div className={`
-                w-8 h-8 rounded-lg flex items-center justify-center shadow-sm
+w - 8 h - 8 rounded - lg flex items - center justify - center shadow - sm
                 ${node.code === 'COMPANY' ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'}
-            `}>
+`}>
                 <Building size={16} />
             </div>
 
@@ -221,7 +222,7 @@ const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
                 <ul>
                     {branchingChildren.map(child => (
                         <TreeNode
-                            key={`${child.type}-${child.id}`}
+                            key={`${child.type} -${child.id} `}
                             node={child}
                             showAllEmployees={showAllEmployees}
                             onEmployeeClick={onEmployeeClick}
@@ -378,12 +379,12 @@ const OrganizationChart = () => {
                     <button
                         onClick={() => setShowDebug(!showDebug)}
                         className={`
-                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
+                            flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - xs md: text - sm font - medium transition - colors border shadow - sm whitespace - nowrap
                             ${showDebug
                                 ? 'bg-amber-100 text-amber-700 border-amber-200'
                                 : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                             }
-                        `}
+`}
                     >
                         <MousePointer size={16} />
                         {showDebug ? 'Debug Kapat' : 'Debug Aç'}
@@ -392,12 +393,12 @@ const OrganizationChart = () => {
                     <button
                         onClick={() => setShowEmployees(!showEmployees)}
                         className={`
-                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
+                            flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - xs md: text - sm font - medium transition - colors border shadow - sm whitespace - nowrap
                             ${showEmployees
                                 ? 'bg-blue-600 text-white border-blue-600'
                                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                             }
-                        `}
+`}
                     >
                         <User size={16} />
                         {showEmployees ? 'Çalışanları Gizle' : 'Çalışanları Göster'}
@@ -458,88 +459,88 @@ const OrganizationChart = () => {
             </div>
 
             <style>{`
-                /* Tree CSS - Robust Flexbox Implementation */
-                .tree ul {
-                    padding-top: 20px; 
-                    position: relative;
-                    transition: all 0.5s;
-                    display: flex;
-                    justify-content: center;
-                }
+    /* Tree CSS - Robust Flexbox Implementation */
+    .tree ul {
+    padding - top: 20px;
+    position: relative;
+    transition: all 0.5s;
+    display: flex;
+    justify - content: center;
+}
 
                 .tree li {
-                    text-align: center;
-                    list-style-type: none;
-                    position: relative;
-                    padding: 20px 5px 0 5px;
-                    transition: all 0.5s;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                }
+    text - align: center;
+    list - style - type: none;
+    position: relative;
+    padding: 20px 5px 0 5px;
+    transition: all 0.5s;
+    display: flex;
+    flex - direction: column;
+    align - items: center;
+}
 
                 /* Connectors */
-                .tree li::before, .tree li::after {
-                    content: '';
-                    position: absolute; 
-                    top: 0; 
-                    right: 50%;
-                    border-top: 2px solid #cbd5e1; /* Thicker, lighter line */
-                    width: 50%; 
-                    height: 20px;
-                    z-index: -1;
-                }
+                .tree li:: before, .tree li::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 50 %;
+    border - top: 2px solid #cbd5e1; /* Thicker, lighter line */
+    width: 50 %;
+    height: 20px;
+    z - index: -1;
+}
 
                 .tree li::after {
-                    right: auto; 
-                    left: 50%;
-                    border-left: 2px solid #cbd5e1;
-                }
+    right: auto;
+    left: 50 %;
+    border - left: 2px solid #cbd5e1;
+}
 
                 /* Only Child: No horizontal connectors needed at top */
-                .tree li:only-child::after, .tree li:only-child::before {
-                    display: none;
-                }
+                .tree li: only - child:: after, .tree li: only - child::before {
+    display: none;
+}
 
                 /* Only Child: Remove top padding */
-                .tree li:only-child { 
-                    padding-top: 0;
-                }
+                .tree li: only - child {
+    padding - top: 0;
+}
 
                 /* First Child: Remove left connector */
-                .tree li:first-child::before {
-                    border: 0 none;
-                }
-                
+                .tree li: first - child::before {
+    border: 0 none;
+}
+
                 /* First Child: Add curve to right connector */
-                .tree li:first-child::after {
-                    border-radius: 5px 0 0 0;
-                }
+                .tree li: first - child::after {
+    border - radius: 5px 0 0 0;
+}
 
                 /* Last Child: Remove right connector */
-                .tree li:last-child::after {
-                    border: 0 none;
-                }
-                
+                .tree li: last - child::after {
+    border: 0 none;
+}
+
                 /* Last Child: Add curve to left connector */
-                .tree li:last-child::before {
-                    border-right: 2px solid #cbd5e1;
-                    border-radius: 0 5px 0 0;
-                }
+                .tree li: last - child::before {
+    border - right: 2px solid #cbd5e1;
+    border - radius: 0 5px 0 0;
+}
 
                 /* Vertical connector from Parent down to Children */
                 .tree ul ul::before {
-                    content: '';
-                    position: absolute; 
-                    top: 0; 
-                    left: 50%;
-                    border-left: 2px solid #cbd5e1;
-                    width: 0; 
-                    height: 20px;
-                    transform: translateX(-50%); /* Perfectly center vertical line */
-                    z-index: -1;
-                }
-            `}</style>
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50 %;
+    border - left: 2px solid #cbd5e1;
+    width: 0;
+    height: 20px;
+    transform: translateX(-50 %); /* Perfectly center vertical line */
+    z - index: -1;
+}
+`}</style>
         </div>
     );
 };

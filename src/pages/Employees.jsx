@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key } from 'lucide-react';
+import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key, Calculator } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
@@ -11,7 +11,7 @@ const STEPS = [
     { number: 2, title: 'Kurumsal Bilgiler', icon: Building },
     { number: 3, title: 'İletişim & Acil', icon: Phone },
     { number: 4, title: 'Detaylar & Yetkinlik', icon: Briefcase },
-    { number: 5, title: 'Yetkilendirme', icon: Key }, // New Step
+    { number: 5, title: 'Yetkilendirme', icon: Key }, // Permission Controlled
     { number: 6, title: 'Önizleme & Onay', icon: FileText }
 ];
 
@@ -661,6 +661,13 @@ const PERMISSION_CATEGORIES = [
         icon: UserPlus,
         color: 'text-purple-500',
         filter: (p) => p.category === 'HR_ORG' || p.code.startsWith('EMPLOYEE_') || p.code.startsWith('ORG_') || p.code.startsWith('DEPARTMENT_') || p.code.startsWith('JOB_POSITION_')
+    },
+    {
+        id: 'accounting',
+        label: 'Muhasebe',
+        icon: Calculator,
+        color: 'text-emerald-600',
+        filter: (p) => p.category === 'ACCOUNTING' || p.code.startsWith('SCHEDULE_') || p.code.startsWith('REPORT_')
     },
     {
         id: 'system',
@@ -1516,9 +1523,11 @@ const Employees = () => {
                                 </section>
 
                                 {/* Section 5: Permissions */}
-                                <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
-                                    <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={hasPermission('EMPLOYEE_MANAGE_ROLES')} />
-                                </section>
+                                {hasPermission('EMPLOYEE_MANAGE_ROLES') && (
+                                    <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
+                                        <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />
+                                    </section>
+                                )}
                             </div>
                         ) : (
                             /* CREATE WIZARD MODE */
@@ -1527,7 +1536,17 @@ const Employees = () => {
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                                {currentStep === 5 && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={hasPermission('EMPLOYEE_MANAGE_ROLES')} />}
+                                {currentStep === 5 && hasPermission('EMPLOYEE_MANAGE_ROLES') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
+                                {currentStep === 5 && !hasPermission('EMPLOYEE_MANAGE_ROLES') && (
+                                    <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-fade-in">
+                                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400"><Key size={32} /></div>
+                                        <h3 className="text-xl font-bold text-slate-700">Yetkilendirme Erişimi Kısıtlı</h3>
+                                        <p className="text-slate-500 mt-2 max-w-md mx-auto">
+                                            Bu personel için rol ve yetki tanımlama yetkiniz bulunmuyor. Varsayılan roller (pozisyona göre) otomatik atanacaktır.
+                                            <br /><br />Devam etmek için <strong>"Devam Et"</strong> butonuna tıklayınız.
+                                        </p>
+                                    </div>
+                                )}
                                 {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                             </div>
                         )}
