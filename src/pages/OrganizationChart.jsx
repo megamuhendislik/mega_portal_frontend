@@ -493,85 +493,85 @@ const OrganizationChart = () => {
             <style>{`
     /* Tree CSS - Robust Flexbox Implementation */
     .tree ul {
-    padding - top: 20px;
-    position: relative;
-    transition: all 0.5s;
-    display: flex;
-    justify - content: center;
-}
+        padding-top: 20px;
+        position: relative;
+        transition: all 0.5s;
+        display: flex;
+        justify-content: center;
+    }
 
-                .tree li {
-    text - align: center;
-    list - style - type: none;
-    position: relative;
-    padding: 20px 5px 0 5px;
-    transition: all 0.5s;
-    display: flex;
-    flex - direction: column;
-    align - items: center;
-}
+    .tree li {
+        text-align: center;
+        list-style-type: none;
+        position: relative;
+        padding: 20px 5px 0 5px;
+        transition: all 0.5s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-                /* Connectors */
-                .tree li:: before, .tree li::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 50 %;
-    border - top: 2px solid #cbd5e1; /* Thicker, lighter line */
-    width: 50 %;
-    height: 20px;
-    z - index: -1;
-}
+    /* Connectors */
+    .tree li::before, .tree li::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 50%;
+        border-top: 2px solid #cbd5e1; /* Thicker, lighter line */
+        width: 50%;
+        height: 20px;
+        z-index: -1;
+    }
 
-                .tree li::after {
-    right: auto;
-    left: 50 %;
-    border - left: 2px solid #cbd5e1;
-}
+    .tree li::after {
+        right: auto;
+        left: 50%;
+        border-left: 2px solid #cbd5e1;
+    }
 
-                /* Only Child: No horizontal connectors needed at top */
-                .tree li: only - child:: after, .tree li: only - child::before {
-    display: none;
-}
+    /* Only Child: No horizontal connectors needed at top */
+    .tree li:only-child::after, .tree li:only-child::before {
+        display: none;
+    }
 
-                /* Only Child: Remove top padding */
-                .tree li: only - child {
-    padding - top: 0;
-}
+    /* Only Child: Remove top padding */
+    .tree li:only-child {
+        padding-top: 0;
+    }
 
-                /* First Child: Remove left connector */
-                .tree li: first - child::before {
-    border: 0 none;
-}
+    /* First Child: Remove left connector */
+    .tree li:first-child::before {
+        border: 0 none;
+    }
 
-                /* First Child: Add curve to right connector */
-                .tree li: first - child::after {
-    border - radius: 5px 0 0 0;
-}
+    /* First Child: Add curve to right connector */
+    .tree li:first-child::after {
+        border-radius: 5px 0 0 0;
+    }
 
-                /* Last Child: Remove right connector */
-                .tree li: last - child::after {
-    border: 0 none;
-}
+    /* Last Child: Remove right connector */
+    .tree li:last-child::after {
+        border: 0 none;
+    }
 
-                /* Last Child: Add curve to left connector */
-                .tree li: last - child::before {
-    border - right: 2px solid #cbd5e1;
-    border - radius: 0 5px 0 0;
-}
+    /* Last Child: Add curve to left connector */
+    .tree li:last-child::before {
+        border-right: 2px solid #cbd5e1;
+        border-radius: 0 5px 0 0;
+    }
 
-                /* Vertical connector from Parent down to Children */
-                .tree ul ul::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50 %;
-    border - left: 2px solid #cbd5e1;
-    width: 0;
-    height: 20px;
-    transform: translateX(-50 %); /* Perfectly center vertical line */
-    z - index: -1;
-}
+    /* Vertical connector from Parent down to Children */
+    .tree ul ul::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        border-left: 2px solid #cbd5e1;
+        width: 0;
+        height: 20px;
+        transform: translateX(-50%); /* Perfectly center vertical line */
+        z-index: -1;
+    }
 `}</style>
         </div>
     );
