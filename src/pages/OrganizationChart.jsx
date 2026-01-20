@@ -85,12 +85,13 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 const EmployeeNode = ({ emp, onClick, showTags }) => (
     <div
         className={`
-            relative z - 10 p - 2 rounded - lg border shadow - sm transition - all hover: shadow - md bg - white min - w - [160px] text - center cursor - pointer group
+            relative z-10 p-3 rounded-lg border-2 shadow-lg transition-all hover:scale-105 hover:shadow-xl cursor-pointer
             ${emp.is_secondary
-                ? 'border-amber-200 bg-amber-50 hover:border-amber-300'
-                : 'border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100'
+                ? 'bg-amber-50 border-amber-300 text-amber-900' // Secondary Styling
+                : 'bg-gradient-to-b from-blue-400 to-blue-600 border-blue-300 text-white' // Main Manager Styling (Blue 3D)
             }
-`}
+            min-w-[180px] max-w-[220px]
+        `}
         onClick={(e) => {
             e.stopPropagation();
             if (onClick) onClick(emp);
@@ -98,37 +99,36 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
     >
         <div className="flex flex-col items-center gap-1">
             <div className={`
-w - 8 h - 8 rounded - full flex items - center justify - center text - xs font - bold mb - 1
-                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}
-`}>
+                w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-1 border-2 border-white/30 shadow-inner
+                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-white/20 text-white backdrop-blur-sm'}
+            `}>
                 {emp.name.charAt(0)}
             </div>
 
             <div className="w-full px-1">
-                <h4 className="font-bold text-slate-800 text-sm leading-tight break-words">{emp.name}</h4>
+                <h4 className="font-bold text-sm leading-tight break-words drop-shadow-md uppercase tracking-wide">
+                    {emp.name}
+                </h4>
                 {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className="text-xs text-blue-600 font-medium mt-0.5 leading-tight break-words">{emp.title}</p>
+                    <p className={`text-xs font-medium mt-0.5 leading-tight break-words ${emp.is_secondary ? 'text-amber-700' : 'text-blue-100'}`}>
+                        {emp.title}
+                    </p>
                 )}
             </div>
 
             {showTags && emp.functional_groups && emp.functional_groups.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                    {emp.functional_groups.slice(0, 2).map((group, idx) => (
-                        <span key={idx} className="text-[6px] px-1 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {emp.functional_groups.map((group, idx) => (
+                        <span key={idx} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
                             {group}
                         </span>
                     ))}
-                    {emp.functional_groups.length > 2 && (
-                        <span className="text-[6px] px-1 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-100">
-                            +{emp.functional_groups.length - 2}
-                        </span>
-                    )}
                 </div>
             )}
 
             {emp.is_secondary && (
                 <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
-                    <Star size={12} className="text-amber-500 fill-amber-500" />
+                    <Star size={14} className="text-amber-500 fill-amber-500" />
                 </div>
             )}
         </div>
@@ -138,23 +138,24 @@ w - 8 h - 8 rounded - full flex items - center justify - center text - xs font -
 const DepartmentNode = ({ node }) => (
     <div
         className={`
-            relative z - 10 p - 4 rounded - 2xl border shadow - sm transition - all hover: shadow - xl bg - white min - w - [220px] max - w - [260px] text - center cursor - pointer
-border - slate - 200 hover: border - blue - 400 group
-    `}
+            relative z-10 p-4 rounded-xl border-b-4 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl cursor-pointer
+            bg-gradient-to-br from-slate-700 to-slate-800 border-slate-900 text-white
+            min-w-[240px] max-w-[280px]
+        `}
         onClick={(e) => {
             e.stopPropagation();
         }}
     >
         <div className="flex flex-col items-center gap-2">
             <div className={`
-w - 8 h - 8 rounded - lg flex items - center justify - center shadow - sm
-                ${node.code === 'COMPANY' ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'}
-`}>
-                <Building size={16} />
+                w-10 h-10 rounded-lg flex items-center justify-center shadow-lg border border-white/10
+                bg-white/10 backdrop-blur-md text-blue-300
+            `}>
+                <Building size={20} />
             </div>
 
             <div>
-                <h3 className="font-bold text-slate-800 text-sm leading-tight">
+                <h3 className="font-bold text-base uppercase tracking-wider drop-shadow-lg">
                     {node.name}
                 </h3>
             </div>
