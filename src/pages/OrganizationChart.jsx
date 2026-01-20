@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
@@ -127,8 +127,8 @@ w - 8 h - 8 rounded - full flex items - center justify - center text - xs font -
             )}
 
             {emp.is_secondary && (
-                <div className="absolute top-1 right-1">
-                    <span className="text-[6px] px-1 rounded bg-amber-100 text-amber-700">Ek</span>
+                <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
+                    <Star size={12} className="text-amber-500 fill-amber-500" />
                 </div>
             )}
         </div>
@@ -165,64 +165,78 @@ w - 8 h - 8 rounded - lg flex items - center justify - center shadow - sm
 const TreeNode = ({ node, showAllEmployees, onEmployeeClick }) => {
     const isDepartment = node.type === 'department';
 
-    // Combine Employees and Sub-Departments into branching children
+    // Combine Sub-Departments into branching children (Tree Structure)
     let branchingChildren = [];
+    let employeeGroup = [];
 
     if (isDepartment) {
-        // 1. Employees (Roots of the employee tree)
+        // 1. Separation: Employees go to a "Group", Departments go to "Tree"
         if (node.employees && node.employees.length > 0) {
-            // Only show Executives/Managers (Rank <= 3) if toggle is OFF
             const visibleEmployees = node.employees.filter(e => showAllEmployees || (e.rank && e.rank <= 3));
             if (visibleEmployees.length > 0) {
-                branchingChildren = [
-                    ...branchingChildren,
-                    ...visibleEmployees.map(e => ({ ...e, type: 'employee' }))
-                ];
+                employeeGroup = visibleEmployees.map(e => ({ ...e, type: 'employee' }));
             }
         }
-        // 2. Sub-Departments
+
+        // 2. Sub-Departments (Tree Branches)
         if (node.children && node.children.length > 0) {
-            branchingChildren = [
-                ...branchingChildren,
-                ...node.children.map(d => ({ ...d, type: 'department' }))
-            ];
+            branchingChildren = node.children.map(d => ({ ...d, type: 'department' }));
         }
     } else {
-        // Employee Node: Children are Subordinates (or Sub-Departments)
+        // Employee Node (Manager -> Subordinates)
+        // Keep original logic for employee-to-employee matrix reporting if used
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children
-                .filter(child => {
-                    // Always show Sub-Departments (Structural)
-                    if (child.code) return true;
-                    // Filter Employees based on Toggle & Rank
-                    return showAllEmployees || (child.rank && child.rank <= 3);
-                })
-                .map(child => ({
-                    ...child,
-                    type: child.code ? 'department' : 'employee'
-                }));
+            branchingChildren = node.children.map(child => ({
+                ...child,
+                type: child.code ? 'department' : 'employee'
+            }));
         }
     }
 
-    const hasChildren = branchingChildren.length > 0;
+    const hasTreeChildren = branchingChildren.length > 0;
+    const hasEmployees = employeeGroup.length > 0;
 
     return (
         <li>
-            <div className="flex flex-col items-center relative">
+            <div className="flex flex-col items-center relative gap-4">
                 {/* Main Node Card */}
                 {isDepartment ? (
                     <DepartmentNode node={node} />
                 ) : (
                     <EmployeeNode emp={node} onClick={onEmployeeClick} />
                 )}
+
+                {/* VISUAL IMPROVEMENT: Render Employees as a GRID here, under the specific Dept, 
+                    instead of spreading them as individual tree branches. 
+                    This keeps the chart compact.
+                */}
+                {isDepartment && hasEmployees && (
+                    <div className="relative mt-4 p-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-300">
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 py-0.5 text-[10px] text-slate-400 font-medium border rounded-full">
+                            Ekip ({employeeGroup.length})
+                        </div>
+                        {/* Vertical Line Connector is handled by parent CSS if we treat this div as part of the content, 
+                            but conceptually it's a "leaf list" of this node. 
+                        */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 w-max max-w-[800px]">
+                            {employeeGroup.map(emp => (
+                                <EmployeeNode
+                                    key={`emp-grid-${emp.id}`}
+                                    emp={emp}
+                                    onClick={onEmployeeClick}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Recursive Branching Children */}
-            {hasChildren && (
+            {/* Recursive Branching Children (Only Departments or Direct Tree Subordinates) */}
+            {hasTreeChildren && (
                 <ul>
                     {branchingChildren.map(child => (
                         <TreeNode
-                            key={`${child.type} -${child.id} `}
+                            key={`${child.type}-${child.id}`}
                             node={child}
                             showAllEmployees={showAllEmployees}
                             onEmployeeClick={onEmployeeClick}

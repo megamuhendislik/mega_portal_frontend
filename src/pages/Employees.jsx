@@ -34,12 +34,11 @@ const INITIAL_FORM_STATE = {
     // Step 2: Corporate (Matrix)
     department: '', // Hierarchy Dept (Auto-filled)
     job_position: '',
-    secondary_job_positions: [], // List of IDs
+    assignments: [], // Matrix (Dept+Title)
     reports_to: '', // Manager ID (Primary)
     // cross_manager_ids: [], // REMOVED
     substitutes: [], // [NEW] Substitutes
     functional_department: '', // Attribute (stored in secondary_departments)
-    secondary_departments: [], // Additional depts
 
     employee_code: '',
 
@@ -274,53 +273,84 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     />
                 </div>
 
-                {/* 5. SECONDARY DEPARTMENTS (Multi) [NEW] */}
-                <div className="md:col-span-2">
-                    <div className="group">
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">İkincil Departmanlar (Opsiyonel)</label>
-                        <div className="relative">
-                            <Building className="absolute left-3 top-3 text-slate-400" size={18} />
-                            <select
-                                multiple
-                                value={formData.secondary_departments}
-                                onChange={e => {
-                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    handleChange('secondary_departments', selected);
-                                }}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
-                            >
-                                {departments.map(dept => (
-                                    <option key={dept.id} value={dept.id}>
-                                        {dept.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-slate-400 mt-1 ml-1">Kişinin bağlı olduğu diğer birimler/gruplar.</p>
-                        </div>
+                {/* 5. MATRIX ASSIGNMENTS (Dynamic List) */}
+                <div className="md:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-slate-700 ml-1">İkincil Görevlendirmeler (Matrix)</label>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const current = formData.assignments || [];
+                                handleChange('assignments', [...current, { department_id: '', job_position_id: '' }]);
+                            }}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
+                        >
+                            <Plus size={14} /> Yeni Görev Ekle
+                        </button>
                     </div>
-                </div>
 
-                {/* 5. SECONDARY POSITIONS (Multi) */}
-                <div className="md:col-span-2">
-                    <div className="group">
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Ek Pozisyonlar (Opsiyonel)</label>
-                        <div className="relative">
-                            <Briefcase className="absolute left-3 top-3 text-slate-400" size={18} />
-                            <select
-                                multiple
-                                value={formData.secondary_job_positions}
-                                onChange={e => {
-                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    handleChange('secondary_job_positions', selected);
-                                }}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
-                            >
-                                {jobPositions.map(pos => (
-                                    <option key={pos.id} value={pos.id}>{pos.name}</option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-slate-400 mt-1 ml-1">Birden fazla seçim için CTRL tuşuna basılı tutunuz.</p>
-                        </div>
+                    <div className="space-y-2">
+                        {(!formData.assignments || formData.assignments.length === 0) && (
+                            <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-sm text-slate-400">
+                                Ek görevlendirme bulunmuyor.
+                            </div>
+                        )}
+                        {(formData.assignments || []).map((asn, idx) => (
+                            <div key={idx} className="flex gap-2 items-start animate-fade-in">
+                                <div className="flex-1">
+                                    <select
+                                        value={asn.department_id || ''}
+                                        onChange={e => {
+                                            const newAsn = [...(formData.assignments || [])];
+                                            newAsn[idx].department_id = e.target.value;
+                                            handleChange('assignments', newAsn);
+                                        }}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    >
+                                        <option value="">Departman Seçiniz...</option>
+                                        {/* Flatten departments for select */}
+                                        {departments.filter(d => !d.parent).map(root => (
+                                            <optgroup key={root.id} label={root.name}>
+                                                {/* Recursive function approach handled in renderDepartmentOptions? We can simplify here or copy logic */}
+                                                <option value={root.id}>{root.name}</option>
+                                                {departments.filter(d => d.parent === root.id).map(child => (
+                                                    <option key={child.id} value={child.id}>&nbsp;&nbsp;└ {child.name}</option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
+                                        {departments.filter(d => !d.parent && d.children && d.children.length === 0).length === 0 && (
+                                            departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)
+                                        )}
+                                    </select>
+                                </div>
+                                <div className="flex-1">
+                                    <select
+                                        value={asn.job_position_id || ''}
+                                        onChange={e => {
+                                            const newAsn = [...(formData.assignments || [])];
+                                            newAsn[idx].job_position_id = e.target.value;
+                                            handleChange('assignments', newAsn);
+                                        }}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    >
+                                        <option value="">Unvan Seçiniz...</option>
+                                        {jobPositions.map(pos => (
+                                            <option key={pos.id} value={pos.id}>{pos.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newAsn = formData.assignments.filter((_, i) => i !== idx);
+                                        handleChange('assignments', newAsn);
+                                    }}
+                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -1148,11 +1178,7 @@ const Employees = () => {
             const payload = {
                 ...cleanPayload,
                 work_schedule: cleanPayload.work_schedule || null,
-                // Merge functional_department into secondary_departments if exists
-                secondary_departments: [
-                    ...(cleanPayload.secondary_departments || []).map(d => parseInt(d)),
-                    cleanPayload.functional_department ? parseInt(cleanPayload.functional_department) : null
-                ].filter((v, i, a) => v && a.indexOf(v) === i) // Unique and non-null
+                // assignments is already in cleanPayload
             };
 
             if (viewMode === 'create') {
