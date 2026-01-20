@@ -18,7 +18,7 @@ import Skeleton from '../components/Skeleton';
 import { format } from 'date-fns';
 
 const Attendance = () => {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
 
     // UI State
     const [activeTab, setActiveTab] = useState('my_attendance'); // 'my_attendance', 'team_attendance', 'team_detail'

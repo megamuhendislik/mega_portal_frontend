@@ -4,6 +4,7 @@ import {
     ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 
 const EmployeeDetail = () => {
