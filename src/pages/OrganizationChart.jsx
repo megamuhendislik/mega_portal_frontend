@@ -87,10 +87,10 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
         className={`
             relative z-10 p-3 rounded-lg border-2 shadow-lg transition-all hover:scale-105 hover:shadow-xl cursor-pointer
             ${emp.is_secondary
-                ? 'bg-amber-50 border-amber-300 text-amber-900' // Secondary Styling
-                : 'bg-gradient-to-b from-blue-400 to-blue-600 border-blue-300 text-white' // Main Manager Styling (Blue 3D)
+                ? 'bg-amber-50 border-amber-300 text-amber-900' // Secondary
+                : 'bg-gradient-to-b from-indigo-500 to-indigo-600 border-indigo-400 text-white' // Main Employee (Indigo)
             }
-            min-w-[180px] max-w-[220px]
+            min-w-[180px] max-w-[220px] group
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -110,7 +110,7 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
                     {emp.name}
                 </h4>
                 {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className={`text-xs font-medium mt-0.5 leading-tight break-words ${emp.is_secondary ? 'text-amber-700' : 'text-blue-100'}`}>
+                    <p className={`text-xs font-medium mt-0.5 leading-tight break-words ${emp.is_secondary ? 'text-amber-700' : 'text-indigo-100'}`}>
                         {emp.title}
                     </p>
                 )}
@@ -139,7 +139,7 @@ const DepartmentNode = ({ node }) => (
     <div
         className={`
             relative z-10 p-4 rounded-xl border-b-4 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl cursor-pointer
-            bg-gradient-to-br from-slate-700 to-slate-800 border-slate-900 text-white
+            bg-gradient-to-br from-cyan-500 to-sky-600 border-sky-700 text-white
             min-w-[240px] max-w-[280px]
         `}
         onClick={(e) => {
@@ -149,7 +149,7 @@ const DepartmentNode = ({ node }) => (
         <div className="flex flex-col items-center gap-2">
             <div className={`
                 w-10 h-10 rounded-lg flex items-center justify-center shadow-lg border border-white/10
-                bg-white/10 backdrop-blur-md text-blue-300
+                bg-white/10 backdrop-blur-md text-cyan-100
             `}>
                 <Building size={20} />
             </div>
@@ -166,36 +166,33 @@ const DepartmentNode = ({ node }) => (
 const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
     const isDepartment = node.type === 'department';
 
-    // Combine Sub-Departments into branching children (Tree Structure)
+    // Combine Sub-Departments AND Employees into branching children (Tree Structure)
     let branchingChildren = [];
-    let employeeGroup = [];
 
     if (isDepartment) {
-        // 1. Separation: Employees go to a "Group", Departments go to "Tree"
-        if (node.employees && node.employees.length > 0) {
-            const visibleEmployees = node.employees.filter(e => showAllEmployees || (e.rank && e.rank <= 3));
-            if (visibleEmployees.length > 0) {
-                employeeGroup = visibleEmployees.map(e => ({ ...e, type: 'employee' }));
-            }
+        // 1. Employees (Managers -> Subordinates Tree)
+        // Since backend returns a tree of employees in 'employees' field, we treat them as children nodes.
+        if (showAllEmployees && node.employees && node.employees.length > 0) {
+            const empNodes = node.employees.map(e => ({ ...e, type: 'employee' }));
+            branchingChildren.push(...empNodes);
         }
 
-        // 2. Sub-Departments (Tree Branches)
+        // 2. Sub-Departments
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children.map(d => ({ ...d, type: 'department' }));
+            const deptNodes = node.children.map(d => ({ ...d, type: 'department' }));
+            branchingChildren.push(...deptNodes);
         }
     } else {
         // Employee Node (Manager -> Subordinates)
-        // Keep original logic for employee-to-employee matrix reporting if used
         if (node.children && node.children.length > 0) {
             branchingChildren = node.children.map(child => ({
                 ...child,
-                type: child.code ? 'department' : 'employee'
+                type: 'employee' // Subordinates are employees
             }));
         }
     }
 
-    const hasTreeChildren = branchingChildren.length > 0;
-    const hasEmployees = employeeGroup.length > 0;
+    const hasChildren = branchingChildren.length > 0;
 
     return (
         <li>
@@ -206,35 +203,10 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
                 ) : (
                     <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} />
                 )}
-
-                {/* VISUAL IMPROVEMENT: Render Employees as a GRID here, under the specific Dept, 
-                    instead of spreading them as individual tree branches. 
-                    This keeps the chart compact.
-                */}
-                {isDepartment && hasEmployees && (
-                    <div className="relative mt-4 p-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-300">
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 py-0.5 text-[10px] text-slate-400 font-medium border rounded-full">
-                            Ekip ({employeeGroup.length})
-                        </div>
-                        {/* Vertical Line Connector is handled by parent CSS if we treat this div as part of the content, 
-                            but conceptually it's a "leaf list" of this node. 
-                        */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 w-max max-w-[800px]">
-                            {employeeGroup.map(emp => (
-                                <EmployeeNode
-                                    key={`emp-grid-${emp.id}`}
-                                    emp={emp}
-                                    onClick={onEmployeeClick}
-                                    showTags={showTags}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* Recursive Branching Children (Only Departments or Direct Tree Subordinates) */}
-            {hasTreeChildren && (
+            {/* Recursive Branching Children */}
+            {hasChildren && (
                 <ul>
                     {branchingChildren.map(child => (
                         <TreeNode
