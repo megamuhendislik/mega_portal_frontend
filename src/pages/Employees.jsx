@@ -58,7 +58,8 @@ const INITIAL_FORM_STATE = {
     // Annual Leave
     annual_leave_entitlement: 0,
     annual_leave_used: 0,
-    annual_leave_advance_limit: 0
+    annual_leave_advance_limit: 0,
+    annual_leave_accrual_rate: 14
 };
 
 // ...
@@ -666,7 +667,43 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                     )}
                 </div>
             </div>
-        </div >
+
+            {/* Annual Leave Section */}
+            <div className="mt-8 mb-4 border-t border-slate-100 pt-6">
+                <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4">
+                    <Briefcase size={18} className="text-emerald-500" />
+                    Yıllık İzin Ayarları
+                </h4>
+                <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <InputField
+                        type="number"
+                        label="Yıllık İzin Hakkı (Gün)"
+                        value={formData.annual_leave_entitlement}
+                        onChange={e => handleChange('annual_leave_entitlement', e.target.value)}
+                        placeholder="0"
+                        className="bg-white"
+                    />
+                    <InputField
+                        type="number"
+                        label="Yıllık Hak Ediş (Oranı)"
+                        value={formData.annual_leave_accrual_rate}
+                        onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
+                        placeholder="14"
+                        className="bg-white"
+                        helpText="Her yıl eklenecek gün"
+                    />
+                    <InputField
+                        type="number"
+                        label="Avans Limiti (Gün)"
+                        value={formData.annual_leave_advance_limit}
+                        onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
+                        placeholder="0"
+                        className="bg-white"
+                        helpText="Eksi bakiyeye düşme limiti"
+                    />
+                </div>
+            </div>
+        </div>
     );
 };
 
