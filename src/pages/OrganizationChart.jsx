@@ -394,20 +394,6 @@ const OrganizationChart = () => {
                         {showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}
                     </button>
 
-                    <button
-                        onClick={() => setShowEmployees(!showEmployees)}
-                        className={`
-                            flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - xs md: text - sm font - medium transition - colors border shadow - sm whitespace - nowrap
-                            ${showEmployees
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                            }
-`}
-                    >
-                        <User size={16} />
-                        {showEmployees ? 'Çalışanları Gizle' : 'Çalışanları Göster'}
-                    </button>
-
                     <div className="flex items-center gap-1 md:gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
                         <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
                         <span className="text-xs font-mono w-10 md:w-12 text-center">{(scale * 100).toFixed(0)}%</span>
@@ -453,7 +439,7 @@ const OrganizationChart = () => {
                                 <TreeNode
                                     key={node.id}
                                     node={{ ...node, type: node.type || 'department' }}
-                                    showAllEmployees={showEmployees}
+                                    showAllEmployees={true} // ALWAYS FORCE SHOW
                                     showTags={showTags}
                                     onEmployeeClick={setSelectedEmployee}
                                 />
