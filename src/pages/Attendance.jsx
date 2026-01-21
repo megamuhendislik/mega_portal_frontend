@@ -303,16 +303,17 @@ const Attendance = () => {
                         {/* 3. Charts Row */}
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[450px]">
                             {/* Stacked Attendance Chart (8 Cols) */}
-                            {/* Stacked Attendance Chart (8 Cols) - New Generic Analytics Component */}
-                            <div className="xl:col-span-8 h-full">
+                            {/* Stacked Attendance Chart */}
+                            <div className={`${hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS') ? 'xl:col-span-8' : 'xl:col-span-12'} h-full transition-all duration-300`}>
                                 <AttendanceAnalyticsChart logs={logs} currentYear={viewYear} />
                             </div>
 
                             {/* Break Analysis (4 Cols) */}
                             {hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS') && (
                                 <div className="xl:col-span-4 h-full">
-                                    {(activeTab === 'my_attendance' || hasPermission('ATTENDANCE_VIEW_OTHERS_BREAKS')) ? (
+                                    {(activeTab === 'my_attendance' || hasPermission('ATTENDANCE_VIEW_OTHERS_BREAKS') || hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS')) ? (
                                         <BreakAnalysisWidget
+                                            employeeId={selectedEmployeeId}
                                             logs={logs}
                                             totalBreakSeconds={periodSummary?.total_break_seconds}
                                             startDate={startDate}

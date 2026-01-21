@@ -234,17 +234,11 @@ const Dashboard = () => {
                     </div>
 
                     {/* Bottom Grid: Detailed Usage */}
-                    <div className="grid grid-cols-3 gap-1 pt-3 border-t border-slate-50 text-center">
+                    <div className="grid grid-cols-2 gap-1 pt-3 border-t border-slate-50 text-center">
                         <div>
                             <span className="text-[9px] font-bold text-slate-400 uppercase block">BU YIL</span>
                             <span className="text-sm font-bold text-amber-600">
                                 {monthlySummary?.annual_leave_used_this_year || 0}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">TOPLAM</span>
-                            <span className="text-sm font-bold text-slate-600">
-                                {monthlySummary?.annual_leave_used || 0}
                             </span>
                         </div>
                         <div>
