@@ -34,7 +34,8 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
     const displayStatus = liveData ? liveData.label : 'Yükleniyor...';
     const statusColor = liveData ? liveData.color : 'gray'; // green, amber, gray
     const detailedUnit = liveData?.unit_detailed || employee.department_name || 'Ana Birim';
-    const jobDesc = liveData?.job_description || employee.title || 'Görev tanımı yok.';
+    const managerName = liveData?.manager_name || '-';
+    const secondaryRoles = liveData?.secondary_roles || [];
 
     // Status Badge Helpers
     const getBadgeStyle = (color) => {
@@ -93,26 +94,46 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
                     </div>
 
                     <div className="space-y-4">
-                        {/* Unit Info */}
+                        {/* Unit Info (Renamed to Departman) */}
                         <div className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                                 <Building size={24} />
                             </div>
                             <div>
-                                <p className="text-xs text-slate-500 font-bold uppercase">Organizasyonel Birim</p>
+                                <p className="text-xs text-slate-500 font-bold uppercase">Departman</p>
                                 <p className="text-sm font-semibold text-slate-800 break-words leading-snug mt-1">
                                     {detailedUnit}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Job Description */}
-                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <p className="text-xs text-slate-500 font-bold uppercase mb-2">Görev Tanımı</p>
-                            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
-                                {jobDesc}
-                            </p>
+                        {/* Manager Info (Replaced Job Description) */}
+                        <div className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                                <User size={24} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-bold uppercase">Yönetici</p>
+                                <p className="text-sm font-semibold text-slate-800 break-words leading-snug mt-1">
+                                    {managerName}
+                                </p>
+                            </div>
                         </div>
+
+                        {/* Secondary Roles (Matrix) */}
+                        {secondaryRoles.length > 0 && (
+                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                                <p className="text-xs text-amber-700 font-bold mb-2 uppercase tracking-wide">Diğer Görevler (Matrix)</p>
+                                <ul className="space-y-2">
+                                    {secondaryRoles.map((role, idx) => (
+                                        <li key={idx} className="flex items-center gap-2 text-sm text-amber-900 font-medium">
+                                            <Star size={14} className="fill-amber-500 text-amber-500" />
+                                            {role}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
                         {employee.functional_groups && employee.functional_groups.length > 0 && (
                             <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
