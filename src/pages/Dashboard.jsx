@@ -206,14 +206,39 @@ const Dashboard = () => {
                 />
 
                 {/* 4. Annual Leave StatCard */}
-                <StatCard
-                    title="YILLIK İZİN"
-                    value={`${monthlySummary?.annual_leave_remaining || 0} Gün`}
-                    subValue={`Hak: ${monthlySummary?.annual_leave_entitlement || 0} / Kul: ${monthlySummary?.annual_leave_used || 0}`}
-                    icon={Briefcase}
-                    color="blue"
-                    trend="neutral"
-                />
+                {/* 4. Annual Leave StatCard (Custom 3-Split Layout) */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    {/* Hover Decoration */}
+                    <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none bg-blue-600" />
+
+                    <div className="flex items-center justify-between mb-4">
+                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">YILLIK İZİN DURUMU</p>
+                        <div className="p-2 rounded-lg bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
+                            <Briefcase size={20} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1 text-center divide-x divide-slate-100">
+                        <div className="flex flex-col items-center justify-center px-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">TOPLAM HAK</span>
+                            <span className="text-lg md:text-xl font-black text-slate-700">
+                                {monthlySummary?.annual_leave_entitlement || 0}
+                            </span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center px-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">KULLANILAN</span>
+                            <span className="text-lg md:text-xl font-black text-amber-600">
+                                {monthlySummary?.annual_leave_used || 0}
+                            </span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center px-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">KALAN</span>
+                            <span className="text-lg md:text-xl font-black text-emerald-600">
+                                {monthlySummary?.annual_leave_remaining || 0}
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* 2. Main Charts Grid */}
