@@ -184,7 +184,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const limit = user.annual_leave_advance_limit || 0;
 
         const available = balance + limit;
-        return { balance, held, limit, available };
+        const lastLeave = user.last_annual_leave_date || null;
+        return { balance, held, limit, available, lastLeave };
     };
 
     // Helper to calculate duration in days
@@ -215,7 +216,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             <Briefcase size={18} className={isInsufficient ? 'text-red-600' : 'text-blue-600'} />
                             <h4 className={`font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>Yıllık İzin Bakiyesi</h4>
                         </div>
-                        <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="grid grid-cols-5 gap-2 text-center">
                             <div className="bg-white/60 p-2 rounded-lg">
                                 <span className="block text-xs text-slate-500">Mevcut Bakiye</span>
                                 <span className="block font-bold text-slate-700">{balance.balance} gün</span>
@@ -225,8 +226,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 <span className="block font-bold text-slate-700">{balance.held} gün</span>
                             </div>
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Avans Limiti</span>
                                 <span className="block font-bold text-slate-700">{balance.limit} gün</span>
+                            </div>
+                            <div className="bg-white/60 p-2 rounded-lg">
+                                <span className="block text-xs text-slate-500">Son İzin Bitiş</span>
+                                <span className="block font-bold text-slate-700 text-xs mt-1">{balance.lastLeave ? new Date(balance.lastLeave).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '-'}</span>
                             </div>
                             <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-blue-100 ring-1 ring-blue-200'}`}>
                                 <span className={`block text-xs ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>Kullanılabilir</span>

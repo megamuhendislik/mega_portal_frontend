@@ -278,6 +278,7 @@ const AttendanceTracking = () => {
                                     <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
                                         <th className="p-4">Personel</th>
                                         <th className="p-4">Departman</th>
+                                        <th className="p-4 text-center text-blue-600">İzin Bakiye</th>
                                         <th className="p-4 text-right">Toplam Çalışma</th>
                                         <th className="p-4 text-right text-orange-600">Geç Kalma</th>
                                         <th className="p-4 text-right text-orange-600">Erken Çıkma</th>
@@ -297,6 +298,9 @@ const AttendanceTracking = () => {
                                             <tr key={item.employee_id} className="hover:bg-slate-50 transition-colors group">
                                                 <td className="p-4 font-medium text-slate-800">{item.employee_name}</td>
                                                 <td className="p-4 text-slate-500 text-sm">{item.department}</td>
+                                                <td className="p-4 text-center text-blue-600 font-bold text-sm">
+                                                    {item.annual_leave_balance !== undefined ? `${item.annual_leave_balance} Gün` : '-'}
+                                                </td>
                                                 <td className="p-4 text-right text-slate-600 font-mono text-sm">{formatMinutes(item.total_worked)}</td>
                                                 <td className="p-4 text-right text-orange-600 font-mono text-sm font-medium">
                                                     {item.total_late > 0 ? formatMinutes(item.total_late) : '-'}
