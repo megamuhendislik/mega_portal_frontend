@@ -204,7 +204,6 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             const response = await api.get(`/attendance/stats/?scope=YEARLY&year=${currentYear}&employee_id=${employeeId || ''}`);
             const mapped = response.data.map(m => ({
                 name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }), // Oca, Şub
-                normal: parseFloat(m.normal_hours.toFixed(1)), // This is TOTAL for month. User asked for "Average"?
                 // "yıllık gösteriminde aylık ortalamalar".
                 // Total makes more sense for Year view usually, but if they want "Average Day" in that month?
                 // Use total for now, or divide by ~22 days?

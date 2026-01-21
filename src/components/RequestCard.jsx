@@ -111,96 +111,95 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                                 </div>
                             )}
                         </div>
+                    )}
                 </div>
             )}
-        </div>
-    )
-}
 
-{/* Details */ }
-<div className="space-y-3 mb-4 flex-1">
-    <div className="flex items-center gap-2.5 text-sm text-slate-600">
-        <Calendar size={16} className="text-slate-400 shrink-0" />
-        {type === 'LEAVE' && (
-            <span className="font-medium">{formatDate(request.start_date)} - {formatDate(request.end_date)} <span className="text-slate-400 font-normal">({request.total_days} Gün)</span></span>
-        )}
-        {type === 'OVERTIME' && (
-            <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.start_time)} - {formatTime(request.end_time)}</span>
-        )}
-        {type === 'MEAL' && (
-            <span className="font-medium">{formatDate(request.date)}</span>
-        )}
-        {type === 'CARDLESS_ENTRY' && (
-            <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.check_in_time)} - {formatTime(request.check_out_time)}</span>
-        )}
-    </div>
 
-    {/* Description */}
-    <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed min-h-[3rem]">
-        {type === 'MEAL' ? request.description : request.reason || <span className="text-slate-400 italic">Açıklama belirtilmemiş.</span>}
-    </div>
-</div>
-
-{/* Actions Footer */ }
-<div className="mt-auto pt-4 border-t border-slate-100 flex justify-end gap-2">
-    {/* Owner Actions */}
-    {!isIncoming && (
-        <>
-            {request.status === 'PENDING' && (
-                <>
-                    {onEdit && (
-                        <button
-                            onClick={() => onEdit(request)}
-                            className="px-3 py-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
-                        >
-                            <Edit2 size={14} />
-                            Düzenle
-                        </button>
+            {/* Details */}
+            <div className="space-y-3 mb-4 flex-1">
+                <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                    <Calendar size={16} className="text-slate-400 shrink-0" />
+                    {type === 'LEAVE' && (
+                        <span className="font-medium">{formatDate(request.start_date)} - {formatDate(request.end_date)} <span className="text-slate-400 font-normal">({request.total_days} Gün)</span></span>
                     )}
-                    {onDelete && (
-                        <button
-                            onClick={() => onDelete(request)}
-                            className="px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
-                        >
-                            <Trash2 size={14} />
-                            İptal
-                        </button>
+                    {type === 'OVERTIME' && (
+                        <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.start_time)} - {formatTime(request.end_time)}</span>
                     )}
-                </>
-            )}
-            {/* Resubmit for Rejected Requests */}
-            {request.status === 'REJECTED' && (request.onResubmit || onEdit) && (
-                <button
-                    onClick={() => (request.onResubmit ? request.onResubmit(request) : onEdit(request))} // Reuse onEdit for simplicity if onResubmit passed via parent prop
-                    className="px-3 py-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors text-sm font-bold flex items-center gap-1.5 border border-amber-200"
-                >
-                    <Edit2 size={14} />
-                    Tekrar Talep Et
-                </button>
-            )}
-        </>
-    )}
+                    {type === 'MEAL' && (
+                        <span className="font-medium">{formatDate(request.date)}</span>
+                    )}
+                    {type === 'CARDLESS_ENTRY' && (
+                        <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.check_in_time)} - {formatTime(request.check_out_time)}</span>
+                    )}
+                </div>
 
-    {/* Manager Actions (Incoming Requests) */}
-    {canAction && onApprove && onReject && (
-        <div className="flex gap-2 w-full">
-            <button
-                onClick={() => onReject(request.id, prompt('Red sebebi:'))}
-                className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm font-bold flex items-center justify-center gap-2"
-            >
-                <X size={16} />
-                Reddet
-            </button>
-            <button
-                onClick={() => onApprove(request.id)}
-                className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-            >
-                <Check size={16} />
-                {request.status === 'REJECTED' ? 'Tekrar Onayla' : 'Onayla'}
-            </button>
-        </div>
-    )}
-</div>
+                {/* Description */}
+                <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed min-h-[3rem]">
+                    {type === 'MEAL' ? request.description : request.reason || <span className="text-slate-400 italic">Açıklama belirtilmemiş.</span>}
+                </div>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="mt-auto pt-4 border-t border-slate-100 flex justify-end gap-2">
+                {/* Owner Actions */}
+                {!isIncoming && (
+                    <>
+                        {request.status === 'PENDING' && (
+                            <>
+                                {onEdit && (
+                                    <button
+                                        onClick={() => onEdit(request)}
+                                        className="px-3 py-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                                    >
+                                        <Edit2 size={14} />
+                                        Düzenle
+                                    </button>
+                                )}
+                                {onDelete && (
+                                    <button
+                                        onClick={() => onDelete(request)}
+                                        className="px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                                    >
+                                        <Trash2 size={14} />
+                                        İptal
+                                    </button>
+                                )}
+                            </>
+                        )}
+                        {/* Resubmit for Rejected Requests */}
+                        {request.status === 'REJECTED' && (request.onResubmit || onEdit) && (
+                            <button
+                                onClick={() => (request.onResubmit ? request.onResubmit(request) : onEdit(request))} // Reuse onEdit for simplicity if onResubmit passed via parent prop
+                                className="px-3 py-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors text-sm font-bold flex items-center gap-1.5 border border-amber-200"
+                            >
+                                <Edit2 size={14} />
+                                Tekrar Talep Et
+                            </button>
+                        )}
+                    </>
+                )}
+
+                {/* Manager Actions (Incoming Requests) */}
+                {canAction && onApprove && onReject && (
+                    <div className="flex gap-2 w-full">
+                        <button
+                            onClick={() => onReject(request.id, prompt('Red sebebi:'))}
+                            className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm font-bold flex items-center justify-center gap-2"
+                        >
+                            <X size={16} />
+                            Reddet
+                        </button>
+                        <button
+                            onClick={() => onApprove(request.id)}
+                            className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                        >
+                            <Check size={16} />
+                            {request.status === 'REJECTED' ? 'Tekrar Onayla' : 'Onayla'}
+                        </button>
+                    </div>
+                )}
+            </div>
         </div >
     );
 };
