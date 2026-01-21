@@ -11,8 +11,9 @@ const STEPS = [
     { number: 2, title: 'Kurumsal Bilgiler', icon: Building },
     { number: 3, title: 'İletişim & Acil', icon: Phone },
     { number: 4, title: 'Detaylar & Yetkinlik', icon: Briefcase },
-    { number: 5, title: 'Yetkilendirme', icon: Key }, // Permission Controlled
-    { number: 6, title: 'Önizleme & Onay', icon: FileText }
+    { number: 5, title: 'İzin Yönetimi', icon: CalendarRange }, // [NEW] Dedicated Step
+    { number: 6, title: 'Yetkilendirme', icon: Key },
+    { number: 7, title: 'Önizleme & Onay', icon: FileText }
 ];
 
 // Add Shield Icon for Sensitive Data Indicator
@@ -670,63 +671,79 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                 </div>
             </div>
 
-            {/* Annual Leave Section */}
-            <div className="mt-8 mb-4 border-t border-slate-100 pt-6">
-                <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4">
-                    <Briefcase size={18} className="text-emerald-500" />
-                    Yıllık İzin Ayarları
-                </h4>
-                <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField
-                        type="number"
-                        label="Güncel Bakiye (Gün)"
-                        value={formData.annual_leave_balance}
-                        onChange={e => handleChange('annual_leave_balance', e.target.value)}
-                        placeholder="0"
-                        className="bg-white"
-                        helpText="Şu an kullanılabilir bakiye (Devreden + Hak Edilen - Kullanılan)."
-                    />
-                    <InputField
-                        type="number"
-                        label="Top. Kullanılan (Tüm Zamanlar)"
-                        value={formData.completed_annual_leave_total}
-                        onChange={e => handleChange('completed_annual_leave_total', e.target.value)}
-                        placeholder="0"
-                        className="bg-white"
-                        helpText="İşe girişten bugüne kullanılan toplam izin."
-                    />
-                    <InputField
-                        type="number"
-                        label="Kullanılan (Bu Yıl)"
-                        value={formData.completed_annual_leave_this_year}
-                        onChange={e => handleChange('completed_annual_leave_this_year', e.target.value)}
-                        placeholder="0"
-                        className="bg-white"
-                        helpText="Sadece bu takvim yılında kullanılan izin."
-                    />
-                    <InputField
-                        type="number"
-                        label="Yıllık Hak Ediş (Oranı)"
-                        value={formData.annual_leave_accrual_rate}
-                        onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
-                        placeholder="14"
-                        className="bg-white"
-                        helpText="Her yıl eklenecek gün (Varsayılan: 14)"
-                    />
-                    <InputField
-                        type="number"
-                        label="Avans Limiti (Gün)"
-                        value={formData.annual_leave_advance_limit}
-                        onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
-                        placeholder="0"
-                        className="bg-white"
-                        helpText="Eksi bakiyeye düşme limiti (Örn: 10)"
-                    />
-                </div>
-            </div>
+
         </div>
     );
 };
+
+const StepLeave = ({ formData, handleChange }) => (
+    <div className="animate-fade-in-up">
+        <div className="mb-6 pb-4 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-800">İzin Yönetimi</h3>
+            <p className="text-slate-500 text-sm">Yıllık izin bakiyeleri ve hak ediş ayarları.</p>
+        </div>
+
+        <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                    <Briefcase size={20} />
+                </div>
+                <div>
+                    <h4 className="font-bold text-emerald-900">Yıllık İzin Konfigürasyonu</h4>
+                    <p className="text-xs text-emerald-700">Personelin izin haklarını ve geçmiş kullanımlarını buradan yönetebilirsiniz.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputField
+                    type="number"
+                    label="Güncel Bakiye (Gün)"
+                    value={formData.annual_leave_balance}
+                    onChange={e => handleChange('annual_leave_balance', e.target.value)}
+                    placeholder="0"
+                    className="bg-white font-bold text-slate-700"
+                    helpText="Şu an kullanılabilir bakiye (Devreden + Hak Edilen - Kullanılan)."
+                />
+                <InputField
+                    type="number"
+                    label="Yıllık Hak Ediş (Oranı)"
+                    value={formData.annual_leave_accrual_rate}
+                    onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
+                    placeholder="14"
+                    className="bg-white"
+                    helpText="Her yıl eklenecek gün sayısı (Varsayılan: 14)"
+                />
+                <InputField
+                    type="number"
+                    label="Top. Kullanılan (Tüm Zamanlar)"
+                    value={formData.completed_annual_leave_total}
+                    onChange={e => handleChange('completed_annual_leave_total', e.target.value)}
+                    placeholder="0"
+                    className="bg-white"
+                    helpText="İşe girişten bugüne kullanılan toplam izin."
+                />
+                <InputField
+                    type="number"
+                    label="Kullanılan (Bu Yıl)"
+                    value={formData.completed_annual_leave_this_year}
+                    onChange={e => handleChange('completed_annual_leave_this_year', e.target.value)}
+                    placeholder="0"
+                    className="bg-white"
+                    helpText="Sadece bu takvim yılında kullanılan izin."
+                />
+                <InputField
+                    type="number"
+                    label="Avans Limiti (Gün)"
+                    value={formData.annual_leave_advance_limit}
+                    onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
+                    placeholder="0"
+                    className="bg-white"
+                    helpText="Eksi bakiyeye düşme limiti (Örn: 10)"
+                />
+            </div>
+        </div>
+    </div>
+);
 
 const PERMISSION_CATEGORIES = [
     {
@@ -1097,7 +1114,7 @@ const Employees = () => {
     const handleNext = () => {
         if (validateStep(currentStep)) {
             setCompletedSteps(prev => [...new Set([...prev, currentStep])]);
-            setCurrentStep(prev => Math.min(prev + 1, 6));
+            setCurrentStep(prev => Math.min(prev + 1, 7));
             window.scrollTo(0, 0);
         } else {
             alert("Lütfen zorunlu alanları doldurunuz.");
@@ -1608,6 +1625,11 @@ const Employees = () => {
                                     <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />
                                 </section>
 
+                                {/* Section 5: Annual Leave (Edit Mode) */}
+                                <section id="sec-leave" className="scroll-mt-24 pt-8 border-t border-slate-100">
+                                    <StepLeave formData={formData} handleChange={handleInputChange} />
+                                </section>
+
                                 {/* Section 5: Permissions */}
                                 {hasPermission('EMPLOYEE_MANAGE_ROLES') && (
                                     <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
@@ -1622,8 +1644,9 @@ const Employees = () => {
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
-                                {currentStep === 5 && hasPermission('EMPLOYEE_MANAGE_ROLES') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
-                                {currentStep === 5 && !hasPermission('EMPLOYEE_MANAGE_ROLES') && (
+                                {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
+                                {currentStep === 6 && hasPermission('EMPLOYEE_MANAGE_ROLES') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
+                                {currentStep === 6 && !hasPermission('EMPLOYEE_MANAGE_ROLES') && (
                                     <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-fade-in">
                                         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400"><Key size={32} /></div>
                                         <h3 className="text-xl font-bold text-slate-700">Yetkilendirme Erişimi Kısıtlı</h3>
@@ -1633,7 +1656,7 @@ const Employees = () => {
                                         </p>
                                     </div>
                                 )}
-                                {currentStep === 6 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                                {currentStep === 7 && <StepPreview formData={formData} departments={departments} jobPositions={jobPositions} employees={employees} />}
                             </div>
                         )}
                     </div>
@@ -1657,7 +1680,7 @@ const Employees = () => {
 
                         {/* Save / Next Button */}
                         <button
-                            onClick={viewMode === 'create' ? (currentStep === 6 ? handleSubmit : handleNext) : handleSubmit}
+                            onClick={viewMode === 'create' ? (currentStep === 7 ? handleSubmit : handleNext) : handleSubmit}
                             disabled={submitting}
                             className={`
                                 h-12 px-8 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95
@@ -1671,8 +1694,8 @@ const Employees = () => {
                                 </>
                             ) : (
                                 <>
-                                    {viewMode === 'edit' ? 'Değişiklikleri Kaydet' : (currentStep === 6 ? 'Kaydet ve Tamamla' : 'Devam Et')}
-                                    {viewMode === 'create' && currentStep !== 6 && <ArrowRight size={20} />}
+                                    {viewMode === 'edit' ? 'Değişiklikleri Kaydet' : (currentStep === 7 ? 'Kaydet ve Tamamla' : 'Devam Et')}
+                                    {viewMode === 'create' && currentStep !== 7 && <ArrowRight size={20} />}
                                     {viewMode === 'edit' && <Save size={20} />}
                                 </>
                             )}
