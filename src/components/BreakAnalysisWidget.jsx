@@ -297,9 +297,18 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                                 animationDuration={1000}
                             >
                                 {chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.val > 60 ? '#EF4444' : '#fbbf24'} />
+                                    <Cell key={`cell-${index}`} fill={entry.val >= 60 ? '#EF4444' : '#fbbf24'} />
                                 ))}
                             </Bar>
+
+                            {/* Average Line */}
+                            <ReferenceLine
+                                yAxisId="left"
+                                y={dailyAvg}
+                                stroke="#94a3b8"
+                                strokeDasharray="3 3"
+                                label={{ position: 'right', value: 'Ort.', fill: '#94a3b8', fontSize: 10 }}
+                            />
 
                             {/* Cumulative Line (Conditional) */}
                             {showCumulative && (

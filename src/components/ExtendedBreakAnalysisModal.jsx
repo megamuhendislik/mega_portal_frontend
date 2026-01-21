@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, TrendingUp, Calendar, Clock, Coffee, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, Cell } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, Cell, ReferenceLine } from 'recharts';
 import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
@@ -337,9 +337,18 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                                 animationDuration={1000}
                                             >
                                                 {chartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={(viewMode === 'MONTHLY' ? entry.minutes : entry.avgDaily) > 60 ? '#EF4444' : '#fbbf24'} />
+                                                    <Cell key={`cell-${index}`} fill={(viewMode === 'MONTHLY' ? entry.minutes : entry.avgDaily) >= 60 ? '#EF4444' : '#fbbf24'} />
                                                 ))}
                                             </Bar>
+
+                                            {/* Average Line */}
+                                            <ReferenceLine
+                                                yAxisId="left"
+                                                y={globalDailyAvg}
+                                                stroke="#94a3b8"
+                                                strokeDasharray="3 3"
+                                                label={{ position: 'right', value: 'Ort.', fill: '#94a3b8', fontSize: 10 }}
+                                            />
 
                                             {/* Moving Average Line - Only for Monthly */}
                                             {viewMode === 'MONTHLY' && (
@@ -395,7 +404,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                                     {row.label}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className={`px-2 py-1 rounded-lg font-bold text-xs ${row.minutes > (viewMode === 'MONTHLY' ? 60 : 1800) ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                                                    <span className={`px-2 py-1 rounded-lg font-bold text-xs ${row.minutes >= (viewMode === 'MONTHLY' ? 60 : 1800) ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
                                                         {row.minutes} dk
                                                     </span>
                                                 </td>
