@@ -1,24 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, TrendingUp, Calendar, Clock, Coffee, ArrowRight } from 'lucide-react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area } from 'recharts';
-import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth, subDays, isSameDay, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns';
+import { X, TrendingUp, Calendar, Clock, Coffee, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, Cell } from 'recharts';
+import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
 
 const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, initialViewMode = 'MONTHLY' }) => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState([]);
-    const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
-    const [viewMode, setViewMode] = useState(initialViewMode); // 'MONTHLY' | 'YEARLY'
 
-    // Sync view mode if widget changes (optional, but good UX on open)
+    // Internal State
+    const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
+    const [viewMode, setViewMode] = useState(initialViewMode);
+    const [showCumulative, setShowCumulative] = useState(false);
+
+    // Sync on Open
     useEffect(() => {
         if (isOpen) {
-            setViewMode(initialViewMode);
-            // If date changed in widget, sync it too? Maybe not necessary if passed as prop.
+            if (initialDate) setSelectedDate(initialDate);
+            if (initialViewMode) setViewMode(initialViewMode);
         }
-    }, [isOpen, initialViewMode]);
+    }, [isOpen, initialDate, initialViewMode]);
 
+    // Fetch Data on Change
     useEffect(() => {
         if (isOpen && employeeId) {
             fetchDetailedData();
@@ -37,7 +41,6 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                 end = format(endOfYear(selectedDate), 'yyyy-MM-dd');
             }
 
-            // Fetch All Attendance Records for the range
             const res = await api.get('/attendance/', {
                 params: {
                     employee_id: employeeId,
@@ -54,17 +57,15 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
         }
     };
 
-    // Process Data for Charts and Table
     const chartData = useMemo(() => {
         if (!data) return [];
+        let cumulative = 0;
 
         if (viewMode === 'MONTHLY') {
-            // DAILY Breakdown
             const start = startOfMonth(selectedDate);
             const end = endOfMonth(selectedDate);
             const days = eachDayOfInterval({ start, end });
 
-            // Map data by date
             const dataMap = {};
             data.forEach(rec => {
                 const dateStr = rec.work_date;
@@ -75,22 +76,24 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                 }
             });
 
-            // Flatten for Chart
-            let processed = [];
-            days.forEach((day, idx) => {
+            // Calculate Moving Average & Cumulative
+            // First pass: build basic array
+            const basic = days.map(day => {
                 const dateStr = format(day, 'yyyy-MM-dd');
-                const dayData = dataMap[dateStr] || { minutes: 0, breaks: [] };
-                processed.push({
+                const val = dataMap[dateStr] || { minutes: 0, breaks: [] };
+                cumulative += val.minutes;
+                return {
                     date: day,
                     label: format(day, 'd MMM', { locale: tr }),
-                    minutes: dayData.minutes,
-                    breaks: dayData.breaks,
-                    isYearly: false
-                });
+                    fullLabel: format(day, 'd MMMM yyyy', { locale: tr }),
+                    minutes: val.minutes,
+                    cumulative: cumulative,
+                    breaks: val.breaks,
+                };
             });
 
-            // Moving Average (3 Days)
-            return processed.map((d, i, arr) => {
+            // Second pass: moving avg
+            return basic.map((d, i, arr) => {
                 let sum = 0;
                 let count = 0;
                 for (let j = Math.max(0, i - 2); j <= i; j++) {
@@ -104,19 +107,18 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
             });
 
         } else {
-            // YEARLY Breakdown (Monthly Aggregates)
+            // YEARLY
             const start = startOfYear(selectedDate);
             const end = endOfYear(selectedDate);
             const months = eachMonthOfInterval({ start, end });
 
             const monthlyTotals = {};
-            // Accumulate detailed break lists per month if needed? 
-            // Might be too much data for the table "breaks" column. Only show Count?
             data.forEach(rec => {
                 const d = parseISO(rec.work_date);
                 const k = format(d, 'yyyy-MM');
-                if (!monthlyTotals[k]) monthlyTotals[k] = { minutes: 0, breaks: [] };
+                if (!monthlyTotals[k]) monthlyTotals[k] = { minutes: 0, count: 0, breaks: [] };
                 monthlyTotals[k].minutes += Math.floor((rec.break_seconds || 0) / 60);
+                monthlyTotals[k].count += 1; // Active days count
                 if (rec.breaks_data) {
                     monthlyTotals[k].breaks.push(...rec.breaks_data);
                 }
@@ -124,34 +126,88 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
 
             return months.map(m => {
                 const k = format(m, 'yyyy-MM');
-                const val = monthlyTotals[k] || { minutes: 0, breaks: [] };
+                const val = monthlyTotals[k] || { minutes: 0, count: 0, breaks: [] };
+
+                // AVG DAILY for Yearly View
+                const avgDaily = val.count > 0 ? Math.round(val.minutes / val.count) : 0;
+                cumulative += val.minutes; // Cumulative is still Total Minutes
+
                 return {
                     date: m,
-                    label: format(m, 'MMMM', { locale: tr }),
-                    minutes: val.minutes,
-                    breaks: val.breaks || [], // This list might be huge, we might summarize it in UI
-                    movingAvg: 0, // No moving avg for yearly monthly bars usually? Or maybe 3-month avg?
-                    isYearly: true
+                    label: format(m, 'MMM', { locale: tr }),
+                    fullLabel: format(m, 'MMMM yyyy', { locale: tr }),
+                    minutes: val.minutes, // Total for table/tooltip
+                    avgDaily: avgDaily,   // For BAR chart
+                    cumulative: cumulative,
+                    breaks: val.breaks,
+                    count: val.count
                 };
             });
         }
     }, [data, selectedDate, viewMode]);
 
-    // Calculate Summary Stats
-    const totalMinutes = chartData.reduce((acc, curr) => acc + curr.minutes, 0);
-    const activeItems = chartData.filter(d => d.minutes > 0).length;
+    // Stats
+    const totalMinutes = chartData.reduce((acc, curr) => acc + (viewMode === 'MONTHLY' ? curr.minutes : curr.minutes), 0); // Always sum totals
+    // Active items (days or months with data)
+    const activeItems = viewMode === 'MONTHLY'
+        ? chartData.filter(d => d.minutes > 0).length
+        : chartData.filter(d => d.count > 0).length;
 
-    // For Yearly: Average per Active Month
-    // For Monthly: Average per Active Day
-    const realAvg = activeItems > 0 ? Math.round(totalMinutes / activeItems) : 0;
+    const realAvg = activeItems > 0 ? Math.round(totalMinutes / activeItems) : 0; // Avg minutes per active day (approx for year if verifying against sum of daily avgs, but logic holds: Total / Active Days)
+    // Wait, for Yearly view "Avg Daily", we want Average of Daily Averages? No, we simply want Global Daily Average.
+    // Logic: Total Yearly Minutes / Total Active Days in Year.
+    // My `activeItems` for Yearly mode is "Months with data". 
+    // To get proper "Daily Average" in Yearly mode stats card, I should sum up all active days.
+
+    // Better Global Avg Calculation:
+    const totalActiveDays = viewMode === 'MONTHLY'
+        ? activeItems
+        : chartData.reduce((acc, curr) => acc + (curr.count || 0), 0);
+
+    const globalDailyAvg = totalActiveDays > 0 ? Math.round(totalMinutes / totalActiveDays) : 0;
+
+
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            const d = payload[0].payload;
+            return (
+                <div className="bg-white/95 backdrop-blur-md p-3 border border-slate-100 shadow-xl rounded-xl text-xs z-50">
+                    <p className="font-bold text-slate-800 mb-2 border-b border-slate-50 pb-1">{d.fullLabel}</p>
+                    <div className="space-y-1">
+                        <div className="flex justify-between gap-4">
+                            <span className="text-slate-500">
+                                {viewMode === 'YEARLY' ? 'Günlük Ort.:' : 'Kullanım:'}
+                            </span>
+                            <span className="font-bold text-slate-700">
+                                {viewMode === 'YEARLY' ? d.avgDaily : d.minutes} dk
+                            </span>
+                        </div>
+                        {viewMode === 'YEARLY' && (
+                            <div className="flex justify-between gap-4">
+                                <span className="text-slate-400">Ay Toplam:</span>
+                                <span className="font-bold text-slate-500">{d.minutes} dk</span>
+                            </div>
+                        )}
+                        {showCumulative && (
+                            <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Kümülatif:</span>
+                                <span className="font-bold text-blue-600">{d.cumulative} dk</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in zoom-in duration-200">
             <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white z-10">
+                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white z-10 shrink-0">
                     <div>
                         <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
                             <div className="p-2.5 bg-amber-100/50 text-amber-600 rounded-2xl">
@@ -159,12 +215,9 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                             </div>
                             Genişletilmiş Mola Analizi
                         </h2>
-                        <div className="flex items-center gap-2 mt-1">
-                            <p className="text-sm font-medium text-slate-400 pl-1">
-                                Detaylı kullanım raporu
-                            </p>
-                            {/* Toggle */}
-                            <div className="bg-slate-100 p-0.5 rounded-lg flex ml-4">
+                        <div className="flex items-center gap-4 mt-2">
+                            {/* View Mode Toggles */}
+                            <div className="flex bg-slate-100 p-0.5 rounded-lg">
                                 <button
                                     onClick={() => setViewMode('MONTHLY')}
                                     className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${viewMode === 'MONTHLY' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
@@ -178,24 +231,49 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                     Yıllık
                                 </button>
                             </div>
+
+                            <span className="text-slate-300">|</span>
+
+                            {/* Cumulative Toggle */}
+                            <button
+                                onClick={() => setShowCumulative(!showCumulative)}
+                                className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+                            >
+                                {showCumulative ? <CheckSquare size={14} className="text-indigo-600" /> : <Square size={14} />}
+                                Kümülatif
+                            </button>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Date Selector Display */}
-                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-                            <Calendar size={14} className="text-slate-400" />
-                            <span className="text-sm font-bold text-slate-600">
-                                {viewMode === 'MONTHLY'
-                                    ? format(selectedDate, 'MMMM yyyy', { locale: tr })
-                                    : format(selectedDate, 'yyyy', { locale: tr })
-                                }
-                            </span>
+                        {/* Date Navigation */}
+                        <div className="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-xl border border-slate-200">
+                            <button
+                                onClick={() => setSelectedDate(prev => viewMode === 'MONTHLY' ? subMonths(prev, 1) : subYears(prev, 1))}
+                                className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="flex items-center gap-2 px-2 min-w-[120px] justify-center">
+                                <Calendar size={14} className="text-slate-400" />
+                                <span className="text-sm font-bold text-slate-600">
+                                    {viewMode === 'MONTHLY'
+                                        ? format(selectedDate, 'MMMM yyyy', { locale: tr })
+                                        : format(selectedDate, 'yyyy', { locale: tr })
+                                    }
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setSelectedDate(prev => viewMode === 'MONTHLY' ? addMonths(prev, 1) : addYears(prev, 1))}
+                                className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
                         </div>
 
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition-colors"
+                            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition-colors ml-2"
                         >
                             <X size={24} />
                         </button>
@@ -217,12 +295,12 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                     </div>
                                 </div>
                                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">ORTALAMA</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">GÜNLÜK ORTALAMA</p>
                                     <div className="text-3xl font-black text-slate-800">
-                                        {realAvg}<span className="text-lg text-slate-400 font-bold ml-1">dk</span>
+                                        {globalDailyAvg}<span className="text-lg text-slate-400 font-bold ml-1">dk</span>
                                     </div>
                                     <p className="text-xs font-medium text-slate-400 mt-1">
-                                        {viewMode === 'MONTHLY' ? 'Aktif gün başına' : 'Aktif ay başına'}
+                                        Aktif gün başına
                                     </p>
                                 </div>
                                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm col-span-2">
@@ -230,7 +308,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                     <div className="text-sm font-medium text-slate-600">
                                         {viewMode === 'MONTHLY'
                                             ? 'Günlük mola kullanımları ve detaylı aralıklar.'
-                                            : 'Yıllık bazda aylık toplam mola kullanımları.'}
+                                            : 'Yıllık bazda günlük ortalama mola alışkanlığı.'}
                                     </div>
                                 </div>
                             </div>
@@ -239,25 +317,71 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                                 <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
                                     <TrendingUp size={16} className="text-blue-500" />
-                                    {viewMode === 'MONTHLY' ? 'Günlük Kullanım Grafiği' : 'Aylık Toplam Kullanım Grafiği'}
+                                    {viewMode === 'MONTHLY' ? 'Günlük Kullanım Grafiği' : 'Aylık Bazda Günlük Ortalamalar'}
                                 </h3>
                                 <div className="h-80 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorCumulativeModal" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
+                                                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} minTickGap={30} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} unit=" dk" />
-                                            <Tooltip
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                                                itemStyle={{ fontSize: '12px', fontWeight: 600 }}
+                                            <XAxis
+                                                dataKey="label"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                dy={10}
+                                                minTickGap={30}
                                             />
+                                            <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <YAxis yAxisId="right" orientation="right" hide />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
 
-                                            <Bar dataKey="minutes" name="Süre (Dk)" fill="#fbbf24" radius={[4, 4, 0, 0]} barSize={20} />
+                                            {/* Bar: Daily Minutes OR Avg Daily for Yearly */}
+                                            <Bar
+                                                yAxisId="left"
+                                                dataKey={viewMode === 'MONTHLY' ? "minutes" : "avgDaily"}
+                                                name="Süre"
+                                                fill="#fbbf24"
+                                                radius={[4, 4, 0, 0]}
+                                                barSize={viewMode === 'MONTHLY' ? 12 : 24} // Thinner for dense monthly, wider for yearly
+                                                animationDuration={1000}
+                                            >
+                                                {chartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={(viewMode === 'MONTHLY' ? entry.minutes : entry.avgDaily) > 60 ? '#EF4444' : '#fbbf24'} />
+                                                ))}
+                                            </Bar>
 
-                                            {/* Show Line only for Monthly view (Moving Avg) */}
+                                            {/* Moving Average Line - Only for Monthly */}
                                             {viewMode === 'MONTHLY' && (
-                                                <Line type="monotone" dataKey="movingAvg" name="Ortalama" stroke="#3b82f6" strokeWidth={3} dot={false} strokeOpacity={0.8} />
+                                                <Line yAxisId="left" type="monotone" dataKey="movingAvg" stroke="#3b82f6" strokeWidth={3} dot={false} strokeOpacity={0.5} />
                                             )}
+
+                                            {/* Cumulative Line - Conditional */}
+                                            {showCumulative && (
+                                                <>
+                                                    <Line
+                                                        yAxisId="right"
+                                                        type="monotone"
+                                                        dataKey="cumulative"
+                                                        stroke="#3b82f6"
+                                                        strokeWidth={2}
+                                                        dot={false}
+                                                    />
+                                                    <Area
+                                                        yAxisId="right"
+                                                        type="monotone"
+                                                        dataKey="cumulative"
+                                                        stroke="none"
+                                                        fill="url(#colorCumulativeModal)"
+                                                    />
+                                                </>
+                                            )}
+
                                         </ComposedChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -267,7 +391,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                                 <div className="px-6 py-4 border-b border-slate-50">
                                     <h3 className="text-sm font-bold text-slate-700">
-                                        {viewMode === 'MONTHLY' ? 'Günlük Detaylar' : 'Aylık Detaylar'}
+                                        {viewMode === 'MONTHLY' ? 'Günlük Detaylar' : 'Aylık Özet'}
                                     </h3>
                                 </div>
                                 <table className="w-full text-left text-sm">
@@ -275,20 +399,28 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                         <tr>
                                             <th className="px-6 py-3">{viewMode === 'MONTHLY' ? 'Tarih' : 'Ay'}</th>
                                             <th className="px-6 py-3 text-center">Toplam Süre</th>
+                                            {viewMode === 'YEARLY' && <th className="px-6 py-3 text-center">Günlük Ort.</th>}
                                             <th className="px-6 py-3">{viewMode === 'MONTHLY' ? 'Mola Aralıkları' : 'İşlem Sayısı'}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {chartData.filter(d => d.minutes > 0).map((row, i) => (
+                                        {chartData.filter(d => (viewMode === 'MONTHLY' ? d.minutes > 0 : d.count > 0)).map((row, i) => (
                                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-6 py-4 font-bold text-slate-700 w-40">
                                                     {row.label}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className={`px-2 py-1 rounded-lg font-bold text-xs ${row.minutes > (viewMode === 'MONTHLY' ? 60 : 1800) ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                    <span className={`px-2 py-1 rounded-lg font-bold text-xs ${row.minutes > (viewMode === 'MONTHLY' ? 60 : 1800) ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
                                                         {row.minutes} dk
                                                     </span>
                                                 </td>
+                                                {viewMode === 'YEARLY' && (
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`px-2 py-1 rounded-lg font-bold text-xs bg-amber-50 text-amber-600`}>
+                                                            {row.avgDaily} dk
+                                                        </span>
+                                                    </td>
+                                                )}
                                                 <td className="px-6 py-4">
                                                     {viewMode === 'MONTHLY' ? (
                                                         <div className="flex flex-wrap gap-2">
@@ -305,7 +437,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                                         </div>
                                                     ) : (
                                                         <span className="text-slate-500 text-xs font-bold">
-                                                            {row.breaks ? row.breaks.length : 0} adet mola kaydı
+                                                            {row.count} aktif gün
                                                         </span>
                                                     )}
                                                 </td>
