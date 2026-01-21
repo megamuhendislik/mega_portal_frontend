@@ -179,12 +179,12 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Helper to calculate balance
     const getLeaveBalance = () => {
         if (!user) return null;
-        const ent = user.annual_leave_entitlement || 0;
-        const used = user.annual_leave_used || 0;
+        const balance = user.annual_leave_balance || 0;
+        const held = user.held_annual_leave || 0;
         const limit = user.annual_leave_advance_limit || 0;
-        const remaining = ent - used;
-        const available = remaining + limit;
-        return { ent, used, limit, remaining, available };
+
+        const available = balance + limit;
+        return { balance, held, limit, available };
     };
 
     // Helper to calculate duration in days
@@ -217,15 +217,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         </div>
                         <div className="grid grid-cols-4 gap-2 text-center">
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Hak Edilen</span>
-                                <span className="block font-bold text-slate-700">{balance.ent} gün</span>
+                                <span className="block text-xs text-slate-500">Mevcut Bakiye</span>
+                                <span className="block font-bold text-slate-700">{balance.balance} gün</span>
                             </div>
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Kullanılan</span>
-                                <span className="block font-bold text-slate-700">{balance.used} gün</span>
+                                <span className="block text-xs text-slate-500">Askıda (Gelecek)</span>
+                                <span className="block font-bold text-slate-700">{balance.held} gün</span>
                             </div>
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Avans</span>
+                                <span className="block text-xs text-slate-500">Avans Limiti</span>
                                 <span className="block font-bold text-slate-700">{balance.limit} gün</span>
                             </div>
                             <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-blue-100 ring-1 ring-blue-200'}`}>

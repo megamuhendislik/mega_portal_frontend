@@ -56,8 +56,10 @@ const INITIAL_FORM_STATE = {
     username: '', // Will be auto-generated or manual
 
     // Annual Leave
-    annual_leave_entitlement: 0,
-    annual_leave_used: 0,
+    // Annual Leave
+    annual_leave_balance: 0,
+    completed_annual_leave_total: 0,
+    completed_annual_leave_this_year: 0,
     annual_leave_advance_limit: 0,
     annual_leave_accrual_rate: 14
 };
@@ -677,21 +679,30 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                 <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField
                         type="number"
-                        label="Toplam İzin Hakkı (Gün)"
-                        value={formData.annual_leave_entitlement}
-                        onChange={e => handleChange('annual_leave_entitlement', e.target.value)}
+                        label="Güncel Bakiye (Gün)"
+                        value={formData.annual_leave_balance}
+                        onChange={e => handleChange('annual_leave_balance', e.target.value)}
                         placeholder="0"
                         className="bg-white"
-                        helpText="Kullanıcının şu ana kadar hak ettiği toplam izin."
+                        helpText="Şu an kullanılabilir bakiye (Devreden + Hak Edilen - Kullanılan)."
                     />
                     <InputField
                         type="number"
-                        label="Kullanılan İzin (Gün)"
-                        value={formData.annual_leave_used}
-                        onChange={e => handleChange('annual_leave_used', e.target.value)}
+                        label="Top. Kullanılan (Tüm Zamanlar)"
+                        value={formData.completed_annual_leave_total}
+                        onChange={e => handleChange('completed_annual_leave_total', e.target.value)}
                         placeholder="0"
                         className="bg-white"
-                        helpText="Şu ana kadar kullandığı gün sayısı."
+                        helpText="İşe girişten bugüne kullanılan toplam izin."
+                    />
+                    <InputField
+                        type="number"
+                        label="Kullanılan (Bu Yıl)"
+                        value={formData.completed_annual_leave_this_year}
+                        onChange={e => handleChange('completed_annual_leave_this_year', e.target.value)}
+                        placeholder="0"
+                        className="bg-white"
+                        helpText="Sadece bu takvim yılında kullanılan izin."
                     />
                     <InputField
                         type="number"
@@ -1161,9 +1172,11 @@ const Employees = () => {
                 hired_date: data.hired_date || '',
 
                 // Annual Leave
-                annual_leave_entitlement: data.annual_leave_entitlement || 0,
-                annual_leave_used: data.annual_leave_used || 0,
+                annual_leave_balance: data.annual_leave_balance || 0,
+                completed_annual_leave_total: data.completed_annual_leave_total || 0,
+                completed_annual_leave_this_year: data.completed_annual_leave_this_year || 0,
                 annual_leave_advance_limit: data.annual_leave_advance_limit || 0,
+                annual_leave_accrual_rate: data.annual_leave_accrual_rate || 14,
 
                 work_schedule: data.work_schedule?.id || '',
                 weekly_schedule: data.weekly_schedule || {},
