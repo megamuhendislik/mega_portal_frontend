@@ -185,10 +185,12 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
         const entitlement = user.annual_leave_entitlement || 0;
         const used = user.annual_leave_used || 0;
+        const reserved = user.annual_leave_reserved || 0;
+        const effective = user.effective_balance !== undefined ? user.effective_balance : balance;
 
-        const available = balance + limit;
+        const available = effective + limit;
         const lastLeave = user.last_annual_leave_date || null;
-        return { balance, held, limit, available, lastLeave, entitlement, used };
+        return { balance, held, limit, available, lastLeave, entitlement, used, reserved, effective };
     };
 
     // Helper to calculate duration in days
@@ -219,27 +221,35 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             <Briefcase size={18} className={isInsufficient ? 'text-red-600' : 'text-blue-600'} />
                             <h4 className={`font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>Yıllık İzin Bakiyesi</h4>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 text-center">
+
+                        <div className="grid grid-cols-2 gap-2 text-center mb-2">
                             <div className="bg-white/60 p-2 rounded-lg">
                                 <span className="block text-xs text-slate-500 font-bold uppercase">TOPLAM HAK</span>
                                 <span className="block font-black text-slate-700 text-lg">{balance.entitlement}</span>
                             </div>
-                            <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500 font-bold uppercase">KULLANILAN</span>
-                                <span className="block font-black text-amber-600 text-lg">{balance.used}</span>
-                            </div>
                             <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-100 ring-1 ring-emerald-200'}`}>
-                                <span className={`block text-xs font-bold uppercase ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>KALAN</span>
-                                <span className={`block font-black text-lg ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>{balance.balance}</span>
+                                <span className={`block text-xs font-bold uppercase ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>KULLANILABİLİR</span>
+                                <span className={`block font-black text-lg ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>{balance.effective}</span>
                             </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-2">
+                                <span className="text-slate-500 font-bold">KULLANILAN</span>
+                                <span className="text-amber-600 font-bold">{balance.used}</span>
+                            </div>
+                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-2">
+                                <span className="text-slate-500 font-bold">PLANLANAN</span>
+                                <span className="text-blue-600 font-bold">{balance.reserved}</span>
+                            </div>
+                        </div>
+
                         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
                                 <span className="text-slate-500">Avans Limiti:</span>
                                 <span className="font-bold text-slate-700">{balance.limit} gün</span>
                             </div>
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                <span className="text-slate-500">Kullanılabilir:</span>
+                                <span className="text-slate-500">Max Talep:</span>
                                 <span className={`font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>{balance.available} gün</span>
                             </div>
                         </div>

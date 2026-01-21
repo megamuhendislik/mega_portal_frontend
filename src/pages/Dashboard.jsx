@@ -205,8 +205,7 @@ const Dashboard = () => {
                     color="emerald"
                 />
 
-                {/* 4. Annual Leave StatCard */}
-                {/* 4. Annual Leave StatCard (Custom 3-Split Layout) */}
+                {/* 4. Annual Leave StatCard (Advanced Logic) */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-all duration-300 relative overflow-hidden">
                     {/* Hover Decoration */}
                     <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none bg-blue-600" />
@@ -218,23 +217,40 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-1 text-center divide-x divide-slate-100">
-                        <div className="flex flex-col items-center justify-center px-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">TOPLAM HAK</span>
-                            <span className="text-lg md:text-xl font-black text-slate-700">
+                    {/* Top Row: Entitlement vs Effective Balance */}
+                    <div className="flex justify-between items-end mb-4 px-1">
+                        <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">TOPLAM HAK</span>
+                            <span className="text-xl font-black text-slate-800">
                                 {monthlySummary?.annual_leave_entitlement || 0}
                             </span>
                         </div>
-                        <div className="flex flex-col items-center justify-center px-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">KULLANILAN</span>
-                            <span className="text-lg md:text-xl font-black text-amber-600">
+                        <div className="text-right">
+                            <span className="text-[10px] font-bold text-emerald-600 uppercase block mb-0.5">KULLANILABİLİR</span>
+                            <span className="text-xl font-black text-emerald-600">
+                                {monthlySummary?.effective_balance !== undefined ? monthlySummary.effective_balance : (monthlySummary?.annual_leave_remaining || 0)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Bottom Grid: Detailed Usage */}
+                    <div className="grid grid-cols-3 gap-1 pt-3 border-t border-slate-50 text-center">
+                        <div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">BU YIL</span>
+                            <span className="text-sm font-bold text-amber-600">
+                                {monthlySummary?.annual_leave_used_this_year || 0}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">TOPLAM</span>
+                            <span className="text-sm font-bold text-slate-600">
                                 {monthlySummary?.annual_leave_used || 0}
                             </span>
                         </div>
-                        <div className="flex flex-col items-center justify-center px-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">KALAN</span>
-                            <span className="text-lg md:text-xl font-black text-emerald-600">
-                                {monthlySummary?.annual_leave_remaining || 0}
+                        <div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">PLANLANAN</span>
+                            <span className="text-sm font-bold text-blue-500">
+                                {monthlySummary?.annual_leave_reserved || 0}
                             </span>
                         </div>
                     </div>

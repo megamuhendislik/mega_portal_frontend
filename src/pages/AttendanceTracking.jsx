@@ -301,17 +301,17 @@ const AttendanceTracking = () => {
                                                 <td className="p-4 text-center">
                                                     {item.annual_leave_balance !== undefined ? (
                                                         <div className="grid grid-cols-3 gap-1 text-[10px] w-[140px] mx-auto bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-                                                            <div className="flex flex-col">
+                                                            <div className="flex flex-col text-center">
                                                                 <span className="text-slate-400 font-bold uppercase" title="Toplam Hak">Hak</span>
                                                                 <span className="text-slate-700 font-bold">{item.annual_leave_entitlement || 0}</span>
                                                             </div>
-                                                            <div className="flex flex-col border-l border-slate-200 pl-1">
-                                                                <span className="text-slate-400 font-bold uppercase" title="Kullanılan">Kul</span>
-                                                                <span className="text-amber-600 font-bold">{item.annual_leave_used || 0}</span>
+                                                            <div className="flex flex-col text-center border-l border-slate-200 pl-1">
+                                                                <span className="text-blue-500 font-bold uppercase" title="Planlanan (Bekleyen + Gelecek)">Plan</span>
+                                                                <span className="text-blue-600 font-bold">{item.annual_leave_reserved || 0}</span>
                                                             </div>
-                                                            <div className="flex flex-col border-l border-slate-200 pl-1">
-                                                                <span className="text-slate-400 font-bold uppercase" title="Kalan">Kal</span>
-                                                                <span className="text-emerald-600 font-bold">{item.annual_leave_remaining || 0}</span>
+                                                            <div className="flex flex-col text-center border-l border-slate-200 pl-1">
+                                                                <span className="text-emerald-500 font-bold uppercase" title="Kullanılabilir Bakiye">Net</span>
+                                                                <span className="text-emerald-600 font-bold">{item.effective_leave_balance !== undefined ? item.effective_leave_balance : (item.annual_leave_balance || 0)}</span>
                                                             </div>
                                                         </div>
                                                     ) : '-'}
