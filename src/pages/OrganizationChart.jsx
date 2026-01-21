@@ -5,41 +5,112 @@ import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
 
 // Simple Modal Component for Employee Details
+// Live Employee Detail Modal
 const EmployeeDetailModal = ({ employee, onClose }) => {
+    const [liveData, setLiveData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            if (!employee) return;
+            try {
+                // Determine endpoint based on known API structure
+                // Assume registered at /api/attendance/live-status/
+                const res = await api.get(`/attendance/live-status/${employee.id}/status/`);
+                setLiveData(res.data);
+            } catch (err) {
+                console.error("Status fetch failed", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStatus();
+    }, [employee]);
+
     if (!employee) return null;
+
+    // Default static data if live fetch fails or loading
+    const displayStatus = liveData ? liveData.label : 'Yükleniyor...';
+    const statusColor = liveData ? liveData.color : 'gray'; // green, amber, gray
+    const detailedUnit = liveData?.unit_detailed || employee.department_name || 'Ana Birim';
+    const jobDesc = liveData?.job_description || employee.title || 'Görev tanımı yok.';
+
+    // Status Badge Helpers
+    const getBadgeStyle = (color) => {
+        switch (color) {
+            case 'green': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'amber': return 'bg-amber-100 text-amber-700 border-amber-200';
+            default: return 'bg-slate-100 text-slate-600 border-slate-200';
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="bg-blue-600 p-6 text-white text-center relative">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+
+                {/* Header */}
+                <div className="bg-blue-600 p-6 text-white text-center relative shrink-0">
                     <button
                         onClick={onClose}
                         className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/20 transition-colors"
                     >
-                        <ChevronDown className="rotate-180" size={20} />
+                        <ChevronDown className="rotate-180" size={24} />
                     </button>
 
-                    <div className="w-20 h-20 mx-auto bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-3xl font-bold mb-3 border-4 border-white/30">
+                    <div className="w-24 h-24 mx-auto bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-4xl font-bold mb-4 border-4 border-white/30 shadow-xl">
                         {employee.name.charAt(0)}
                     </div>
-                    <h2 className="text-xl font-bold">{employee.name}</h2>
-                    <p className="text-blue-100 font-medium text-sm mt-1">
+                    <h2 className="text-2xl font-bold">{employee.name}</h2>
+                    <p className="text-blue-100 font-medium text-base mt-1">
                         {(!employee.title || employee.title === 'Temp') ? 'Unvan Belirtilmemiş' : employee.title}
                     </p>
                 </div>
 
-                <div className="p-6 space-y-4">
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                                <Building size={20} />
+                {/* Scrollable Content */}
+                <div className="p-6 space-y-6 overflow-y-auto">
+
+                    {/* Live Status Card */}
+                    <div className={`p-4 rounded-xl border-l-4 shadow-sm flex items-center justify-between ${getBadgeStyle(statusColor).replace('bg-', 'bg-opacity-50 bg-')}`}>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wide opacity-70">Canlı Durum</p>
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                {loading ? (
+                                    <span className="animate-pulse">Yükleniyor...</span>
+                                ) : (
+                                    <span>{displayStatus}</span>
+                                )}
+                            </h3>
+                        </div>
+                        <div className="text-right">
+                            {liveData?.check_in && (
+                                <p className="text-sm font-medium">Giriş: {liveData.check_in}</p>
+                            )}
+                            {liveData?.duration && (
+                                <p className="text-xs opacity-75">{liveData.duration}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* Unit Info */}
+                        <div className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                                <Building size={24} />
                             </div>
                             <div>
-                                <p className="text-xs text-slate-500 font-medium">Bölüm</p>
-                                <p className="text-sm font-semibold text-slate-700">
-                                    {employee.department_name || 'Ana Birim'}
+                                <p className="text-xs text-slate-500 font-bold uppercase">Organizasyonel Birim</p>
+                                <p className="text-sm font-semibold text-slate-800 break-words leading-snug mt-1">
+                                    {detailedUnit}
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Job Description */}
+                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <p className="text-xs text-slate-500 font-bold uppercase mb-2">Görev Tanımı</p>
+                            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                {jobDesc}
+                            </p>
                         </div>
 
                         {employee.functional_groups && employee.functional_groups.length > 0 && (
@@ -54,25 +125,14 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
                                 </div>
                             </div>
                         )}
-
-                        {employee.email && (
-                            <div className="flex items-center gap-3 p-2">
-                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                                    <span className="text-xs">@</span>
-                                </div>
-                                <div className="overflow-hidden">
-                                    <p className="text-xs text-slate-500">Email</p>
-                                    <p className="text-sm font-medium text-slate-700 truncate">{employee.email}</p>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+                {/* Footer */}
+                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0">
                     <button
                         onClick={() => alert('Profil detay sayfasına yönlendirilecek...')}
-                        className="text-sm text-blue-600 font-medium hover:underline"
+                        className="text-sm text-blue-600 font-bold hover:underline"
                     >
                         Tam Profili Görüntüle
                     </button>
@@ -82,64 +142,54 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
     );
 };
 
+// Horizontal Employee Card
 const EmployeeNode = ({ emp, onClick, showTags }) => (
     <div
         className={`
             relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
-            ${emp.is_secondary
-                ? 'bg-amber-50 border-amber-300 text-amber-900' // Secondary
-                : 'bg-white border-blue-200 text-slate-800' // Main Employee (White Card)
-            }
-            min-w-[140px] max-w-[160px] group
+            bg-white border-blue-200 text-slate-800
+            flex flex-row items-center gap-3
+            min-w-[220px] max-w-[280px] group h-[60px]
         `}
         onClick={(e) => {
             e.stopPropagation();
             if (onClick) onClick(emp);
         }}
     >
-        <div className="flex flex-col items-center gap-1">
-            <div className={`
-                w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-1 border shadow-inner
-                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-600'}
-            `}>
-                {emp.name.charAt(0)}
-            </div>
+        {/* Avatar Left */}
+        <div className={`
+            w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-sm font-bold border shadow-sm
+            ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-blue-600 text-white'}
+        `}>
+            {emp.name.charAt(0)}
+        </div>
 
-            <div className="w-full px-1">
-                <h4 className="font-bold text-sm leading-tight break-words drop-shadow-md uppercase tracking-wide">
-                    {emp.name}
-                </h4>
-                {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className={`text-[10px] font-medium mt-0.5 leading-tight break-words ${emp.is_secondary ? 'text-amber-700' : 'text-slate-500'}`}>
-                        {emp.title}
-                    </p>
-                )}
-            </div>
-
-            {showTags && emp.functional_groups && emp.functional_groups.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-1 mt-2">
-                    {emp.functional_groups.map((group, idx) => (
-                        <span key={idx} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-                            {group}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {emp.is_secondary && (
-                <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
-                    <Star size={14} className="text-amber-500 fill-amber-500" />
-                </div>
+        {/* Info Right */}
+        <div className="flex flex-col min-w-0 flex-1">
+            <h4 className="font-bold text-xs leading-tight truncate text-slate-900">
+                {emp.name}
+            </h4>
+            {(!emp.title || emp.title === 'Temp') ? null : (
+                <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                    {emp.title}
+                </p>
             )}
         </div>
+
+        {emp.is_secondary && (
+            <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
+                <Star size={12} className="text-amber-500 fill-amber-500" />
+            </div>
+        )}
     </div>
 );
 
+// White Department Card
 const DepartmentNode = ({ node }) => (
     <div
         className={`
-            relative z-10 p-4 rounded-xl border-b-4 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl cursor-pointer
-            bg-gradient-to-br from-emerald-500 to-teal-600 border-teal-700 text-white
+            relative z-10 p-3 rounded-xl border-l-4 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer
+            bg-white border-slate-200 border-l-emerald-500 text-slate-800
             min-w-[220px] max-w-[260px]
         `}
         onClick={(e) => {
@@ -147,15 +197,13 @@ const DepartmentNode = ({ node }) => (
         }}
     >
         <div className="flex flex-col items-center gap-2">
-            <div className={`
-                w-10 h-10 rounded-lg flex items-center justify-center shadow-lg border border-white/10
-                bg-white/10 backdrop-blur-md text-emerald-100
-            `}>
-                <Building size={20} />
+            {/* Icon */}
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 mb-1">
+                <Building size={18} />
             </div>
 
-            <div>
-                <h3 className="font-bold text-base uppercase tracking-wider drop-shadow-lg">
+            <div className="text-center px-2">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-slate-800 leading-tight">
                     {node.name}
                 </h3>
             </div>
