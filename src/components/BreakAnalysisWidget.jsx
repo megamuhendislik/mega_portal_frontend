@@ -16,7 +16,7 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
     const [localLogs, setLocalLogs] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // Sync prop changes if external date changes significantly (optional, but good for initial load)
+    // Sync prop changes
     useEffect(() => {
         if (startDate) {
             setCurrentDate(parseISO(startDate));
@@ -41,8 +41,6 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                 end = format(endOfYear(currentDate), 'yyyy-MM-dd');
             }
 
-            // Optimization: If viewing current month and we have initialLogs, use them? 
-            // Actually, safer to fetch to handle all navigation cases uniformly.
             const res = await api.get('/attendance/', {
                 params: {
                     employee_id: employeeId,
@@ -102,9 +100,7 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                 const k = format(d, 'yyyy-MM');
                 if (!monthlyStats[k]) monthlyStats[k] = { total: 0, count: 0 };
                 monthlyStats[k].total += Math.floor((log.break_seconds || 0) / 60);
-                monthlyStats[k].count += 1; // Count active days? Or should we divide by total days in month?
-                // User asked for "Günlük Ortalama". Usually implies "Total / Days Worked" or "Total / Total Days".
-                // "Days Worked" matches "Avg Minutes per Active Day".
+                monthlyStats[k].count += 1; // Active Days
             });
 
             let cumulative = 0;
@@ -112,14 +108,7 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                 const k = format(m, 'yyyy-MM');
                 const stats = monthlyStats[k] || { total: 0, count: 0 };
 
-                // Calculate Average Daily for this Month
-                // Strategy: Total Month Breaks / Days in Month (to show intensity vs time)
-                // OR: Total Month Breaks / Active Work Dates (to show habit when working)
-                // Let's go with Active Work Dates for "Habit" accuracy, or Days in Month for "Cost".
-                // User said "barlar hep günlük cinsinden olsun".
-                const daysInMonth = getDaysInMonth(m);
-                // Let's use daysInMonth for a normalized "Daily consumption" view over 30 days
-                // OR stats.count (active days). Active days is fairer to the employee.
+                // Active Day Average: Total Minutes / Active Days
                 const avgDaily = stats.count > 0 ? Math.round(stats.total / stats.count) : 0;
 
                 cumulative += stats.total;
@@ -129,7 +118,7 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                     fullLabel: format(m, 'MMMM yyyy', { locale: tr }),
                     val: avgDaily, // Displaying AVERAGE daily usage
                     total: stats.total,
-                    cumulative: cumulative, // Cumulative total for the year so far
+                    cumulative: cumulative,
                 };
             });
         }
@@ -137,10 +126,6 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
 
     // Stats Calculations
     const totalMinutes = localLogs.reduce((acc, log) => acc + Math.floor((log.break_seconds || 0) / 60), 0);
-    // Average Daily (Global)
-    // Monthly: Total / Days in Month
-    // Yearly: Total / Days in Year
-    const daysCount = viewMode === 'MONTHLY' ? getDaysInMonth(currentDate) : 365;
     const activeDays = localLogs.length;
 
     // "Günlük Ortalama" (Daily Average)
@@ -162,12 +147,14 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                             </span>
                             <span className="font-bold text-slate-700">{data.val} dk</span>
                         </div>
+                        {/* Hidden Period Total for Yearly to focus on Daily Avg per user request 
                         {viewMode === 'YEARLY' && (
                             <div className="flex justify-between gap-4">
                                 <span className="text-slate-400">Ay Toplam:</span>
                                 <span className="font-bold text-slate-500">{data.total} dk</span>
                             </div>
                         )}
+                        */}
                         {showCumulative && (
                             <div className="flex justify-between gap-4">
                                 <span className="text-slate-500">Kümülatif:</span>
@@ -305,7 +292,7 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                                 yAxisId="left"
                                 dataKey="val"
                                 radius={[4, 4, 0, 0]}
-                                barSize={viewMode === 'YEARLY' ? 14 : 8} // Thinner bars for daily to look less ugly
+                                barSize={viewMode === 'YEARLY' ? 14 : 8}
                                 fill="#fbbf24"
                                 animationDuration={1000}
                             >

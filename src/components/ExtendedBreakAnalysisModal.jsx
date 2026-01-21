@@ -136,7 +136,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                     date: m,
                     label: format(m, 'MMM', { locale: tr }),
                     fullLabel: format(m, 'MMMM yyyy', { locale: tr }),
-                    minutes: val.minutes, // Total for table/tooltip
+                    minutes: val.minutes, // Total for table
                     avgDaily: avgDaily,   // For BAR chart
                     cumulative: cumulative,
                     breaks: val.breaks,
@@ -148,20 +148,10 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
 
     // Stats
     const totalMinutes = chartData.reduce((acc, curr) => acc + (viewMode === 'MONTHLY' ? curr.minutes : curr.minutes), 0); // Always sum totals
-    // Active items (days or months with data)
-    const activeItems = viewMode === 'MONTHLY'
-        ? chartData.filter(d => d.minutes > 0).length
-        : chartData.filter(d => d.count > 0).length;
-
-    const realAvg = activeItems > 0 ? Math.round(totalMinutes / activeItems) : 0; // Avg minutes per active day (approx for year if verifying against sum of daily avgs, but logic holds: Total / Active Days)
-    // Wait, for Yearly view "Avg Daily", we want Average of Daily Averages? No, we simply want Global Daily Average.
-    // Logic: Total Yearly Minutes / Total Active Days in Year.
-    // My `activeItems` for Yearly mode is "Months with data". 
-    // To get proper "Daily Average" in Yearly mode stats card, I should sum up all active days.
 
     // Better Global Avg Calculation:
     const totalActiveDays = viewMode === 'MONTHLY'
-        ? activeItems
+        ? chartData.filter(d => d.minutes > 0).length
         : chartData.reduce((acc, curr) => acc + (curr.count || 0), 0);
 
     const globalDailyAvg = totalActiveDays > 0 ? Math.round(totalMinutes / totalActiveDays) : 0;
@@ -182,12 +172,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                 {viewMode === 'YEARLY' ? d.avgDaily : d.minutes} dk
                             </span>
                         </div>
-                        {viewMode === 'YEARLY' && (
-                            <div className="flex justify-between gap-4">
-                                <span className="text-slate-400">Ay Toplam:</span>
-                                <span className="font-bold text-slate-500">{d.minutes} dk</span>
-                            </div>
-                        )}
+                        {/* Removed Total for Yearly to focus on Daily Avg */}
                         {showCumulative && (
                             <div className="flex justify-between gap-4">
                                 <span className="text-slate-500">Kümülatif:</span>
@@ -348,7 +333,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                                 name="Süre"
                                                 fill="#fbbf24"
                                                 radius={[4, 4, 0, 0]}
-                                                barSize={viewMode === 'MONTHLY' ? 12 : 24} // Thinner for dense monthly, wider for yearly
+                                                barSize={viewMode === 'MONTHLY' ? 12 : 24}
                                                 animationDuration={1000}
                                             >
                                                 {chartData.map((entry, index) => (
