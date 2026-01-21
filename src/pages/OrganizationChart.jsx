@@ -85,12 +85,12 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 const EmployeeNode = ({ emp, onClick, showTags }) => (
     <div
         className={`
-            relative z-10 p-3 rounded-lg border-2 shadow-lg transition-all hover:scale-105 hover:shadow-xl cursor-pointer
+            relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
             ${emp.is_secondary
                 ? 'bg-amber-50 border-amber-300 text-amber-900' // Secondary
-                : 'bg-gradient-to-b from-indigo-500 to-indigo-600 border-indigo-400 text-white' // Main Employee (Indigo)
+                : 'bg-white border-blue-200 text-slate-800' // Main Employee (White Card)
             }
-            min-w-[180px] max-w-[220px] group
+            min-w-[140px] max-w-[160px] group
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -99,8 +99,8 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
     >
         <div className="flex flex-col items-center gap-1">
             <div className={`
-                w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-1 border-2 border-white/30 shadow-inner
-                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-white/20 text-white backdrop-blur-sm'}
+                w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-1 border shadow-inner
+                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-600'}
             `}>
                 {emp.name.charAt(0)}
             </div>
@@ -110,7 +110,7 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
                     {emp.name}
                 </h4>
                 {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className={`text-xs font-medium mt-0.5 leading-tight break-words ${emp.is_secondary ? 'text-amber-700' : 'text-indigo-100'}`}>
+                    <p className={`text-[10px] font-medium mt-0.5 leading-tight break-words ${emp.is_secondary ? 'text-amber-700' : 'text-slate-500'}`}>
                         {emp.title}
                     </p>
                 )}
@@ -138,9 +138,9 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
 const DepartmentNode = ({ node }) => (
     <div
         className={`
-            relative z-10 p-4 rounded-xl border-b-4 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl cursor-pointer
-            bg-gradient-to-br from-cyan-500 to-sky-600 border-sky-700 text-white
-            min-w-[240px] max-w-[280px]
+            relative z-10 p-4 rounded-xl border-b-4 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl cursor-pointer
+            bg-gradient-to-br from-emerald-500 to-teal-600 border-teal-700 text-white
+            min-w-[220px] max-w-[260px]
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -149,7 +149,7 @@ const DepartmentNode = ({ node }) => (
         <div className="flex flex-col items-center gap-2">
             <div className={`
                 w-10 h-10 rounded-lg flex items-center justify-center shadow-lg border border-white/10
-                bg-white/10 backdrop-blur-md text-cyan-100
+                bg-white/10 backdrop-blur-md text-emerald-100
             `}>
                 <Building size={20} />
             </div>
@@ -164,14 +164,14 @@ const DepartmentNode = ({ node }) => (
 );
 
 const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
-    const isDepartment = node.type === 'department';
+    // 1. Determine Type Dynamicallly (Fix for "Departments appearing as Employees")
+    const isDepartment = node.type === 'department' || node.code || node.employees;
 
     // Combine Sub-Departments AND Employees into branching children (Tree Structure)
     let branchingChildren = [];
 
     if (isDepartment) {
         // 1. Employees (Managers -> Subordinates Tree)
-        // Since backend returns a tree of employees in 'employees' field, we treat them as children nodes.
         if (showAllEmployees && node.employees && node.employees.length > 0) {
             const empNodes = node.employees.map(e => ({ ...e, type: 'employee' }));
             branchingChildren.push(...empNodes);
@@ -183,12 +183,17 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
             branchingChildren.push(...deptNodes);
         }
     } else {
-        // Employee Node (Manager -> Subordinates)
+        // Employee Node (Manager -> Subordinates OR Mixed Departments)
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children.map(child => ({
-                ...child,
-                type: 'employee' // Subordinates are employees
-            }));
+            branchingChildren = node.children.map(child => {
+                // Heuristic: If child has 'employees' array or 'code', treat as Department
+                // Otherwise treat as Employee
+                const childIsDept = child.employees || child.code;
+                return {
+                    ...child,
+                    type: childIsDept ? 'department' : 'employee'
+                };
+            });
         }
     }
 
@@ -196,7 +201,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
 
     return (
         <li>
-            <div className="flex flex-col items-center relative gap-4">
+            <div className="flex flex-col items-center relative gap-6">
                 {/* Main Node Card */}
                 {isDepartment ? (
                     <DepartmentNode node={node} />
