@@ -14,7 +14,8 @@ import {
     ExclamationTriangleIcon,
     CommandLineIcon,
     TrashIcon,
-    KeyIcon
+    KeyIcon,
+    SparklesIcon
 } from '@heroicons/react/24/outline';
 
 export default function SystemHealth() {
@@ -70,6 +71,7 @@ export default function SystemHealth() {
                         { id: 'test_suite', name: 'Sistem Testleri', icon: CheckCircleIcon },
                         { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
+                        { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -95,7 +97,9 @@ export default function SystemHealth() {
                 {activeTab === 'stress_test' && <StressTestTab />}
                 {activeTab === 'test_suite' && <TestSuiteTab />}
                 {activeTab === 'logs' && <ServiceLogsTab />}
+                {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
+                {activeTab === 'synthetic' && <SyntheticDataTab />}
             </div>
 
         </div>
@@ -787,6 +791,142 @@ function TestSuiteTab() {
                                 {output}
                             </pre>
                         )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- UTILS ---
+
+function SyntheticDataTab() {
+    const [isRunning, setIsRunning] = useState(false);
+    const [wipeExisting, setWipeExisting] = useState(true);
+    const [logs, setLogs] = useState([]);
+    const consoleEndRef = useRef(null);
+
+    // Auto-scroll console
+    useEffect(() => {
+        consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [logs]);
+
+    const runGenerator = async () => {
+        if (!confirm("DİKKAT: Bu işlem seçime bağlı olarak mevcut verileri silebilir ve sisteme binlerce rastgele kayıt ekler. Devam etmek istiyor musunuz?")) return;
+
+        setIsRunning(true);
+        setLogs(['> Başlatılıyor...', '> API İsteği gönderiliyor...']);
+
+        try {
+            // 1. Start Task
+            const startRes = await api.post('/system/health-check/run_synthetic_data_generation/', { wipe_existing: wipeExisting });
+            if (startRes.data.error) throw new Error(startRes.data.error);
+
+            const taskId = startRes.data.task_id;
+            setLogs(prev => [...prev, `> Görev Kuyruğa Alındı: ${taskId}`, '> İşleniyor...']);
+
+            // 2. Poll Status
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await api.get(`/system/health-check/get_synthetic_data_status/?task_id=${taskId}`);
+                    const { state, logs: remoteLogs, report, error } = statusRes.data;
+
+                    if (state === 'PROGRESS' && remoteLogs) {
+                        // Use remote logs as source of truth for the list
+                        const formattedLogs = remoteLogs.map(l => l);
+                        setLogs(formattedLogs);
+                    }
+
+                    if (state === 'SUCCESS') {
+                        clearInterval(pollInterval);
+                        setLogs(prev => [...prev, `> ✅ İŞLEM BAŞARILI.`, `> Özet: ${report.summary}`]);
+                        setIsRunning(false);
+                    } else if (state === 'FAILURE') {
+                        clearInterval(pollInterval);
+                        setLogs(prev => [...prev, `> ❌ KRİTİK HATA: ${error}`]);
+                        setIsRunning(false);
+                    }
+
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }, 1000);
+
+        } catch (error) {
+            setLogs(prev => [...prev, `> BAŞLATMA HATASI: ${error.message}`]);
+            setIsRunning(false);
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
+            {/* Control Panel */}
+            <div className="col-span-1 space-y-6">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Sentetik Veri Üretimi</h3>
+                    <p className="text-gray-500 text-sm mb-6">
+                        Test ortamı için geçmişe yönelik rastgele veri üretir.
+                    </p>
+
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 mb-6">
+                        <h4 className="text-xs font-bold text-purple-800 uppercase mb-2">Nasıl Çalışır?</h4>
+                        <ul className="text-sm text-purple-700 space-y-1 list-disc list-inside">
+                            <li>Personelin İşe Giriş Tarihinden itibaren başlar.</li>
+                            <li>Hafta içi rastgele giriş/çıkış saatleri üretir.</li>
+                            <li>Arada rastgele izin ve devamsızlık ekler.</li>
+                            <li>Tüm çalışanlar için uygulanır.</li>
+                        </ul>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-6 p-3 bg-red-50 border border-red-100 rounded text-sm text-red-700">
+                        <input
+                            type="checkbox"
+                            id="wipe"
+                            checked={wipeExisting}
+                            onChange={e => setWipeExisting(e.target.checked)}
+                            className="w-4 h-4 text-red-600 rounded"
+                        />
+                        <label htmlFor="wipe" className="font-bold select-none cursor-pointer">
+                            ÖNCE MEVCUT VERİLERİ SİL (Tavsiye)
+                        </label>
+                    </div>
+
+                    <button
+                        onClick={runGenerator}
+                        disabled={isRunning}
+                        className={`w-full py-3 px-4 rounded-lg font-bold shadow-sm transition-all flex justify-center items-center gap-2
+                            ${isRunning
+                                ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md'}
+                        `}
+                    >
+                        {isRunning ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <SparklesIcon className="w-5 h-5" />}
+                        {isRunning ? 'ÜRETİLİYOR...' : 'VERİ ÜRETİMİ BAŞLAT'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Console Output */}
+            <div className="col-span-2">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[600px]">
+                    <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
+                        <span className="text-xs font-mono text-gray-400">root@mega-engine:~# ./generate_synthetic_data.py</span>
+                        <div className="flex gap-1.5">
+                            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                        </div>
+                    </div>
+                    <div className="flex-1 p-4 overflow-y-auto font-mono text-xs md:text-sm text-purple-300 space-y-1">
+                        {logs.length === 0 && (
+                            <div className="text-gray-600 select-none">
+                                // Bekleniyor...
+                            </div>
+                        )}
+                        {logs.map((log, i) => (
+                            <div key={i} className="whitespace-pre-wrap break-words">{log}</div>
+                        ))}
+                        <div ref={consoleEndRef} />
                     </div>
                 </div>
             </div>
