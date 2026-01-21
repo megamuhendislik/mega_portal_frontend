@@ -674,14 +674,24 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                     <Briefcase size={18} className="text-emerald-500" />
                     Yıllık İzin Ayarları
                 </h4>
-                <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField
                         type="number"
-                        label="Yıllık İzin Hakkı (Gün)"
+                        label="Toplam İzin Hakkı (Gün)"
                         value={formData.annual_leave_entitlement}
                         onChange={e => handleChange('annual_leave_entitlement', e.target.value)}
                         placeholder="0"
                         className="bg-white"
+                        helpText="Kullanıcının şu ana kadar hak ettiği toplam izin."
+                    />
+                    <InputField
+                        type="number"
+                        label="Kullanılan İzin (Gün)"
+                        value={formData.annual_leave_used}
+                        onChange={e => handleChange('annual_leave_used', e.target.value)}
+                        placeholder="0"
+                        className="bg-white"
+                        helpText="Şu ana kadar kullandığı gün sayısı."
                     />
                     <InputField
                         type="number"
@@ -690,7 +700,7 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
                         placeholder="14"
                         className="bg-white"
-                        helpText="Her yıl eklenecek gün"
+                        helpText="Her yıl eklenecek gün (Varsayılan: 14)"
                     />
                     <InputField
                         type="number"
@@ -699,7 +709,7 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
                         placeholder="0"
                         className="bg-white"
-                        helpText="Eksi bakiyeye düşme limiti"
+                        helpText="Eksi bakiyeye düşme limiti (Örn: 10)"
                     />
                 </div>
             </div>

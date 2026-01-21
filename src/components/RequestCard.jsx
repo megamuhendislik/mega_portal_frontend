@@ -75,9 +75,38 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
 
             {/* Employee Info (For Incoming Requests) */}
             {request.employee_name && (
-                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <User size={16} className="text-slate-400 shrink-0" />
-                    <span className="truncate">{request.employee_name}</span>
+                <div className="mb-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <User size={16} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{request.employee_name}</span>
+                    </div>
+
+                    {/* Annual Leave Balance Info (Only for Incoming Leave Requests) */}
+                    {isIncoming && type === 'LEAVE' && request.employee_annual_leave_balance && (
+                        <div className="bg-blue-50/50 rounded-xl p-2.5 border border-blue-100 text-xs text-slate-600">
+                            <h5 className="font-bold text-blue-700 mb-1.5 flex items-center gap-1.5">
+                                <FileText size={12} />
+                                İzin Bakiyesi
+                            </h5>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="bg-white/60 p-1 rounded">
+                                    <span className="block text-[10px] text-slate-400 font-bold">Kalan</span>
+                                    <span className="font-black text-slate-700 text-sm">{request.employee_annual_leave_balance.remaining}</span>
+                                </div>
+                                <div className="bg-white/60 p-1 rounded">
+                                    <span className="block text-[10px] text-slate-400 font-bold">Talep</span>
+                                    <span className="font-black text-indigo-600 text-sm">{request.total_days}</span>
+                                </div>
+                                <div className="bg-white/60 p-1 rounded">
+                                    <span className="block text-[10px] text-slate-400 font-bold">Sonuç</span>
+                                    <span className={`font-black text-sm ${(request.employee_annual_leave_balance.remaining - request.total_days) < 0 ? 'text-rose-600' : 'text-emerald-600'
+                                        }`}>
+                                        {request.employee_annual_leave_balance.remaining - request.total_days}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

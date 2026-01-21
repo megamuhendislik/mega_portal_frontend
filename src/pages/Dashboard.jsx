@@ -261,6 +261,40 @@ const Dashboard = () => {
                 </div>
                 <MonthlyPerformanceSummary logs={logs} periodSummary={monthlySummary} />
             </div>
+
+            {/* 4. Annual Leave Status (If available) */}
+            {monthlySummary && (
+                <div className="bg-blue-50/50 rounded-2xl shadow-sm border border-blue-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-100/50 text-blue-600 rounded-xl">
+                            <Briefcase size={28} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800">Yıllık İzin Durumu</h3>
+                            <p className="text-slate-500 font-medium text-sm">Mevcut izin haklarınız ve kullanım detayları.</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-8 w-full md:w-auto">
+                        <div className="text-center">
+                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Hak Edilen</span>
+                            <span className="text-2xl font-black text-slate-800">{monthlySummary.annual_leave_entitlement || 0}</span>
+                        </div>
+                        <div className="text-center">
+                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Kullanılan</span>
+                            <span className="text-2xl font-black text-rose-500">{monthlySummary.annual_leave_used || 0}</span>
+                        </div>
+                        <div className="text-center">
+                            <div className="flex flex-col items-center">
+                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Kalan</span>
+                                <span className={`text-2xl font-black ${(monthlySummary.annual_leave_remaining || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    {monthlySummary.annual_leave_remaining || 0}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
