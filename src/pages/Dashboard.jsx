@@ -182,7 +182,7 @@ const Dashboard = () => {
             </div>
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="BUGÜN ÇALIŞMA"
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
@@ -203,6 +203,16 @@ const Dashboard = () => {
                     subValue={`Onay: ${formatMin(todaySummary?.overtime_approved)} / Bekl: ${formatMin(todaySummary?.overtime_pending)} / Taslak: ${formatMin(todaySummary?.current_overtime - (todaySummary?.overtime_approved || 0) - (todaySummary?.overtime_pending || 0))} dk`}
                     icon={Zap}
                     color="emerald"
+                />
+
+                {/* 4. Annual Leave StatCard */}
+                <StatCard
+                    title="YILLIK İZİN"
+                    value={`${monthlySummary?.annual_leave_remaining || 0} Gün`}
+                    subValue={`Hak: ${monthlySummary?.annual_leave_entitlement || 0} / Kul: ${monthlySummary?.annual_leave_used || 0}`}
+                    icon={Briefcase}
+                    color="blue"
+                    trend="neutral"
                 />
             </div>
 

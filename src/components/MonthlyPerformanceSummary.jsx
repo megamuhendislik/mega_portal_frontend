@@ -142,29 +142,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
             {/* 3. Stats Grid with Colors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Annual Leave Card */}
-                <div className="md:col-span-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col justify-between">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
-                            <Briefcase size={18} />
-                        </div>
-                        <span className="text-xs font-bold uppercase text-slate-500">Yıllık İzin Durumu</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-center mt-2">
-                        <div className="p-2 bg-white/60 rounded-lg">
-                            <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Hak Edilen</span>
-                            <span className="text-xl font-black text-slate-700">{stats.annualLeave.entitlement}</span>
-                        </div>
-                        <div className="p-2 bg-white/60 rounded-lg">
-                            <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Kullanılan</span>
-                            <span className="text-xl font-black text-rose-600">{stats.annualLeave.used}</span>
-                        </div>
-                        <div className="p-2 bg-white/60 rounded-lg">
-                            <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Kalan</span>
-                            <span className="text-xl font-black text-emerald-600">{stats.annualLeave.remaining}</span>
-                        </div>
-                    </div>
-                </div>
+
 
                 {/* Net Surplus Card */}
                 <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
