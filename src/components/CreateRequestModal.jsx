@@ -183,9 +183,12 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const held = user.held_annual_leave || 0;
         const limit = user.annual_leave_advance_limit || 0;
 
+        const entitlement = user.annual_leave_entitlement || 0;
+        const used = user.annual_leave_used || 0;
+
         const available = balance + limit;
         const lastLeave = user.last_annual_leave_date || null;
-        return { balance, held, limit, available, lastLeave };
+        return { balance, held, limit, available, lastLeave, entitlement, used };
     };
 
     // Helper to calculate duration in days
@@ -216,25 +219,28 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             <Briefcase size={18} className={isInsufficient ? 'text-red-600' : 'text-blue-600'} />
                             <h4 className={`font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>Yıllık İzin Bakiyesi</h4>
                         </div>
-                        <div className="grid grid-cols-5 gap-2 text-center">
+                        <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Mevcut Bakiye</span>
-                                <span className="block font-bold text-slate-700">{balance.balance} gün</span>
+                                <span className="block text-xs text-slate-500 font-bold uppercase">TOPLAM HAK</span>
+                                <span className="block font-black text-slate-700 text-lg">{balance.entitlement}</span>
                             </div>
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Askıda (Gelecek)</span>
-                                <span className="block font-bold text-slate-700">{balance.held} gün</span>
+                                <span className="block text-xs text-slate-500 font-bold uppercase">KULLANILAN</span>
+                                <span className="block font-black text-amber-600 text-lg">{balance.used}</span>
                             </div>
-                            <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block font-bold text-slate-700">{balance.limit} gün</span>
+                            <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-100 ring-1 ring-emerald-200'}`}>
+                                <span className={`block text-xs font-bold uppercase ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>KALAN</span>
+                                <span className={`block font-black text-lg ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>{balance.balance}</span>
                             </div>
-                            <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500">Son İzin Bitiş</span>
-                                <span className="block font-bold text-slate-700 text-xs mt-1">{balance.lastLeave ? new Date(balance.lastLeave).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '-'}</span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
+                                <span className="text-slate-500">Avans Limiti:</span>
+                                <span className="font-bold text-slate-700">{balance.limit} gün</span>
                             </div>
-                            <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-blue-100 ring-1 ring-blue-200'}`}>
-                                <span className={`block text-xs ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>Kullanılabilir</span>
-                                <span className={`block font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>{balance.available} gün</span>
+                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
+                                <span className="text-slate-500">Kullanılabilir:</span>
+                                <span className={`font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>{balance.available} gün</span>
                             </div>
                         </div>
                         {isInsufficient && (
