@@ -325,6 +325,7 @@ const WorkSchedules = () => {
                             daily_break_allowance: 0,
                             late_tolerance_minutes: 0,
                             service_tolerance_minutes: 0,
+                            minimum_overtime_minutes: 15,
                             schedule: defaultSchedule
                         });
                         setShowScheduleModal(true);
@@ -370,6 +371,7 @@ const WorkSchedules = () => {
                                         daily_break_allowance: selectedSchedule.daily_break_allowance || 30,
                                         late_tolerance_minutes: selectedSchedule.late_tolerance_minutes || 15,
                                         service_tolerance_minutes: selectedSchedule.service_tolerance_minutes || 0,
+                                        minimum_overtime_minutes: selectedSchedule.minimum_overtime_minutes || 15,
                                         schedule: JSON.parse(JSON.stringify(selectedSchedule.schedule))
                                     });
                                     setShowScheduleModal(true);
@@ -591,7 +593,7 @@ const WorkSchedules = () => {
                             </div>
 
                             {/* Tolerances & Break */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
                                     <input type="number" value={scheduleFormData.daily_break_allowance} onChange={e => setScheduleFormData({ ...scheduleFormData, daily_break_allowance: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
@@ -603,6 +605,10 @@ const WorkSchedules = () => {
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Servis Toleransı (Dk)</label>
                                     <input type="number" value={scheduleFormData.service_tolerance_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, service_tolerance_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Min. Mesai (Dk)</label>
+                                    <input type="number" value={scheduleFormData.minimum_overtime_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, minimum_overtime_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
                                 </div>
                             </div>
 

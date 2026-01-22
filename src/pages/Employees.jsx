@@ -46,6 +46,8 @@ const INITIAL_FORM_STATE = {
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
     uses_service: false, // [NEW] Service Usage
+    service_tolerance_minutes: 0,
+    minimum_overtime_minutes: 0,
     remote_work_days: [], // ['MON', 'WED']
 
     hired_date: new Date().toISOString().split('T')[0],
@@ -429,7 +431,7 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     const [customMode, setCustomMode] = useState(!formData.work_schedule);
     const [showOverrides, setShowOverrides] = useState(
         // Show overrides if ANY override field is populated
-        !!(formData.shift_start || formData.shift_end || formData.lunch_start || formData.daily_break_allowance || formData.attendance_tolerance_minutes || formData.uses_service)
+        !!(formData.shift_start || formData.shift_end || formData.lunch_start || formData.daily_break_allowance || formData.attendance_tolerance_minutes || formData.uses_service || formData.service_tolerance_minutes || formData.minimum_overtime_minutes)
     );
 
     // Sync customMode with parent if needed, but local toggle is fine for UI
@@ -450,6 +452,8 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     const defaultLunchEnd = selectedSchedule?.lunch_end?.slice(0, 5) || '';
     const defaultBreak = selectedSchedule?.daily_break_allowance || '';
     const defaultTolerance = selectedSchedule?.late_tolerance_minutes || '';
+    const defaultServiceTolerance = selectedSchedule?.service_tolerance_minutes || '';
+    const defaultMinOvertime = selectedSchedule?.minimum_overtime_minutes || '';
 
     return (
         <div className="animate-fade-in-up">
@@ -594,6 +598,8 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
 
                                         <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} placeholder={defaultBreak} />
                                         <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} placeholder={defaultTolerance} />
+                                        <InputField type="number" label="Servis Tol. (Dk)" value={formData.service_tolerance_minutes} onChange={e => handleChange('service_tolerance_minutes', e.target.value)} placeholder={defaultServiceTolerance} />
+                                        <InputField type="number" label="Min. Mesai (Dk)" value={formData.minimum_overtime_minutes} onChange={e => handleChange('minimum_overtime_minutes', e.target.value)} placeholder={defaultMinOvertime} />
                                     </div>
 
                                     <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mt-2">
