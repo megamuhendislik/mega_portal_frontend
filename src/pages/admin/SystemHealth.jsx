@@ -315,7 +315,7 @@ function DashboardTab({ stats, refresh, loading }) {
 
                     <ActionButton
                         label="Molaları Yeniden Oluştur (Otomatik Kesinti)"
-                        description="Belirtilen tarih aralığındaki tüm kayıtları tarar ve günlük mola sınırına (örn: 60dk) göre otomatik düşüm yapar."
+                        description="Belirtilen tarih aralığındaki tüm kayıtları tarar ve personelin bağlı olduğu takvimin mola kurallarına göre (örn: 30dk veya 60dk) otomatik düşüm yapar."
                         hazard={false}
                         onClick={async () => {
                             const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
@@ -323,7 +323,7 @@ function DashboardTab({ stats, refresh, loading }) {
                             const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
                             if (!end) return;
 
-                            if (confirm(`${start} - ${end} arası tüm personelin molaları yeniden hesaplanacak. Onaylıyor musunuz?`)) {
+                            if (confirm(`${start} - ${end} arası tüm personelin molaları takvim kurallarına göre yeniden hesaplanacak. Onaylıyor musunuz?`)) {
                                 try {
                                     setRecalcConsoleOpen(true);
                                     setRecalcLoading(true);
@@ -382,11 +382,17 @@ function DashboardTab({ stats, refresh, loading }) {
                                             </button>
                                         </div>
                                     )}
-                                    {recalcLogs.map((l, i) => (
-                                        <div key={i} className="whitespace-pre-wrap break-all border-b border-gray-900/50 pb-0.5">
-                                            {l}
-                                        </div>
-                                    ))}
+                                    {recalcLogs.map((l, i) => {
+                                        let content = l;
+                                        if (typeof l === 'object' && l !== null) {
+                                            content = `[${l.time}] ${l.message} ${l.details ? ` (${l.details})` : ''}`;
+                                        }
+                                        return (
+                                            <div key={i} className="whitespace-pre-wrap break-all border-b border-gray-900/50 pb-0.5 text-xs text-green-300 font-mono">
+                                                {content}
+                                            </div>
+                                        );
+                                    })}
                                     {recalcLoading && <div className="animate-pulse text-green-500 mt-2">_ İşleniyor...</div>}
                                 </div>
                             </div>
@@ -954,9 +960,13 @@ function SyntheticDataTab() {
                                 // Bekleniyor...
                             </div>
                         )}
-                        {logs.map((log, i) => (
-                            <div key={i} className="whitespace-pre-wrap break-words">{log}</div>
-                        ))}
+                        {logs.map((log, i) => {
+                            let content = log;
+                            if (typeof log === 'object' && log !== null) {
+                                content = JSON.stringify(log);
+                            }
+                            return <div key={i} className="whitespace-pre-wrap break-words">{content}</div>;
+                        })}
                         <div ref={consoleEndRef} />
                     </div>
                 </div>
