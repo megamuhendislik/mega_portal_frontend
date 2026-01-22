@@ -134,17 +134,21 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                         <div className="mb-1">
                             <StatusBadge status={node.status} isOnLeave={node.isOnLeave} leaveStatus={node.leaveStatus} />
                         </div>
-                        <div className="flex items-baseline gap-1 text-slate-500 text-xs">
-                            <span className="font-bold text-slate-700">{Math.floor(node.totalTodayMinutes / 60)}</span>s
-                            <span className="font-bold text-slate-700">{node.totalTodayMinutes % 60}</span>dk
+                        <div className="flex items-baseline gap-1 text-xs">
+                            <span className="font-bold text-slate-700">{Math.floor(node.totalTodayMinutes / 60)}</span>
+                            <span className="text-slate-500">sa</span>
+                            <span className="font-bold text-slate-700">{node.totalTodayMinutes % 60}</span>
+                            <span className="text-slate-500">dk</span>
                         </div>
                     </div>
 
                     {/* Column 3: Monthly Progress Bar */}
                     <div className="col-span-3">
                         <div className="flex justify-between text-[10px] text-slate-500 mb-1 px-1">
-                            <span>Hedef: <b>{node.monthTarget}s</b></span>
-                            {node.summaryRemaining > 0 && <span>Kalan: {node.summaryRemaining}s</span>}
+                            <span>Hedef: <b className="text-slate-700">{parseFloat(node.monthTarget || 0).toFixed(0)}</b> sa</span>
+                            {parseFloat(node.summaryRemaining || 0) > 0 && (
+                                <span>Kalan: <b className="text-amber-600">{parseFloat(node.summaryRemaining || 0).toFixed(1)}</b> sa</span>
+                            )}
                         </div>
                         <StackedProgressBar
                             completed={node.summaryCompleted}
@@ -156,22 +160,22 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
 
                     {/* Column 4: Net Balance */}
                     <div className="col-span-1 text-right">
-                        <div className={clsx("font-bold text-sm", isPositive ? "text-emerald-600" : "text-red-500")}>
-                            {isPositive ? '+' : ''}{balance.toFixed(1)} sa
+                        <div className={clsx("font-bold text-base leading-none mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
+                            {isPositive ? '+' : ''}{balance.toFixed(1)}
                         </div>
-                        <span className="text-[10px] text-slate-400">Net Mesai</span>
+                        <span className="text-[9px] text-slate-400 uppercase tracking-wide font-medium">saat</span>
                     </div>
 
                     {/* Column 5: Total Work & OT */}
                     <div className="col-span-2 text-right pr-2">
-                        <div className="font-bold text-slate-700 text-sm">
-                            {node.summaryTotalWork} sa
+                        <div className="font-bold text-slate-800 text-base leading-none mb-1">
+                            {parseFloat(node.summaryTotalWork || 0).toFixed(1)}
                         </div>
-                        <div className="text-[10px] text-slate-400">Toplam Mesai</div>
+                        <div className="text-[9px] text-slate-400 uppercase tracking-wide font-medium">saat</div>
 
                         {hasOt && (
-                            <div className="mt-0.5 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded inline-block">
-                                +{otMinutes}dk Ek Mesai
+                            <div className="mt-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-block border border-emerald-200">
+                                +{Math.floor(otMinutes / 60)}s {otMinutes % 60}dk Ek
                             </div>
                         )}
                     </div>
@@ -497,12 +501,12 @@ const TeamAttendanceOverview = ({ teamData, onMemberClick }) => {
                 hierarchy.length > 0 ? (
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                         {/* Static Table Header */}
-                        <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <div className="grid grid-cols-12 gap-4 p-3 bg-gradient-to-r from-blue-50 to-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             <div className="col-span-4 pl-12">Çalışan</div>
-                            <div className="col-span-2">Durum / Bugün</div>
-                            <div className="col-span-3">Aylık İlerleme</div>
-                            <div className="col-span-1 text-right">Net</div>
-                            <div className="col-span-2 text-right pr-2">Toplam</div>
+                            <div className="col-span-2">Durum & Bugünkü Mesai</div>
+                            <div className="col-span-3">Aylık İlerleme (Sa)</div>
+                            <div className="col-span-1 text-right">Net Bakiye</div>
+                            <div className="col-span-2 text-right pr-2">Toplam Çalışma</div>
                         </div>
 
                         {/* Recursive Tree Rows */}

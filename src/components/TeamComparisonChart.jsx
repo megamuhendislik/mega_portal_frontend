@@ -6,7 +6,14 @@ const TeamComparisonChart = ({ data }) => {
     // Sort by Actual descending for leaderboard feel
     const sortedData = [...data]
         .sort((a, b) => b.actual - a.actual)
-        .slice(0, 10); // Top 10 only if many users
+        .slice(0, 10) // Top 10 only if many users
+        .map(item => ({
+            ...item,
+            // Format name with proper spacing
+            name: item.name.split(' ').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ')
+        }));
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
@@ -18,17 +25,19 @@ const TeamComparisonChart = ({ data }) => {
                 <div className="bg-white/95 backdrop-blur-md p-3 border border-slate-100 shadow-xl rounded-xl text-xs z-50 min-w-[140px]">
                     <p className="font-bold text-slate-800 mb-2 border-b border-slate-50 pb-1">{item.name}</p>
                     <div className="space-y-1.5">
-                        <div className="flex justify-between text-slate-500">
-                            <span>Hedef:</span>
-                            <span className="font-mono font-medium">{item.target.toFixed(1)}h</span>
+                        <div className="flex justify-between items-baseline gap-3">
+                            <span className="text-slate-500">Hedef:</span>
+                            <span className="font-semibold text-slate-700">{item.target.toFixed(1)} sa</span>
                         </div>
-                        <div className="flex justify-between text-indigo-600">
-                            <span>Gerçekleşen:</span>
-                            <span className="font-mono font-bold">{item.actual.toFixed(1)}h</span>
+                        <div className="flex justify-between items-baseline gap-3">
+                            <span className="text-slate-500">Çalışma:</span>
+                            <span className="font-bold text-indigo-600">{item.actual.toFixed(1)} sa</span>
                         </div>
-                        <div className={`mt-2 pt-1 font-bold flex justify-between ${isMet ? 'text-emerald-500' : 'text-amber-500'}`}>
-                            <span>İlerleme</span>
-                            <span>%{percent}</span>
+                        <div className="mt-2 pt-2 border-t border-slate-100">
+                            <div className={`flex justify-between items-baseline ${isMet ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                <span className="text-xs font-medium">İlerleme</span>
+                                <span className="text-lg font-bold">%{percent}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -54,7 +63,7 @@ const TeamComparisonChart = ({ data }) => {
                     <BarChart
                         layout="vertical"
                         data={sortedData}
-                        margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                        margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
                         barGap={-24}
                     >
                         <XAxis type="number" hide />
@@ -63,8 +72,8 @@ const TeamComparisonChart = ({ data }) => {
                             type="category"
                             axisLine={false}
                             tickLine={false}
-                            width={90}
-                            tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }}
+                            width={140}
+                            tick={{ fontSize: 12, fill: '#475569', fontWeight: 500 }}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
 
