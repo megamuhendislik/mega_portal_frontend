@@ -313,6 +313,37 @@ function DashboardTab({ stats, refresh, loading }) {
                         onClick={() => setRecalcConsoleOpen(true)}
                     />
 
+                    <ActionButton
+                        label="Molaları Yeniden Oluştur (Otomatik Kesinti)"
+                        description="Belirtilen tarih aralığındaki tüm kayıtları tarar ve günlük mola sınırına (örn: 60dk) göre otomatik düşüm yapar."
+                        hazard={false}
+                        onClick={async () => {
+                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
+                            if (!start) return;
+                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+                            if (!end) return;
+
+                            if (confirm(`${start} - ${end} arası tüm personelin molaları yeniden hesaplanacak. Onaylıyor musunuz?`)) {
+                                try {
+                                    setRecalcConsoleOpen(true);
+                                    setRecalcLoading(true);
+                                    setRecalcLogs(['> Mola İyileştirme Başlatılıyor...', `> Aralık: ${start} - ${end}`]);
+
+                                    const res = await api.post('/system/health-check/regenerate_compliance/', { start_date: start, end_date: end });
+
+                                    setRecalcLogs(prev => [...prev, ...res.data.logs, `> SONUÇ: ${res.data.message}`]);
+                                    alert(res.data.message);
+                                    refresh();
+                                } catch (e) {
+                                    setRecalcLogs(prev => [...prev, `> HATA: ${e.response?.data?.error || e.message}`]);
+                                    alert("Hata: " + (e.response?.data?.error || e.message));
+                                } finally {
+                                    setRecalcLoading(false);
+                                }
+                            }
+                        }}
+                    />
+
                     {/* Recalculate Console Modal/Area */}
                     {recalcConsoleOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
