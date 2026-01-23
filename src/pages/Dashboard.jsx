@@ -260,7 +260,7 @@ const Dashboard = () => {
                         </div>
                     ) : (
                         <div className="pt-3 border-t border-slate-50">
-                            <span className="text-[10px] text-slate-400 italic">Hak ediş tarihi hesaplanamadı.</span>
+                            <span className="text-[10px] text-slate-400 italic">İşe giriş tarihi eksik.</span>
                         </div>
                     )}
                 </div>
