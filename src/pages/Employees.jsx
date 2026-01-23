@@ -706,6 +706,13 @@ const StepLeave = ({ formData, handleChange }) => (
                     placeholder="0"
                     className="bg-white font-bold text-slate-700"
                     helpText="Şu an kullanılabilir bakiye (Devreden + Hak Edilen - Kullanılan)."
+                <InputField
+                    type="date"
+                    label="İşe Giriş Tarihi (Hak Ediş Bazı)"
+                    value={formData.hired_date}
+                    onChange={e => handleChange('hired_date', e.target.value)}
+                    className="bg-white border-blue-200"
+                    helpText="Yıllık izin hak ediş hesaplaması bu tarih baz alınarak yapılır."
                 />
                 <InputField
                     type="number"
