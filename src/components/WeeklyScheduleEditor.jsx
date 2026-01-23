@@ -74,11 +74,13 @@ const WeeklyScheduleEditor = ({ value, onChange }) => {
 
     return (
         <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 p-3 bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <div className="col-span-3">Gün</div>
-                <div className="col-span-3">Başlangıç</div>
-                <div className="col-span-3">Bitiş</div>
-                <div className="col-span-3 text-center">Durum</div>
+            <div className="grid grid-cols-12 gap-2 p-3 bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <div className="col-span-2">Gün</div>
+                <div className="col-span-2">Başlangıç</div>
+                <div className="col-span-2">Bitiş</div>
+                <div className="col-span-2 text-center text-blue-600">Öğle Baş.</div>
+                <div className="col-span-2 text-center text-blue-600">Öğle Bit.</div>
+                <div className="col-span-2 text-center">Durum</div>
             </div>
 
             <div className="divide-y divide-slate-100">
@@ -87,36 +89,58 @@ const WeeklyScheduleEditor = ({ value, onChange }) => {
                     const isOff = dayData.is_off;
 
                     return (
-                        <div key={day.key} className={`grid grid-cols-12 gap-4 p-3 items-center transition-colors ${isOff ? 'bg-slate-50/50' : 'hover:bg-white'}`}>
-                            <div className="col-span-3 font-medium text-slate-700 flex items-center gap-2">
+                        <div key={day.key} className={`grid grid-cols-12 gap-2 p-3 items-center transition-colors ${isOff ? 'bg-slate-50/50' : 'hover:bg-white'}`}>
+                            <div className="col-span-2 font-medium text-slate-700 flex items-center gap-1 text-xs sm:text-sm truncate">
                                 {day.label}
                             </div>
 
-                            <div className="col-span-3">
+                            <div className="col-span-2">
                                 <input
                                     type="time"
                                     value={dayData.start}
                                     disabled={isOff}
                                     onChange={(e) => handleChange(day.key, 'start', e.target.value)}
-                                    className={`w-full p-1.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-white border-slate-200'}`}
+                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-white border-slate-200'}`}
                                 />
                             </div>
 
-                            <div className="col-span-3">
+                            <div className="col-span-2">
                                 <input
                                     type="time"
                                     value={dayData.end}
                                     disabled={isOff}
                                     onChange={(e) => handleChange(day.key, 'end', e.target.value)}
-                                    className={`w-full p-1.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-white border-slate-200'}`}
+                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-white border-slate-200'}`}
                                 />
                             </div>
 
-                            <div className="col-span-3 flex justify-center">
+                            <div className="col-span-2">
+                                <input
+                                    type="time"
+                                    value={dayData.lunch_start || ''}
+                                    disabled={isOff}
+                                    placeholder="12:30"
+                                    onChange={(e) => handleChange(day.key, 'lunch_start', e.target.value)}
+                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 border-slate-200 text-blue-700'}`}
+                                />
+                            </div>
+
+                            <div className="col-span-2">
+                                <input
+                                    type="time"
+                                    value={dayData.lunch_end || ''}
+                                    disabled={isOff}
+                                    placeholder="13:30"
+                                    onChange={(e) => handleChange(day.key, 'lunch_end', e.target.value)}
+                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 border-slate-200 text-blue-700'}`}
+                                />
+                            </div>
+
+                            <div className="col-span-2 flex justify-center gap-1">
                                 <button
                                     type="button"
                                     onClick={() => handleToggleOff(day.key)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${isOff
+                                    className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center w-full ${isOff
                                         ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
                                         : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                                         }`}
@@ -127,8 +151,8 @@ const WeeklyScheduleEditor = ({ value, onChange }) => {
                                     <button
                                         type="button"
                                         onClick={() => handleCopyToAll(day.key)}
-                                        title="Bu saati diğer günlere kopyala"
-                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Bu dizilimi tüm günlere kopyala"
+                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors hidden sm:block"
                                     >
                                         <Copy size={14} />
                                     </button>
