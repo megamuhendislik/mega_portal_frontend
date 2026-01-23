@@ -217,18 +217,19 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* Top Row: Entitlement vs Effective Balance */}
+                    {/* Top Row: Main Balance and Entitlement */}
                     <div className="flex justify-between items-end mb-4 px-1">
                         <div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">TOPLAM HAK</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">ANA BAKİYE</span>
                             <span className="text-xl font-black text-slate-800">
-                                {monthlySummary?.annual_leave_entitlement || 0}
+                                {monthlySummary?.annual_leave_balance || 0}
                             </span>
                         </div>
                         <div className="text-right">
-                            <span className="text-[10px] font-bold text-emerald-600 uppercase block mb-0.5">KULLANILABİLİR</span>
-                            <span className="text-xl font-black text-emerald-600">
-                                {monthlySummary?.effective_balance !== undefined ? monthlySummary.effective_balance : (monthlySummary?.annual_leave_remaining || 0)}
+                            {/* HAK EDİŞE KALAN */}
+                            <span className="text-[10px] font-bold text-indigo-500 uppercase block mb-0.5">HAK EDİŞE KALAN</span>
+                            <span className="text-xl font-black text-indigo-600">
+                                {monthlySummary?.days_to_next_accrual !== undefined ? `${monthlySummary.days_to_next_accrual} Gün` : '-'}
                             </span>
                         </div>
                     </div>
@@ -236,15 +237,20 @@ const Dashboard = () => {
                     {/* Bottom Grid: Detailed Usage */}
                     <div className="grid grid-cols-2 gap-1 pt-3 border-t border-slate-50 text-center">
                         <div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">BU YIL</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">BU YIL KULLANILAN</span>
                             <span className="text-sm font-bold text-amber-600">
                                 {monthlySummary?.annual_leave_used_this_year || 0}
                             </span>
                         </div>
                         <div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">PLANLANAN</span>
-                            <span className="text-sm font-bold text-blue-500">
-                                {monthlySummary?.annual_leave_reserved || 0}
+                            {/* SIRADAKİ İZİN */}
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">SIRADAKİ İZİN</span>
+                            <span className="text-sm font-bold text-blue-500 truncate" title={monthlySummary?.next_leave_request ? `${monthlySummary.next_leave_request.start_date} (${monthlySummary.next_leave_request.total_days} Gün)` : 'Yok'}>
+                                {monthlySummary?.next_leave_request ? (
+                                    <>
+                                        {monthlySummary.next_leave_request.start_date.split('-').slice(1).reverse().join('.')} <span className='text-[10px] text-slate-400'>({monthlySummary.next_leave_request.total_days}g)</span>
+                                    </>
+                                ) : '-'}
                             </span>
                         </div>
                     </div>

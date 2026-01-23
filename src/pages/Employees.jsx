@@ -709,16 +709,16 @@ const StepLeave = ({ formData, handleChange }) => (
                 />
                 <InputField
                     type="number"
-                    label="Yıllık Hak Ediş (Oranı)"
+                    label="Yıllık Hak Edilen İzin Miktarı"
                     value={formData.annual_leave_accrual_rate}
                     onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
                     placeholder="14"
                     className="bg-white"
-                    helpText="Her yıl eklenecek gün sayısı (Varsayılan: 14)"
+                    helpText="Her yıl dönümünde eklenecek gün sayısı (Varsayılan: 14)"
                 />
                 <InputField
                     type="number"
-                    label="Top. Kullanılan (Tüm Zamanlar)"
+                    label="Kullanılan (Tüm Zamanlar)"
                     value={formData.completed_annual_leave_total}
                     onChange={e => handleChange('completed_annual_leave_total', e.target.value)}
                     placeholder="0"
@@ -736,12 +736,12 @@ const StepLeave = ({ formData, handleChange }) => (
                 />
                 <InputField
                     type="number"
-                    label="Avans Limiti (Gün)"
+                    label="Avans Limiti (Gelecek Haktan)"
                     value={formData.annual_leave_advance_limit}
                     onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
                     placeholder="0"
                     className="bg-white"
-                    helpText="Eksi bakiyeye düşme limiti (Örn: 10)"
+                    helpText="Gelecek yılın hakkından ne kadar kullanılabileceği (Kullanılırsa gelecek haktan düşer)."
                 />
             </div>
         </div>

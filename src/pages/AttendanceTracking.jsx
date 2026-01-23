@@ -300,18 +300,24 @@ const AttendanceTracking = () => {
                                                 <td className="p-4 text-slate-500 text-sm">{item.department}</td>
                                                 <td className="p-4 text-center">
                                                     {item.annual_leave_balance !== undefined ? (
-                                                        <div className="grid grid-cols-3 gap-1 text-[10px] w-[140px] mx-auto bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-                                                            <div className="flex flex-col text-center">
-                                                                <span className="text-slate-400 font-bold uppercase" title="Toplam Hak">Hak</span>
-                                                                <span className="text-slate-700 font-bold">{item.annual_leave_entitlement || 0}</span>
+                                                        <div className="flex flex-col gap-1 text-[10px] w-[180px] mx-auto bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                                            <div className="flex justify-between border-b border-slate-200 pb-1 mb-1">
+                                                                <span className="text-slate-400 font-bold uppercase">ANA BAKİYE</span>
+                                                                <span className="text-slate-700 font-bold">{item.annual_leave_balance}</span>
                                                             </div>
-                                                            <div className="flex flex-col text-center border-l border-slate-200 pl-1">
-                                                                <span className="text-blue-500 font-bold uppercase" title="Planlanan (Bekleyen + Gelecek)">Plan</span>
-                                                                <span className="text-blue-600 font-bold">{item.annual_leave_reserved || 0}</span>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-indigo-400 font-bold uppercase">HAK EDİŞE</span>
+                                                                <span className="text-indigo-600 font-bold">{item.days_to_next_accrual !== undefined ? `${item.days_to_next_accrual}g` : '-'}</span>
                                                             </div>
-                                                            <div className="flex flex-col text-center border-l border-slate-200 pl-1">
-                                                                <span className="text-emerald-500 font-bold uppercase" title="Kullanılabilir Bakiye">Net</span>
-                                                                <span className="text-emerald-600 font-bold">{item.effective_leave_balance !== undefined ? item.effective_leave_balance : (item.annual_leave_balance || 0)}</span>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-amber-500 font-bold uppercase">BU YIL</span>
+                                                                <span className="text-amber-600 font-bold">{item.annual_leave_used_this_year || 0}</span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center text-blue-500">
+                                                                <span className="font-bold uppercase">SONRAKİ</span>
+                                                                <span className="font-bold truncate max-w-[80px]" title={item.next_leave_request ? `${item.next_leave_request.start_date}` : ''}>
+                                                                    {item.next_leave_request ? item.next_leave_request.start_date.split('-').slice(1).reverse().join('.') : '-'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     ) : '-'}

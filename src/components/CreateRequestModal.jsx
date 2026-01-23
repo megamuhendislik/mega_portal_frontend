@@ -188,9 +188,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const reserved = user.annual_leave_reserved || 0;
         const effective = user.effective_balance !== undefined ? user.effective_balance : balance;
 
+        // New fields
+        const daysToAccrual = user.days_to_next_accrual;
+        const nextLeave = user.next_leave_request;
+        const usedThisYear = user.annual_leave_used_this_year || 0;
+
         const available = effective + limit;
         const lastLeave = user.last_annual_leave_date || null;
-        return { balance, held, limit, available, lastLeave, entitlement, used, reserved, effective };
+        return { balance, held, limit, available, lastLeave, entitlement, used, reserved, effective, daysToAccrual, nextLeave, usedThisYear };
     };
 
     // Helper to calculate duration in days
@@ -224,22 +229,28 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                         <div className="grid grid-cols-2 gap-2 text-center mb-2">
                             <div className="bg-white/60 p-2 rounded-lg">
-                                <span className="block text-xs text-slate-500 font-bold uppercase">TOPLAM HAK</span>
-                                <span className="block font-black text-slate-700 text-lg">{balance.entitlement}</span>
+                                <span className="block text-xs text-slate-500 font-bold uppercase">ANA BAKİYE</span>
+                                <span className="block font-black text-slate-700 text-lg">{balance.balance}</span>
                             </div>
-                            <div className={`p-2 rounded-lg ${isInsufficient ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-100 ring-1 ring-emerald-200'}`}>
-                                <span className={`block text-xs font-bold uppercase ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>KULLANILABİLİR</span>
-                                <span className={`block font-black text-lg ${isInsufficient ? 'text-red-700' : 'text-emerald-700'}`}>{balance.effective}</span>
+                            <div className={`p-2 rounded-lg bg-indigo-50 ring-1 ring-indigo-100`}>
+                                <span className={`block text-xs font-bold uppercase text-indigo-700`}>HAK EDİŞE KALAN</span>
+                                <span className={`block font-black text-lg text-indigo-700`}>{balance.daysToAccrual !== undefined ? `${balance.daysToAccrual} Gün` : '-'}</span>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-center text-xs">
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-2">
-                                <span className="text-slate-500 font-bold">KULLANILAN</span>
-                                <span className="text-amber-600 font-bold">{balance.used}</span>
+                                <span className="text-slate-500 font-bold">BU YIL KULLANILAN</span>
+                                <span className="text-amber-600 font-bold">{balance.usedThisYear}</span>
                             </div>
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-2">
-                                <span className="text-slate-500 font-bold">PLANLANAN</span>
-                                <span className="text-blue-600 font-bold">{balance.reserved}</span>
+                                <span className="text-slate-500 font-bold">SIRADAKİ İZİN</span>
+                                <span className="text-blue-600 font-bold">
+                                    {balance.nextLeave ? (
+                                        <span title={`${balance.nextLeave.start_date} (${balance.nextLeave.total_days} gün)`}>
+                                            {balance.nextLeave.start_date.split('-').slice(1).reverse().join('.')}
+                                        </span>
+                                    ) : '-'}
+                                </span>
                             </div>
                         </div>
 
