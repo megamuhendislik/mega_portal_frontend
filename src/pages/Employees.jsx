@@ -706,6 +706,7 @@ const StepLeave = ({ formData, handleChange }) => (
                     placeholder="0"
                     className="bg-white font-bold text-slate-700"
                     helpText="Şu an kullanılabilir bakiye (Devreden + Hak Edilen - Kullanılan)."
+                />
                 <InputField
                     type="date"
                     label="İşe Giriş Tarihi (Hak Ediş Bazı)"
