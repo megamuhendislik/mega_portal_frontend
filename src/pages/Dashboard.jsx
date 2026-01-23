@@ -205,55 +205,64 @@ const Dashboard = () => {
                     color="emerald"
                 />
 
-                {/* 4. Annual Leave StatCard (Advanced Logic) */}
+                {/* 4. Annual Leave StatCard (Revamp) */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-all duration-300 relative overflow-hidden">
-                    {/* Hover Decoration */}
-                    <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none bg-blue-600" />
-
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">YILLIK İZİN DURUMU</p>
                         <div className="p-2 rounded-lg bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
                             <Briefcase size={20} />
                         </div>
                     </div>
 
-                    {/* Top Row: Main Balance and Entitlement */}
-                    <div className="flex justify-between items-end mb-4 px-1">
+                    <div className="flex justify-between items-end mb-4">
                         <div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">ANA BAKİYE</span>
-                            <span className="text-xl font-black text-slate-800">
+                            <span className="text-3xl font-black text-slate-800 tracking-tight">
                                 {monthlySummary?.annual_leave_balance || 0}
                             </span>
+                            <span className="text-xs font-bold text-slate-400 ml-1">GÜN</span>
+                            <p className="text-[10px] text-slate-400 font-medium mt-1">
+                                Bu Yıl Kullanılan: <span className="text-amber-600 font-bold">{monthlySummary?.annual_leave_used_this_year || 0} Gün</span>
+                            </p>
                         </div>
+
                         <div className="text-right">
-                            {/* HAK EDİŞE KALAN */}
-                            <span className="text-[10px] font-bold text-indigo-500 uppercase block mb-0.5">HAK EDİŞE KALAN</span>
-                            <span className="text-xl font-black text-indigo-600">
-                                {monthlySummary?.days_to_next_accrual !== undefined ? `${monthlySummary.days_to_next_accrual} Gün` : '-'}
-                            </span>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">SIRADAKİ İZİN</span>
+                                {monthlySummary?.next_leave_request ? (
+                                    <div className="text-right">
+                                        <span className="block text-sm font-bold text-blue-600">
+                                            {monthlySummary.next_leave_request.start_date.split('-').slice(1).reverse().join('.')}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-slate-400">
+                                            {monthlySummary.next_leave_request.total_days} Gün
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-xs font-bold text-slate-300">-</span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Bottom Grid: Detailed Usage */}
-                    <div className="grid grid-cols-2 gap-1 pt-3 border-t border-slate-50 text-center">
-                        <div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">BU YIL KULLANILAN</span>
-                            <span className="text-sm font-bold text-amber-600">
-                                {monthlySummary?.annual_leave_used_this_year || 0}
-                            </span>
+                    {/* Progress Bar for Next Accrual */}
+                    {monthlySummary?.days_to_next_accrual !== undefined ? (
+                        <div className="pt-3 border-t border-slate-50">
+                            <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-[10px] font-bold text-indigo-500 uppercase">YENİ HAK EDİŞE</span>
+                                <span className="text-[10px] font-bold text-indigo-600">{monthlySummary.days_to_next_accrual} Gün</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className="h-full bg-indigo-500 rounded-full"
+                                    style={{ width: `${Math.max(0, Math.min(100, (365 - monthlySummary.days_to_next_accrual) / 365 * 100))}%` }}
+                                />
+                            </div>
                         </div>
-                        <div>
-                            {/* SIRADAKİ İZİN */}
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">SIRADAKİ İZİN</span>
-                            <span className="text-sm font-bold text-blue-500 truncate" title={monthlySummary?.next_leave_request ? `${monthlySummary.next_leave_request.start_date} (${monthlySummary.next_leave_request.total_days} Gün)` : 'Yok'}>
-                                {monthlySummary?.next_leave_request ? (
-                                    <>
-                                        {monthlySummary.next_leave_request.start_date.split('-').slice(1).reverse().join('.')} <span className='text-[10px] text-slate-400'>({monthlySummary.next_leave_request.total_days}g)</span>
-                                    </>
-                                ) : '-'}
-                            </span>
+                    ) : (
+                        <div className="pt-3 border-t border-slate-50">
+                            <span className="text-[10px] text-slate-400 italic">Hak ediş tarihi hesaplanamadı.</span>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
