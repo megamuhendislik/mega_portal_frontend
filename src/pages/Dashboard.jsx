@@ -74,10 +74,7 @@ const Dashboard = () => {
             ]);
 
             if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
-            if (monthRes.status === 'fulfilled') {
-                console.log("Dashboard Monthly Summary Data:", monthRes.value.data);
-                setMonthlySummary(monthRes.value.data);
-            }
+            if (monthRes.status === 'fulfilled') setMonthlySummary(monthRes.value.data);
             if (logsRes.status === 'fulfilled') setLogs(logsRes.value.data);
 
             // Requests
@@ -251,7 +248,7 @@ const Dashboard = () => {
                     {monthlySummary?.days_to_next_accrual !== undefined ? (
                         <div className="pt-3 border-t border-slate-50">
                             <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-[10px] font-bold text-indigo-500 uppercase">YENİ HAK EDİŞE</span>
+                                <span className="text-[10px] font-bold text-indigo-500 uppercase">YILLIK İZİN YENİLEMESİNE KALAN</span>
                                 <span className="text-[10px] font-bold text-indigo-600">{monthlySummary.days_to_next_accrual} Gün</span>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">

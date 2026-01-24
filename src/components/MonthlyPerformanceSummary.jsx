@@ -66,7 +66,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     entitlement: periodSummary.annual_leave_entitlement || 0,
                     used: periodSummary.annual_leave_used || 0,
                     limit: periodSummary.annual_leave_limit || 0,
-                    remaining: periodSummary.annual_leave_remaining || 0
+                    remaining: periodSummary.annual_leave_remaining || 0,
+                    daysToRenewal: periodSummary.days_to_next_accrual
                 }
             };
         }
@@ -176,6 +177,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
                 </div>
             </div>
+            {/* Annual Leave Info Card */}
+            {stats.annualLeave && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
+                    <span className="text-xs font-bold uppercase text-slate-500 mb-1">Yıllık İzin Yenilemesine Kalan</span>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-indigo-600">
+                            {stats.annualLeave.daysToRenewal !== undefined && stats.annualLeave.daysToRenewal !== null
+                                ? stats.annualLeave.daysToRenewal
+                                : '-'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">Gün</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

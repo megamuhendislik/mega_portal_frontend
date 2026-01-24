@@ -100,6 +100,26 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         }
     }, [selectedType]);
 
+    const [leaveStats, setLeaveStats] = useState(null);
+
+    useEffect(() => {
+        const fetchLeaveStats = async () => {
+            // Only fetch if leave type is selected and it looks like it might be annual leave (or just fetch always for LEAVE type)
+            if (selectedType === 'LEAVE' && leaveForm.request_type) {
+                const typeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+                if (typeObj && typeObj.code === 'ANNUAL_LEAVE') {
+                    try {
+                        const res = await api.get('/attendance/monthly_summary/');
+                        setLeaveStats(res.data);
+                    } catch (e) {
+                        console.error("Failed to fetch leave stats", e);
+                    }
+                }
+            }
+        };
+        fetchLeaveStats();
+    }, [selectedType, leaveForm.request_type, requestTypes]);
+
     const fetchUnclaimedOvertime = async () => {
         try {
             const res = await api.get('/attendance/overtime_requests/unclaimed/'); // Note: ensure URL matches backend ViewSet path
@@ -189,7 +209,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const effective = user.effective_balance !== undefined ? user.effective_balance : balance;
 
         // New fields
-        const daysToAccrual = user.days_to_next_accrual;
+        let daysToAccrual = user.days_to_next_accrual;
+
+        // Prefer live stats if available
+        if (leaveStats) {
+            daysToAccrual = leaveStats.days_to_next_accrual;
+        }
+
         const nextLeave = user.next_leave_request;
         const usedThisYear = user.annual_leave_used_this_year || 0;
 
@@ -233,7 +259,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 <span className="block font-black text-slate-700 text-lg">{balance.balance}</span>
                             </div>
                             <div className={`p-2 rounded-lg bg-indigo-50 ring-1 ring-indigo-100`}>
-                                <span className={`block text-xs font-bold uppercase text-indigo-700`}>HAK EDİŞE KALAN</span>
+                                <span className={`block text-xs font-bold uppercase text-indigo-700`}>YILLIK İZİN YENİLEMESİNE KALAN</span>
                                 <span className={`block font-black text-lg text-indigo-700`}>{balance.daysToAccrual !== undefined ? `${balance.daysToAccrual} Gün` : '-'}</span>
                             </div>
                         </div>
