@@ -15,7 +15,8 @@ import {
     CommandLineIcon,
     TrashIcon,
     KeyIcon,
-    SparklesIcon
+    SparklesIcon,
+    ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
 export default function SystemHealth() {
@@ -72,6 +73,7 @@ export default function SystemHealth() {
                         { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
+                        { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -100,6 +102,7 @@ export default function SystemHealth() {
                 {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
+                {activeTab === 'data_audit' && <DataAuditTab />}
             </div>
 
         </div>
@@ -107,6 +110,147 @@ export default function SystemHealth() {
 }
 
 // --- SUB COMPONENTS ---
+
+function DataAuditTab() {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [filter, setFilter] = useState('ALL'); // ALL, CRITICAL, WARNING
+
+    useEffect(() => {
+        loadAudit();
+    }, []);
+
+    const loadAudit = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/system/health-check/data_audit/');
+            setData(res.data);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredEmployees = data?.employees?.filter(emp => {
+        if (filter === 'ALL') return true;
+        return emp.status === filter;
+    }) || [];
+
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'CRITICAL': return <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">KRİTİK EKSİK</span>;
+            case 'WARNING': return <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold">UYARI</span>;
+            case 'OK': return <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">TAMAM</span>;
+            default: return null;
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <ShieldCheckIcon className="w-6 h-6 text-indigo-600" />
+                        Veri Denetimi ve Bütünlük Raporu
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Tüm çalışanların kritik veri alanlarını (İşe Giriş Tarihi, Email, TC vb.) tarar ve eksikleri raporlar.
+                    </p>
+                </div>
+                <button
+                    onClick={loadAudit}
+                    className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500"
+                    title="Yenile"
+                >
+                    <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-2 mb-4">
+                {['ALL', 'CRITICAL', 'WARNING', 'OK'].map(f => (
+                    <button
+                        key={f}
+                        onClick={() => setFilter(f)}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${filter === f ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                        {f === 'ALL' ? 'Tümü' : f}
+                    </button>
+                ))}
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                        <tr>
+                            <th className="px-4 py-3">Durum</th>
+                            <th className="px-4 py-3">Personel</th>
+                            <th className="px-4 py-3">Departman & Pozisyon</th>
+                            <th className="px-4 py-3">İşe Giriş Tarihi</th>
+                            <th className="px-4 py-3">Email & Kullanıcı</th>
+                            <th className="px-4 py-3">Eksik Alanlar</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {loading && (
+                            <tr><td colSpan="6" className="p-8 text-center text-gray-400">Veriler taranıyor...</td></tr>
+                        )}
+                        {!loading && filteredEmployees.length === 0 && (
+                            <tr><td colSpan="6" className="p-8 text-center text-gray-400">Kriterlere uygun kayıt bulunamadı.</td></tr>
+                        )}
+                        {!loading && filteredEmployees.map(emp => (
+                            <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3">{getStatusBadge(emp.status)}</td>
+                                <td className="px-4 py-3">
+                                    <div className="font-bold text-gray-800">{emp.name}</div>
+                                    <div className="text-xs text-gray-400 font-mono">{emp.employee_code}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className="text-xs">
+                                        <span className="block font-medium">{emp.department}</span>
+                                        <span className="text-gray-500">{emp.job_position}</span>
+                                    </div>
+                                </td>
+                                <td className={`px-4 py-3 font-mono text-xs ${!emp.hired_date ? 'text-red-600 font-bold bg-red-50' : 'text-gray-600'}`}>
+                                    {emp.hired_date || 'EKSİK'}
+                                </td>
+                                <td className="px-4 py-3 text-xs">
+                                    <div className={!emp.email ? 'text-red-600 font-bold' : ''}>{emp.email || 'NO EMAIL'}</div>
+                                    <div className={!emp.has_user ? 'text-amber-600' : 'text-green-600'}>
+                                        {emp.has_user ? `User: ${emp.username}` : 'No User Account'}
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    {emp.missing_fields.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {emp.missing_fields.map(f => (
+                                                <span key={f} className="bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-red-200">
+                                                    {f}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className="text-green-500 text-xs font-bold flex items-center gap-1">
+                                            <CheckCircleIcon className="w-4 h-4" /> Tamam
+                                        </span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="mt-4 text-xs text-gray-400 text-right">
+                Toplam {data?.total_scanned || 0} personel tarandı.
+            </div>
+        </div>
+    );
+}
+    );
+}
 
 function PermissionsTab() {
     const [report, setReport] = useState(null);
