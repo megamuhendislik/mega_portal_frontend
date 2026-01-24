@@ -117,7 +117,7 @@ const MainLayout = () => {
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'REPORT_VIEW_ALL' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'SYSTEM_MANAGE' },
-        { path: '/admin/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'VIEW_MEAL_ORDERS' },
+        { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'VIEW_MEAL_ORDERS' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'SYSTEM_MANAGE' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'SYSTEM_MANAGE' },
     ];

@@ -20,6 +20,7 @@ import SystemHealth from './pages/admin/SystemHealth';
 import AttendanceDebugger from './pages/admin/AttendanceDebugger';
 import FiscalCalendarSettings from './pages/admin/FiscalCalendarSettings';
 import ServiceControl from './pages/ServiceControl';
+import MealOrders from './pages/admin/MealOrders';
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -77,6 +78,7 @@ function App() {
             <Route path="reports" element={<ProtectedRoute requiredPermission="REPORT_VIEW_ALL"><Reports /></ProtectedRoute>} />
             <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><SystemHealth /></ProtectedRoute>} />
             <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><ServiceControl /></ProtectedRoute>} />
+            <Route path="meal-orders" element={<ProtectedRoute requiredPermission="VIEW_MEAL_ORDERS"><MealOrders /></ProtectedRoute>} />
             <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="ATTENDANCE_MANAGE_FISCAL"><FiscalCalendarSettings /></ProtectedRoute>} />
             <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
