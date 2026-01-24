@@ -50,15 +50,13 @@ const Requests = () => {
 
     const fetchData = async () => {
         try {
-            const [reqRes, typesRes, overtimeRes, mealRes, cardlessRes, incomingLeaveRes, incomingOvertimeRes, incomingCardlessRes] = await Promise.all([
+            const [reqRes, typesRes, overtimeRes, mealRes, cardlessRes, teamRes] = await Promise.all([
                 api.get('/leave/requests/'),
                 api.get('/leave/types/'),
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
-                api.get('/cardless-entry-requests/'), // Fetch List
-                api.get('/leave-requests/pending_approvals/'),
-                api.get('/overtime-requests/pending_approvals/'),
-                api.get('/cardless-entry-requests/pending_approvals/') // Fetch Pending
+                api.get('/cardless-entry-requests/'),
+                api.get('/attendance/team-requests/'), // Unified Team Requests
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);
@@ -66,15 +64,12 @@ const Requests = () => {
             setMealRequests(mealRes.data.results || mealRes.data);
             setCardlessEntryRequests(cardlessRes.data.results || cardlessRes.data);
 
-            // Merge Incoming
-            const leaves = (incomingLeaveRes.data.results || incomingLeaveRes.data).map(r => ({ ...r, type: 'LEAVE', uniqueId: `L_${r.id}` }));
-            const overtimes = (incomingOvertimeRes.data.results || incomingOvertimeRes.data).map(r => ({ ...r, type: 'OVERTIME', uniqueId: `O_${r.id}` }));
-            const cardless = (incomingCardlessRes.data.results || incomingCardlessRes.data).map(r => ({ ...r, type: 'CARDLESS_ENTRY', uniqueId: `C_${r.id}` }));
-
-            setIncomingRequests([...leaves, ...overtimes, ...cardless].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+            // Unified Incoming Requests from Team Endpoint
+            setIncomingRequests(teamRes.data || []);
 
         } catch (error) {
             console.error('Error fetching requests:', error);
+            message.error("Veriler yüklenirken hata oluştu.");
         } finally {
             setLoading(false);
         }
@@ -458,7 +453,7 @@ const Requests = () => {
                         { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_VIEW') || hasPermission('REQUEST_OVERTIME_APPROVE') },
                         { id: 'meal_requests', label: 'Yemek', show: hasPermission('REQUEST_MEAL_VIEW') || hasPermission('REQUEST_MEAL_APPROVE') },
                         { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_CARDLESS_ENTRY_VIEW') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') },
-                        { id: 'incoming', label: 'Onay Bekleyenler', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') },
+                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') || hasPermission('ATTENDANCE_VIEW_TEAM') },
                         { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_LEAVE_VIEW') || hasPermission('ATTENDANCE_VIEW_TEAM') }
                     ].filter(t => t.show).map(tab => (
                         <button

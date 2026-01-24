@@ -628,14 +628,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const renderMealForm = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
             <div className="bg-emerald-50 p-4 rounded-xl flex items-start gap-3 text-emerald-800 text-sm border border-emerald-100">
-                <Utensils className="shrink-0 mt-0.5" size={18} />
-                <p>Yemek talebi oluşturarak bugünkü yemek listesine adınızı yazdırabilirsiniz. Lütfen özel tercihiniz varsa belirtiniz.</p>
+                <CheckCircle2 className="shrink-0 mt-0.5" size={18} />
+                <div>
+                    <h4 className="font-bold">Otomatik Onay</h4>
+                    <p className="mt-1">Yemek talepleriniz için yönetici onayı gerekmez. Talebiniz direkt olarak idari işlere iletilecektir.</p>
+                </div>
             </div>
 
             <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Yemek Tercihi / Açıklama <span className="text-red-500">*</span></label>
                 <textarea
                     required
+                    rows="3"
+                    className="input-field"
+                    placeholder="Örn: Vejetaryen menü, Diyet kola vb."
+                    value={mealForm.description}
+                    onChange={e => setMealForm({ ...mealForm, description: e.target.value })}
                 ></textarea>
             </div>
         </div>
