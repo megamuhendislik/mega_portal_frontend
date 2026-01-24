@@ -74,7 +74,10 @@ const Dashboard = () => {
             ]);
 
             if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
-            if (monthRes.status === 'fulfilled') setMonthlySummary(monthRes.value.data);
+            if (monthRes.status === 'fulfilled') {
+                console.log("Dashboard Monthly Summary Data:", monthRes.value.data);
+                setMonthlySummary(monthRes.value.data);
+            }
             if (logsRes.status === 'fulfilled') setLogs(logsRes.value.data);
 
             // Requests
