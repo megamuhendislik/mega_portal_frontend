@@ -249,8 +249,7 @@ function DataAuditTab() {
         </div>
     );
 }
-    );
-}
+
 
 function PermissionsTab() {
     const [report, setReport] = useState(null);
