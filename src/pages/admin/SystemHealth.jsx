@@ -123,7 +123,7 @@ function DataAuditTab() {
     const loadAudit = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/system/health-check/data_audit/');
+            const res = await api.get('/system/health-check/data-audit/');
             setData(res.data);
         } catch (e) {
             console.error(e);
