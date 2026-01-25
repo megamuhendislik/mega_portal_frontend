@@ -22,7 +22,7 @@ const MealOrders = () => {
                 api.get(`/meal-orders/summary/?date=${dateStr}`)
             ]);
 
-            setData(listRes.data);
+            setData(listRes.data.results || listRes.data);
             setSummary(summaryRes.data); // Adjust if summary endpoint structure differs
         } catch (error) {
             message.error("Veriler yüklenirken hata oluştu.");
