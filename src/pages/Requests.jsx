@@ -56,7 +56,7 @@ const Requests = () => {
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
                 api.get('/cardless-entry-requests/'),
-                api.get('/attendance/team-requests/'), // Unified Team Requests
+                api.get('/team-requests/'), // Unified Team Requests
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);

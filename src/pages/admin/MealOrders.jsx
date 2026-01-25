@@ -18,8 +18,8 @@ const MealOrders = () => {
             const dateStr = date.format('YYYY-MM-DD');
             // Parallel Fetch
             const [listRes, summaryRes] = await Promise.all([
-                api.get(`/attendance/meal-orders/?date=${dateStr}`),
-                api.get(`/attendance/meal-orders/summary/?date=${dateStr}`)
+                api.get(`/meal-orders/?date=${dateStr}`),
+                api.get(`/meal-orders/summary/?date=${dateStr}`)
             ]);
 
             setData(listRes.data);
@@ -37,7 +37,7 @@ const MealOrders = () => {
 
     const handleMarkOrdered = async (id, currentStatus) => {
         try {
-            await api.post(`/attendance/meal-orders/${id}/mark_ordered/`, {
+            await api.post(`/meal-orders/${id}/mark_ordered/`, {
                 is_ordered: !currentStatus
             });
             message.success("Durum güncellendi.");
@@ -50,7 +50,7 @@ const MealOrders = () => {
     const handleSaveNote = async () => {
         if (!editingNote) return;
         try {
-            await api.post(`/attendance/meal-orders/${editingNote.id}/mark_ordered/`, {
+            await api.post(`/meal-orders/${editingNote.id}/mark_ordered/`, {
                 is_ordered: editingNote.is_ordered, // Keep status same
                 note: noteText
             });
