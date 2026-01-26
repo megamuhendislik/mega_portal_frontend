@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Filter, Download, ChevronRight, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Filter, Download, ChevronRight, Clock, AlertCircle, CheckCircle, Coffee } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import moment from 'moment';
 
 import useInterval from '../hooks/useInterval';
 
 const AttendanceTracking = () => {
+    const { hasPermission } = useAuth();
     const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
     const [matrixData, setMatrixData] = useState(null);
 
@@ -268,6 +270,18 @@ const AttendanceTracking = () => {
                                 </h3>
                             </div>
                         </div>
+
+                        {hasPermission('FEATURE_BREAK_ANALYSIS_VIEW_TEAM') && (
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                <div className="p-3 bg-fuchsia-100 text-fuchsia-600 rounded-lg">
+                                    <Coffee size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-slate-500 font-medium">Mola Analizi</p>
+                                    <h3 className="text-xl font-bold text-slate-800">Detaylar</h3>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Table */}
