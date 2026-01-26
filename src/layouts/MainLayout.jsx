@@ -108,19 +108,19 @@ const MainLayout = () => {
 
     const navItems = [
         { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: null },
-        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'PAGE_EMPLOYEES_VIEW' },
-        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'PAGE_ORG_CHART_VIEW' },
+        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'MENU_EMPLOYEES_VIEW' },
+        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'MENU_ORG_CHART_VIEW' },
 
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: null },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
-        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'PAGE_WORK_CALENDAR_VIEW' },
+        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'MENU_WORK_CALENDAR_VIEW' },
 
         // { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'ATTENDANCE_MANAGE_FISCAL' }, // Merged into Work Schedules
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
-        { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: ['REQUEST_ANNUAL_LEAVE_MANAGE', 'REQUEST_OVERTIME_MANAGE', 'REQUEST_CARDLESS_ENTRY_MANAGE', 'REQUEST_EXTERNAL_DUTY_MANAGE'] },
-        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS_VIEW' },
+        { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: ['REQUEST_LEAVE_APPROVE', 'REQUEST_OVERTIME_APPROVE', 'REQUEST_ENTRY_EXIT_APPROVE'] },
+        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'MENU_REPORTS_VIEW' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'SYSTEM_ADMIN_ACCESS' },
-        { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_TRACKING_VIEW' },
+        { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'MENU_MEAL_TRACKING_VIEW' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'SYSTEM_ADMIN_ACCESS' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'SYSTEM_ADMIN_ACCESS' },
     ];

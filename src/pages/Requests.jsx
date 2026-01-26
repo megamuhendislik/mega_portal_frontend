@@ -304,7 +304,7 @@ const Requests = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                             {submitted.map(req => (
                                 <RequestCard
-                            onViewDetails={handleViewDetails}
+                                    onViewDetails={handleViewDetails}
                                     key={req.id}
                                     request={{ ...req, onResubmit: () => handleResubmitOvertime(req) }}
                                     type="OVERTIME"
@@ -466,11 +466,11 @@ const Requests = () => {
                 <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {[
                         { id: 'my_requests', label: 'İzin Taleplerim', show: true },
-                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_MANAGE') },
-                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('PAGE_MEAL_TRACKING_VIEW') },
-                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_CARDLESS_ENTRY_MANAGE') },
-                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('REQUEST_ANNUAL_LEAVE_MANAGE') || hasPermission('REQUEST_OVERTIME_MANAGE') || hasPermission('REQUEST_CARDLESS_ENTRY_MANAGE') || hasPermission('REQUEST_EXTERNAL_DUTY_MANAGE') },
-                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_ANNUAL_LEAVE_MANAGE') || hasPermission('REQUEST_OVERTIME_MANAGE') || hasPermission('REQUEST_CARDLESS_ENTRY_MANAGE') || hasPermission('REQUEST_EXTERNAL_DUTY_MANAGE') }
+                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_APPROVE') },
+                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('MENU_MEAL_TRACKING_VIEW') },
+                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_ENTRY_EXIT_APPROVE') },
+                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_ENTRY_EXIT_APPROVE') },
+                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_ENTRY_EXIT_APPROVE') }
                     ].filter(t => t.show).map(tab => (
                         <button
                             key={tab.id}

@@ -762,35 +762,35 @@ const PERMISSION_CATEGORIES = [
         label: 'Menü Erişimi',
         icon: FileText,
         color: 'text-emerald-500',
-        filter: (p) => p.category === 'MENU' || p.code.startsWith('VIEW_SECTION_')
+        filter: (p) => p.category === 'MENU'
     },
     {
         id: 'requests',
         label: 'Talep & Mesai',
         icon: CalendarRange,
         color: 'text-blue-500',
-        filter: (p) => p.category === 'REQUEST' || p.code.startsWith('REQUEST_') || p.code.startsWith('ATTENDANCE_') || p.code.startsWith('CALENDAR_') || p.code.startsWith('WORK_SCHEDULE_')
-    },
-    {
-        id: 'hr',
-        label: 'İK & Organizasyon',
-        icon: UserPlus,
-        color: 'text-purple-500',
-        filter: (p) => p.category === 'HR_ORG' || p.code.startsWith('EMPLOYEE_') || p.code.startsWith('ORG_') || p.code.startsWith('DEPARTMENT_') || p.code.startsWith('JOB_POSITION_')
+        filter: (p) => p.category === 'REQUEST'
     },
     {
         id: 'accounting',
         label: 'Muhasebe',
         icon: Calculator,
         color: 'text-emerald-600',
-        filter: (p) => p.category === 'ACCOUNTING' || p.code.startsWith('SCHEDULE_') || p.code.startsWith('REPORT_')
+        filter: (p) => p.category === 'ACCOUNTING'
     },
     {
         id: 'system',
         label: 'Sistem & Admin',
         icon: Settings,
         color: 'text-amber-500',
-        filter: (p) => p.category === 'SYSTEM' || p.code.startsWith('SYSTEM_') || p.code.startsWith('SETTINGS_') || p.code.startsWith('ACCESS_') || p.code.startsWith('PROJECT_')
+        filter: (p) => p.category === 'SYSTEM'
+    },
+    {
+        id: 'features',
+        label: 'Özellikler',
+        icon: Briefcase,
+        color: 'text-purple-500',
+        filter: (p) => p.category === 'FEATURE'
     }
 ];
 
