@@ -413,9 +413,27 @@ const Profile = () => {
                                         </div>
 
                                         <div className="mt-8 pt-6 border-t border-indigo-50/50">
-                                            <h4 className="text-sm font-bold text-slate-900 mb-3">Tanımlı Vekiller</h4>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="text-sm font-bold text-slate-900">Tanımlı Vekiller</h4>
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="İsim ile ara..."
+                                                        className="px-3 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                                                        onChange={(e) => {
+                                                            const term = e.target.value.toLowerCase();
+                                                            const options = document.getElementById('substitutes-select').options;
+                                                            for (let i = 0; i < options.length; i++) {
+                                                                const text = options[i].text.toLowerCase();
+                                                                options[i].style.display = text.includes(term) ? 'block' : 'none';
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
                                             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-1">
                                                 <select
+                                                    id="substitutes-select"
                                                     multiple
                                                     value={formData.substitutes}
                                                     onChange={e => {
@@ -431,9 +449,15 @@ const Profile = () => {
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div className="flex justify-end items-center mt-3 gap-2 text-xs font-medium text-slate-400">
-                                                <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-sans">CTRL</span>
-                                                tuşuna basılı tutarak çoklu seçim yapabilirsiniz.
+                                            <div className="flex justify-between items-start mt-3 gap-4">
+                                                <p className="text-xs text-slate-500 leading-relaxed">
+                                                    <span className="font-bold text-slate-700">Not:</span> Sadece sistemde kayıtlı ve aktif çalışanları vekil tayin edebilirsiniz.
+                                                    Listede olmayan bir kişiye vekalet vermek için öncelikle Yönetim panelinden çalışan kaydı oluşturulmalıdır.
+                                                </p>
+                                                <div className="flex items-center gap-2 text-xs font-medium text-slate-400 shrink-0">
+                                                    <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-sans">CTRL</span>
+                                                    tuşuna basılı tutarak çoklu seçim yapabilirsiniz.
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
