@@ -106,8 +106,6 @@ const Profile = () => {
         { id: 'general', label: 'Genel Bilgiler', icon: User },
         { id: 'contact', label: 'İletişim & Adres', icon: MapPin },
         { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
-        { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
-        { id: 'preferences', label: 'Çalışma Tercihleri', icon: Clock },
         { id: 'security', label: 'Güvenlik', icon: Lock }
     ];
 
@@ -393,66 +391,6 @@ const Profile = () => {
                                             <div className="flex justify-end items-center mt-3 gap-2 text-xs font-medium text-slate-400">
                                                 <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-sans">CTRL</span>
                                                 tuşuna basılı tutarak çoklu seçim yapabilirsiniz.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* PREFERENCES - Re-styled */}
-                            {activeTab === 'preferences' && (
-                                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8 space-y-10">
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                                            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-500"><Clock size={18} /></div>
-                                            Mesai Bilgileri
-                                        </h3>
-                                        <div className="grid grid-cols-3 gap-6">
-                                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 text-center hover:bg-white hover:shadow-md transition-all duration-300">
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Başlangıç</div>
-                                                <div className="text-2xl font-mono font-bold text-slate-800">{user.employee?.shift_start || '09:00'}</div>
-                                            </div>
-                                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 text-center hover:bg-white hover:shadow-md transition-all duration-300">
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bitiş</div>
-                                                <div className="text-2xl font-mono font-bold text-slate-800">{user.employee?.shift_end || '18:00'}</div>
-                                            </div>
-                                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 text-center hover:bg-white hover:shadow-md transition-all duration-300">
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mola</div>
-                                                <div className="text-2xl font-mono font-bold text-slate-800">{user.employee?.daily_break_allowance || '60'} <span className="text-sm font-sans font-medium text-slate-500">dk</span></div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                                            <div className="p-1.5 bg-amber-50 rounded-lg text-amber-500"><LayoutDashboard size={18} /></div>
-                                            Yemek Molası Tercihleri
-                                        </h3>
-                                        <div className="flex gap-6 items-start p-6 bg-amber-50/50 rounded-2xl border border-amber-100/50">
-                                            <div className="grid grid-cols-2 gap-6 flex-1">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-bold text-slate-700">Mola Çıkış</label>
-                                                    <input
-                                                        type="time"
-                                                        value={formData.lunch_start}
-                                                        onChange={e => setFormData({ ...formData, lunch_start: e.target.value })}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all outline-none"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-bold text-slate-700">Mola Dönüş</label>
-                                                    <input
-                                                        type="time"
-                                                        value={formData.lunch_end}
-                                                        onChange={e => setFormData({ ...formData, lunch_end: e.target.value })}
-                                                        disabled={!isEditable}
-                                                        className={`w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all outline-none ${!isEditable ? 'bg-slate-50/50 text-slate-400' : ''}`}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="w-1/3 text-xs text-amber-800/80 leading-relaxed font-medium bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
-                                                <strong className="block mb-1 text-amber-900">Not:</strong>
-                                                Belirttiğiniz saatler tercih niteliğindedir. İş yoğunluğuna göre sistem veya yöneticiniz tarafından güncellenebilir.
                                             </div>
                                         </div>
                                     </div>
