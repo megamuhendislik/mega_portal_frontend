@@ -39,6 +39,7 @@ const EmployeeDetail = () => {
         hired_date: '', employee_code: '',
         primary_manager_ids: [], cross_manager_ids: [],
         is_active: true,
+        is_profile_editable: false,
 
         // Work Schedule
         work_schedule: '',
@@ -100,6 +101,7 @@ const EmployeeDetail = () => {
                 hired_date: emp.hired_date || '',
                 employee_code: emp.employee_code || '',
                 is_active: emp.is_active,
+                is_profile_editable: emp.is_profile_editable || false,
 
                 // Map managers to IDs
                 primary_manager_ids: managers.primary_managers.map(m => m.id),
@@ -374,6 +376,33 @@ const EmployeeDetail = () => {
 
                         {activeTab === 'settings' && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
+                                {/* Profile Edit Permission (New) */}
+                                {canEditSensitive && (
+                                    <div className={`card p-6 border ${formData.is_profile_editable ? 'border-green-200 bg-green-50/30' : 'border-slate-200'}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                                    <Settings size={20} className={formData.is_profile_editable ? "text-green-600" : "text-slate-400"} />
+                                                    Profil Düzenleme İzni
+                                                </h3>
+                                                <p className="text-sm text-slate-500 mt-1">
+                                                    Bu izin açıldığında, kullanıcı <b>tek seferlik</b> olarak kendi şifresini ve kişisel bilgilerini (adres, telefon vb.) düzenleyebilir.
+                                                    işlem sonrası izin otomatik olarak kapanacaktır.
+                                                </p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={formData.is_profile_editable}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, is_profile_editable: e.target.checked }))}
+                                                />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Password Change Section (Protected) */}
                                 {canChangePassword && (
                                     <div className="card p-6 border border-yellow-200 bg-yellow-50/30">

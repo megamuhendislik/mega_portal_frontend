@@ -30,6 +30,10 @@ const Profile = () => {
         confirm_password: ''
     });
 
+    // Check edit permission
+    const isEditable = user?.employee?.is_profile_editable || false;
+    // Proxy (Substitutes) is ALWAYS editable.
+
     useEffect(() => {
         if (user && user.employee) {
             const subs = user.employee.substitutes?.map(s => (typeof s === 'object' ? s.id : s)) || [];
@@ -78,6 +82,10 @@ const Profile = () => {
                     old_password: formData.old_password,
                     new_password: formData.new_password
                 });
+                setSuccessMessage('Şifreniz başarıyla değiştirildi. Güvenlik nedeniyle profil düzenleme izniniz kapatılmıştır.');
+                setFormData({ ...formData, old_password: '', new_password: '', confirm_password: '' });
+                // Force reload or re-auth might be needed if user object needs refresh, but for now reload is safe
+                setTimeout(() => window.location.reload(), 2000);
                 setSuccessMessage('Şifreniz başarıyla değiştirildi.');
                 setFormData({ ...formData, old_password: '', new_password: '', confirm_password: '' });
                 setTimeout(() => setSuccessMessage(''), 2000);
@@ -157,6 +165,27 @@ const Profile = () => {
                             Bu bölümdeki bilgileri aşağıdan görüntüleyebilir veya düzenleyebilirsiniz.
                         </p>
                     </div>
+
+                    {!isEditable && activeTab !== 'substitutes' && activeTab !== 'general' && (
+                        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 text-blue-800 text-sm">
+                            <Shield size={20} className="shrink-0" />
+                            <div>
+                                <h4 className="font-bold">Profiliniz Kilitli</h4>
+                                <p>Kişisel bilgilerinizi ve şifrenizi güncellemek için Yöneticinizden veya İK departmanından <b>geçici düzenleme izni</b> talep etmeniz gerekmektedir.</p>
+                                <p className="mt-1 text-xs opacity-70">Vekalet yönetimi her zaman açıktır.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {isEditable && activeTab !== 'substitutes' && activeTab !== 'general' && (
+                        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3 text-green-800 text-sm animate-pulse-slow">
+                            <Settings size={20} className="shrink-0" />
+                            <div>
+                                <h4 className="font-bold">Düzenleme Modu Aktif</h4>
+                                <p>Şu anda bilgilerinizi güncelleyebilirsiniz. İşlem sonrası (veya şifre değişiminden sonra) mod otomatik olarak kapanacaktır.</p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         {/* GENERAL TAB */}
@@ -238,6 +267,7 @@ const Profile = () => {
                                                 onChange={e => setFormData({ ...formData, phone_secondary: e.target.value })}
                                                 className="bg-transparent w-full text-slate-700 outline-none font-medium"
                                                 placeholder="05..."
+                                                disabled={!isEditable}
                                             />
                                         </div>
                                     </div>
@@ -247,8 +277,9 @@ const Profile = () => {
                                         <textarea
                                             value={formData.address}
                                             onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 resize-none h-24"
+                                            className={`w-full bg-white border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-700 resize-none h-24 ${!isEditable ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                                             placeholder="Açık adresiniz..."
+                                            disabled={!isEditable}
                                         />
                                     </div>
                                 </div>
@@ -264,7 +295,8 @@ const Profile = () => {
                                             <input
                                                 value={formData.emergency_contact_name}
                                                 onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                                className={`w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700 ${!isEditable ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                                                disabled={!isEditable}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -272,7 +304,8 @@ const Profile = () => {
                                             <input
                                                 value={formData.emergency_contact_phone}
                                                 onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                                className={`w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700 ${!isEditable ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                                                disabled={!isEditable}
                                             />
                                         </div>
                                     </div>
@@ -362,7 +395,8 @@ const Profile = () => {
                                                 type="time"
                                                 value={formData.lunch_end}
                                                 onChange={e => setFormData({ ...formData, lunch_end: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700"
+                                                className={`w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700 ${!isEditable ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                                                disabled={!isEditable}
                                             />
                                         </div>
                                     </div>
@@ -398,8 +432,11 @@ const Profile = () => {
                                             type="password"
                                             value={formData.old_password}
                                             onChange={e => setFormData({ ...formData, old_password: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-medium text-slate-700"
+                                            className={`w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-medium text-slate-700 ${!isEditable ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`}
                                             placeholder="••••••••"
+                                            disabled={!isEditable}
+                                        />
+                                        placeholder="••••••••"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -428,18 +465,22 @@ const Profile = () => {
                     </div>
 
                     {/* Action Bar (Only for editable tabs) */}
-                    {activeTab !== 'general' && (
+                    {activeTab !== 'general' && ( // Proxy tab (substitutes) has its own state but share this save button? No, substitutes updates via handleSave too.
+                        // We must ensure handleSave works for substitutes even if isEditable is false.
                         <div className="mt-6 flex items-center justify-between">
                             <p className="text-sm text-slate-500">
                                 {successMessage && <span className="text-emerald-600 font-bold flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> {successMessage}</span>}
                             </p>
-                            <button
-                                onClick={handleSave}
-                                disabled={loading}
-                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                            >
-                                {loading ? 'Kaydediliyor...' : <><Save size={18} /> Değişiklikleri Kaydet</>}
-                            </button>
+
+                            {(isEditable || activeTab === 'substitutes') && (
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className={`px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2`}
+                                >
+                                    {loading ? 'Kaydediliyor...' : <><Save size={18} /> Değişiklikleri Kaydet</>}
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
