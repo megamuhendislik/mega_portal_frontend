@@ -520,19 +520,43 @@ const EmployeeDetail = () => {
 
                                     <div>
                                         <h4 className="font-semibold text-slate-700 mb-3">Ekstra Yetkiler</h4>
-                                        <div className="h-64 overflow-y-auto border rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-2">
-                                            {allPermissions.map(perm => (
-                                                <label key={perm.id} className={`flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.direct_permissions.includes(perm.id)}
-                                                        onChange={() => toggleArrayItem('direct_permissions', perm.id)}
-                                                        disabled={!canManageRoles} // Granular check
-                                                        className="rounded text-orange-600 focus:ring-orange-500"
-                                                    />
-                                                    <span className="text-sm" title={perm.description}>{perm.name} <span className="text-xs text-slate-400">({perm.code})</span></span>
-                                                </label>
-                                            ))}
+                                        <div className="h-80 overflow-y-auto border rounded-lg p-4 bg-slate-50 space-y-4 custom-scrollbar">
+                                            {['MENU', 'REQUEST', 'FEATURE', 'SYSTEM'].map(cat => {
+                                                const catPerms = allPermissions.filter(p => p.category === cat);
+                                                if (catPerms.length === 0) return null;
+
+                                                let catLabel = 'Diğer';
+                                                let catColor = 'text-slate-500';
+                                                if (cat === 'MENU') { catLabel = 'Menü & Sayfa'; catColor = 'text-emerald-600'; }
+                                                if (cat === 'REQUEST') { catLabel = 'Talep & Mesai'; catColor = 'text-blue-600'; }
+                                                if (cat === 'FEATURE') { catLabel = 'Özellikler'; catColor = 'text-purple-600'; }
+                                                if (cat === 'SYSTEM') { catLabel = 'Sistem & Admin'; catColor = 'text-amber-600'; }
+
+                                                return (
+                                                    <div key={cat}>
+                                                        <h5 className={`text-xs font-bold uppercase tracking-wider mb-2 ${catColor}border-b border-slate-200 pb-1`}>
+                                                            {catLabel}
+                                                        </h5>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                            {catPerms.map(perm => (
+                                                                <label key={perm.id} className={`flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-slate-200 ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={formData.direct_permissions.includes(perm.id)}
+                                                                        onChange={() => toggleArrayItem('direct_permissions', perm.id)}
+                                                                        disabled={!canManageRoles}
+                                                                        className="rounded text-orange-600 focus:ring-orange-500"
+                                                                    />
+                                                                    <div>
+                                                                        <span className="text-sm font-medium block text-slate-700">{perm.name}</span>
+                                                                        <span className="text-[10px] text-slate-400 font-mono">{perm.code}</span>
+                                                                    </div>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>

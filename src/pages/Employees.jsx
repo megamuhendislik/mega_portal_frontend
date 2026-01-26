@@ -759,25 +759,17 @@ const StepLeave = ({ formData, handleChange }) => (
 const PERMISSION_CATEGORIES = [
     {
         id: 'menu',
-        label: 'Menü Erişimi',
+        label: 'Menü & Sayfa Erişimi',
         icon: FileText,
         color: 'text-emerald-500',
         filter: (p) => p.category === 'MENU'
     },
     {
         id: 'requests',
-        label: 'Talep & Mesai',
+        label: 'Talep & Mesai Yönetimi',
         icon: CalendarRange,
         color: 'text-blue-500',
         filter: (p) => p.category === 'REQUEST'
-    },
-
-    {
-        id: 'system',
-        label: 'Sistem & Admin',
-        icon: Settings,
-        color: 'text-amber-500',
-        filter: (p) => p.category === 'SYSTEM'
     },
     {
         id: 'features',
@@ -785,6 +777,13 @@ const PERMISSION_CATEGORIES = [
         icon: Briefcase,
         color: 'text-purple-500',
         filter: (p) => p.category === 'FEATURE'
+    },
+    {
+        id: 'system',
+        label: 'Sistem & Admin',
+        icon: Settings,
+        color: 'text-amber-500',
+        filter: (p) => p.category === 'SYSTEM'
     }
 ];
 
