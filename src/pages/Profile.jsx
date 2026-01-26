@@ -45,6 +45,8 @@ const Profile = () => {
                 emergency_contact_phone: user.employee.emergency_contact_phone || '',
                 lunch_start: user.employee.lunch_start || '',
                 lunch_end: user.employee.lunch_end || '',
+                tc_number: user.employee.tc_number || '',
+                birth_date: user.employee.birth_date || '',
                 substitutes: subs
             });
         }
@@ -242,6 +244,47 @@ const Profile = () => {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 border-t border-slate-100 pt-8">
                                             <div className="space-y-6">
+                                                {/* TC NO - Editable if isEditable */}
+                                                <div className="group">
+                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">TC Kimlik No</label>
+                                                    <div className="relative">
+                                                        {isEditable ? (
+                                                            <input
+                                                                type="text"
+                                                                maxLength={11}
+                                                                value={formData.tc_number || ''}
+                                                                onChange={e => setFormData({ ...formData, tc_number: e.target.value })}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                                                            />
+                                                        ) : (
+                                                            <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><Shield size={16} /></div>
+                                                                {user.employee?.tc_number ? '***********' : '-'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Birth Date - Editable if isEditable */}
+                                                <div className="group">
+                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">Doğum Tarihi</label>
+                                                    <div className="relative">
+                                                        {isEditable ? (
+                                                            <input
+                                                                type="date"
+                                                                value={formData.birth_date || ''}
+                                                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                                                            />
+                                                        ) : (
+                                                            <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><Calendar size={16} /></div>
+                                                                {user.employee?.birth_date || '-'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 <div className="group">
                                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">E-posta Adresi</label>
                                                     <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
