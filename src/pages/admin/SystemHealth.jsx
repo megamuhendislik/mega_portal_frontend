@@ -254,10 +254,11 @@ function DataAuditTab() {
 function PermissionsTab() {
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [viewMode, setViewMode] = useState('health'); // 'health' or 'matrix'
 
     useEffect(() => {
-        runScan();
-    }, []);
+        if (viewMode === 'health') runScan();
+    }, [viewMode]);
 
     const runScan = async () => {
         setLoading(true);
@@ -271,11 +272,43 @@ function PermissionsTab() {
         }
     };
 
-    if (loading && !report) return <div className="p-12 text-center text-gray-500 animate-pulse">Yetki taraması yapılıyor...</div>;
-
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
-            {/* LEFT: STATUS CARD */}
+        <div className="space-y-6">
+            <div className="flex justify-center bg-gray-100 p-1 rounded-lg w-fit mx-auto">
+                <button
+                    onClick={() => setViewMode('health')}
+                    className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'health' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Sağlık Kontrolü
+                </button>
+                <button
+                    onClick={() => setViewMode('matrix')}
+                    className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'matrix' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Detaylı Yetki Matrisi
+                </button>
+            </div>
+
+            {viewMode === 'health' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
+                    {/* LEFT: STATUS CARD - Existing Logic */}
+                    {loading && !report ? (
+                        <div className="col-span-2 p-12 text-center text-gray-500 animate-pulse">Yetki taraması yapılıyor...</div>
+                    ) : (
+                        <PermissionHealthView report={report} loading={loading} runScan={runScan} />
+                    )}
+                </div>
+            ) : (
+                <PermissionMatrixView />
+            )}
+        </div>
+    );
+}
+
+function PermissionHealthView({ report, loading, runScan }) {
+    if (!report) return null;
+    return (
+        <>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
@@ -404,6 +437,180 @@ function PermissionsTab() {
                     </div>
                 )}
             </div>
+        </>
+    );
+}
+
+function PermissionMatrixView() {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [activeSection, setActiveSection] = useState('users'); // users, roles, perms
+
+    useEffect(() => {
+        fetchMatrix();
+    }, []);
+
+    const fetchMatrix = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/system/health-check/permission-matrix/');
+            setData(res.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading && !data) return <div className="p-12 text-center text-gray-500 animate-pulse">Matris verisi yükleniyor...</div>;
+    if (!data) return null;
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-300">
+            {/* View Selector */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
+                <button
+                    onClick={() => setActiveSection('users')}
+                    className={`flex-1 p-3 rounded-lg border-2 font-bold text-sm transition-all ${activeSection === 'users' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-transparent hover:bg-gray-50 text-gray-500'}`}
+                >
+                    Kullanıcı Yetki Listesi
+                </button>
+                <button
+                    onClick={() => setActiveSection('roles')}
+                    className={`flex-1 p-3 rounded-lg border-2 font-bold text-sm transition-all ${activeSection === 'roles' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-transparent hover:bg-gray-50 text-gray-500'}`}
+                >
+                    Rol Tanımları
+                </button>
+                <button
+                    onClick={() => setActiveSection('perms')}
+                    className={`flex-1 p-3 rounded-lg border-2 font-bold text-sm transition-all ${activeSection === 'perms' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-transparent hover:bg-gray-50 text-gray-500'}`}
+                >
+                    Tüm Yetki Havuzu
+                </button>
+            </div>
+
+            {/* SECTIONS */}
+            {activeSection === 'users' && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 className="font-bold text-gray-800">Kullanıcı Bazlı Yetki Durumu</h3>
+                        <span className="text-xs text-gray-500">{data.users.length} Kullanıcı</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                                <tr>
+                                    <th className="px-4 py-3">Kullanıcı</th>
+                                    <th className="px-4 py-3">Departman / Pozisyon</th>
+                                    <th className="px-4 py-3">Atanan Roller</th>
+                                    <th className="px-4 py-3">Yetki Sayısı</th>
+                                    <th className="px-4 py-3">Statü</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {data.users.map(u => (
+                                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 py-3">
+                                            <div className="font-bold text-gray-800">{u.full_name}</div>
+                                            <div className="text-xs text-gray-400 font-mono">@{u.username}</div>
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-gray-600">
+                                            <div>{u.department}</div>
+                                            <div className="text-gray-400">{u.job_position}</div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-wrap gap-1">
+                                                {u.roles.map(r => (
+                                                    <span key={r} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold">{r}</span>
+                                                ))}
+                                                {u.roles.length === 0 && <span className="text-gray-400 text-xs italic">Rol Yok</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`font-mono font-bold ${u.is_superuser ? 'text-purple-600' : 'text-gray-700'}`}>
+                                                {u.perm_count}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {u.is_superuser && (
+                                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold border border-purple-200">
+                                                    SUPERUSER
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeSection === 'roles' && (
+                <div className="grid grid-cols-1 gap-6">
+                    {data.roles.map(role => (
+                        <div key={role.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="p-4 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
+                                <div>
+                                    <h3 className="font-bold text-purple-900 text-lg">{role.name}</h3>
+                                    <div className="text-xs text-purple-600 font-mono">{role.code} (Level: {role.level})</div>
+                                </div>
+                                <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-purple-700 shadow-sm border border-purple-100">
+                                    {role.permissions.length} Yetki
+                                </span>
+                            </div>
+                            <div className="p-4">
+                                <div className="flex flex-wrap gap-2">
+                                    {role.permissions.map(p => (
+                                        <span key={p} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs border border-gray-200 font-mono">
+                                            {p}
+                                        </span>
+                                    ))}
+                                    {role.permissions.length === 0 && <span className="text-gray-400 italic text-sm">Bu role tanımlı yetki yok.</span>}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {activeSection === 'perms' && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-emerald-50 flex justify-between items-center">
+                        <h3 className="font-bold text-emerald-900">Tüm Yetki Tanımları (Permission Definitions)</h3>
+                        <span className="text-xs text-emerald-700">{data.permissions.length} Adet</span>
+                    </div>
+                    <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200 sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-4 py-3 bg-gray-50">Kategori</th>
+                                    <th className="px-4 py-3 bg-gray-50">Kod (Code)</th>
+                                    <th className="px-4 py-3 bg-gray-50">İsim</th>
+                                    <th className="px-4 py-3 bg-gray-50">Açıklama</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {data.permissions.map(p => (
+                                    <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 py-2">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border
+                                                ${p.category === 'MENU' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                    p.category === 'REQUEST' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                        'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                                                {p.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2 font-mono text-indigo-600 text-xs">{p.code}</td>
+                                        <td className="px-4 py-2 font-medium text-gray-700">{p.name}</td>
+                                        <td className="px-4 py-2 text-gray-500 text-xs">{p.description}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
