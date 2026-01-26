@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard } from 'lucide-react';
 
-const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming }) => {
+const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming, onViewDetails }) => {
     // Helper to format dates
     const formatDate = (dateString) => {
         if (!dateString) return '-';
@@ -54,7 +54,10 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
     const canAction = isIncoming && (request.status === 'PENDING' || request.status === 'REJECTED');
 
     return (
-        <div className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 relative overflow-hidden flex flex-col h-full">
+        <div
+            onClick={() => onViewDetails && onViewDetails(request, type)}
+            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 relative overflow-hidden flex flex-col h-full cursor-pointer"
+        >
             {/* Top Status Line */}
             <div className={`absolute top-0 left-0 w-full h-1 ${getStatusColor(request.status)}`} />
 

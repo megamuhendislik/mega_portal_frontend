@@ -4,6 +4,7 @@ import { Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, C
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import CreateRequestModal from '../components/CreateRequestModal';
+import RequestDetailModal from '../components/RequestDetailModal';
 
 import useSmartPolling from '../hooks/useSmartPolling';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +24,9 @@ const Requests = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
     const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [selectedRequestType, setSelectedRequestType] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -109,6 +113,12 @@ const Requests = () => {
             data: req
         });
         setShowCreateModal(true);
+    };
+
+    const handleViewDetails = (request, type) => {
+        setSelectedRequest(request);
+        setSelectedRequestType(type);
+        setShowDetailModal(true);
     };
 
     const handleEditOvertimeSubmit = async (e) => {
@@ -238,6 +248,7 @@ const Requests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {requests.map(req => (
                         <RequestCard
+                            onViewDetails={handleViewDetails}
                             key={req.id}
                             request={{ ...req, leave_type_name: requestTypes.find(t => t.id === req.request_type)?.name }}
                             type="LEAVE"
@@ -293,6 +304,7 @@ const Requests = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                             {submitted.map(req => (
                                 <RequestCard
+                            onViewDetails={handleViewDetails}
                                     key={req.id}
                                     request={{ ...req, onResubmit: () => handleResubmitOvertime(req) }}
                                     type="OVERTIME"
@@ -311,6 +323,7 @@ const Requests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {mealRequests.map(req => (
                         <RequestCard
+                            onViewDetails={handleViewDetails}
                             key={req.id}
                             request={req}
                             type="MEAL"
@@ -326,6 +339,7 @@ const Requests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {cardlessEntryRequests.map(req => (
                         <RequestCard
+                            onViewDetails={handleViewDetails}
                             key={req.id}
                             request={req}
                             type="CARDLESS_ENTRY"
@@ -342,6 +356,7 @@ const Requests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {incomingRequests.map(req => (
                         <RequestCard
+                            onViewDetails={handleViewDetails}
                             key={req.uniqueId || req.id}
                             request={{
                                 ...req,
@@ -363,6 +378,7 @@ const Requests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {teamHistoryRequests.map(req => (
                         <RequestCard
+                            onViewDetails={handleViewDetails}
                             key={req.id}
                             request={{
                                 ...req,
@@ -450,11 +466,11 @@ const Requests = () => {
                 <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {[
                         { id: 'my_requests', label: 'İzin Taleplerim', show: true },
-                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_VIEW') || hasPermission('REQUEST_OVERTIME_APPROVE') },
-                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('REQUEST_MEAL_VIEW') || hasPermission('REQUEST_MEAL_APPROVE') },
-                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_CARDLESS_ENTRY_VIEW') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') },
-                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_CARDLESS_ENTRY_APPROVE') || hasPermission('ATTENDANCE_VIEW_TEAM') },
-                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_LEAVE_VIEW') || hasPermission('ATTENDANCE_VIEW_TEAM') }
+                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_MANAGE') },
+                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('PAGE_MEAL_TRACKING_VIEW') },
+                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_CARDLESS_ENTRY_MANAGE') },
+                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('REQUEST_ANNUAL_LEAVE_MANAGE') || hasPermission('REQUEST_OVERTIME_MANAGE') || hasPermission('REQUEST_CARDLESS_ENTRY_MANAGE') || hasPermission('REQUEST_EXTERNAL_DUTY_MANAGE') },
+                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_ANNUAL_LEAVE_MANAGE') || hasPermission('REQUEST_OVERTIME_MANAGE') || hasPermission('REQUEST_CARDLESS_ENTRY_MANAGE') || hasPermission('REQUEST_EXTERNAL_DUTY_MANAGE') }
                     ].filter(t => t.show).map(tab => (
                         <button
                             key={tab.id}
@@ -529,6 +545,19 @@ const Requests = () => {
                 </div>,
                 document.body
             )}
+
+            {/* Request Detail Modal */}
+            <RequestDetailModal
+                isOpen={showDetailModal}
+                onClose={() => {
+                    setShowDetailModal(false);
+                    setSelectedRequest(null);
+                    setSelectedRequestType(null);
+                }}
+                request={selectedRequest}
+                requestType={selectedRequestType}
+                onUpdate={fetchData}
+            />
         </div>
     );
 };

@@ -40,7 +40,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         reason: '',
         destination: '',
         contact_phone: '',
-        notify_substitutes: false
+        send_to_substitute: false
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
@@ -50,7 +50,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         end_time: '',
 
         reason: '',
-        notify_substitutes: false
+        send_to_substitute: false
     });
 
     const [mealForm, setMealForm] = useState({
@@ -65,14 +65,16 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         destination: '',
         trip_type: 'NONE', // INNER_CITY, OUT_OF_CITY
         budget_amount: '',
-        transport_description: ''
+        transport_description: '',
+        send_to_substitute: false
     });
 
     const [cardlessEntryForm, setCardlessEntryForm] = useState({
         date: new Date().toISOString().split('T')[0],
         check_in_time: '',
         check_out_time: '',
-        reason: ''
+        reason: '',
+        send_to_substitute: false
     });
 
     useEffect(() => {
@@ -89,7 +91,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 end_time: '',
 
                 reason: '',
-                notify_substitutes: false
+                send_to_substitute: false
             });
         }
     }, [isOpen]);
@@ -153,7 +155,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         end_time: overtimeForm.end_time,
                         reason: overtimeForm.reason,
                         status: 'PENDING',
-                        notify_substitutes: overtimeForm.notify_substitutes
+                        send_to_substitute: overtimeForm.send_to_substitute
                     });
                 } else {
                     // Create New Manual Request
@@ -382,13 +384,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
                     <input
                         type="checkbox"
-                        id="notify_subs_leave"
-                        checked={leaveForm.notify_substitutes}
-                        onChange={e => setLeaveForm({ ...leaveForm, notify_substitutes: e.target.checked })}
+                        id="send_to_sub_leave"
+                        checked={leaveForm.send_to_substitute}
+                        onChange={e => setLeaveForm({ ...leaveForm, send_to_substitute: e.target.checked })}
                         className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                     />
-                    <label htmlFor="notify_subs_leave" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
-                        İlgili Yöneticinin Vekillerini de Bilgilendir
+                    <label htmlFor="send_to_sub_leave" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                        Vekil yöneticiye de gönder
                     </label>
                 </div>
             </div >
@@ -537,7 +539,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                                 start_time: u.start_time ? u.start_time.substring(0, 5) : '',
                                                 end_time: u.end_time ? u.end_time.substring(0, 5) : '',
                                                 reason: u.reason || '',
-                                                notify_substitutes: false
+                                                send_to_substitute: false
                                             });
                                         }}
                                         className="w-4 h-4 text-amber-600 border-slate-300 focus:ring-amber-500"
@@ -613,13 +615,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             <div className="flex items-center gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-100 transition-all hover:bg-amber-50">
                 <input
                     type="checkbox"
-                    id="notify_subs_ot"
-                    checked={overtimeForm.notify_substitutes}
-                    onChange={e => setOvertimeForm({ ...overtimeForm, notify_substitutes: e.target.checked })}
+                    id="send_to_sub_ot"
+                    checked={overtimeForm.send_to_substitute}
+                    onChange={e => setOvertimeForm({ ...overtimeForm, send_to_substitute: e.target.checked })}
                     className="w-5 h-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
                 />
-                <label htmlFor="notify_subs_ot" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
-                    İlgili Yöneticinin Vekillerini de Bilgilendir
+                <label htmlFor="send_to_sub_ot" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    Vekil yöneticiye de gönder
                 </label>
             </div>
         </div >
@@ -744,6 +746,81 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none font-medium text-slate-700"
                     placeholder="Uçak, otobüs, otel vb. detayları..."
                 ></textarea>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-purple-50\50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
+                <input
+                    type="checkbox"
+                    id="send_to_sub_duty"
+                    checked={externalDutyForm.send_to_substitute}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, send_to_substitute: e.target.checked })}
+                    className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                />
+                <label htmlFor="send_to_sub_duty" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    Vekil yöneticiye de gönder
+                </label>
+            </div>
+        </div>
+    );
+
+    const renderCardlessEntryForm = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
+                <input
+                    required
+                    type="date"
+                    value={cardlessEntryForm.date}
+                    onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, date: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Giriş Saati <span className="text-red-500">*</span></label>
+                    <input
+                        required
+                        type="time"
+                        value={cardlessEntryForm.check_in_time}
+                        onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_in_time: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Çıkış Saati</label>
+                    <input
+                        type="time"
+                        value={cardlessEntryForm.check_out_time}
+                        onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_out_time: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
+                <textarea
+                    required
+                    rows="3"
+                    value={cardlessEntryForm.reason}
+                    onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, reason: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    placeholder="Kartsız giriş gerekçesini belirtiniz..."
+                ></textarea>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-purple-50\50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
+                <input
+                    type="checkbox"
+                    id="send_to_sub_cardless"
+                    checked={cardlessEntryForm.send_to_substitute}
+                    onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, send_to_substitute: e.target.checked })}
+                    className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                />
+                <label htmlFor="send_to_sub_cardless" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    Vekil yöneticiye de gönder
+                </label>
             </div>
         </div>
     );

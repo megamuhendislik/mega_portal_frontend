@@ -304,14 +304,14 @@ const Attendance = () => {
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[450px]">
                             {/* Stacked Attendance Chart (8 Cols) */}
                             {/* Stacked Attendance Chart */}
-                            <div className={`${hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS') ? 'xl:col-span-8' : 'xl:col-span-12'} h-full transition-all duration-300`}>
+                            <div className={`${hasPermission('FEATURE_BREAK_ANALYSIS_VIEW') ? 'xl:col-span-8' : 'xl:col-span-12'} h-full transition-all duration-300`}>
                                 <AttendanceAnalyticsChart logs={logs} currentYear={viewYear} />
                             </div>
 
                             {/* Break Analysis (4 Cols) */}
-                            {hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS') && (
+                            {hasPermission('FEATURE_BREAK_ANALYSIS_VIEW') && (
                                 <div className="xl:col-span-4 h-full">
-                                    {(activeTab === 'my_attendance' || hasPermission('ATTENDANCE_VIEW_OTHERS_BREAKS') || hasPermission('ATTENDANCE_VIEW_BREAK_ANALYSIS')) ? (
+                                    {(activeTab === 'my_attendance' || hasPermission('FEATURE_BREAK_ANALYSIS_VIEW')) ? (
                                         <BreakAnalysisWidget
                                             employeeId={selectedEmployeeId}
                                             logs={logs}
