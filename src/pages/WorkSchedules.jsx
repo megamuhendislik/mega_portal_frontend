@@ -370,6 +370,7 @@ const WorkSchedules = () => {
                                 id: null,
                                 name: '',
                                 is_default: false,
+                                has_lunch_break: true,
                                 lunch_start: '',
                                 lunch_end: '',
                                 daily_break_allowance: 0,
@@ -436,6 +437,9 @@ const WorkSchedules = () => {
                                                 id: selectedSchedule.id,
                                                 name: selectedSchedule.name,
                                                 is_default: selectedSchedule.is_default,
+                                                name: selectedSchedule.name,
+                                                is_default: selectedSchedule.is_default,
+                                                has_lunch_break: selectedSchedule.has_lunch_break !== undefined ? selectedSchedule.has_lunch_break : true,
                                                 lunch_start: selectedSchedule.lunch_start || '12:30',
                                                 lunch_end: selectedSchedule.lunch_end || '13:30',
                                                 daily_break_allowance: selectedSchedule.daily_break_allowance || 30,
@@ -747,6 +751,16 @@ const WorkSchedules = () => {
                                         />
                                         <span className="ml-3 font-medium text-slate-700">Bu varsayılan çalışma takvimidir</span>
                                     </label>
+
+                                    <label className="flex items-center cursor-pointer mt-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={scheduleFormData.has_lunch_break}
+                                            onChange={e => setScheduleFormData({ ...scheduleFormData, has_lunch_break: e.target.checked })}
+                                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="ml-3 font-medium text-slate-700">Öğle Molası Var</span>
+                                    </label>
                                 </div>
                             </div>
 
@@ -800,22 +814,24 @@ const WorkSchedules = () => {
                                                     </div>
 
                                                     {/* Lunch Times (Day Specific) */}
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold text-slate-400 w-12">Öğle:</span>
-                                                        <input type="time" value={rule.lunch_start || scheduleFormData.lunch_start} onChange={e => {
-                                                            const ns = { ...scheduleFormData.schedule };
-                                                            if (!ns[day.key]) ns[day.key] = {};
-                                                            ns[day.key].lunch_start = e.target.value;
-                                                            setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                        }} className="border rounded px-2 py-1 text-sm w-28 text-slate-600 bg-slate-50" />
-                                                        <span className="text-slate-400">-</span>
-                                                        <input type="time" value={rule.lunch_end || scheduleFormData.lunch_end} onChange={e => {
-                                                            const ns = { ...scheduleFormData.schedule };
-                                                            if (!ns[day.key]) ns[day.key] = {};
-                                                            ns[day.key].lunch_end = e.target.value;
-                                                            setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                        }} className="border rounded px-2 py-1 text-sm w-28 text-slate-600 bg-slate-50" />
-                                                    </div>
+                                                    {scheduleFormData.has_lunch_break && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-bold text-slate-400 w-12">Öğle:</span>
+                                                            <input type="time" value={rule.lunch_start || scheduleFormData.lunch_start} onChange={e => {
+                                                                const ns = { ...scheduleFormData.schedule };
+                                                                if (!ns[day.key]) ns[day.key] = {};
+                                                                ns[day.key].lunch_start = e.target.value;
+                                                                setScheduleFormData({ ...scheduleFormData, schedule: ns });
+                                                            }} className="border rounded px-2 py-1 text-sm w-28 text-slate-600 bg-slate-50" />
+                                                            <span className="text-slate-400">-</span>
+                                                            <input type="time" value={rule.lunch_end || scheduleFormData.lunch_end} onChange={e => {
+                                                                const ns = { ...scheduleFormData.schedule };
+                                                                if (!ns[day.key]) ns[day.key] = {};
+                                                                ns[day.key].lunch_end = e.target.value;
+                                                                setScheduleFormData({ ...scheduleFormData, schedule: ns });
+                                                            }} className="border rounded px-2 py-1 text-sm w-28 text-slate-600 bg-slate-50" />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

@@ -113,7 +113,7 @@ const MainLayout = () => {
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: null },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: ['SCHEDULE_MANAGE', 'ATTENDANCE_MANAGE_FISCAL'] },
-        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'SCHEDULE_MANAGE' },
+
         // { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'ATTENDANCE_MANAGE_FISCAL' }, // Merged into Work Schedules
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'REPORT_VIEW_ALL' },
