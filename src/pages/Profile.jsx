@@ -129,8 +129,8 @@ const Profile = () => {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`group w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 font-medium text-sm relative overflow-hidden ${isActive
-                                        ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100 scale-[1.02]'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100 scale-[1.02]'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                             >
                                 <div className={`relative z-10 flex items-center gap-4`}>
@@ -266,7 +266,7 @@ const Profile = () => {
                                                     <Shield size={20} className="shrink-0 mt-0.5 text-amber-600" />
                                                     <div>
                                                         <span className="font-bold block mb-1">Bilgilendirme</span>
-                                                        Bu ekrandaki kurumsal bilgiler İnsan Kaynakları departmanı tarafından yönetilmektedir. Hatalı bir bilgi olduğunu düşünüyorsanız lütfen destek talebi oluşturunuz.
+                                                        Bu ekrandaki kurumsal bilgiler Sistem Yöneticisi tarafından yönetilmektedir. Hatalı bir bilgi olduğunu düşünüyorsanız lütfen sistem yöneticisi ile iletişime geçiniz.
                                                     </div>
                                                 </div>
                                             </div>
