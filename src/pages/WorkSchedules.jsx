@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Edit, Trash2, Save, X, Calendar, ChevronLeft, ChevronRight, Settings, Info, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Calendar, ChevronLeft, ChevronRight, Settings, Info, Clock, CheckCircle, RefreshCw, Lock } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
 import { useAuth } from '../context/AuthContext';
@@ -302,178 +302,336 @@ const WorkSchedules = () => {
         return { type: 'WORK', label: `${rule.start}-${rule.end}`, color: 'bg-green-50 text-green-700 border-green-200 border' };
     };
 
+    // --- Fiscal Logic ---
+    const [activeTab, setActiveTab] = useState('SCHEDULES'); // 'SCHEDULES' | 'FISCAL'
+    const [fiscalPeriods, setFiscalPeriods] = useState([]);
+    const [generatingFiscal, setGeneratingFiscal] = useState(false);
+
+    useEffect(() => {
+        if (activeTab === 'FISCAL') {
+            fetchFiscalPeriods();
+        }
+    }, [activeTab, selectedYear]);
+
+    const fetchFiscalPeriods = async () => {
+        try {
+            const response = await api.get(`/attendance/fiscal-periods/?year=${selectedYear}`);
+            setFiscalPeriods(response.data);
+        } catch (error) {
+            console.error('Error fetching fiscal periods:', error);
+        }
+    };
+
+    const handleGenerateFiscal = async () => {
+        if (!window.confirm(`${selectedYear} yılı için mali dönemleri oluşturmak istediğinize emin misiniz?`)) return;
+        setGeneratingFiscal(true);
+        try {
+            await api.post('/attendance/fiscal-periods/generate_defaults/', { year: selectedYear });
+            fetchFiscalPeriods();
+            alert('Mali dönemler başarıyla oluşturuldu.');
+        } catch (error) {
+            alert('Oluşturma hatası: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setGeneratingFiscal(false);
+        }
+    };
+
+    const handleToggleLock = async (period) => {
+        const action = period.is_locked ? 'kilidini açmak' : 'kilitlemek';
+        if (!window.confirm(`${period.name} dönemini ${action} istediğinize emin misiniz?`)) return;
+
+        try {
+            await api.patch(`/attendance/fiscal-periods/${period.id}/`, { is_locked: !period.is_locked });
+            fetchFiscalPeriods();
+        } catch (error) {
+            alert('İşlem başarısız.');
+        }
+    };
+
+    // --- Render ---
+
     if (loading) return <div className="p-10 text-center animate-pulse text-slate-500">Yükleniyor...</div>;
 
     return (
         <div className="p-4 w-full mx-auto select-none" onMouseUp={handleMouseUp}>
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Çalışma Takvimleri</h2>
-                    <p className="text-slate-500 text-sm mt-1">Takvim ve tatil yönetimi.</p>
+                    <h2 className="text-2xl font-bold text-slate-800">Çalışma ve Mali Takvim</h2>
+                    <p className="text-slate-500 text-sm mt-1">Vardiya programları, tatiller ve maaş dönem yönetimleri.</p>
                 </div>
+
+                {activeTab === 'SCHEDULES' && (
+                    <button
+                        onClick={() => {
+                            const defaultSchedule = {};
+                            DAYS.forEach(day => { defaultSchedule[day.key] = { start: '', end: '', is_off: day.key === 'SAT' || day.key === 'SUN' }; });
+                            setScheduleFormData({
+                                id: null,
+                                name: '',
+                                is_default: false,
+                                lunch_start: '',
+                                lunch_end: '',
+                                daily_break_allowance: 0,
+                                late_tolerance_minutes: 0,
+                                service_tolerance_minutes: 0,
+                                minimum_overtime_minutes: 15,
+                                schedule: defaultSchedule
+                            });
+                            setShowScheduleModal(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
+                    >
+                        <Plus size={20} /> Yeni Takvim Ekle
+                    </button>
+                )}
+            </div>
+
+            {/* Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl w-fit mb-6">
                 <button
-                    onClick={() => {
-                        const defaultSchedule = {};
-                        DAYS.forEach(day => { defaultSchedule[day.key] = { start: '', end: '', is_off: day.key === 'SAT' || day.key === 'SUN' }; });
-                        setScheduleFormData({
-                            id: null,
-                            name: '',
-                            is_default: false,
-                            lunch_start: '',
-                            lunch_end: '',
-                            daily_break_allowance: 0,
-                            late_tolerance_minutes: 0,
-                            service_tolerance_minutes: 0,
-                            minimum_overtime_minutes: 15,
-                            schedule: defaultSchedule
-                        });
-                        setShowScheduleModal(true);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
+                    onClick={() => setActiveTab('SCHEDULES')}
+                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'SCHEDULES' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                    <Plus size={20} /> Yeni Takvim Ekle
+                    Çalışma Şablonları & Tatiller
+                </button>
+                <button
+                    onClick={() => setActiveTab('FISCAL')}
+                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'FISCAL' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Mali Takvim (Dönemler)
                 </button>
             </div>
 
-            {/* Controls */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-8 flex flex-col xl:flex-row items-center gap-6 justify-between">
-                <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
-                    <div className="relative">
-                        <select
-                            value={selectedScheduleId || ''}
-                            onChange={(e) => setSelectedScheduleId(e.target.value)}
-                            className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-semibold py-3 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[240px] cursor-pointer"
-                        >
-                            {schedules.map(s => (
-                                <option key={s.id} value={s.id}>{s.name} {s.is_default ? '(Varsayılan)' : ''}</option>
-                            ))}
-                        </select>
-                        <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
-                    </div>
+            {/* Content: PROPERLY CONDITIONED SECTION */}
+            {activeTab === 'SCHEDULES' ? (
+                <>
+                    {/* Controls */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-8 flex flex-col xl:flex-row items-center gap-6 justify-between">
+                        <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+                            <div className="relative">
+                                <select
+                                    value={selectedScheduleId || ''}
+                                    onChange={(e) => setSelectedScheduleId(e.target.value)}
+                                    className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-semibold py-3 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[240px] cursor-pointer"
+                                >
+                                    {schedules.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} {s.is_default ? '(Varsayılan)' : ''}</option>
+                                    ))}
+                                </select>
+                                <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                            </div>
 
-                    <div className="flex bg-slate-50 rounded-xl border border-slate-200 p-1">
-                        <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
-                        <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
-                        <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronRight size={20} /></button>
-                    </div>
+                            <div className="flex bg-slate-50 rounded-xl border border-slate-200 p-1">
+                                <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
+                                <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
+                                <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronRight size={20} /></button>
+                            </div>
 
-                    {selectedSchedule && (
-                        <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-4">
-                            <button
-                                onClick={() => {
-                                    setScheduleFormData({
-                                        id: selectedSchedule.id,
-                                        name: selectedSchedule.name,
-                                        is_default: selectedSchedule.is_default,
-                                        lunch_start: selectedSchedule.lunch_start || '12:30',
-                                        lunch_end: selectedSchedule.lunch_end || '13:30',
-                                        daily_break_allowance: selectedSchedule.daily_break_allowance || 30,
-                                        late_tolerance_minutes: selectedSchedule.late_tolerance_minutes || 15,
-                                        service_tolerance_minutes: selectedSchedule.service_tolerance_minutes || 0,
-                                        minimum_overtime_minutes: selectedSchedule.minimum_overtime_minutes || 15,
-                                        schedule: JSON.parse(JSON.stringify(selectedSchedule.schedule))
-                                    });
-                                    setShowScheduleModal(true);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                <Settings size={16} /> Ayarlar
-                            </button>
-                            {!selectedSchedule.is_default && (
-                                <button onClick={() => {
-                                    if (window.confirm('Silmek istediğinize emin misiniz?')) {
-                                        api.delete(`/work-schedules/${selectedSchedule.id}/`).then(() => { setSelectedScheduleId(null); fetchData(); });
-                                    }
-                                }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                            {selectedSchedule && (
+                                <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-4">
+                                    <button
+                                        onClick={() => {
+                                            setScheduleFormData({
+                                                id: selectedSchedule.id,
+                                                name: selectedSchedule.name,
+                                                is_default: selectedSchedule.is_default,
+                                                lunch_start: selectedSchedule.lunch_start || '12:30',
+                                                lunch_end: selectedSchedule.lunch_end || '13:30',
+                                                daily_break_allowance: selectedSchedule.daily_break_allowance || 30,
+                                                late_tolerance_minutes: selectedSchedule.late_tolerance_minutes || 15,
+                                                service_tolerance_minutes: selectedSchedule.service_tolerance_minutes || 0,
+                                                minimum_overtime_minutes: selectedSchedule.minimum_overtime_minutes || 15,
+                                                schedule: JSON.parse(JSON.stringify(selectedSchedule.schedule))
+                                            });
+                                            setShowScheduleModal(true);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        <Settings size={16} /> Ayarlar
+                                    </button>
+                                    {!selectedSchedule.is_default && (
+                                        <button onClick={() => {
+                                            if (window.confirm('Silmek istediğinize emin misiniz?')) {
+                                                api.delete(`/work-schedules/${selectedSchedule.id}/`).then(() => { setSelectedScheduleId(null); fetchData(); });
+                                            }
+                                        }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                                    )}
+                                </div>
                             )}
                         </div>
-                    )}
-                </div>
 
-                <div className="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
-                    {/* Legend */}
-                    <div className="flex gap-3 text-xs">
-                        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Çalışma</div>
-                        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div> Tatil</div>
-                        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Resmi</div>
+                        <div className="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
+                            {/* Legend */}
+                            <div className="flex gap-3 text-xs">
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Çalışma</div>
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div> Tatil</div>
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Resmi</div>
+                            </div>
+
+                            {canManageHolidays && (
+                                <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                                    <span className={`text-sm font-bold ${editMode ? 'text-blue-600' : 'text-slate-500'}`}>Tatil Modu</span>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" className="sr-only peer" checked={editMode} onChange={(e) => setEditMode(e.target.checked)} />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                                    </label>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {canManageHolidays && (
-                        <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                            <span className={`text-sm font-bold ${editMode ? 'text-blue-600' : 'text-slate-500'}`}>Tatil Modu</span>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" className="sr-only peer" checked={editMode} onChange={(e) => setEditMode(e.target.checked)} />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                            </label>
+                    {/* Info Message */}
+                    {editMode && (
+                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
+                            <Info className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <h4 className="font-bold text-blue-800 text-sm">Tatil Düzenleme Modu</h4>
+                                <p className="text-blue-600 text-sm mt-1">Günleri seçmek için tıklayın veya <strong>basılı tutup sürükleyerek</strong> çoklu seçim yapın.</p>
+                            </div>
                         </div>
                     )}
-                </div>
-            </div>
 
-            {/* Info Message */}
-            {editMode && (
-                <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
-                    <Info className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                    <div>
-                        <h4 className="font-bold text-blue-800 text-sm">Tatil Düzenleme Modu</h4>
-                        <p className="text-blue-600 text-sm mt-1">Günleri seçmek için tıklayın veya <strong>basılı tutup sürükleyerek</strong> çoklu seçim yapın.</p>
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
+                        {MONTHS_TR.map((monthName, index) => {
+                            const monthStart = moment(`${selectedYear}-${index + 1}-01`, 'YYYY-M-DD').locale('tr');
+                            const daysInMonth = monthStart.daysInMonth();
+                            const startDayOfWeek = (monthStart.day() + 6) % 7;
+
+                            return (
+                                <div key={monthName} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden select-none">
+                                    <div className="bg-slate-50 p-3 border-b border-slate-100 text-center font-bold text-slate-800 capitalize">{monthName}</div>
+                                    <div className="p-4">
+                                        <div className="grid grid-cols-7 gap-1 mb-2">
+                                            {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => <div key={d} className="text-center text-[10px] text-slate-400 font-bold">{d}</div>)}
+                                        </div>
+                                        <div className="grid grid-cols-7 gap-1.5">
+                                            {Array(startDayOfWeek).fill(null).map((_, i) => <div key={`e-${i}`} className="h-8"></div>)}
+                                            {Array(daysInMonth).fill(null).map((_, i) => {
+                                                const date = moment(monthStart).add(i, 'days').locale('tr');
+                                                const status = getDayStatus(date);
+                                                const isPast = date.isBefore(today, 'day');
+
+                                                return (
+                                                    <div
+                                                        key={i}
+                                                        onMouseDown={() => handleMouseDown(date)}
+                                                        onMouseEnter={() => handleMouseEnter(date)}
+                                                        // MouseUp handled by wrapper div to catch drops anywhere, but click handles logic here if needed
+                                                        onClick={() => handleDayClick(date, status.holiday)}
+                                                        onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
+                                                        className={`
+                                                            h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-all relative group
+                                                            ${status.color}
+                                                            ${isPast ? 'opacity-40 grayscale cursor-not-allowed' : ''}
+                                                            ${!isPast && editMode ? 'cursor-pointer hover:ring-2 hover:ring-blue-300' : ''}
+                                                        `}
+                                                        title={status.label}
+                                                    >
+                                                        {i + 1}
+                                                        {status.holiday?.start_time && (
+                                                            <div className="absolute top-0 right-0 w-2 h-2 bg-amber-400 rounded-full border border-white"></div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            ) : (
+                <div className="card max-w-5xl mx-auto shadow-sm p-8">
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-orange-50 p-3 rounded-full text-orange-600"><Settings size={24} /></div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800">Mali Dönem Ayarları</h3>
+                                <p className="text-sm text-slate-500">Maaş dönemlerini kilitleyerek geriye dönük değişikliği engelleyebilirsiniz.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex bg-slate-50 rounded-xl border border-slate-200 p-1 mr-4">
+                                <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
+                                <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
+                                <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronRight size={20} /></button>
+                            </div>
+                            <button
+                                onClick={handleGenerateFiscal}
+                                disabled={generatingFiscal}
+                                className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all disabled:opacity-50"
+                            >
+                                <RefreshCw size={18} className={generatingFiscal ? "animate-spin" : ""} />
+                                Standart Oluştur
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                                <tr>
+                                    <th className="px-6 py-4">Dönem</th>
+                                    <th className="px-6 py-4">Başlangıç</th>
+                                    <th className="px-6 py-4">Bitiş</th>
+                                    <th className="px-6 py-4">Durum</th>
+                                    <th className="px-6 py-4 text-right">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {fiscalPeriods.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <Calendar size={48} className="opacity-20" />
+                                                <p>Bu yıl için mali dönem bulunamadı.</p>
+                                                <button onClick={handleGenerateFiscal} className="text-blue-600 hover:underline font-medium">Otomatik Oluştur</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    fiscalPeriods.map((period) => (
+                                        <tr key={period.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4 font-bold text-slate-700">{period.name}</td>
+                                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">{period.start_date}</td>
+                                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">{period.end_date}</td>
+                                            <td className="px-6 py-4">
+                                                {period.is_locked ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                                                        <Lock size={12} /> KİLİTLİ
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                                                        <CheckCircle size={12} /> AÇIK
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => handleToggleLock(period)}
+                                                    className={`p-2 rounded-lg transition-colors ${period.is_locked
+                                                        ? 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                                        : 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700'
+                                                        }`}
+                                                    title={period.is_locked ? "Ocak Kilidini Aç" : "Dönemi Kilitle"}
+                                                >
+                                                    {period.is_locked ? <Settings size={18} /> : <Lock size={18} />}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
-                {MONTHS_TR.map((monthName, index) => {
-                    const monthStart = moment(`${selectedYear}-${index + 1}-01`, 'YYYY-M-DD').locale('tr');
-                    const daysInMonth = monthStart.daysInMonth();
-                    const startDayOfWeek = (monthStart.day() + 6) % 7;
-
-                    return (
-                        <div key={monthName} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden select-none">
-                            <div className="bg-slate-50 p-3 border-b border-slate-100 text-center font-bold text-slate-800 capitalize">{monthName}</div>
-                            <div className="p-4">
-                                <div className="grid grid-cols-7 gap-1 mb-2">
-                                    {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => <div key={d} className="text-center text-[10px] text-slate-400 font-bold">{d}</div>)}
-                                </div>
-                                <div className="grid grid-cols-7 gap-1.5">
-                                    {Array(startDayOfWeek).fill(null).map((_, i) => <div key={`e-${i}`} className="h-8"></div>)}
-                                    {Array(daysInMonth).fill(null).map((_, i) => {
-                                        const date = moment(monthStart).add(i, 'days').locale('tr');
-                                        const status = getDayStatus(date);
-                                        const isPast = date.isBefore(today, 'day');
-
-                                        return (
-                                            <div
-                                                key={i}
-                                                onMouseDown={() => handleMouseDown(date)}
-                                                onMouseEnter={() => handleMouseEnter(date)}
-                                                // MouseUp handled by wrapper div to catch drops anywhere, but click handles logic here if needed
-                                                onClick={() => handleDayClick(date, status.holiday)}
-                                                onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
-                                                className={`
-                                                    h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-all relative group
-                                                    ${status.color}
-                                                    ${isPast ? 'opacity-40 grayscale cursor-not-allowed' : ''}
-                                                    ${!isPast && editMode ? 'cursor-pointer hover:ring-2 hover:ring-blue-300' : ''}
-                                                `}
-                                                title={status.label}
-                                            >
-                                                {i + 1}
-                                                {status.holiday?.start_time && (
-                                                    <div className="absolute top-0 right-0 w-2 h-2 bg-amber-400 rounded-full border border-white"></div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
             {/* --- Modals (Portals) --- */}
+
 
             {/* Holiday Modal */}
             {showHolidayModal && holidayFormData && createPortal(

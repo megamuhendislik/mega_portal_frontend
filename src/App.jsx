@@ -33,14 +33,19 @@ const ProtectedRoute = ({ children, requiredPermission }) => {
     return <Navigate to="/login" />;
   }
 
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
-        <h2 className="text-xl font-bold text-red-500 mb-2">Erişim Reddedildi</h2>
-        <p>Bu sayfayı görüntülemek için gerekli yetkiye sahip değilsiniz.</p>
-        <code className="bg-slate-100 px-2 py-1 rounded mt-2 text-xs">{requiredPermission}</code>
-      </div>
-    );
+  if (requiredPermission) {
+    const permissions = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+    const hasAccess = permissions.some(perm => hasPermission(perm));
+
+    if (!hasAccess) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
+          <h2 className="text-xl font-bold text-red-500 mb-2">Erişim Reddedildi</h2>
+          <p>Bu sayfayı görüntülemek için gerekli yetkiye sahip değilsiniz.</p>
+          <code className="bg-slate-100 px-2 py-1 rounded mt-2 text-xs">{permissions.join(' veya ')}</code>
+        </div>
+      );
+    }
   }
 
   return children;
@@ -71,7 +76,7 @@ function App() {
             <Route path="attendance-tracking" element={<ProtectedRoute requiredPermission="ATTENDANCE_VIEW_TEAM"><AttendanceTracking /></ProtectedRoute>} />
 
             <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
-            <Route path="work-schedules" element={<ProtectedRoute requiredPermission="SCHEDULE_MANAGE"><WorkSchedules /></ProtectedRoute>} />
+            <Route path="work-schedules" element={<ProtectedRoute requiredPermission={['SCHEDULE_MANAGE', 'ATTENDANCE_MANAGE_FISCAL']}><WorkSchedules /></ProtectedRoute>} />
             <Route path="public-holidays" element={<ProtectedRoute requiredPermission="SETTINGS_MANAGE_HOLIDAYS"><PublicHolidays /></ProtectedRoute>} />
 
             <Route path="requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
@@ -79,7 +84,7 @@ function App() {
             <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><SystemHealth /></ProtectedRoute>} />
             <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><ServiceControl /></ProtectedRoute>} />
             <Route path="meal-orders" element={<ProtectedRoute requiredPermission="VIEW_MEAL_ORDERS"><MealOrders /></ProtectedRoute>} />
-            <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="ATTENDANCE_MANAGE_FISCAL"><FiscalCalendarSettings /></ProtectedRoute>} />
+            {/* <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="ATTENDANCE_MANAGE_FISCAL"><FiscalCalendarSettings /></ProtectedRoute>} /> */}
             <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="SYSTEM_MANAGE"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>

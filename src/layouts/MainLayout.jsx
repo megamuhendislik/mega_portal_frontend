@@ -112,8 +112,9 @@ const MainLayout = () => {
 
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: null },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
+        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: ['SCHEDULE_MANAGE', 'ATTENDANCE_MANAGE_FISCAL'] },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'SCHEDULE_MANAGE' },
-        { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'ATTENDANCE_MANAGE_FISCAL' },
+        // { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'ATTENDANCE_MANAGE_FISCAL' }, // Merged into Work Schedules
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'REPORT_VIEW_ALL' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'SYSTEM_MANAGE' },
@@ -130,7 +131,8 @@ const MainLayout = () => {
         if (item.adminOnly) return false;
 
         if (!item.permission) return true;
-        return user.all_permissions?.includes(item.permission);
+        const permissions = Array.isArray(item.permission) ? item.permission : [item.permission];
+        return permissions.some(p => user.all_permissions?.includes(p));
     });
 
     return (
