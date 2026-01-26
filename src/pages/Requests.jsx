@@ -466,11 +466,11 @@ const Requests = () => {
                 <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {[
                         { id: 'my_requests', label: 'İzin Taleplerim', show: true },
-                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('REQUEST_OVERTIME_APPROVE') },
-                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('MENU_MEAL_TRACKING_VIEW') },
-                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('REQUEST_ENTRY_EXIT_APPROVE') },
-                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_ENTRY_EXIT_APPROVE') },
-                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('REQUEST_LEAVE_APPROVE') || hasPermission('REQUEST_OVERTIME_APPROVE') || hasPermission('REQUEST_ENTRY_EXIT_APPROVE') }
+                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('request.overtime.manage') },
+                        { id: 'meal_requests', label: 'Yemek', show: hasPermission('page.meal_tracking.access') },
+                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('request.cardless_entry.manage') },
+                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('request.annual_leave.manage') || hasPermission('request.overtime.manage') || hasPermission('request.cardless_entry.manage') },
+                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('request.annual_leave.manage') || hasPermission('request.overtime.manage') || hasPermission('request.cardless_entry.manage') }
                     ].filter(t => t.show).map(tab => (
                         <button
                             key={tab.id}

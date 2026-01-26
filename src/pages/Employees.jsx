@@ -771,13 +771,7 @@ const PERMISSION_CATEGORIES = [
         color: 'text-blue-500',
         filter: (p) => p.category === 'REQUEST'
     },
-    {
-        id: 'accounting',
-        label: 'Muhasebe',
-        icon: Calculator,
-        color: 'text-emerald-600',
-        filter: (p) => p.category === 'ACCOUNTING'
-    },
+
     {
         id: 'system',
         label: 'Sistem & Admin',

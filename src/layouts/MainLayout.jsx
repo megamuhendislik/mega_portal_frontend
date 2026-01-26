@@ -108,21 +108,21 @@ const MainLayout = () => {
 
     const navItems = [
         { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: null },
-        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'MENU_EMPLOYEES_VIEW' },
-        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'MENU_ORG_CHART_VIEW' },
+        { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'page.employees.access' },
+        { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'page.organization.view' },
 
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: null },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
-        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'MENU_WORK_CALENDAR_VIEW' },
+        { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'page.work_calendar.access' },
 
-        // { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'ATTENDANCE_MANAGE_FISCAL' }, // Merged into Work Schedules
+        // { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'admin.full_access' }, // Merged into Work Schedules
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
-        { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: ['REQUEST_LEAVE_APPROVE', 'REQUEST_OVERTIME_APPROVE', 'REQUEST_ENTRY_EXIT_APPROVE'] },
-        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'MENU_REPORTS_VIEW' },
-        { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'SYSTEM_ADMIN_ACCESS' },
-        { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'MENU_MEAL_TRACKING_VIEW' },
-        { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'SYSTEM_ADMIN_ACCESS' },
-        { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'SYSTEM_ADMIN_ACCESS' },
+        { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: ['request.annual_leave.manage', 'request.overtime.manage', 'request.cardless_entry.manage'] },
+        { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'page.reports.access' },
+        { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'admin.full_access' },
+        { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'page.meal_tracking.access' },
+        { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'admin.full_access' },
+        { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'admin.full_access' },
     ];
 
     const filteredNavItems = navItems.filter(item => {
