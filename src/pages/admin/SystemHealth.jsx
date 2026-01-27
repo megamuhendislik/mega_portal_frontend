@@ -492,52 +492,66 @@ function PermissionMatrixView() {
             {/* SECTIONS */}
             {activeSection === 'users' && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                        <h3 className="font-bold text-gray-800">Kullanıcı Bazlı Yetki Durumu</h3>
-                        <span className="text-xs text-gray-500">{data.users.length} Kullanıcı</span>
+                    <div className="p-4 bg-yellow-50 border-b border-yellow-100 text-xs text-yellow-800 flex items-center gap-2">
+                        <ExclamationTriangleIcon className="w-4 h-4" />
+                        <span>Not: Bu tablo çok geniştir. Yatay kaydırma yapabilirsiniz. Yetkiler kategorilere göre renklendirilmiştir.</span>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                    <div className="overflow-x-auto max-h-[800px] overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
                                 <tr>
-                                    <th className="px-4 py-3">Kullanıcı</th>
-                                    <th className="px-4 py-3">Departman / Pozisyon</th>
-                                    <th className="px-4 py-3">Atanan Roller</th>
-                                    <th className="px-4 py-3">Yetki Sayısı</th>
-                                    <th className="px-4 py-3">Statü</th>
+                                    <th className="px-4 py-3 bg-slate-100 z-30 sticky left-0 border-b border-r border-slate-200 min-w-[200px]">Personel</th>
+                                    <th className="px-4 py-3 bg-slate-100 z-30 sticky left-[200px] border-b border-r border-slate-200 min-w-[200px]">Roller</th>
+                                    {data.permissions.map(p => (
+                                        <th key={p.code} className="px-1 py-3 border-b border-slate-200 text-center min-w-[40px] max-w-[40px] h-[180px] align-bottom relative group">
+                                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-max -rotate-90 origin-bottom-left text-[10px] font-mono font-medium text-slate-500 hover:text-indigo-600 transition-colors cursor-help">
+                                                {p.code.split('.').pop()}
+                                            </div>
+                                            {/* Tooltip on hover */}
+                                            <div className="hidden group-hover:block absolute bottom-0 left-full ml-1 w-48 bg-slate-800 text-white p-2 rounded z-50 text-left normal-case shadow-xl">
+                                                <div className="font-bold text-xs mb-0.5">{p.name}</div>
+                                                <div className="text-[10px] opacity-75 font-mono">{p.code}</div>
+                                                <div className="text-[10px] mt-1 border-t border-slate-600 pt-1">{p.description}</div>
+                                            </div>
+                                            {/* Category Color Strip */}
+                                            <div className={`absolute bottom-0 left-0 w-full h-1 ${p.category === 'MENU' ? 'bg-blue-400' :
+                                                p.category === 'REQUEST' ? 'bg-amber-400' : 'bg-gray-300'
+                                                }`}></div>
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-slate-100">
                                 {data.users.map(u => (
-                                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-3">
-                                            <div className="font-bold text-gray-800">{u.full_name}</div>
-                                            <div className="text-xs text-gray-400 font-mono">@{u.username}</div>
+                                    <tr key={u.id} className="hover:bg-blue-50/30 transition-colors">
+                                        <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-slate-100 group-hover:bg-blue-50/30">
+                                            <div className="font-bold text-slate-800 truncate max-w-[180px]" title={u.full_name}>{u.full_name}</div>
+                                            <div className="text-[10px] text-slate-400 font-mono text-xs">@{u.username}</div>
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-gray-600">
-                                            <div>{u.department}</div>
-                                            <div className="text-gray-400">{u.job_position}</div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
+                                        <td className="px-4 py-2 bg-white sticky left-[200px] z-10 border-r border-slate-100 group-hover:bg-blue-50/30">
+                                            <div className="flex flex-wrap gap-1 w-[180px]">
                                                 {u.roles.map(r => (
-                                                    <span key={r} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold">{r}</span>
+                                                    <span key={r} className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[10px] font-bold truncate max-w-full block" title={r}>
+                                                        {r}
+                                                    </span>
                                                 ))}
-                                                {u.roles.length === 0 && <span className="text-gray-400 text-xs italic">Rol Yok</span>}
+                                                {u.roles.length === 0 && <span className="text-slate-300 text-[10px] italic">-</span>}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`font-mono font-bold ${u.is_superuser ? 'text-purple-600' : 'text-gray-700'}`}>
-                                                {u.perm_count}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {u.is_superuser && (
-                                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold border border-purple-200">
-                                                    SUPERUSER
-                                                </span>
-                                            )}
-                                        </td>
+                                        {data.permissions.map(p => {
+                                            const hasPerm = u.is_superuser || (u.permissions && u.permissions.includes(p.code));
+                                            return (
+                                                <td key={p.code} className={`px-1 py-1 border-r border-slate-50 text-center ${hasPerm ? 'bg-green-50/30' : ''}`}>
+                                                    {hasPerm ? (
+                                                        <div className="flex justify-center">
+                                                            <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-1 h-1 bg-slate-200 rounded-full mx-auto"></div>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                 ))}
                             </tbody>
@@ -610,8 +624,9 @@ function PermissionMatrixView() {
                         </table>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }
 
