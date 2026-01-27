@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import moment from 'moment';
-import { ChevronLeft, ChevronRight, Lock, Unlock, RefreshCw, Save, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Unlock, RefreshCw, Save, Calendar as CalendarIcon, Clock, Coffee } from 'lucide-react';
+import DailyConfigModal from './DailyConfigModal';
 
 const FiscalCalendarView = () => {
     const [year, setYear] = useState(new Date().getFullYear());
     const [periods, setPeriods] = useState([]);
-    const [holidays, setHolidays] = useState([]);
+    const [holidays, setHolidays] = useState(new Set());
+    const [overrides, setOverrides] = useState({}); // Map: 'YYYY-MM-DD' -> OverrideObj
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
+
+    // Modal State
+    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -17,22 +23,31 @@ const FiscalCalendarView = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [pRes, hRes] = await Promise.all([
-                api.get(`/attendance/fiscal-periods/?year=${year}`),
-                api.get(`/attendance/fiscal-periods/?year=${year}`) // Actually we need holidays. Assuming we use public-holidays endpoint?
-                // Let's correct this. We need existing fiscal periods AND public holidays.
-            ]);
-
-            // Re-fetch holidays correctly
+            // Need range for fiscal year roughly
             const startStr = `${year - 1}-12-01`;
             const endStr = `${year + 1}-02-01`;
-            const holRes = await api.get(`/calendar-events/?start=${startStr}&end=${endStr}&view_mode=all`);
+
+            const [pRes, holRes, ovRes] = await Promise.all([
+                api.get(`/attendance/fiscal-periods/?year=${year}`),
+                api.get(`/calendar-events/?start=${startStr}&end=${endStr}&view_mode=all`),
+                api.get(`/attendance/daily-overrides/?start_date=${startStr}&end_date=${endStr}`)
+            ]);
 
             setPeriods(pRes.data);
 
-            // Extract holidays from calendar events
-            const holidayEvents = holRes.data.filter(e => e.status === 'HOLIDAY').map(e => moment(e.start).format('YYYY-MM-DD'));
-            setHolidays(holidayEvents);
+            // Holidays
+            const hSet = new Set();
+            holRes.data.filter(e => e.status === 'HOLIDAY').forEach(e => {
+                hSet.add(moment(e.start).format('YYYY-MM-DD'));
+            });
+            setHolidays(hSet);
+
+            // Overrides
+            const ovMap = {};
+            ovRes.data.forEach(o => {
+                ovMap[o.date] = o;
+            });
+            setOverrides(ovMap);
 
         } catch (error) {
             console.error("Fiscal data error:", error);
@@ -67,23 +82,10 @@ const FiscalCalendarView = () => {
         return arr;
     };
 
-    const toggleHoliday = async (dateStr) => {
-        // Toggle Holiday logic would go here. 
-        // For now, let's just alert strictly as per requirement "edit specific days" might need a modal or direct toggle.
-        // Assuming we have an endpoint to toggle holiday.
-        // If not, we might need to skip or implement a basic one.
-        const notes = prompt("Resmi Tatil Adı (Boş bırakırsanız silinecek):");
-        if (notes === null) return; // Cancel
-
-        try {
-            // Need a way to manage holidays via API.
-            // Using a hypothetical endpoint or just public-holidays ViewSet if confirmed.
-            // Let's assume we can POST to /core/public-holidays/ 
-            // BUT deleting requires ID.
-            alert("Tatil düzenleme özelliği eklenecek.");
-        } catch (e) {
-            console.error(e);
-        }
+    const handleDayClick = (dateStr) => {
+        const d = moment(dateStr).toDate();
+        setSelectedDate(d);
+        setShowConfigModal(true);
     };
 
     const renderMonth = (period) => {
@@ -108,26 +110,48 @@ const FiscalCalendarView = () => {
                     {/* Days */}
                     {days.map(day => {
                         const dStr = day.format('YYYY-MM-DD');
-                        const isHoliday = holidays.includes(dStr);
+                        const isPublicHoliday = holidays.has(dStr);
+                        const override = overrides[dStr];
                         const isWeekend = day.day() === 0 || day.day() === 6;
 
+                        // Determine Visual State
                         let bgClass = "bg-white hover:bg-slate-50 text-slate-700";
-                        if (isHoliday) bgClass = "bg-red-50 text-red-600 font-bold border-red-100";
-                        else if (isWeekend) bgClass = "bg-slate-100 text-slate-500";
+                        let borderClass = "border-transparent";
+
+                        if (override) {
+                            if (override.is_off) {
+                                bgClass = "bg-red-50 text-red-600 font-bold";
+                                borderClass = "border-red-200";
+                            } else {
+                                bgClass = "bg-emerald-50 text-emerald-700 font-bold";
+                                borderClass = "border-emerald-200";
+                            }
+                        } else if (isPublicHoliday) {
+                            bgClass = "bg-red-50 text-red-600 font-bold";
+                            borderClass = "border-red-100";
+                        } else if (isWeekend) {
+                            bgClass = "bg-slate-100/50 text-slate-400";
+                        }
 
                         return (
                             <div
                                 key={dStr}
-                                onClick={() => toggleHoliday(dStr)} // Placeholder
+                                onClick={() => handleDayClick(dStr)}
                                 className={`
-                                    ${bgClass} 
-                                    rounded-lg p-1 text-center text-xs cursor-pointer border border-transparent transition-all
+                                    ${bgClass} border ${borderClass}
+                                    rounded-lg p-1 text-center text-xs cursor-pointer transition-all
                                     flex flex-col items-center justify-center h-10 relative
+                                    relative group
                                 `}
                                 title={dStr}
                             >
                                 <span>{day.date()}</span>
-                                <span className="text-[9px] opacity-60">{day.format('MMM')}</span>
+                                {override && !override.is_off && (
+                                    <Clock size={8} className="absolute bottom-1 right-1 text-emerald-600" />
+                                )}
+                                {(override?.is_off || isPublicHoliday) && (
+                                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full absolute bottom-1"></span>
+                                )}
                             </div>
                         );
                     })}
@@ -190,6 +214,20 @@ const FiscalCalendarView = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {periods.map(renderMonth)}
                 </div>
+            )}
+
+            {/* Config Modal */}
+            {showConfigModal && selectedDate && (
+                <DailyConfigModal
+                    date={selectedDate}
+                    initialOverride={overrides[moment(selectedDate).format('YYYY-MM-DD')]}
+                    isHoliday={holidays.has(moment(selectedDate).format('YYYY-MM-DD'))}
+                    onClose={() => setShowConfigModal(false)}
+                    onSuccess={() => {
+                        setShowConfigModal(false);
+                        fetchData();
+                    }}
+                />
             )}
         </div>
     );
