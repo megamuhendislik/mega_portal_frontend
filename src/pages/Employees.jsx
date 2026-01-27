@@ -40,6 +40,9 @@ const INITIAL_FORM_STATE = {
     // cross_manager_ids: [], // REMOVED
     substitutes: [], // [NEW] Substitutes
     functional_department: '', // Attribute (stored in secondary_departments)
+    roles: [],
+    direct_permissions: [],
+    excluded_permissions: [],
 
     employee_code: '',
 
@@ -1150,7 +1153,7 @@ const Employees = () => {
     };
 
     const handleAddNew = () => {
-        setFormData({ ...INITIAL_FORM_STATE, substitutes: [], roles: [], secondary_job_positions: [] });
+        setFormData({ ...INITIAL_FORM_STATE, substitutes: [], roles: [], secondary_job_positions: [], excluded_permissions: [] });
         setViewMode('create');
         setCurrentStep(1);
         setCompletedSteps([]);
