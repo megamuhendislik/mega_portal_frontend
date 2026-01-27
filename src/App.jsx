@@ -19,6 +19,7 @@ import Reports from './pages/Reports';
 import SystemHealth from './pages/admin/SystemHealth';
 import AttendanceDebugger from './pages/admin/AttendanceDebugger';
 import FiscalCalendarSettings from './pages/admin/FiscalCalendarSettings';
+import UnifiedFiscalCalendar from './pages/admin/UnifiedFiscalCalendar';
 import ServiceControl from './pages/ServiceControl';
 import MealOrders from './pages/admin/MealOrders';
 import SubstituteManagement from './pages/SubstituteManagement';
@@ -101,6 +102,7 @@ function App() {
             {/* Meal Orders - Requires page.meal_tracking.access */}
             <Route path="meal-orders" element={<ProtectedRoute requiredPermission="page.meal_tracking.access"><MealOrders /></ProtectedRoute>} />
             {/* <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="admin.full_access"><FiscalCalendarSettings /></ProtectedRoute>} /> */}
+            <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="admin.full_access"><UnifiedFiscalCalendar /></ProtectedRoute>} />
             <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="admin.full_access"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>
