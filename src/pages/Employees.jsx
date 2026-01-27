@@ -794,27 +794,42 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
         const current = formData.roles || [];
         if (current.includes(roleId)) {
             handleChange('roles', current.filter(id => id !== roleId));
+            // When removing a role, we should arguably clear exclusions related to it? 
+            // Or just leave them, they won't do anything if role isn't there.
         } else {
             handleChange('roles', [...current, roleId]);
         }
     };
 
-    const togglePermission = (permId) => {
-        const current = formData.direct_permissions || [];
-        if (current.includes(permId)) {
-            handleChange('direct_permissions', current.filter(id => id !== permId));
-        } else {
-            handleChange('direct_permissions', [...current, permId]);
-        }
-    };
-
-    // Helper to check if a permission is already granted by a selected Role
+    // Helper to check if a permission is granted by a selected Role
     const isGrantedByRole = (permId) => {
         if (!formData.roles) return false;
-        // Find selected roles
         const selectedRoles = roles.filter(r => formData.roles.includes(r.id));
-        // Check if any has this permission
         return selectedRoles.some(r => r.permissions && r.permissions.some(p => p.id === permId));
+    };
+
+    const togglePermission = (permId) => {
+        const fromRole = isGrantedByRole(permId);
+        const direct = formData.direct_permissions || [];
+        const excluded = formData.excluded_permissions || [];
+
+        if (fromRole) {
+            // Logic for Role-based permissions: Toggle Exclusion
+            if (excluded.includes(permId)) {
+                // Was excluded, now including it back (Uncheck -> Check)
+                handleChange('excluded_permissions', excluded.filter(id => id !== permId));
+            } else {
+                // Was included, now excluding it (Check -> Uncheck)
+                handleChange('excluded_permissions', [...excluded, permId]);
+            }
+        } else {
+            // Logic for Non-Role permissions: Toggle Direct
+            if (direct.includes(permId)) {
+                handleChange('direct_permissions', direct.filter(id => id !== permId));
+            } else {
+                handleChange('direct_permissions', [...direct, permId]);
+            }
+        }
     };
 
     // Filter permissions for the active tab
@@ -881,26 +896,34 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
                             {tabPermissions.map(perm => {
                                 const fromRole = isGrantedByRole(perm.id);
                                 const isDirect = (formData.direct_permissions || []).includes(perm.id);
-                                const isChecked = fromRole || isDirect;
+                                const isExcluded = (formData.excluded_permissions || []).includes(perm.id);
+
+                                // Effectively checked if (Role AND NOT Excluded) OR Direct
+                                const isChecked = (fromRole && !isExcluded) || isDirect;
 
                                 return (
                                     <label key={perm.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? (fromRole ? 'bg-slate-50 border-slate-200' : 'bg-blue-50 border-blue-200 shadow-sm') : 'bg-white border-slate-100 hover:border-slate-300'}`}>
                                         <div className="mt-0.5">
                                             <input
                                                 type="checkbox"
-                                                className={`w-4 h-4 rounded focus:ring-blue-500 ${fromRole ? 'text-slate-400 bg-slate-200' : 'text-blue-600'}`}
+                                                className={`w-4 h-4 rounded focus:ring-blue-500 ${fromRole ? (isChecked ? 'text-indigo-500 bg-slate-100' : 'text-slate-300 bg-red-50 ring-red-200') : 'text-blue-600'}`}
                                                 checked={isChecked}
                                                 onChange={() => togglePermission(perm.id)}
-                                                disabled={!canManageRoles || fromRole}
+                                                disabled={!canManageRoles}
                                             />
                                         </div>
                                         <div>
-                                            <div className={`font-bold text-sm ${isChecked ? 'text-slate-800' : 'text-slate-600'}`}>{perm.name}</div>
+                                            <div className={`font-bold text-sm ${isChecked ? 'text-slate-800' : 'text-slate-400 line-through decoration-slate-300'}`}>{perm.name}</div>
                                             <div className="text-[10px] text-slate-400 font-mono mt-0.5">{perm.code}</div>
 
-                                            {fromRole && (
+                                            {fromRole && isChecked && (
                                                 <div className="mt-1 flex items-center gap-1 text-[10px] text-indigo-600 font-bold bg-indigo-50 w-fit px-1.5 py-0.5 rounded">
                                                     <Briefcase size={10} /> Rolden Tanımlı
+                                                </div>
+                                            )}
+                                            {fromRole && !isChecked && (
+                                                <div className="mt-1 flex items-center gap-1 text-[10px] text-red-600 font-bold bg-red-50 w-fit px-1.5 py-0.5 rounded">
+                                                    <XCircle size={10} /> Hariç Tutuldu
                                                 </div>
                                             )}
                                         </div>
@@ -912,7 +935,8 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
                     <div className="p-4 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
                         <div className="flex gap-4">
                             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded"></div> Doğrudan Yetki</div>
-                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-100 border border-slate-300 rounded"></div> Rolden Gelen (Kaldırılamaz)</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-indigo-50 border border-indigo-200 rounded"></div> Rolden Gelen</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-50 border border-red-200 rounded"></div> Hariç Tutulan</div>
                         </div>
                         <div>Top. {tabPermissions.length} yetki listeleniyor</div>
                     </div>
@@ -1226,9 +1250,10 @@ const Employees = () => {
                 foreign_languages: data.foreign_languages || [],
 
                 substitutes: data.substitutes || [], // [NEW] - Ensure this is populated if API returns IDs
-                roles: data.roles ? data.roles.map(r => r.id || r) : [], // [NEW] Populating IDs
+                roles: data.roles ? data.roles.map(r => r.id || r) : [],
 
                 direct_permissions: data.direct_permissions ? data.direct_permissions.map(p => p.id) : [],
+                excluded_permissions: data.excluded_permissions ? data.excluded_permissions.map(p => p.id) : [],
                 password: '', // Don't populate
             };
 
