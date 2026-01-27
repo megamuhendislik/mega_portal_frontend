@@ -709,6 +709,37 @@ function DashboardTab({ stats, refresh, loading }) {
                         }}
                     />
 
+                    <ActionButton
+                        label="Standart Mesai Harici Temizle"
+                        description="Vardiya saatleri dışındaki (Erken Giriş / Geç Çıkış) tüm süreleri siler ve giriş-çıkış saatlerini vardiya saatlerine eşitler. Fazla mesaileri sıfırlar."
+                        hazard={true}
+                        onClick={async () => {
+                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
+                            if (!start) return;
+                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+                            if (!end) return;
+
+                            if (confirm(`DİKKAT: ${start} - ${end} arasındaki tüm kayıtlarda ERKEN GİRİŞ ve GEÇ ÇIKIŞLAR SİLİNECEK. Sadece standart çalışma saatleri kalacak. Onaylıyor musunuz?`)) {
+                                try {
+                                    setRecalcConsoleOpen(true);
+                                    setRecalcLoading(true);
+                                    setRecalcLogs(['> Vardiyaya Eşitleme Başlatılıyor...', `> Aralık: ${start} - ${end}`, '> Bu işlem fazla mesaileri silebilir.']);
+
+                                    const res = await api.post('/system/health-check/snap_attendance_to_shift/', { start_date: start, end_date: end });
+
+                                    setRecalcLogs(prev => [...prev, `> Başarıyla Güncellendi: ${res.data.updated_count} kayıt`, `> Mesaj: ${res.data.message}`]);
+                                    alert(res.data.message);
+                                    refresh();
+                                } catch (e) {
+                                    setRecalcLogs(prev => [...prev, `> HATA: ${e.response?.data?.error || e.message}`]);
+                                    alert("Hata: " + (e.response?.data?.error || e.message));
+                                } finally {
+                                    setRecalcLoading(false);
+                                }
+                            }
+                        }}
+                    />
+
                     {/* Recalculate Console Modal/Area */}
                     {recalcConsoleOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

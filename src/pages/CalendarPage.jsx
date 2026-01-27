@@ -8,7 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
 import DayDetailModal from '../components/DayDetailModal';
 import useInterval from '../hooks/useInterval';
-import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import FiscalCalendarView from '../components/FiscalCalendarView'; // Imported
+import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft, Settings } from 'lucide-react'; // Added Settings icon
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -29,14 +30,14 @@ const messages = {
 };
 
 const CalendarPage = () => {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const [events, setEvents] = useState([]);
     const [holidays, setHolidays] = useState(new Set()); // Strings 'YYYY-MM-DD'
     const [loading, setLoading] = useState(false);
 
     // View State
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [mode, setMode] = useState('YEAR'); // 'YEAR' | 'CALENDAR'
+    const [mode, setMode] = useState('YEAR'); // 'YEAR' | 'CALENDAR' | 'FISCAL'
     const [calendarView, setCalendarView] = useState('month'); // Internal view for big-calendar
 
     // Modal State
@@ -51,9 +52,9 @@ const CalendarPage = () => {
     useEffect(() => {
         // If in year mode, maybe fetch broad range or just specific buckets?
         // For simplicity, we fetch the current view's range when in CALENDAR mode.
-        // If in year mode, maybe fetch broad range or just specific buckets?
-        // For simplicity, we fetch the current view's range when in CALENDAR mode.
-        fetchCalendarData();
+        if (mode === 'CALENDAR') {
+            fetchCalendarData();
+        }
     }, [currentDate, calendarView, showWorkEvents, mode]);
 
     // Live Updates (Every 60s) - Only active in Calendar mode to save resources?
@@ -572,15 +573,30 @@ const CalendarPage = () => {
                             Ajandam
                         </span>
                         <span className="text-sm font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                            {mode === 'YEAR' ? 'Yıllık Görünüm' : 'Ajanda Modu'}
+                            {mode === 'YEAR' ? 'Yıllık Görünüm' : mode === 'FISCAL' ? 'Mali Takvim (Yönetici)' : 'Ajanda Modu'}
                         </span>
                     </h1>
-                    <p className="text-slate-500 mt-2 font-medium">
-                        Planlarınızı yönetin ve takip edin.
-                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <p className="text-slate-500 font-medium">
+                            Planlarınızı yönetin ve takip edin.
+                        </p>
+
+                        {/* Admin Fiscal Toggle */}
+                        {hasPermission('ATTENDANCE_MANAGE_FISCAL') && (
+                            <button
+                                onClick={() => setMode(mode === 'FISCAL' ? 'CALENDAR' : 'FISCAL')}
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${mode === 'FISCAL' ? 'bg-slate-800 text-white shadow-lg shadow-slate-300' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'}`}
+                            >
+                                <Settings size={14} />
+                                {mode === 'FISCAL' ? 'Kişisel Takvime Dön' : 'Şirket Takvimi Düzenle'}
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <Legend />
+                {mode !== 'FISCAL' && <Legend />}
             </div>
+
+            {mode === 'FISCAL' && <FiscalCalendarView />}
 
             {mode === 'YEAR' && <YearView />}
 
