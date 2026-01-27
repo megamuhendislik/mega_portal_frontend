@@ -1,862 +1,536 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { Plus, Edit, Trash2, Save, X, Calendar, ChevronLeft, ChevronRight, Settings, Info, Clock, CheckCircle, RefreshCw, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import moment from 'moment';
-import { useAuth } from '../context/AuthContext';
-import 'moment/locale/tr';
-
-// Constants
-const DAYS = [
-    { key: 'MON', label: 'Pazartesi' },
-    { key: 'TUE', label: 'Salı' },
-    { key: 'WED', label: 'Çarşamba' },
-    { key: 'THU', label: 'Perşembe' },
-    { key: 'FRI', label: 'Cuma' },
-    { key: 'SAT', label: 'Cumartesi' },
-    { key: 'SUN', label: 'Pazar' },
-];
-
-const MONTHS_TR = [
-    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-];
+import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 
 const WorkSchedules = () => {
-    // --- State ---
-    const [schedules, setSchedules] = useState([]);
-    const [holidays, setHolidays] = useState([]);
+    const [calendars, setCalendars] = useState([]);
+    const [selectedCalendarId, setSelectedCalendarId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [calendarData, setCalendarData] = useState(null);
 
-    // View State
-    const [selectedScheduleId, setSelectedScheduleId] = useState(null);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [editMode, setEditMode] = useState(false); // Holiday Edit Mode
-
-    // Drag Selection State
-    const [isDragging, setIsDragging] = useState(false);
-    const [selectionStart, setSelectionStart] = useState(null);
-    const [selectionEnd, setSelectionEnd] = useState(null);
-
-    // Modal State
-    const [showScheduleModal, setShowScheduleModal] = useState(false);
-    const [showHolidayModal, setShowHolidayModal] = useState(false);
-
-    // Edit Data
-    const [scheduleFormData, setScheduleFormData] = useState(null);
-    const [holidayFormData, setHolidayFormData] = useState(null);
-
-    const { user } = useAuth();
-    const canManageHolidays = user?.user?.is_superuser || user?.all_permissions?.includes('CALENDAR_MANAGE_HOLIDAYS');
-
-    const today = moment().startOf('day');
-
-    // --- Effects ---
     useEffect(() => {
-        moment.locale('tr');
-        fetchData();
+        fetchCalendars();
     }, []);
 
-    const fetchData = async () => {
+    useEffect(() => {
+        if (selectedCalendarId) {
+            fetchCalendarDetails(selectedCalendarId);
+        } else {
+            setCalendarData(null);
+        }
+    }, [selectedCalendarId]);
+
+    const fetchCalendars = async () => {
+        setLoading(true);
         try {
-            const [schedulesRes, holidaysRes] = await Promise.all([
-                api.get('/work-schedules/'),
-                api.get('/public-holidays/')
-            ]);
-            setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : schedulesRes.data.results || []);
-            setHolidays(Array.isArray(holidaysRes.data) ? holidaysRes.data : holidaysRes.data.results || []);
+            const res = await api.get('/attendance/fiscal-calendars/');
+            setCalendars(res.data);
+            if (res.data.length > 0 && !selectedCalendarId) {
+                setSelectedCalendarId(res.data[0].id);
+            }
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error("Error fetching calendars:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (schedules.length > 0 && !selectedScheduleId) {
-            setSelectedScheduleId(schedules[0].id);
-        }
-    }, [schedules]);
-
-    const selectedSchedule = schedules.find(s => s.id === parseInt(selectedScheduleId));
-
-    // --- Interaction Handlers (Drag Select) ---
-
-    // 1. Mouse Down: Start Selection
-    const handleMouseDown = (date) => {
-        if (!editMode || !canManageHolidays) return;
-        if (date.isBefore(today, 'day')) return; // Block past dates
-
-        setIsDragging(true);
-        setSelectionStart(date);
-        setSelectionEnd(date);
-    };
-
-    // 2. Mouse Enter: Update Selection End (while dragging)
-    const handleMouseEnter = (date) => {
-        if (!isDragging) return;
-        setSelectionEnd(date);
-    };
-
-    // 3. Mouse Up: Finish Selection & Open Modal
-    const handleMouseUp = () => {
-        if (!isDragging) return;
-        setIsDragging(false);
-
-        if (!selectionStart || !selectionEnd) return;
-
-        // Determine range (start could be after end if dragged backwards)
-        const start = selectionStart.isBefore(selectionEnd) ? selectionStart : selectionEnd;
-        const end = selectionStart.isBefore(selectionEnd) ? selectionEnd : selectionStart;
-
-        openHolidayModalRange(start, end);
-    };
-
-    // Standard Click Handling (Fallbacks if no drag happened)
-    const handleDayClick = (date, existingHoliday) => {
-        if (date.isBefore(today, 'day')) return;
-
-        // If dragging just finished, ignore duplicate click event
-        if (isDragging) return;
-
-        // If existing holiday, open edit for THAT specific holiday
-        if (existingHoliday) {
-            openHolidayModalEdit(existingHoliday);
-            return;
-        }
-
-        // If edit mode is ON and no existing holiday, treat as single day select
-        if (editMode && canManageHolidays) {
-            setSelectionStart(date);
-            setSelectionEnd(date);
-            openHolidayModalRange(date, date);
-        }
-    };
-
-    // Double click shortcut (Works even if edit mode is OFF, for power users)
-    const handleDayDoubleClick = (date, existingHoliday) => {
-        if (date.isBefore(today, 'day')) return;
-
-        if (canManageHolidays) {
-            if (existingHoliday) {
-                openHolidayModalEdit(existingHoliday);
-            } else {
-                setSelectionStart(date);
-                setSelectionEnd(date);
-                openHolidayModalRange(date, date);
-            }
-        }
-    }
-
-
-    // --- Modal Logic ---
-
-    // Open Modal for NEW Holiday (Range or Single)
-    const openHolidayModalRange = (start, end) => {
-        const isMultiDay = !start.isSame(end, 'day');
-
-        setHolidayFormData({
-            id: null,
-            name: '',
-            category: 'OFFICIAL',
-            isPartial: false,
-            startTime: '13:00',
-            endTime: '18:00',
-            rangeStart: start,
-            rangeEnd: end,
-            isMultiDay: isMultiDay
-        });
-        setShowHolidayModal(true);
-    };
-
-    // Open Modal for EXISTING Holiday
-    const openHolidayModalEdit = (holiday) => {
-        const holidayDate = moment(holiday.date);
-        const isPartial = !!holiday.start_time;
-
-        setHolidayFormData({
-            id: holiday.id,
-            name: holiday.name,
-            category: holiday.category,
-            isPartial: isPartial,
-            startTime: holiday.start_time ? holiday.start_time.substring(0, 5) : '13:00',
-            endTime: holiday.end_time ? holiday.end_time.substring(0, 5) : '18:00',
-            rangeStart: holidayDate,
-            rangeEnd: holidayDate,
-            isMultiDay: false // Editing existng always effectively single day for now
-        });
-        setShowHolidayModal(true);
-    };
-
-    const handleSaveHoliday = async () => {
-        if (!holidayFormData.name.trim()) return alert('Lütfen isim giriniz.');
-
+    const fetchCalendarDetails = async (id) => {
         try {
-            const { rangeStart, rangeEnd, name, category, isPartial, startTime, endTime } = holidayFormData;
+            const res = await api.get(`/attendance/fiscal-calendars/${id}/`);
+            setCalendarData(res.data);
+        } catch (error) {
+            console.error("Error details:", error);
+        }
+    };
 
-            // Generate list of dates to process
-            const datesToProcess = [];
-            let current = rangeStart.clone();
-            while (current.isSameOrBefore(rangeEnd)) {
-                datesToProcess.push(current.clone());
-                current.add(1, 'day');
-            }
-
-            // Prepare Payload Base
-            const basePayload = { name, category };
-
-            // Logic:
-            // 1. If Multi-Day: Force FULL_DAY for all (Partial not supported for ranges yet logic-wise easily)
-            // 2. If Single-Day: Allow Partial
-
-            if (holidayFormData.isMultiDay) {
-                // Bulk Create for Range
-                const promises = datesToProcess.map(date =>
-                    api.post('/public-holidays/', {
-                        ...basePayload,
-                        date: date.format('YYYY-MM-DD'),
-                        type: 'FULL_DAY',
-                        start_time: null,
-                        end_time: null
-                    })
-                );
-                await Promise.all(promises);
-            } else {
-                // Single Day (Create or Update)
-                const payload = {
-                    ...basePayload,
-                    date: rangeStart.format('YYYY-MM-DD'),
-                    type: isPartial ? 'HALF_DAY' : 'FULL_DAY',
-                    start_time: isPartial ? startTime : null,
-                    end_time: isPartial ? endTime : null
-                };
-
-                if (holidayFormData.id) {
-                    await api.put(`/public-holidays/${holidayFormData.id}/`, payload);
-                } else {
-                    await api.post('/public-holidays/', payload);
+    const handleCreate = async () => {
+        const name = prompt("Yeni Takvim Adı:");
+        if (!name) return;
+        try {
+            const res = await api.post('/attendance/fiscal-calendars/', {
+                name,
+                year: 2026,
+                weekly_schedule: {
+                    MON: { start: "08:30", end: "18:00", is_off: false },
+                    TUE: { start: "08:30", end: "18:00", is_off: false },
+                    WED: { start: "08:30", end: "18:00", is_off: false },
+                    THU: { start: "08:30", end: "18:00", is_off: false },
+                    FRI: { start: "08:30", end: "18:00", is_off: false },
+                    SAT: { start: "08:30", end: "13:00", is_off: false },
+                    SUN: { start: "00:00", end: "00:00", is_off: true }
                 }
-            }
-
-            setShowHolidayModal(false);
-            setSelectionStart(null);
-            setSelectionEnd(null);
-            fetchData(); // Refresh grid
+            });
+            setCalendars([...calendars, res.data]);
+            setSelectedCalendarId(res.data.id);
         } catch (error) {
-            console.error('Save failed:', error);
-            alert('Kaydetme hatası: ' + (error.response?.data?.detail || error.message));
+            alert('Hata: ' + error.message);
         }
     };
 
-    const handleDeleteHoliday = async () => {
-        if (!holidayFormData.id) return;
-        if (!window.confirm('Bu tatili silmek istediğinize emin misiniz?')) return;
-        try {
-            await api.delete(`/public-holidays/${holidayFormData.id}/`);
-            setShowHolidayModal(false);
-            fetchData();
-        } catch (error) {
-            alert('Silinemedi.');
-        }
-    }
-
-
-    // --- Render Helpers ---
-    const getDayStatus = (date) => {
-        const dateStr = date.format('YYYY-MM-DD');
-
-        // Check Selection State (Dragging visual)
-        if (selectionStart && selectionEnd) {
-            const start = selectionStart.isBefore(selectionEnd) ? selectionStart : selectionEnd;
-            const end = selectionStart.isBefore(selectionEnd) ? selectionEnd : selectionStart;
-            if (date.isBetween(start, end, 'day', '[]')) {
-                return { type: 'SELECTED', label: 'Seçili', color: 'bg-blue-200 ring-2 ring-blue-400 z-10' };
-            }
-        }
-
-        // Check Public Holiday
-        const holiday = holidays.find(h => h.date === dateStr);
-        if (holiday) {
-            const isReligious = holiday.category === 'RELIGIOUS';
-            // Partial text
-            let label = holiday.name;
-            if (holiday.start_time && holiday.end_time) {
-                label += ` (${holiday.start_time.substring(0, 5)}-${holiday.end_time.substring(0, 5)})`;
-            }
-
-            return {
-                type: 'HOLIDAY',
-                label: label,
-                color: isReligious ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-red-100 text-red-700 border-red-200',
-                holiday
-            };
-        }
-
-        // Check Schedule
-        if (!selectedSchedule) return { type: 'UNKNOWN', label: '-', color: 'bg-slate-50' };
-
-        const dayKey = date.format('ddd').toUpperCase();
-        const rule = selectedSchedule.schedule[dayKey];
-        if (!rule || rule.is_off) return { type: 'OFF', label: 'Hafta Tatili', color: 'bg-slate-100 text-slate-400' };
-
-        return { type: 'WORK', label: `${rule.start}-${rule.end}`, color: 'bg-green-50 text-green-700 border-green-200 border' };
-    };
-
-    // --- Fiscal Logic ---
-    const [activeTab, setActiveTab] = useState('SCHEDULES'); // 'SCHEDULES' | 'FISCAL'
-    const [fiscalPeriods, setFiscalPeriods] = useState([]);
-    const [generatingFiscal, setGeneratingFiscal] = useState(false);
-
-    useEffect(() => {
-        if (activeTab === 'FISCAL') {
-            fetchFiscalPeriods();
-        }
-    }, [activeTab, selectedYear]);
-
-    const fetchFiscalPeriods = async () => {
-        try {
-            const response = await api.get(`/attendance/fiscal-periods/?year=${selectedYear}`);
-            setFiscalPeriods(response.data);
-        } catch (error) {
-            console.error('Error fetching fiscal periods:', error);
-        }
-    };
-
-    const handleGenerateFiscal = async () => {
-        if (!window.confirm(`${selectedYear} yılı için mali dönemleri oluşturmak istediğinize emin misiniz?`)) return;
-        setGeneratingFiscal(true);
-        try {
-            await api.post('/attendance/fiscal-periods/generate_defaults/', { year: selectedYear });
-            fetchFiscalPeriods();
-            alert('Mali dönemler başarıyla oluşturuldu.');
-        } catch (error) {
-            alert('Oluşturma hatası: ' + (error.response?.data?.detail || error.message));
-        } finally {
-            setGeneratingFiscal(false);
-        }
-    };
-
-    const handleToggleLock = async (period) => {
-        const action = period.is_locked ? 'kilidini açmak' : 'kilitlemek';
-        if (!window.confirm(`${period.name} dönemini ${action} istediğinize emin misiniz?`)) return;
-
-        try {
-            await api.patch(`/attendance/fiscal-periods/${period.id}/`, { is_locked: !period.is_locked });
-            fetchFiscalPeriods();
-        } catch (error) {
-            alert('İşlem başarısız.');
-        }
-    };
-
-    // --- Render ---
-
-    if (loading) return <div className="p-10 text-center animate-pulse text-slate-500">Yükleniyor...</div>;
+    if (loading && calendars.length === 0) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
     return (
-        <div className="p-4 w-full mx-auto select-none" onMouseUp={handleMouseUp}>
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+        <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-4rem)] flex flex-col">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Çalışma ve Mali Takvim</h2>
-                    <p className="text-slate-500 text-sm mt-1">Vardiya programları, tatiller ve maaş dönem yönetimleri.</p>
+                    <h1 className="text-2xl font-bold text-slate-800">Mali Takvim Yönetimi</h1>
+                    <p className="text-slate-500">Çalışma saatleri, tatiller ve mali dönemleri tek ekrandan yönetin.</p>
+                </div>
+                <button onClick={handleCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+                    <Plus size={18} /> Yeni Takvim
+                </button>
+            </div>
+
+            <div className="flex gap-6 flex-1 overflow-hidden">
+                {/* Sidebar List */}
+                <div className="w-72 flex-shrink-0 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                    <div className="p-4 bg-slate-50 border-b border-slate-100 font-bold text-slate-600 flex items-center gap-2">
+                        <Calendar size={18} />
+                        Takvim Listesi
+                    </div>
+                    <div className="divide-y divide-slate-100 overflow-y-auto flex-1">
+                        {calendars.map(c => (
+                            <div
+                                key={c.id}
+                                onClick={() => setSelectedCalendarId(c.id)}
+                                className={`p-4 cursor-pointer transition-colors hover:bg-slate-50 ${selectedCalendarId === c.id ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500' : 'text-slate-600 border-l-4 border-transparent'}`}
+                            >
+                                <div className="font-medium">{c.name}</div>
+                                <div className="flex justify-between items-center mt-1">
+                                    <span className="text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-600">{c.year}</span>
+                                    {c.is_default && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Varsayılan</span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                {activeTab === 'SCHEDULES' && (
-                    <button
-                        onClick={() => {
-                            const defaultSchedule = {};
-                            DAYS.forEach(day => { defaultSchedule[day.key] = { start: '', end: '', is_off: day.key === 'SAT' || day.key === 'SUN' }; });
-                            setScheduleFormData({
-                                id: null,
-                                name: '',
-                                is_default: false,
-                                has_lunch_break: true,
-                                lunch_start: '',
-                                lunch_end: '',
-                                daily_break_allowance: 0,
-                                late_tolerance_minutes: 0,
-                                service_tolerance_minutes: 0,
-                                minimum_overtime_minutes: 15,
-                                schedule: defaultSchedule
-                            });
-                            setShowScheduleModal(true);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
-                    >
-                        <Plus size={20} /> Yeni Takvim Ekle
-                    </button>
-                )}
-            </div>
+                {/* Main Content */}
+                <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                    {calendarData ? (
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
-            {/* Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl w-fit mb-6">
-                <button
-                    onClick={() => setActiveTab('SCHEDULES')}
-                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'SCHEDULES' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    Çalışma Şablonları & Tatiller
-                </button>
-                <button
-                    onClick={() => setActiveTab('FISCAL')}
-                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'FISCAL' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    Mali Takvim (Dönemler)
-                </button>
-            </div>
-
-            {/* Content: PROPERLY CONDITIONED SECTION */}
-            {activeTab === 'SCHEDULES' ? (
-                <>
-                    {/* Controls */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-8 flex flex-col xl:flex-row items-center gap-6 justify-between">
-                        <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
-                            <div className="relative">
-                                <select
-                                    value={selectedScheduleId || ''}
-                                    onChange={(e) => setSelectedScheduleId(e.target.value)}
-                                    className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-semibold py-3 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-w-[240px] cursor-pointer"
-                                >
-                                    {schedules.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} {s.is_default ? '(Varsayılan)' : ''}</option>
-                                    ))}
-                                </select>
-                                <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
-                            </div>
-
-                            <div className="flex bg-slate-50 rounded-xl border border-slate-200 p-1">
-                                <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
-                                <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
-                                <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronRight size={20} /></button>
-                            </div>
-
-                            {selectedSchedule && (
-                                <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-4">
-                                    <button
-                                        onClick={() => {
-                                            setScheduleFormData({
-                                                id: selectedSchedule.id,
-                                                name: selectedSchedule.name,
-                                                is_default: selectedSchedule.is_default,
-                                                name: selectedSchedule.name,
-                                                is_default: selectedSchedule.is_default,
-                                                has_lunch_break: selectedSchedule.has_lunch_break !== undefined ? selectedSchedule.has_lunch_break : true,
-                                                lunch_start: selectedSchedule.lunch_start || '12:30',
-                                                lunch_end: selectedSchedule.lunch_end || '13:30',
-                                                daily_break_allowance: selectedSchedule.daily_break_allowance || 30,
-                                                late_tolerance_minutes: selectedSchedule.late_tolerance_minutes || 15,
-                                                service_tolerance_minutes: selectedSchedule.service_tolerance_minutes || 0,
-                                                minimum_overtime_minutes: selectedSchedule.minimum_overtime_minutes || 15,
-                                                schedule: JSON.parse(JSON.stringify(selectedSchedule.schedule))
-                                            });
-                                            setShowScheduleModal(true);
-                                        }}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                        <Settings size={16} /> Ayarlar
-                                    </button>
-                                    {!selectedSchedule.is_default && (
-                                        <button onClick={() => {
-                                            if (window.confirm('Silmek istediğinize emin misiniz?')) {
-                                                api.delete(`/work-schedules/${selectedSchedule.id}/`).then(() => { setSelectedScheduleId(null); fetchData(); });
-                                            }
-                                        }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
-                            {/* Legend */}
-                            <div className="flex gap-3 text-xs">
-                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Çalışma</div>
-                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div> Tatil</div>
-                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Resmi</div>
-                            </div>
-
-                            {canManageHolidays && (
-                                <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                                    <span className={`text-sm font-bold ${editMode ? 'text-blue-600' : 'text-slate-500'}`}>Tatil Modu</span>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" checked={editMode} onChange={(e) => setEditMode(e.target.checked)} />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Info Message */}
-                    {editMode && (
-                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
-                            <Info className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                            <div>
-                                <h4 className="font-bold text-blue-800 text-sm">Tatil Düzenleme Modu</h4>
-                                <p className="text-blue-600 text-sm mt-1">Günleri seçmek için tıklayın veya <strong>basılı tutup sürükleyerek</strong> çoklu seçim yapın.</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Calendar Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
-                        {MONTHS_TR.map((monthName, index) => {
-                            const monthStart = moment(`${selectedYear}-${index + 1}-01`, 'YYYY-M-DD').locale('tr');
-                            const daysInMonth = monthStart.daysInMonth();
-                            const startDayOfWeek = (monthStart.day() + 6) % 7;
-
-                            return (
-                                <div key={monthName} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden select-none">
-                                    <div className="bg-slate-50 p-3 border-b border-slate-100 text-center font-bold text-slate-800 capitalize">{monthName}</div>
-                                    <div className="p-4">
-                                        <div className="grid grid-cols-7 gap-1 mb-2">
-                                            {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => <div key={d} className="text-center text-[10px] text-slate-400 font-bold">{d}</div>)}
-                                        </div>
-                                        <div className="grid grid-cols-7 gap-1.5">
-                                            {Array(startDayOfWeek).fill(null).map((_, i) => <div key={`e-${i}`} className="h-8"></div>)}
-                                            {Array(daysInMonth).fill(null).map((_, i) => {
-                                                const date = moment(monthStart).add(i, 'days').locale('tr');
-                                                const status = getDayStatus(date);
-                                                const isPast = date.isBefore(today, 'day');
-
-                                                return (
-                                                    <div
-                                                        key={i}
-                                                        onMouseDown={() => handleMouseDown(date)}
-                                                        onMouseEnter={() => handleMouseEnter(date)}
-                                                        // MouseUp handled by wrapper div to catch drops anywhere, but click handles logic here if needed
-                                                        onClick={() => handleDayClick(date, status.holiday)}
-                                                        onDoubleClick={() => handleDayDoubleClick(date, status.holiday)}
-                                                        className={`
-                                                            h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-all relative group
-                                                            ${status.color}
-                                                            ${isPast ? 'opacity-40 grayscale cursor-not-allowed' : ''}
-                                                            ${!isPast && editMode ? 'cursor-pointer hover:ring-2 hover:ring-blue-300' : ''}
-                                                        `}
-                                                        title={status.label}
-                                                    >
-                                                        {i + 1}
-                                                        {status.holiday?.start_time && (
-                                                            <div className="absolute top-0 right-0 w-2 h-2 bg-amber-400 rounded-full border border-white"></div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                            {/* Section 1: Top Row - General & Schedule */}
+                            <div className="grid grid-cols-12 gap-6">
+                                {/* General Settings */}
+                                <div className="col-span-12 xl:col-span-4 space-y-6">
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full">
+                                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                            <SettingsIcon /> Genel Ayarlar
+                                        </h3>
+                                        <GeneralSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </>
-            ) : (
-                <div className="card max-w-5xl mx-auto shadow-sm p-8">
-                    <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-orange-50 p-3 rounded-full text-orange-600"><Settings size={24} /></div>
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800">Mali Dönem Ayarları</h3>
-                                <p className="text-sm text-slate-500">Maaş dönemlerini kilitleyerek geriye dönük değişikliği engelleyebilirsiniz.</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="flex bg-slate-50 rounded-xl border border-slate-200 p-1 mr-4">
-                                <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
-                                <span className="px-4 py-2 font-bold text-slate-700 min-w-[80px] text-center">{selectedYear}</span>
-                                <button onClick={() => setSelectedYear(y => y + 1)} className="p-2 hover:bg-white rounded-lg text-slate-500"><ChevronRight size={20} /></button>
-                            </div>
-                            <button
-                                onClick={handleGenerateFiscal}
-                                disabled={generatingFiscal}
-                                className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all disabled:opacity-50"
-                            >
-                                <RefreshCw size={18} className={generatingFiscal ? "animate-spin" : ""} />
-                                Standart Oluştur
-                            </button>
-                        </div>
-                    </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
-                                <tr>
-                                    <th className="px-6 py-4">Dönem</th>
-                                    <th className="px-6 py-4">Başlangıç</th>
-                                    <th className="px-6 py-4">Bitiş</th>
-                                    <th className="px-6 py-4">Durum</th>
-                                    <th className="px-6 py-4 text-right">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {fiscalPeriods.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <Calendar size={48} className="opacity-20" />
-                                                <p>Bu yıl için mali dönem bulunamadı.</p>
-                                                <button onClick={handleGenerateFiscal} className="text-blue-600 hover:underline font-medium">Otomatik Oluştur</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    fiscalPeriods.map((period) => (
-                                        <tr key={period.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-6 py-4 font-bold text-slate-700">{period.name}</td>
-                                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">{period.start_date}</td>
-                                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">{period.end_date}</td>
-                                            <td className="px-6 py-4">
-                                                {period.is_locked ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                                                        <Lock size={12} /> KİLİTLİ
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                                                        <CheckCircle size={12} /> AÇIK
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => handleToggleLock(period)}
-                                                    className={`p-2 rounded-lg transition-colors ${period.is_locked
-                                                        ? 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
-                                                        : 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700'
-                                                        }`}
-                                                    title={period.is_locked ? "Ocak Kilidini Aç" : "Dönemi Kilitle"}
-                                                >
-                                                    {period.is_locked ? <Settings size={18} /> : <Lock size={18} />}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* --- Modals (Portals) --- */}
-
-
-            {/* Holiday Modal */}
-            {showHolidayModal && holidayFormData && createPortal(
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm animate-fade-in text-left">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden scale-100">
-                        <div className="bg-slate-50 p-5 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-800 text-lg">{holidayFormData.id ? 'Tatili Düzenle' : 'Tatil Ekle'}</h3>
-                            <button onClick={() => setShowHolidayModal(false)}><X className="text-slate-400 hover:text-slate-600" size={20} /></button>
-                        </div>
-                        <div className="p-6 space-y-5">
-                            {/* Date Display */}
-                            <div className="text-sm font-medium text-blue-800 text-center bg-blue-50 py-3 rounded-xl border border-blue-100 capitalize">
-                                {holidayFormData.isMultiDay
-                                    ? `${holidayFormData.rangeStart.locale('tr').format('D MMMM')} - ${holidayFormData.rangeEnd.locale('tr').format('D MMMM')}`
-                                    : holidayFormData.rangeStart.locale('tr').format('D MMMM YYYY, dddd')
-                                }
-                            </div>
-
-                            {/* Name Input */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-2">TATİL ADI</label>
-                                <input
-                                    autoFocus
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
-                                    placeholder="Örn: 29 Ekim"
-                                    value={holidayFormData.name}
-                                    onChange={e => setHolidayFormData({ ...holidayFormData, name: e.target.value })}
-                                />
-                            </div>
-
-                            {/* Type (Official/Religious) */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => setHolidayFormData({ ...holidayFormData, category: 'OFFICIAL' })}
-                                    className={`p-3 rounded-xl border-2 font-bold transition-all ${holidayFormData.category === 'OFFICIAL' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-100 text-slate-500'}`}>Resmi Tatil</button>
-                                <button onClick={() => setHolidayFormData({ ...holidayFormData, category: 'RELIGIOUS' })}
-                                    className={`p-3 rounded-xl border-2 font-bold transition-all ${holidayFormData.category === 'RELIGIOUS' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-100 text-slate-500'}`}>Dini Bayram</button>
-                            </div>
-
-                            {/* Partial Day Option (Only for Single Day Mode) */}
-                            {!holidayFormData.isMultiDay && (
-                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                    <label className="flex items-center cursor-pointer mb-3">
-                                        <input
-                                            type="checkbox"
-                                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                                            checked={holidayFormData.isPartial}
-                                            onChange={(e) => setHolidayFormData({ ...holidayFormData, isPartial: e.target.checked })}
-                                        />
-                                        <span className="ml-3 font-bold text-slate-700 text-sm">Yarım / Kısmi Gün</span>
-                                    </label>
-
-                                    {holidayFormData.isPartial && (
-                                        <div className="flex items-center gap-2 animate-fade-in mt-2 border-t border-slate-200 pt-3">
-                                            <div className="flex-1">
-                                                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Başlangıç</label>
-                                                <input type="time" value={holidayFormData.startTime} onChange={(e) => setHolidayFormData({ ...holidayFormData, startTime: e.target.value })} className="w-full p-2 border border-slate-300 rounded-lg text-sm font-medium" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Bitiş</label>
-                                                <input type="time" value={holidayFormData.endTime} onChange={(e) => setHolidayFormData({ ...holidayFormData, endTime: e.target.value })} className="w-full p-2 border border-slate-300 rounded-lg text-sm font-medium" />
-                                            </div>
-                                        </div>
-                                    )}
+                                {/* Weekly Schedule */}
+                                <div className="col-span-12 xl:col-span-8">
+                                    <div className="bg-white border border-slate-200 p-4 rounded-xl h-full shadow-sm">
+                                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                            <ClockIcon /> Haftalık Çalışma Programı
+                                        </h3>
+                                        <ScheduleSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                                    </div>
                                 </div>
-                            )}
+                            </div>
 
-                            {holidayFormData.id && (
-                                <button onClick={handleDeleteHoliday} className="w-full py-3 text-red-600 hover:bg-red-50 rounded-xl font-medium border border-transparent hover:border-red-100 flex items-center justify-center gap-2">
-                                    <Trash2 size={18} /> Sil
-                                </button>
-                            )}
-                        </div>
+                            <hr className="border-slate-100" />
 
-                        <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
-                            <button onClick={() => setShowHolidayModal(false)} className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-100">Vazgeç</button>
-                            <button onClick={handleSaveHoliday} className="flex-[2] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2"><Save size={18} /> Kaydet</button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
+                            {/* Section 2: Fiscal Periods */}
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <CalendarIcon /> Mali Dönemler (Bordro Ayları)
+                                </h3>
+                                <PeriodsSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                            </div>
 
-            {/* Schedule Modal (Simplified for brevity, assuming existing logic maintained in spirit but cleaner) */}
-            {showScheduleModal && scheduleFormData && createPortal(
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm animate-fade-in text-left">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-                        {/* Header */}
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
-                            <div><h3 className="text-xl font-bold text-slate-800">Haftalık Program</h3><p className="text-slate-500 text-sm">Çalışma saatlerini düzenle.</p></div>
-                            <button onClick={() => setShowScheduleModal(false)}><X className="text-slate-400 hover:text-slate-600" size={24} /></button>
+                            <hr className="border-slate-100" />
+
+                            {/* Section 3: Users */}
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <UsersIcon /> Personel Atamaları
+                                </h3>
+                                <UsersSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                            </div>
+
                         </div>
-                        {/* Body */}
-                        <form className="flex-1 overflow-y-auto p-6 space-y-8">
-                            {/* Basic Settings */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Takvim Adı</label>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <Calendar size={48} className="mb-4 opacity-50" />
+                            <p>Detayları görüntülemek için soldan bir takvim seçin.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Sub-Components ---
+
+const GeneralSettingsForm = ({ data, refresh }) => {
+    const [formData, setFormData] = useState({ ...data });
+    const [holidays, setHolidays] = useState([]);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        api.get('/public-holidays/').then(res => setHolidays(res.data));
+    }, []);
+
+    // Sync state when data changes (e.g. switch calendar)
+    useEffect(() => { setFormData({ ...data }); }, [data]);
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await api.patch(`/attendance/fiscal-calendars/${data.id}/`, formData);
+            refresh();
+            // alert('Kaydedildi'); // Remove disruptive alerts? Maybe toast.
+        } catch (e) { alert(e.message); }
+        finally { setSaving(false); }
+    };
+
+    const toggleHoliday = (hId) => {
+        const current = formData.public_holidays || [];
+        const newHolidays = current.includes(hId)
+            ? current.filter(id => id !== hId)
+            : [...current, hId];
+        setFormData({ ...formData, public_holidays: newHolidays });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Takvim Adı</label>
+                <input className="input-field w-full bg-white" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Yıl</label>
+                    <input className="input-field w-full bg-white" type="number" value={formData.year} onChange={e => setFormData({ ...formData, year: parseInt(e.target.value) })} />
+                </div>
+                <div className="flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-white border rounded hover:bg-slate-50 w-full h-[42px]">
+                        <input type="checkbox" checked={formData.is_default} onChange={e => setFormData({ ...formData, is_default: e.target.checked })} />
+                        <span className="text-sm font-medium">Varsayılan</span>
+                    </label>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Geç Tol. (dk)</label>
+                    <input className="input-field w-full bg-white" type="number" value={formData.late_tolerance_minutes} onChange={e => setFormData({ ...formData, late_tolerance_minutes: parseInt(e.target.value) })} />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Erken Tol. (dk)</label>
+                    <input className="input-field w-full bg-white" type="number" value={formData.early_leave_tolerance_minutes} onChange={e => setFormData({ ...formData, early_leave_tolerance_minutes: parseInt(e.target.value) })} />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Resmi Tatiller</label>
+                <div className="bg-white border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1">
+                    {holidays.map(h => (
+                        <label key={h.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded border border-transparent hover:border-slate-100 transition-colors">
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 text-indigo-600 rounded"
+                                checked={(formData.public_holidays || []).includes(h.id)}
+                                onChange={() => toggleHoliday(h.id)}
+                            />
+                            <div className="text-sm">
+                                <div className="font-medium text-slate-700">{h.name}</div>
+                                <div className="text-xs text-slate-400">{h.date}</div>
+                            </div>
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            <button onClick={handleSave} disabled={saving} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors disabled:opacity-50">
+                {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+            </button>
+        </div>
+    );
+};
+
+const ScheduleSettingsForm = ({ data, refresh }) => {
+    const [schedule, setSchedule] = useState(data.weekly_schedule || {});
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => { setSchedule(data.weekly_schedule || {}); }, [data]);
+
+    const days = [
+        { key: 'MON', label: 'Pazartesi' },
+        { key: 'TUE', label: 'Salı' },
+        { key: 'WED', label: 'Çarşamba' },
+        { key: 'THU', label: 'Perşembe' },
+        { key: 'FRI', label: 'Cuma' },
+        { key: 'SAT', label: 'Cumartesi' },
+        { key: 'SUN', label: 'Pazar' },
+    ];
+
+    const handleChange = (dayKey, field, value) => {
+        setSchedule(prev => ({
+            ...prev,
+            [dayKey]: {
+                ...prev[dayKey],
+                [field]: value
+            }
+        }));
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await api.patch(`/attendance/fiscal-calendars/${data.id}/`, { weekly_schedule: schedule });
+            refresh();
+        } catch (e) { alert(e.message); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="grid gap-3">
+                {days.map(day => {
+                    const dayConfig = schedule[day.key] || { start: '08:30', end: '18:00', is_off: day.key === 'SUN' };
+                    return (
+                        <div key={day.key} className={`flex items-center gap-4 p-3 rounded-lg border ${dayConfig.is_off ? 'bg-slate-50 border-slate-100' : 'bg-white border-slate-200'}`}>
+                            <div className="w-24 font-bold text-slate-700">{day.label}</div>
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <div className={`w-10 h-6 rounded-full p-1 transition-colors ${dayConfig.is_off ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${dayConfig.is_off ? 'translate-x-4' : ''}`} />
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={dayConfig.is_off}
+                                    onChange={e => handleChange(day.key, 'is_off', e.target.checked)}
+                                />
+                                <span className="text-sm font-medium text-slate-600">{dayConfig.is_off ? 'Tatil Günü' : 'Çalışma Günü'}</span>
+                            </label>
+
+                            {!dayConfig.is_off && (
+                                <div className="flex items-center gap-2 ml-auto">
+                                    <Clock size={16} className="text-slate-400" />
                                     <input
-                                        type="text"
-                                        value={scheduleFormData.name}
-                                        onChange={e => setScheduleFormData({ ...scheduleFormData, name: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                        placeholder="Örn: Beyaz Yaka, Vardiya A"
+                                        type="time"
+                                        className="border rounded px-2 py-1 text-sm bg-slate-50 focus:bg-white focus:ring-2 ring-indigo-100 outline-none"
+                                        value={dayConfig.start}
+                                        onChange={e => handleChange(day.key, 'start', e.target.value)}
+                                    />
+                                    <span className="text-slate-400">-</span>
+                                    <input
+                                        type="time"
+                                        className="border rounded px-2 py-1 text-sm bg-slate-50 focus:bg-white focus:ring-2 ring-indigo-100 outline-none"
+                                        value={dayConfig.end}
+                                        onChange={e => handleChange(day.key, 'end', e.target.value)}
                                     />
                                 </div>
-                                <div className="flex items-center pt-6">
-                                    <label className="flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={scheduleFormData.is_default}
-                                            onChange={e => setScheduleFormData({ ...scheduleFormData, is_default: e.target.checked })}
-                                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <span className="ml-3 font-medium text-slate-700">Bu varsayılan çalışma takvimidir</span>
-                                    </label>
-
-                                    <label className="flex items-center cursor-pointer mt-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={scheduleFormData.has_lunch_break}
-                                            onChange={e => setScheduleFormData({ ...scheduleFormData, has_lunch_break: e.target.checked })}
-                                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <span className="ml-3 font-medium text-slate-700">Öğle Molası Var</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* Tolerances & Break */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
-                                    <input type="number" value={scheduleFormData.daily_break_allowance} onChange={e => setScheduleFormData({ ...scheduleFormData, daily_break_allowance: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Geç Kalma Toleransı (Dk)</label>
-                                    <input type="number" value={scheduleFormData.late_tolerance_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, late_tolerance_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Servis Toleransı (Dk)</label>
-                                    <input type="number" value={scheduleFormData.service_tolerance_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, service_tolerance_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Min. Mesai (Dk)</label>
-                                    <input type="number" value={scheduleFormData.minimum_overtime_minutes} onChange={e => setScheduleFormData({ ...scheduleFormData, minimum_overtime_minutes: parseInt(e.target.value) || 0 })} className="input-std w-full px-4 py-2 border rounded-lg" />
-                                </div>
-                            </div>
-
-                            {/* List of Days */}
-                            <div className="space-y-3">
-                                {DAYS.map(day => {
-                                    const rule = scheduleFormData.schedule[day.key] || {};
-                                    return (
-                                        <div key={day.key} className={`flex items-center gap-4 p-3 rounded-lg border ${rule.is_off ? 'bg-slate-50' : 'bg-white'}`}>
-                                            <div className="w-24 font-bold text-slate-700">{day.label}</div>
-                                            <label className="flex items-center cursor-pointer mr-4">
-                                                <input type="checkbox" checked={rule.is_off} onChange={e => {
-                                                    const ns = { ...scheduleFormData.schedule };
-                                                    ns[day.key] = { ...rule, is_off: e.target.checked };
-                                                    setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                }} className="w-4 h-4 text-blue-600 rounded" />
-                                                <span className="ml-2 text-sm text-slate-600">Tatil</span>
-                                            </label>
-                                            {!rule.is_off && (
-                                                <div className="flex flex-col gap-2">
-                                                    {/* Shift Times */}
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold text-slate-400 w-12">Mesai:</span>
-                                                        <input type="time" value={rule.start} onChange={e => {
-                                                            const ns = { ...scheduleFormData.schedule }; ns[day.key].start = e.target.value; setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                        }} className="border rounded px-2 py-1 text-sm w-28" />
-                                                        <span className="text-slate-400">-</span>
-                                                        <input type="time" value={rule.end} onChange={e => {
-                                                            const ns = { ...scheduleFormData.schedule }; ns[day.key].end = e.target.value; setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                        }} className="border rounded px-2 py-1 text-sm w-28" />
-                                                    </div>
-
-                                                    {/* Lunch Times (Day Specific) */}
-                                                    {scheduleFormData.has_lunch_break && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-bold text-slate-400 w-12">Öğle:</span>
-                                                            <input type="time" value={rule.lunch_start || scheduleFormData.lunch_start} onChange={e => {
-                                                                const ns = { ...scheduleFormData.schedule };
-                                                                if (!ns[day.key]) ns[day.key] = {};
-                                                                ns[day.key].lunch_start = e.target.value;
-                                                                setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                            }} className="border rounded px-2 py-1 text-sm w-28 text-slate-600 bg-slate-50" />
-                                                            <span className="text-slate-400">-</span>
-                                                            <input type="time" value={rule.lunch_end || scheduleFormData.lunch_end} onChange={e => {
-                                                                const ns = { ...scheduleFormData.schedule };
-                                                                if (!ns[day.key]) ns[day.key] = {};
-                                                                ns[day.key].lunch_end = e.target.value;
-                                                                setScheduleFormData({ ...scheduleFormData, schedule: ns });
-                                                            }} className="border rounded px-2 py-1 text-sm w-28 text-slate-600 bg-slate-50" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </form>
-                        {/* Footer */}
-                        <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 z-10">
-                            <button onClick={() => setShowScheduleModal(false)} className="px-5 py-2 text-slate-600 bg-white border rounded-lg">İptal</button>
-                            <button onClick={async (e) => {
-                                e.preventDefault();
-                                try {
-                                    if (scheduleFormData.id) await api.put(`/work-schedules/${scheduleFormData.id}/`, scheduleFormData);
-                                    else await api.post('/work-schedules/', scheduleFormData);
-                                    setShowScheduleModal(false); fetchData();
-                                } catch (err) { alert('Hata'); }
-                            }} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">Kaydet</button>
+                            )}
                         </div>
-                    </div>
-                </div>,
-                document.body
+                    );
+                })}
+            </div>
+            <div className="flex justify-end pt-2">
+                <button onClick={handleSave} disabled={saving} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-6 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
+                    <Save size={18} /> {saving ? 'Kaydediliyor...' : 'Programı Kaydet'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const PeriodsSettingsForm = ({ data, refresh }) => {
+    const handleGenerate = async () => {
+        if (!confirm('Mevcut dönemler silinip yeniden oluşturulacak (26-25 kuralı). Onaylıyor musunuz?')) return;
+        try {
+            await api.post(`/attendance/fiscal-calendars/${data.id}/generate_periods/`, { clear_existing: true });
+            refresh();
+        } catch (e) { alert(e.message); }
+    };
+
+    const periods = data.periods || [];
+    periods.sort((a, b) => (a.year - b.year) || (a.month - b.month));
+
+    return (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h4 className="font-bold text-slate-700">Dönem Listesi ({data.year})</h4>
+                    <p className="text-xs text-slate-500">Maaş ve hakediş hesaplamaları için kullanılan tarih aralıkları.</p>
+                </div>
+                <button onClick={handleGenerate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors">
+                    <RefreshCw size={16} /> Varsayılanları Oluştur (26-25)
+                </button>
+            </div>
+
+            {periods.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-lg border border-dashed border-slate-300">
+                    <AlertTriangle className="mx-auto text-amber-500 mb-2" />
+                    <p className="text-slate-500 mb-2">Henüz dönem oluşturulmamış.</p>
+                    <button onClick={handleGenerate} className="text-indigo-600 hover:underline text-sm font-semibold">Otomatik Oluştur</button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {periods.map(p => {
+                        const isCurrentMonth = new Date().getMonth() + 1 === p.month && new Date().getFullYear() === p.year;
+                        return (
+                            <div key={p.id} className={`bg-white border rounded-lg p-4 relative group ${isCurrentMonth ? 'ring-2 ring-indigo-500 border-transparent shadow-md' : 'hover:border-indigo-200'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="font-bold text-lg text-slate-800">{p.year} / {p.month}</div>
+                                    {p.is_locked ? <div className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Kilitli</div> : <div className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Aktif</div>}
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500">Başlangıç:</span>
+                                        <span className="font-mono text-slate-700">{p.start_date}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500">Bitiş:</span>
+                                        <span className="font-mono text-slate-700">{p.end_date}</span>
+                                    </div>
+                                </div>
+                                {/* Optional: Edit button could go here */}
+                            </div>
+                        );
+                    })}
+                </div>
             )}
         </div>
     );
 };
+
+const UsersSettingsForm = ({ data, refresh }) => {
+    const [assignedEmployees, setAssignedEmployees] = useState([]);
+    const [allEmployees, setAllEmployees] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => { loadData(); }, [data.id]);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [usersRes, assignedRes] = await Promise.all([
+                api.get('/employees/'),
+                api.get(`/attendance/fiscal-calendars/${data.id}/assigned_employees/`)
+            ]);
+            setAllEmployees(usersRes.data);
+            setAssignedEmployees(assignedRes.data.map(e => e.id));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAssign = (employeeId, assign) => {
+        const newAssigned = assign
+            ? [...assignedEmployees, employeeId]
+            : assignedEmployees.filter(id => id !== employeeId);
+        setAssignedEmployees(newAssigned);
+    };
+
+    const handleBulkSave = async () => {
+        setSaving(true);
+        try {
+            await api.post(`/attendance/fiscal-calendars/${data.id}/assign_employees/`, { employee_ids: assignedEmployees });
+            alert('Atamalar başarıyla güncellendi.');
+        } catch (e) { alert(e.message); }
+        finally { setSaving(false); }
+    };
+
+    if (loading) return <div className="py-8 text-center text-slate-400">Kullanıcı listesi yükleniyor...</div>;
+
+    const assigned = allEmployees.filter(e => assignedEmployees.includes(e.id));
+    const unassigned = allEmployees.filter(e => !assignedEmployees.includes(e.id));
+
+    // Filter logic
+    const filterFn = (e) => (e.first_name + ' ' + e.last_name + ' ' + e.employee_code).toLowerCase().includes(searchTerm.toLowerCase());
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <input
+                    placeholder="Personel ara..."
+                    className="input-field max-w-sm"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
+                <button onClick={handleBulkSave} disabled={saving} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                    {saving ? 'Kaydediliyor...' : 'Atamaları Kaydet'}
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[500px]">
+                {/* Assigned Column */}
+                <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4 flex flex-col">
+                    <h3 className="font-bold mb-3 text-indigo-700 flex justify-between items-center">
+                        <span>Bu Takvime Dahil ({assigned.length})</span>
+                    </h3>
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                        {assigned.filter(filterFn).map(e => (
+                            <div key={e.id} className="flex justify-between items-center p-3 bg-white border border-indigo-100 rounded-lg shadow-sm group hover:border-indigo-300 transition-all">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                                        {e.first_name[0]}{e.last_name[0]}
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-slate-800">{e.first_name} {e.last_name}</div>
+                                        <div className="text-xs text-slate-500">{e.employee_code}</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleAssign(e.id, false)}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm"
+                                >
+                                    Çıkar
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Unassigned Column */}
+                <div className="border border-slate-200 bg-white rounded-xl p-4 flex flex-col">
+                    <h3 className="font-bold mb-3 text-slate-600">Diğer Personeller ({unassigned.length})</h3>
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                        {unassigned.filter(filterFn).map(e => (
+                            <div key={e.id} className="flex justify-between items-center p-3 bg-slate-50 border border-transparent rounded-lg hover:bg-white hover:border-slate-200 hover:shadow-sm transition-all group">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">
+                                        {e.first_name[0]}{e.last_name[0]}
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-slate-600">{e.first_name} {e.last_name}</div>
+                                        <div className="text-xs text-slate-400">{e.employee_code}</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleAssign(e.id, true)}
+                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm"
+                                >
+                                    Ekle
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Icons (Simple SVG Wrappers)
+const SettingsIcon = () => <Settings size={20} className="text-slate-500" />;
+const Settings = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+const ClockIcon = () => <Clock size={20} className="text-slate-500" />;
+const CalendarIcon = () => <Calendar size={20} className="text-slate-500" />;
+const UsersIcon = () => <Users size={20} className="text-slate-500" />;
 
 export default WorkSchedules;
