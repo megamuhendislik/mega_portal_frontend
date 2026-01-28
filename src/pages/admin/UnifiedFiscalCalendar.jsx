@@ -24,9 +24,10 @@ const UnifiedFiscalCalendar = () => {
         setLoading(true);
         try {
             const res = await api.get('/attendance/fiscal-calendars/');
-            setCalendars(res.data);
-            if (res.data.length > 0 && !selectedCalendarId) {
-                setSelectedCalendarId(res.data[0].id);
+            const data = res.data.results || res.data; // Handle pagination
+            setCalendars(data);
+            if (data.length > 0 && !selectedCalendarId) {
+                setSelectedCalendarId(data[0].id);
             }
         } catch (error) {
             console.error("Error fetching calendars:", error);
