@@ -518,25 +518,18 @@ const PeriodsSettingsForm = ({ data, refresh }) => {
     );
 };
 
-const UsersSettingsForm = ({ data, refresh, onSuccess }) => {
-    const [assignedEmployees, setAssignedEmployees] = useState([]);
+const UsersSettingsForm = ({ assignedIds, onChange }) => {
     const [allEmployees, setAllEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const [saving, setSaving] = useState(false);
 
-    useEffect(() => { loadData(); }, [data.id]);
+    useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersRes, assignedRes] = await Promise.all([
-                api.get('/employees/?page_size=1000'), // Get all (or handle true pagination later)
-                api.get(`/attendance/fiscal-calendars/${data.id}/assigned_employees/`)
-            ]);
-            const usersData = usersRes.data.results || usersRes.data;
-            setAllEmployees(usersData);
-            setAssignedEmployees(assignedRes.data.map(e => e.id));
+            const usersRes = await api.get('/employees/?page_size=1000');
+            setAllEmployees(usersRes.data.results || usersRes.data);
         } finally {
             setLoading(false);
         }
@@ -544,24 +537,15 @@ const UsersSettingsForm = ({ data, refresh, onSuccess }) => {
 
     const handleAssign = (employeeId, assign) => {
         const newAssigned = assign
-            ? [...assignedEmployees, employeeId]
-            : assignedEmployees.filter(id => id !== employeeId);
-        setAssignedEmployees(newAssigned);
-    };
-
-    const handleBulkSave = async () => {
-        setSaving(true);
-        try {
-            await api.post(`/attendance/fiscal-calendars/${data.id}/assign_employees/`, { employee_ids: assignedEmployees });
-            alert('Atamalar başarıyla güncellendi.');
-        } catch (e) { alert(e.message); }
-        finally { setSaving(false); }
+            ? [...assignedIds, employeeId]
+            : assignedIds.filter(id => id !== employeeId);
+        onChange(newAssigned);
     };
 
     if (loading) return <div className="py-8 text-center text-slate-400">Kullanıcı listesi yükleniyor...</div>;
 
-    const assigned = allEmployees.filter(e => assignedEmployees.includes(e.id));
-    const unassigned = allEmployees.filter(e => !assignedEmployees.includes(e.id));
+    const assigned = allEmployees.filter(e => assignedIds.includes(e.id));
+    const unassigned = allEmployees.filter(e => !assignedIds.includes(e.id));
 
     // Filter logic
     const filterFn = (e) => (e.first_name + ' ' + e.last_name + ' ' + e.employee_code).toLowerCase().includes(searchTerm.toLowerCase());
@@ -575,9 +559,6 @@ const UsersSettingsForm = ({ data, refresh, onSuccess }) => {
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
-                <button onClick={handleBulkSave} disabled={saving} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                    {saving ? 'Kaydediliyor...' : 'Atamaları Kaydet'}
-                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[500px]">
