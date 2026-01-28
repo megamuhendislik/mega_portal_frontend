@@ -8,7 +8,12 @@ const WorkSchedules = () => {
     const [calendars, setCalendars] = useState([]);
     const [selectedCalendarId, setSelectedCalendarId] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [calendarData, setCalendarData] = useState(null);
+
+    // Consolidated State
+    const [draftData, setDraftData] = useState(null);
+    const [assignments, setAssignments] = useState([]);
+    const [saving, setSaving] = useState(false);
+
     const [showRecalcModal, setShowRecalcModal] = useState(false);
     const [recalcCalendarId, setRecalcCalendarId] = useState(null);
 
@@ -20,7 +25,7 @@ const WorkSchedules = () => {
         if (selectedCalendarId) {
             fetchCalendarDetails(selectedCalendarId);
         } else {
-            setCalendarData(null);
+            setDraftData(null);
         }
     }, [selectedCalendarId]);
 
@@ -28,7 +33,7 @@ const WorkSchedules = () => {
         setLoading(true);
         try {
             const res = await api.get('/attendance/fiscal-calendars/');
-            const data = res.data.results || res.data; // Handle pagination
+            const data = res.data.results || res.data;
             setCalendars(data);
             if (data.length > 0 && !selectedCalendarId) {
                 setSelectedCalendarId(data[0].id);
@@ -42,10 +47,40 @@ const WorkSchedules = () => {
 
     const fetchCalendarDetails = async (id) => {
         try {
-            const res = await api.get(`/attendance/fiscal-calendars/${id}/`);
-            setCalendarData(res.data);
+            const [calRes, assignRes] = await Promise.all([
+                api.get(`/attendance/fiscal-calendars/${id}/`),
+                api.get(`/attendance/fiscal-calendars/${id}/assigned_employees/`)
+            ]);
+            setDraftData(calRes.data);
+            setAssignments(assignRes.data.map(e => e.id));
         } catch (error) {
             console.error("Error details:", error);
+        }
+    };
+
+    const handleGlobalSave = async () => {
+        if (!draftData) return;
+        setSaving(true);
+        try {
+            // 1. Update Calendar Settings
+            await api.patch(`/attendance/fiscal-calendars/${draftData.id}/`, draftData);
+
+            // 2. Update Assignments
+            await api.post(`/attendance/fiscal-calendars/${draftData.id}/assign_employees/`, {
+                employee_ids: assignments
+            });
+
+            // 3. Prompt Recalculation
+            setRecalcCalendarId(draftData.id);
+            setShowRecalcModal(true);
+
+            // Refresh to ensure sync
+            fetchCalendarDetails(draftData.id);
+
+        } catch (error) {
+            alert("Hata: " + error.message);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -126,8 +161,24 @@ const WorkSchedules = () => {
 
                 {/* Main Content */}
                 <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                    {calendarData ? (
+                    {draftData ? (
                         <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+                            {/* Header Row with SAVE Button */}
+                            <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
+                                <div>
+                                    <h2 className="text-lg font-bold text-indigo-900">{draftData.name} ({draftData.year})</h2>
+                                    <p className="text-sm text-indigo-700">Tüm değişiklikleri yaptıktan sonra kaydedin.</p>
+                                </div>
+                                <button
+                                    onClick={handleGlobalSave}
+                                    disabled={saving}
+                                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-all disabled:opacity-50"
+                                >
+                                    <Save size={20} />
+                                    {saving ? 'Kaydediliyor...' : 'Tüm Ayarları Kaydet'}
+                                </button>
+                            </div>
 
                             {/* Section 1: Top Row - General & Schedule */}
                             <div className="grid grid-cols-12 gap-6">
@@ -138,15 +189,8 @@ const WorkSchedules = () => {
                                             <SettingsIcon /> Genel Ayarlar
                                         </h3>
                                         <GeneralSettingsForm
-                                            data={calendarData}
-                                            refresh={() => fetchCalendarDetails(selectedCalendarId)}
-                                            onSuccess={() => {
-                                                console.log("GeneralSettingsForm onSuccess triggered");
-                                                console.log("Setting recalcCalendarId:", selectedCalendarId);
-                                                setRecalcCalendarId(selectedCalendarId);
-                                                setShowRecalcModal(true);
-                                                console.log("setShowRecalcModal(true) called");
-                                            }}
+                                            data={draftData}
+                                            onChange={(newData) => setDraftData(newData)}
                                         />
                                     </div>
                                 </div>
@@ -158,13 +202,8 @@ const WorkSchedules = () => {
                                             <ClockIcon /> Haftalık Çalışma Programı
                                         </h3>
                                         <ScheduleSettingsForm
-                                            data={calendarData}
-                                            refresh={() => fetchCalendarDetails(selectedCalendarId)}
-                                            onSuccess={() => {
-                                                console.log("ScheduleSettingsForm onSuccess triggered");
-                                                setRecalcCalendarId(selectedCalendarId);
-                                                setShowRecalcModal(true);
-                                            }}
+                                            data={draftData}
+                                            onChange={(newData) => setDraftData(newData)}
                                         />
                                     </div>
                                 </div>
@@ -177,7 +216,7 @@ const WorkSchedules = () => {
                                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                     <CalendarIcon /> Mali Dönemler (Bordro Ayları)
                                 </h3>
-                                <PeriodsSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                                <PeriodsSettingsForm data={draftData} refresh={() => fetchCalendarDetails(draftData.id)} />
                             </div>
 
                             <hr className="border-slate-100" />
@@ -188,12 +227,8 @@ const WorkSchedules = () => {
                                     <UsersIcon /> Personel Atamaları
                                 </h3>
                                 <UsersSettingsForm
-                                    data={calendarData}
-                                    refresh={() => fetchCalendarDetails(selectedCalendarId)}
-                                    onSuccess={() => {
-                                        setRecalcCalendarId(selectedCalendarId);
-                                        setShowRecalcModal(true);
-                                    }}
+                                    assignedIds={assignments}
+                                    onChange={setAssignments}
                                 />
                             </div>
 
@@ -212,10 +247,8 @@ const WorkSchedules = () => {
 
 // --- Sub-Components ---
 
-const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
-    const [formData, setFormData] = useState({ ...data });
+const GeneralSettingsForm = ({ data, onChange }) => {
     const [holidays, setHolidays] = useState([]);
-    const [saving, setSaving] = useState(false);
     const [showHolidayBuilder, setShowHolidayBuilder] = useState(false);
 
     useEffect(() => {
@@ -225,55 +258,37 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
         });
     }, []);
 
-    // Sync state when data changes (e.g. switch calendar)
-    useEffect(() => { setFormData({ ...data }); }, [data]);
-
-    const handleSave = async () => {
-        setSaving(true);
-        console.log("GeneralSettingsForm handleSave called");
-        try {
-            await api.patch(`/attendance/fiscal-calendars/${data.id}/`, formData);
-            console.log("API patch success");
-            refresh();
-            if (onSuccess) {
-                console.log("Calling onSuccess");
-                onSuccess();
-            } else {
-                console.warn("onSuccess prop is missing");
-            }
-            // alert('Kaydedildi'); // Remove disruptive alerts? Maybe toast.
-        } catch (e) { alert(e.message); }
-        finally { setSaving(false); }
+    const handleChange = (field, value) => {
+        onChange({ ...data, [field]: value });
     };
 
     const toggleHoliday = (hId) => {
-        const current = formData.public_holidays || [];
+        const current = data.public_holidays || [];
         const newHolidays = current.includes(hId)
             ? current.filter(id => id !== hId)
             : [...current, hId];
-        setFormData({ ...formData, public_holidays: newHolidays });
+        handleChange('public_holidays', newHolidays);
     };
 
     return (
         <div className="space-y-4">
             <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Takvim Adı</label>
-                <input className="input-field w-full bg-white" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                <input className="input-field w-full bg-white" value={data.name || ''} onChange={e => handleChange('name', e.target.value)} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Yıl</label>
-                    <input className="input-field w-full bg-white" type="number" value={formData.year} onChange={e => setFormData({ ...formData, year: parseInt(e.target.value) })} />
+                    <input className="input-field w-full bg-white" type="number" value={data.year || ''} onChange={e => handleChange('year', parseInt(e.target.value))} />
                 </div>
                 <div className="flex items-end">
                     <label className="flex items-center gap-2 cursor-pointer p-2 bg-white border rounded hover:bg-slate-50 w-full h-[42px]">
-                        <input type="checkbox" checked={formData.is_default} onChange={e => setFormData({ ...formData, is_default: e.target.checked })} />
+                        <input type="checkbox" checked={data.is_default || false} onChange={e => handleChange('is_default', e.target.checked)} />
                         <span className="text-sm font-medium">Varsayılan</span>
                     </label>
                 </div>
             </div>
-
 
             {/* Breaks & Lunch Config */}
             <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
@@ -281,15 +296,15 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
                 <div className="grid grid-cols-3 gap-3">
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Öğle Başlangıç</label>
-                        <input className="input-field w-full bg-white text-sm" type="time" value={formData.lunch_start} onChange={e => setFormData({ ...formData, lunch_start: e.target.value })} />
+                        <input className="input-field w-full bg-white text-sm" type="time" value={data.lunch_start || ''} onChange={e => handleChange('lunch_start', e.target.value)} />
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Öğle Bitiş</label>
-                        <input className="input-field w-full bg-white text-sm" type="time" value={formData.lunch_end} onChange={e => setFormData({ ...formData, lunch_end: e.target.value })} />
+                        <input className="input-field w-full bg-white text-sm" type="time" value={data.lunch_end || ''} onChange={e => handleChange('lunch_end', e.target.value)} />
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Günlük Mola (Dk)</label>
-                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.daily_break_allowance} onChange={e => setFormData({ ...formData, daily_break_allowance: parseInt(e.target.value) })} />
+                        <input className="input-field w-full bg-white text-sm" type="number" value={data.daily_break_allowance || 0} onChange={e => handleChange('daily_break_allowance', parseInt(e.target.value))} />
                     </div>
                 </div>
             </div>
@@ -303,25 +318,20 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
                         <input
                             className="input-field w-full bg-white text-center"
                             type="number"
-                            value={formData.late_tolerance_minutes}
-                            onChange={e => setFormData({
-                                ...formData,
-                                late_tolerance_minutes: parseInt(e.target.value),
-                                early_leave_tolerance_minutes: 0 // Force 0 as requested
-                            })}
+                            value={data.late_tolerance_minutes || 0}
+                            onChange={e => handleChange('late_tolerance_minutes', parseInt(e.target.value))}
                         />
                         <p className="text-[10px] text-slate-400 mt-1">Giriş ve çıkışlar için genel tolerans.</p>
                     </div>
-                    {/* Early Leave Removed as per request (set to 0 invisibly above) */}
 
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Servis Toleransı (dk)</label>
-                        <input className="input-field w-full bg-white text-center" type="number" value={formData.service_tolerance_minutes} onChange={e => setFormData({ ...formData, service_tolerance_minutes: parseInt(e.target.value) })} />
+                        <input className="input-field w-full bg-white text-center" type="number" value={data.service_tolerance_minutes || 0} onChange={e => handleChange('service_tolerance_minutes', parseInt(e.target.value))} />
                     </div>
 
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Min. Mesai (dk)</label>
-                        <input className="input-field w-full bg-white text-center" type="number" value={formData.minimum_overtime_minutes} onChange={e => setFormData({ ...formData, minimum_overtime_minutes: parseInt(e.target.value) })} />
+                        <input className="input-field w-full bg-white text-center" type="number" value={data.minimum_overtime_minutes || 0} onChange={e => handleChange('minimum_overtime_minutes', parseInt(e.target.value))} />
                     </div>
                 </div>
             </div>
@@ -348,7 +358,7 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
                             <input
                                 type="checkbox"
                                 className="w-4 h-4 text-indigo-600 rounded"
-                                checked={(formData.public_holidays || []).includes(h.id)}
+                                checked={(data.public_holidays || []).includes(h.id)}
                                 onChange={() => toggleHoliday(h.id)}
                             />
                             <div className="text-sm">
@@ -360,11 +370,8 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
                 </div>
             </div>
 
-            <button onClick={handleSave} disabled={saving} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors disabled:opacity-50">
-                {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-            </button>
-
             {/* Visual Holiday Builder Modal */}
+
             {showHolidayBuilder && (
                 <HolidayBuilderModal
                     onClose={() => setShowHolidayBuilder(false)}
@@ -380,11 +387,8 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
     );
 };
 
-const ScheduleSettingsForm = ({ data, refresh, onSuccess }) => {
-    const [schedule, setSchedule] = useState(data.weekly_schedule || {});
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => { setSchedule(data.weekly_schedule || {}); }, [data]);
+const ScheduleSettingsForm = ({ data, onChange }) => {
+    const schedule = data.weekly_schedule || {};
 
     const days = [
         { key: 'MON', label: 'Pazartesi' },
@@ -397,23 +401,14 @@ const ScheduleSettingsForm = ({ data, refresh, onSuccess }) => {
     ];
 
     const handleChange = (dayKey, field, value) => {
-        setSchedule(prev => ({
-            ...prev,
+        const newSchedule = {
+            ...schedule,
             [dayKey]: {
-                ...prev[dayKey],
+                ...schedule[dayKey],
                 [field]: value
             }
-        }));
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.patch(`/attendance/fiscal-calendars/${data.id}/`, { weekly_schedule: schedule });
-            refresh();
-            if (onSuccess) onSuccess();
-        } catch (e) { alert(e.message); }
-        finally { setSaving(false); }
+        };
+        onChange({ ...data, weekly_schedule: newSchedule });
     };
 
     return (
@@ -458,11 +453,6 @@ const ScheduleSettingsForm = ({ data, refresh, onSuccess }) => {
                         </div>
                     );
                 })}
-            </div>
-            <div className="flex justify-end pt-2">
-                <button onClick={handleSave} disabled={saving} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-6 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
-                    <Save size={18} /> {saving ? 'Kaydediliyor...' : 'Programı Kaydet'}
-                </button>
             </div>
         </div>
     );
