@@ -219,14 +219,48 @@ const GeneralSettingsForm = ({ data, refresh }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Geç Tol. (dk)</label>
-                    <input className="input-field w-full bg-white" type="number" value={formData.late_tolerance_minutes} onChange={e => setFormData({ ...formData, late_tolerance_minutes: parseInt(e.target.value) })} />
+
+            {/* Breaks & Lunch Config */}
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Mola & Yemek Ayarları</label>
+                <div className="grid grid-cols-3 gap-3">
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Öğle Başlangıç</label>
+                        <input className="input-field w-full bg-white text-sm" type="time" value={formData.lunch_start} onChange={e => setFormData({ ...formData, lunch_start: e.target.value })} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Öğle Bitiş</label>
+                        <input className="input-field w-full bg-white text-sm" type="time" value={formData.lunch_end} onChange={e => setFormData({ ...formData, lunch_end: e.target.value })} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Günlük Mola (Dk)</label>
+                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.daily_break_allowance} onChange={e => setFormData({ ...formData, daily_break_allowance: parseInt(e.target.value) })} />
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Erken Tol. (dk)</label>
-                    <input className="input-field w-full bg-white" type="number" value={formData.early_leave_tolerance_minutes} onChange={e => setFormData({ ...formData, early_leave_tolerance_minutes: parseInt(e.target.value) })} />
+            </div>
+
+            {/* Tolerances Config */}
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Tolerans & Limitler</label>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Geç Kalma (dk)</label>
+                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.late_tolerance_minutes} onChange={e => setFormData({ ...formData, late_tolerance_minutes: parseInt(e.target.value) })} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Erken Çıkma (dk)</label>
+                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.early_leave_tolerance_minutes} onChange={e => setFormData({ ...formData, early_leave_tolerance_minutes: parseInt(e.target.value) })} />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Servis Toleransı (dk)</label>
+                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.service_tolerance_minutes} onChange={e => setFormData({ ...formData, service_tolerance_minutes: parseInt(e.target.value) })} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Min. Mesai (dk)</label>
+                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.minimum_overtime_minutes} onChange={e => setFormData({ ...formData, minimum_overtime_minutes: parseInt(e.target.value) })} />
+                    </div>
                 </div>
             </div>
 
@@ -253,7 +287,7 @@ const GeneralSettingsForm = ({ data, refresh }) => {
             <button onClick={handleSave} disabled={saving} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors disabled:opacity-50">
                 {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
             </button>
-        </div>
+        </div >
     );
 };
 
