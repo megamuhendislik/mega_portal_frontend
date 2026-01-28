@@ -141,8 +141,11 @@ const WorkSchedules = () => {
                                             data={calendarData}
                                             refresh={() => fetchCalendarDetails(selectedCalendarId)}
                                             onSuccess={() => {
+                                                console.log("GeneralSettingsForm onSuccess triggered");
+                                                console.log("Setting recalcCalendarId:", selectedCalendarId);
                                                 setRecalcCalendarId(selectedCalendarId);
                                                 setShowRecalcModal(true);
+                                                console.log("setShowRecalcModal(true) called");
                                             }}
                                         />
                                     </div>
@@ -158,6 +161,7 @@ const WorkSchedules = () => {
                                             data={calendarData}
                                             refresh={() => fetchCalendarDetails(selectedCalendarId)}
                                             onSuccess={() => {
+                                                console.log("ScheduleSettingsForm onSuccess triggered");
                                                 setRecalcCalendarId(selectedCalendarId);
                                                 setShowRecalcModal(true);
                                             }}
@@ -219,10 +223,17 @@ const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
 
     const handleSave = async () => {
         setSaving(true);
+        console.log("GeneralSettingsForm handleSave called");
         try {
             await api.patch(`/attendance/fiscal-calendars/${data.id}/`, formData);
+            console.log("API patch success");
             refresh();
-            if (onSuccess) onSuccess();
+            if (onSuccess) {
+                console.log("Calling onSuccess");
+                onSuccess();
+            } else {
+                console.warn("onSuccess prop is missing");
+            }
             // alert('Kaydedildi'); // Remove disruptive alerts? Maybe toast.
         } catch (e) { alert(e.message); }
         finally { setSaving(false); }
