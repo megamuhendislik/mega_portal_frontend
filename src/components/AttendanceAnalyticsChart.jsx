@@ -54,7 +54,7 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
                     <button onClick={() => setWeekStart(d => addDays(d, 7))} className="p-1 hover:bg-white rounded shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"><ChevronRight size={16} /></button>
                 </div>
             </div>
-            <div className="flex-1 w-full min-h-[300px]">
+            <div className="flex-1 w-full min-h-[300px]" style={{ minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
                         <defs>
@@ -97,7 +97,7 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
 // Sub-component for Trends (Line Chart)
 const TrendView = ({ data, xKey, unit = 'sa' }) => {
     return (
-        <div className="h-full w-full flex-1 min-h-[300px] pt-4">
+        <div className="h-full w-full flex-1 min-h-[300px] pt-4" style={{ minHeight: '300px' }}>
             <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
