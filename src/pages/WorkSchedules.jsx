@@ -9,6 +9,8 @@ const WorkSchedules = () => {
     const [selectedCalendarId, setSelectedCalendarId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [calendarData, setCalendarData] = useState(null);
+    const [showRecalcModal, setShowRecalcModal] = useState(false);
+    const [recalcCalendarId, setRecalcCalendarId] = useState(null);
 
     useEffect(() => {
         fetchCalendars();
@@ -135,7 +137,14 @@ const WorkSchedules = () => {
                                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                             <SettingsIcon /> Genel Ayarlar
                                         </h3>
-                                        <GeneralSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                                        <GeneralSettingsForm
+                                            data={calendarData}
+                                            refresh={() => fetchCalendarDetails(selectedCalendarId)}
+                                            onSuccess={() => {
+                                                setRecalcCalendarId(selectedCalendarId);
+                                                setShowRecalcModal(true);
+                                            }}
+                                        />
                                     </div>
                                 </div>
 
@@ -145,7 +154,14 @@ const WorkSchedules = () => {
                                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                             <ClockIcon /> Haftalık Çalışma Programı
                                         </h3>
-                                        <ScheduleSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                                        <ScheduleSettingsForm
+                                            data={calendarData}
+                                            refresh={() => fetchCalendarDetails(selectedCalendarId)}
+                                            onSuccess={() => {
+                                                setRecalcCalendarId(selectedCalendarId);
+                                                setShowRecalcModal(true);
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -185,7 +201,7 @@ const WorkSchedules = () => {
 
 // --- Sub-Components ---
 
-const GeneralSettingsForm = ({ data, refresh }) => {
+const GeneralSettingsForm = ({ data, refresh, onSuccess }) => {
     const [formData, setFormData] = useState({ ...data });
     const [holidays, setHolidays] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -206,6 +222,7 @@ const GeneralSettingsForm = ({ data, refresh }) => {
         try {
             await api.patch(`/attendance/fiscal-calendars/${data.id}/`, formData);
             refresh();
+            if (onSuccess) onSuccess();
             // alert('Kaydedildi'); // Remove disruptive alerts? Maybe toast.
         } catch (e) { alert(e.message); }
         finally { setSaving(false); }
@@ -345,7 +362,7 @@ const GeneralSettingsForm = ({ data, refresh }) => {
     );
 };
 
-const ScheduleSettingsForm = ({ data, refresh }) => {
+const ScheduleSettingsForm = ({ data, refresh, onSuccess }) => {
     const [schedule, setSchedule] = useState(data.weekly_schedule || {});
     const [saving, setSaving] = useState(false);
 
@@ -376,6 +393,7 @@ const ScheduleSettingsForm = ({ data, refresh }) => {
         try {
             await api.patch(`/attendance/fiscal-calendars/${data.id}/`, { weekly_schedule: schedule });
             refresh();
+            if (onSuccess) onSuccess();
         } catch (e) { alert(e.message); }
         finally { setSaving(false); }
     };
@@ -715,6 +733,147 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
             </div>
         </div>
     );
+};
+
+const RecalculationPromptModal = ({ calendarId, onClose }) => {
+    const [step, setStep] = useState('PROMPT'); // PROMPT | SELECT_DATE | PROCESSING | SUCCESS
+    const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 7) + '-01'); // 1st of current month
+    const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10)); // Today
+    const [result, setResult] = useState(null);
+
+    const handleRecalculate = async () => {
+        setStep('PROCESSING');
+        try {
+            const res = await api.post(`/attendance/fiscal-calendars/${calendarId}/recalculate/`, {
+                start_date: startDate,
+                end_date: endDate
+            });
+            setResult(res.data);
+            setStep('SUCCESS');
+        } catch (error) {
+            alert('Hata: ' + error.message);
+            setStep('SELECT_DATE'); // Go back
+        }
+    };
+
+    if (step === 'PROMPT') {
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in-95">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
+                            <CheckCircle size={28} />
+                        </div>
+                        <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
+                    </div>
+
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">Ayarlar Kaydedildi</h3>
+                    <p className="text-slate-600 mb-6">
+                        Yapılan değişikliklerin geçmiş kayıtlara yansıması için hesaplama işlemini tetiklemek ister misiniz?
+                    </p>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={() => setStep('SELECT_DATE')}
+                            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        >
+                            Evet, Şimdi Hesapla
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                        >
+                            Hayır, Sadece Kaydet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'SELECT_DATE') {
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+                    <h3 className="text-lg font-bold text-slate-800 mb-4">Hesaplama Aralığı Seçin</h3>
+
+                    <div className="space-y-4 mb-6">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Başlangıç Tarihi</label>
+                            <input
+                                type="date"
+                                className="input-field w-full"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Bitiş Tarihi</label>
+                            <input
+                                type="date"
+                                className="input-field w-full"
+                                value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setStep('PROMPT')}
+                            className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-lg font-bold hover:bg-slate-200"
+                        >
+                            Geri
+                        </button>
+                        <button
+                            onClick={handleRecalculate}
+                            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700"
+                        >
+                            Hesapla
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'PROCESSING') {
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm text-center">
+                    <div className="animate-spin text-indigo-600 mb-4 mx-auto w-8 h-8">
+                        <RefreshCw size={32} />
+                    </div>
+                    <h3 className="font-bold text-slate-800">Hesaplanıyor...</h3>
+                    <p className="text-sm text-slate-500 mt-2">Bu işlem personel sayısına göre biraz zaman alabilir.</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'SUCCESS' && result) {
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md text-center">
+                    <div className="bg-emerald-100 text-emerald-600 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">İşlem Tamamlandı</h3>
+                    <p className="text-slate-600 mb-6">
+                        {result.message}
+                    </p>
+                    <button
+                        onClick={onClose}
+                        className="w-full bg-slate-800 text-white py-3 rounded-lg font-bold hover:bg-slate-900 transition-colors"
+                    >
+                        Kapat
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return null;
 };
 
 export default WorkSchedules;

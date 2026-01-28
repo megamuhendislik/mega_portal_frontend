@@ -78,6 +78,7 @@ const YearCalendar = ({
                                 {days.map((d, i) => {
                                     if (!d) return <div key={i}></div>;
 
+                                    const currentDayDate = moment([currentYear, index, d]);
                                     const dateStr = currentDayDate.format('YYYY-MM-DD');
                                     const isToday = currentDayDate.isSame(moment(), 'day');
                                     const isHoliday = holidays.has(dateStr);
