@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle, X } from 'lucide-react';
+import YearCalendar from '../../components/YearCalendar';
 
 const UnifiedFiscalCalendar = () => {
     const [calendars, setCalendars] = useState([]);
@@ -174,6 +175,7 @@ const GeneralSettingsForm = ({ data, refresh }) => {
     const [formData, setFormData] = useState({ ...data });
     const [holidays, setHolidays] = useState([]);
     const [saving, setSaving] = useState(false);
+    const [showHolidayBuilder, setShowHolidayBuilder] = useState(false);
 
     useEffect(() => {
         api.get('/public-holidays/').then(res => setHolidays(res.data));
@@ -266,7 +268,15 @@ const GeneralSettingsForm = ({ data, refresh }) => {
             </div>
 
             <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Resmi Tatiller</label>
+                <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase">Resmi Tatiller</label>
+                    <button
+                        onClick={() => setShowHolidayBuilder(true)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:bg-indigo-50 px-2 py-1 rounded transition-colors"
+                    >
+                        <Calendar size={14} /> Görsel Düzenle
+                    </button>
+                </div>
                 <div className="bg-white border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1">
                     {holidays.map(h => (
                         <label key={h.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded border border-transparent hover:border-slate-100 transition-colors">
@@ -288,6 +298,21 @@ const GeneralSettingsForm = ({ data, refresh }) => {
             <button onClick={handleSave} disabled={saving} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors disabled:opacity-50">
                 {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
             </button>
+
+            {/* Visual Holiday Builder Modal */}
+            {
+                showHolidayBuilder && (
+                    <HolidayBuilderModal
+                        onClose={() => setShowHolidayBuilder(false)}
+                        selectedHolidayIds={formData.public_holidays || []}
+                        allHolidays={holidays}
+                        onUpdateSelection={(newIds) => setFormData({ ...formData, public_holidays: newIds })}
+                        onNewHolidayCreated={(newHoliday) => {
+                            setHolidays([...holidays, newHoliday]);
+                        }}
+                    />
+                )
+            }
         </div >
     );
 };
@@ -553,6 +578,101 @@ const UsersSettingsForm = ({ data, refresh }) => {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdateSelection, onNewHolidayCreated }) => {
+    const [year, setYear] = useState(new Date().getFullYear());
+
+    // Derived state for quick lookup
+    const holidayDateMap = useMemo(() => {
+        const map = {};
+        allHolidays.forEach(h => {
+            map[h.date] = h;
+        });
+        return map;
+    }, [allHolidays]);
+
+    const selectedDates = useMemo(() => {
+        const set = new Set();
+        allHolidays.filter(h => selectedHolidayIds.includes(h.id)).forEach(h => {
+            set.add(h.date);
+        });
+        return set;
+    }, [allHolidays, selectedHolidayIds]);
+
+    const handleDateClick = async (dateStr) => {
+        // Check if a holiday exists on this date
+        const existingHoliday = holidayDateMap[dateStr];
+
+        if (existingHoliday) {
+            // Toggle selection
+            const isSelected = selectedHolidayIds.includes(existingHoliday.id);
+            let newIds;
+            if (isSelected) {
+                newIds = selectedHolidayIds.filter(id => id !== existingHoliday.id);
+            } else {
+                newIds = [...selectedHolidayIds, existingHoliday.id];
+            }
+            onUpdateSelection(newIds);
+        } else {
+            // Prompt to create NEW holiday
+            const name = prompt(`${dateStr} tarihine yeni bir tatil eklemek ister misiniz? Tatil Adı:`);
+            if (name) {
+                try {
+                    const res = await api.post('/public-holidays/', {
+                        name,
+                        date: dateStr,
+                        type: 'FULL_DAY',
+                        description: 'Görsel düzenleyici üzerinden eklendi'
+                    });
+
+                    const newHoliday = res.data;
+                    onNewHolidayCreated(newHoliday);
+
+                    // Auto-select the newly created holiday
+                    onUpdateSelection([...selectedHolidayIds, newHoliday.id]);
+
+                } catch (error) {
+                    alert('Tatil oluşturulamadı: ' + error.message);
+                }
+            }
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800">Görsel Tatil Düzenleyici</h3>
+                        <p className="text-sm text-slate-500">Tarihlere tıklayarak ekleyip çıkarabilirsiniz. Kırmızılar genel tatil, Maviler seçili tatillerdir.</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto bg-slate-50/50">
+                    <YearCalendar
+                        year={year}
+                        onYearChange={setYear}
+                        holidays={new Set(allHolidays.map(h => h.date))} // Global list (Red)
+                        selectedDates={selectedDates} // Selected for this calendar (Blue)
+                        onDateClick={handleDateClick}
+                    />
+                </div>
+
+                <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all"
+                    >
+                        Tamamla
+                    </button>
                 </div>
             </div>
         </div>

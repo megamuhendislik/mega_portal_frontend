@@ -9,7 +9,9 @@ const YearCalendar = ({
     year,
     onYearChange,
     holidays = new Set(),
+    selectedDates = new Set(),
     onMonthClick,
+    onDateClick,
     customDayRenderer
 }) => {
     // Explicitly defining Turkish months to ensure localization consistency
@@ -76,23 +78,28 @@ const YearCalendar = ({
                                 {days.map((d, i) => {
                                     if (!d) return <div key={i}></div>;
 
-                                    const currentDayDate = moment([currentYear, index, d]);
                                     const dateStr = currentDayDate.format('YYYY-MM-DD');
                                     const isToday = currentDayDate.isSame(moment(), 'day');
-                                    const isBeforeToday = currentDayDate.isBefore(moment(), 'day');
                                     const isHoliday = holidays.has(dateStr);
+                                    const isSelected = selectedDates.has(dateStr);
                                     const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;
 
                                     let className = "aspect-square rounded-md flex items-center justify-center transition-all font-medium relative overflow-hidden";
                                     let style = {};
+
+                                    if (onDateClick) {
+                                        className += " cursor-pointer hover:ring-2 hover:ring-indigo-300";
+                                    }
 
                                     if (customDayRenderer) {
                                         // Allow external override if needed
                                     }
 
                                     // 1. Base Colors
-                                    if (isToday) {
-                                        className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200";
+                                    if (isSelected) {
+                                        className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200 scale-110 z-10";
+                                    } else if (isToday) {
+                                        className += " bg-indigo-50 text-indigo-700 font-bold border border-indigo-200";
                                     } else if (isHoliday) {
                                         className += " bg-red-100 text-red-700 font-bold ring-1 ring-red-200";
                                     } else if (isWeekend) {
@@ -102,7 +109,18 @@ const YearCalendar = ({
                                     }
 
                                     return (
-                                        <div key={i} className={className} style={style} title={isHoliday ? 'Resmi Tatil' : ''}>
+                                        <div
+                                            key={i}
+                                            className={className}
+                                            style={style}
+                                            title={isHoliday ? 'Resmi Tatil' : ''}
+                                            onClick={(e) => {
+                                                if (onDateClick) {
+                                                    e.stopPropagation();
+                                                    onDateClick(dateStr);
+                                                }
+                                            }}
+                                        >
                                             {d}
                                         </div>
                                     );
