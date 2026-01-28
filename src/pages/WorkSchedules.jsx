@@ -187,7 +187,14 @@ const WorkSchedules = () => {
                                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                     <UsersIcon /> Personel Atamaları
                                 </h3>
-                                <UsersSettingsForm data={calendarData} refresh={() => fetchCalendarDetails(selectedCalendarId)} />
+                                <UsersSettingsForm
+                                    data={calendarData}
+                                    refresh={() => fetchCalendarDetails(selectedCalendarId)}
+                                    onSuccess={() => {
+                                        setRecalcCalendarId(selectedCalendarId);
+                                        setShowRecalcModal(true);
+                                    }}
+                                />
                             </div>
 
                         </div>
@@ -521,7 +528,7 @@ const PeriodsSettingsForm = ({ data, refresh }) => {
     );
 };
 
-const UsersSettingsForm = ({ data, refresh }) => {
+const UsersSettingsForm = ({ data, refresh, onSuccess }) => {
     const [assignedEmployees, setAssignedEmployees] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
