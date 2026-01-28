@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
+import YearCalendar from '../components/YearCalendar';
 
 const PublicHolidays = () => {
     const [holidays, setHolidays] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [viewYear, setViewYear] = useState(new Date().getFullYear());
+    const [showCalendar, setShowCalendar] = useState(true);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -107,6 +109,25 @@ const PublicHolidays = () => {
                 </button>
             </div>
 
+            {/* Calendar Section */}
+            <div className="mb-6">
+                <button
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 mb-3 transition-colors"
+                >
+                    {showCalendar ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showCalendar ? 'Takvimi Gizle' : 'Takvimi Göster'}
+                </button>
+
+                {showCalendar && (
+                    <YearCalendar
+                        year={viewYear}
+                        onYearChange={setViewYear}
+                        holidays={new Set(holidays.map(h => h.date))}
+                    />
+                )}
+            </div>
+
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <table className="w-full text-left border-collapse">
                     <thead>
@@ -168,101 +189,103 @@ const PublicHolidays = () => {
             </div>
 
             {/* Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-xl font-bold text-slate-800">
-                                {editingId ? 'Tatili Düzenle' : 'Yeni Tatil Ekle'}
-                            </h3>
-                            <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tatil Adı</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="input-field"
-                                    placeholder="Örn: Cumhuriyet Bayramı"
-                                />
+            {
+                showModal && (
+                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 className="text-xl font-bold text-slate-800">
+                                    {editingId ? 'Tatili Düzenle' : 'Yeni Tatil Ekle'}
+                                </h3>
+                                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <X size={24} />
+                                </button>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <form onSubmit={handleSubmit} className="p-6 space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Tarih</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Tatil Adı</label>
                                     <input
-                                        type="date"
+                                        type="text"
                                         required
-                                        value={formData.date}
-                                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="input-field"
+                                        placeholder="Örn: Cumhuriyet Bayramı"
                                     />
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tarih</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formData.date}
+                                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tür</label>
+                                        <select
+                                            value={formData.type}
+                                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                            className="input-field"
+                                        >
+                                            <option value="FULL_DAY">Tam Gün</option>
+                                            <option value="HALF_DAY">Yarım Gün</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {formData.type === 'HALF_DAY' && (
+                                    <div className="animate-fade-in mt-4">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Saati</label>
+                                        <input
+                                            type="time"
+                                            required
+                                            value={formData.start_time}
+                                            onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                                            className="input-field"
+                                            placeholder="Örn: 13:00"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">Yarım gün tatilin başladığı saat (Örn: Arife günleri 13:00)</p>
+                                    </div>
+                                )}
+
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Tür</label>
-                                    <select
-                                        value={formData.type}
-                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                        className="input-field"
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="input-field h-24 resize-none"
+                                        placeholder="Opsiyonel açıklama..."
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModal(false)}
+                                        className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                     >
-                                        <option value="FULL_DAY">Tam Gün</option>
-                                        <option value="HALF_DAY">Yarım Gün</option>
-                                    </select>
+                                        İptal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/30"
+                                    >
+                                        <Save size={18} />
+                                        Kaydet
+                                    </button>
                                 </div>
-                            </div>
-
-                            {formData.type === 'HALF_DAY' && (
-                                <div className="animate-fade-in mt-4">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Saati</label>
-                                    <input
-                                        type="time"
-                                        required
-                                        value={formData.start_time}
-                                        onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                                        className="input-field"
-                                        placeholder="Örn: 13:00"
-                                    />
-                                    <p className="text-xs text-slate-500 mt-1">Yarım gün tatilin başladığı saat (Örn: Arife günleri 13:00)</p>
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="input-field h-24 resize-none"
-                                    placeholder="Opsiyonel açıklama..."
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                                >
-                                    İptal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/30"
-                                >
-                                    <Save size={18} />
-                                    Kaydet
-                                </button>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
