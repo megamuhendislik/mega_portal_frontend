@@ -282,7 +282,13 @@ const GeneralSettingsForm = ({ data, refresh }) => {
             </div>
 
             <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Resmi Tatiller</label>
+                <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase">Resmi Tatiller</label>
+                    <a href="/public-holidays" target="_blank" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                        <Settings size={12} />
+                        Tanımları Düzenle
+                    </a>
+                </div>
                 <div className="bg-white border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1">
                     {holidays.map(h => (
                         <label key={h.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded border border-transparent hover:border-slate-100 transition-colors">

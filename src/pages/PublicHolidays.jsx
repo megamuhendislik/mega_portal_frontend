@@ -13,7 +13,8 @@ const PublicHolidays = () => {
         name: '',
         date: '',
         type: 'FULL_DAY',
-        description: ''
+        description: '',
+        start_time: ''
     });
 
     useEffect(() => {
@@ -54,7 +55,8 @@ const PublicHolidays = () => {
             name: holiday.name,
             date: holiday.date,
             type: holiday.type,
-            description: holiday.description
+            description: holiday.description,
+            start_time: holiday.start_time || ''
         });
         setEditingId(holiday.id);
         setShowModal(true);
@@ -129,8 +131,8 @@ const PublicHolidays = () => {
                                     <td className="p-4 text-slate-800 font-semibold">{holiday.name}</td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded text-xs font-medium ${holiday.type === 'FULL_DAY'
-                                                ? 'bg-red-100 text-red-700'
-                                                : 'bg-orange-100 text-orange-700'
+                                            ? 'bg-red-100 text-red-700'
+                                            : 'bg-orange-100 text-orange-700'
                                             }`}>
                                             {holiday.type === 'FULL_DAY' ? 'Tam Gün' : 'Yarım Gün'}
                                         </span>
@@ -214,6 +216,21 @@ const PublicHolidays = () => {
                                     </select>
                                 </div>
                             </div>
+
+                            {formData.type === 'HALF_DAY' && (
+                                <div className="animate-fade-in mt-4">
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Saati</label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={formData.start_time}
+                                        onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                                        className="input-field"
+                                        placeholder="Örn: 13:00"
+                                    />
+                                    <p className="text-xs text-slate-500 mt-1">Yarım gün tatilin başladığı saat (Örn: Arife günleri 13:00)</p>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
