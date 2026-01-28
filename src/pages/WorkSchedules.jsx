@@ -189,7 +189,10 @@ const GeneralSettingsForm = ({ data, refresh }) => {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        api.get('/public-holidays/').then(res => setHolidays(res.data));
+        api.get('/public-holidays/').then(res => {
+            const data = res.data.results || res.data;
+            setHolidays(data);
+        });
     }, []);
 
     // Sync state when data changes (e.g. switch calendar)
@@ -465,10 +468,11 @@ const UsersSettingsForm = ({ data, refresh }) => {
         setLoading(true);
         try {
             const [usersRes, assignedRes] = await Promise.all([
-                api.get('/employees/'),
+                api.get('/employees/?page_size=1000'), // Get all (or handle true pagination later)
                 api.get(`/attendance/fiscal-calendars/${data.id}/assigned_employees/`)
             ]);
-            setAllEmployees(usersRes.data);
+            const usersData = usersRes.data.results || usersRes.data;
+            setAllEmployees(usersData);
             setAssignedEmployees(assignedRes.data.map(e => e.id));
         } finally {
             setLoading(false);
