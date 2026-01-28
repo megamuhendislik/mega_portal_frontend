@@ -257,26 +257,33 @@ const GeneralSettingsForm = ({ data, refresh }) => {
             </div>
 
             {/* Tolerances Config */}
-            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Tolerans & Limitler</label>
-                <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 text-center tracking-wider">Tolerans & Limitler</h4>
+                <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Geç Kalma (dk)</label>
-                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.late_tolerance_minutes} onChange={e => setFormData({ ...formData, late_tolerance_minutes: parseInt(e.target.value) })} />
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Tolerans (dk)</label>
+                        <input
+                            className="input-field w-full bg-white text-center"
+                            type="number"
+                            value={formData.late_tolerance_minutes}
+                            onChange={e => setFormData({
+                                ...formData,
+                                late_tolerance_minutes: parseInt(e.target.value),
+                                early_leave_tolerance_minutes: 0 // Force 0 as requested
+                            })}
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Giriş ve çıkışlar için genel tolerans.</p>
                     </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Erken Çıkma (dk)</label>
-                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.early_leave_tolerance_minutes} onChange={e => setFormData({ ...formData, early_leave_tolerance_minutes: parseInt(e.target.value) })} />
-                    </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+                    {/* Early Leave Removed as per request (set to 0 invisibly above) */}
+
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Servis Toleransı (dk)</label>
-                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.service_tolerance_minutes} onChange={e => setFormData({ ...formData, service_tolerance_minutes: parseInt(e.target.value) })} />
+                        <input className="input-field w-full bg-white text-center" type="number" value={formData.service_tolerance_minutes} onChange={e => setFormData({ ...formData, service_tolerance_minutes: parseInt(e.target.value) })} />
                     </div>
+
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Min. Mesai (dk)</label>
-                        <input className="input-field w-full bg-white text-sm" type="number" value={formData.minimum_overtime_minutes} onChange={e => setFormData({ ...formData, minimum_overtime_minutes: parseInt(e.target.value) })} />
+                        <input className="input-field w-full bg-white text-center" type="number" value={formData.minimum_overtime_minutes} onChange={e => setFormData({ ...formData, minimum_overtime_minutes: parseInt(e.target.value) })} />
                     </div>
                 </div>
             </div>
