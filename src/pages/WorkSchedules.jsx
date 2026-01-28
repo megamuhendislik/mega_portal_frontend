@@ -46,21 +46,34 @@ const WorkSchedules = () => {
     };
 
     const handleCreate = async () => {
-        const name = prompt("Yeni Takvim Adı:");
+        const name = prompt("Yeni Takvim Adı (Örn: 2027 Genel):");
         if (!name) return;
+
+        const yearInput = prompt("Yıl:", new Date().getFullYear() + 1);
+        if (!yearInput) return;
+        const year = parseInt(yearInput);
+
         try {
             const res = await api.post('/attendance/fiscal-calendars/', {
                 name,
-                year: 2026,
+                year: year,
                 weekly_schedule: {
-                    MON: { start: "08:30", end: "18:00", is_off: false },
-                    TUE: { start: "08:30", end: "18:00", is_off: false },
-                    WED: { start: "08:30", end: "18:00", is_off: false },
-                    THU: { start: "08:30", end: "18:00", is_off: false },
-                    FRI: { start: "08:30", end: "18:00", is_off: false },
-                    SAT: { start: "08:30", end: "13:00", is_off: false },
-                    SUN: { start: "00:00", end: "00:00", is_off: true }
-                }
+                    MON: { start: "08:00", end: "18:00", is_off: false },
+                    TUE: { start: "08:00", end: "18:00", is_off: false },
+                    WED: { start: "08:00", "end": "18:00", is_off: false },
+                    THU: { start: "08:00", "end": "18:00", is_off: false },
+                    FRI: { start: "08:00", "end": "18:00", is_off: false },
+                    SAT: { start: "08:00", "end": "18:00", is_off: true },
+                    SUN: { start: "08:00", "end": "18:00", is_off: true }
+                },
+                // Default settings
+                lunch_start: "12:30",
+                lunch_end: "13:30",
+                daily_break_allowance: 30,
+                late_tolerance_minutes: 30,
+                early_leave_tolerance_minutes: 0,
+                service_tolerance_minutes: 15,
+                minimum_overtime_minutes: 15
             });
             setCalendars([...calendars, res.data]);
             setSelectedCalendarId(res.data.id);
