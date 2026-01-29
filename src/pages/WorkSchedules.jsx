@@ -1016,7 +1016,7 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
     );
 };
 
-const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdateSelection, onNewHolidayCreated }) => {
+const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdateSelection, onNewHolidayCreated, onHolidayDeleted }) => {
     const [year, setYear] = useState(new Date().getFullYear());
     const selectedDates = useMemo(() => {
         const dates = new Set();
