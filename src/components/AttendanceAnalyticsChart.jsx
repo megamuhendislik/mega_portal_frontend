@@ -13,35 +13,34 @@ import { tr } from 'date-fns/locale';
 import api from '../services/api';
 
 // Sub-component for Weekly Bar Chart (Legacy Logic)
-const WeeklyView = ({ logs, dailyTarget = 9 }) => {
+const WeeklyView = ({ employeeId }) => {
     const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-    const data = useMemo(() => {
-        const days = [];
-        for (let i = 0; i < 7; i++) {
-            const current = addDays(weekStart, i);
-            const dateStr = format(current, 'yyyy-MM-dd');
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-            // AGGREGATION FIX: Filter all logs for this day and sum them
-            const dayLogs = logs.filter(l => l.work_date === dateStr);
-            const aggregated = dayLogs.reduce((acc, log) => ({
-                normal_seconds: acc.normal_seconds + (log.normal_seconds || 0),
-                overtime_seconds: acc.overtime_seconds + (log.overtime_seconds || 0),
-                missing_seconds: acc.missing_seconds + (log.missing_seconds || 0),
-                day_target_seconds: log.day_target_seconds || acc.day_target_seconds // Take first non-zero target
-            }), { normal_seconds: 0, overtime_seconds: 0, missing_seconds: 0, day_target_seconds: 0 });
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const startStr = format(weekStart, 'yyyy-MM-dd');
+                const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
 
-            days.push({
-                name: format(current, 'EEE', { locale: tr }),
-                fullDate: format(current, 'd MMM yyyy', { locale: tr }),
-                normal: aggregated.normal_seconds / 3600,
-                overtime: aggregated.overtime_seconds / 3600,
-                missing: aggregated.missing_seconds / 3600,
-                target: (aggregated.day_target_seconds > 0) ? (aggregated.day_target_seconds / 3600) : null
-            });
-        }
-        return days;
-    }, [logs, weekStart]);
+                const response = await api.get(`/attendance/stats/?scope=WEEKLY&start_date=${startStr}&end_date=${endStr}&employee_id=${employeeId || ''}`);
+
+                // Backend now returns pre-formatted data or raw logs?
+                // I implemented backend to return: [{ name, fullDate, normal, overtime, missing, target }]
+                // So I can just set data directly!
+                setData(response.data);
+            } catch (error) {
+                console.error("Error fetching weekly stats:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [weekStart, employeeId]);
 
     return (
         <div className="h-full flex flex-col">
@@ -57,6 +56,7 @@ const WeeklyView = ({ logs, dailyTarget = 9 }) => {
             <div className="flex-1 w-full min-h-[300px]" style={{ minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+                        {loading && <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="#94a3b8" fontSize="14">Yükleniyor...</text>}
                         <defs>
                             <pattern id="striped-analytics" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                                 <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
@@ -274,7 +274,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             </div>
 
             <div className="flex-1 w-full min-h-0">
-                {scope === 'WEEKLY' && <WeeklyView logs={logs} />}
+                {scope === 'WEEKLY' && <WeeklyView employeeId={employeeId} />}
                 {scope === 'MONTHLY' && (
                     <TrendView data={monthlyTrendData} xKey="name" />
                 )}
