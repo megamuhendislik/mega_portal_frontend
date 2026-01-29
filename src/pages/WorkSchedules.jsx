@@ -750,70 +750,156 @@ import { createPortal } from 'react-dom';
 const HolidayDetailModal = ({ range, onClose, onSave }) => {
     const [name, setName] = useState('Resmi Tatil');
     const [type, setType] = useState('FULL_DAY');
-    const [startTime, setStartTime] = useState('09:00');
-    const [endTime, setEndTime] = useState('13:00');
+
+    // Global defaults
+    const [defaultStart, setDefaultStart] = useState('09:00');
+    const [defaultEnd, setDefaultEnd] = useState('13:00');
+
+    // Generate date list from range
+    const dates = useMemo(() => {
+        const list = [];
+        let current = moment(range.start);
+        const end = moment(range.end);
+        while (current.isSameOrBefore(end)) {
+            list.push(current.format('YYYY-MM-DD'));
+            current.add(1, 'day');
+        }
+        return list;
+    }, [range]);
+
+    // Per-day overrides: { '2026-01-01': { start: '09:00', end: '13:00' } }
+    const [dailyOverrides, setDailyOverrides] = useState({});
+
+    const handleOverrideChange = (date, field, value) => {
+        setDailyOverrides(prev => ({
+            ...prev,
+            [date]: {
+                ...prev[date],
+                [field]: value
+            }
+        }));
+    };
 
     const handleSave = () => {
-        onSave({
-            name,
-            type,
-            start_time: type === 'HALF_DAY' ? startTime : null,
-            end_time: type === 'HALF_DAY' ? endTime : null
+        const configs = dates.map(date => {
+            const override = dailyOverrides[date] || {};
+            const startTime = override.start || defaultStart;
+            const endTime = override.end || defaultEnd;
+
+            return {
+                name,
+                date, // Explicitly pass date
+                type,
+                start_time: type === 'HALF_DAY' ? startTime : null,
+                end_time: type === 'HALF_DAY' ? endTime : null
+            };
         });
+        onSave(configs);
     };
+
+    const isBulkHalfDay = type === 'HALF_DAY' && dates.length > 1;
 
     return createPortal(
         <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-in fade-in zoom-in-95" style={{ zIndex: 10000 }}>
-            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Tatil Detayları</h3>
+            <div className={`bg-white rounded-xl shadow-2xl p-6 w-full ${isBulkHalfDay ? 'max-w-2xl' : 'max-w-sm'} transition-all`}>
+                <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Tatil Detayları</h3>
+                    <div className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono">
+                        {range.start} - {range.end} ({dates.length} Gün)
+                    </div>
+                </div>
 
                 <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tarih Aralığı</label>
-                        <div className="text-sm bg-slate-50 p-2 rounded border border-slate-200 font-mono text-slate-600">
-                            {range.start} - {range.end}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Tatil Adı</label>
+                            <input
+                                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none"
+                                placeholder="Örn: Kurban Bayramı"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Tür</label>
+                            <select
+                                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none bg-white"
+                                value={type}
+                                onChange={e => setType(e.target.value)}
+                            >
+                                <option value="FULL_DAY">Tam Gün</option>
+                                <option value="HALF_DAY">Yarım Gün / Saatlik</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tatil Adı</label>
-                        <input
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none"
-                            placeholder="Örn: Kurban Bayramı"
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tür</label>
-                        <select
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none bg-white"
-                            value={type}
-                            onChange={e => setType(e.target.value)}
-                        >
-                            <option value="FULL_DAY">Tam Gün</option>
-                            <option value="HALF_DAY">Yarım Gün / Saatlik</option>
-                        </select>
-                    </div>
-
-                    {type === 'HALF_DAY' && (
-                        <div className="grid grid-cols-2 gap-2">
+                    {/* Single Day or Global Settings for Sync */}
+                    {type === 'HALF_DAY' && !isBulkHalfDay && (
+                        <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
-                                <input type="time" className="w-full border rounded px-2 py-1" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Başlangıç</label>
+                                <input type="time" className="w-full border rounded px-2 py-1 bg-white" value={defaultStart} onChange={e => setDefaultStart(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
-                                <input type="time" className="w-full border rounded px-2 py-1" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Bitiş</label>
+                                <input type="time" className="w-full border rounded px-2 py-1 bg-white" value={defaultEnd} onChange={e => setDefaultEnd(e.target.value)} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bulk Day List */}
+                    {isBulkHalfDay && (
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-slate-50 p-2 border-b flex justify-between items-center">
+                                <span className="text-xs font-bold text-slate-500 uppercase">Günlük Ayarlar</span>
+                                <div className="flex gap-2 items-center">
+                                    <span className="text-[10px] text-slate-400">Varsayılan:</span>
+                                    <input type="time" className="text-xs border rounded px-1 py-0.5 w-16" value={defaultStart} onChange={e => setDefaultStart(e.target.value)} />
+                                    <span className="text-slate-300">-</span>
+                                    <input type="time" className="text-xs border rounded px-1 py-0.5 w-16" value={defaultEnd} onChange={e => setDefaultEnd(e.target.value)} />
+                                </div>
+                            </div>
+                            <div className="max-h-[300px] overflow-y-auto bg-slate-50/30">
+                                {dates.map(date => {
+                                    const override = dailyOverrides[date] || {};
+                                    const s = override.start || defaultStart;
+                                    const e = override.end || defaultEnd;
+
+                                    // Highlight if different from default
+                                    const isModified = (override.start && override.start !== defaultStart) || (override.end && override.end !== defaultEnd);
+
+                                    return (
+                                        <div key={date} className={`flex items-center gap-3 p-2 border-b last:border-0 ${isModified ? 'bg-indigo-50/50' : 'hover:bg-white'}`}>
+                                            <div className="w-24 text-sm font-medium text-slate-700">{date}</div>
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <input
+                                                    type="time"
+                                                    className={`border rounded px-2 py-1 text-sm w-full ${isModified ? 'border-indigo-300 bg-white' : 'border-slate-200 text-slate-500'}`}
+                                                    value={s}
+                                                    onChange={e => handleOverrideChange(date, 'start', e.target.value)}
+                                                />
+                                                <span className="text-slate-300">-</span>
+                                                <input
+                                                    type="time"
+                                                    className={`border rounded px-2 py-1 text-sm w-full ${isModified ? 'border-indigo-300 bg-white' : 'border-slate-200 text-slate-500'}`}
+                                                    value={e}
+                                                    onChange={e => handleOverrideChange(date, 'end', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
                     <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">İptal</button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Kaydet</button>
+                    <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+                        {dates.length} Gün İçin Kaydet
+                    </button>
                 </div>
             </div>
         </div>,
@@ -839,34 +925,26 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         setPendingRange({ start, end });
     };
 
-    const confirmHolidayCreation = async (details) => {
-        if (!pendingRange) return;
-
-        // Iterate days in range
-        let current = moment(pendingRange.start);
-        const end = moment(pendingRange.end);
+    const confirmHolidayCreation = async (holidayConfigs) => {
+        // holidayConfigs is now an array of objects: [{ name, date, type, start_time, end_time }, ...]
+        if (!holidayConfigs || holidayConfigs.length === 0) return;
 
         const createdIds = [];
 
         try {
-            while (current.isSameOrBefore(end)) {
-                const dateStr = current.format('YYYY-MM-DD');
-
-                // Determine if this date is already selected or exists
+            for (const config of holidayConfigs) {
                 const payload = {
-                    name: details.name,
-                    date: dateStr,
-                    type: details.type,
-                    start_time: details.start_time,
-                    end_time: details.end_time,
+                    name: config.name,
+                    date: config.date,
+                    type: config.type,
+                    start_time: config.start_time,
+                    end_time: config.end_time,
                     category: 'OFFICIAL'
                 };
 
                 const res = await api.post('/core/public-holidays/', payload);
                 createdIds.push(res.data.id);
                 onNewHolidayCreated(res.data);
-
-                current.add(1, 'day');
             }
 
             // Update Selection
