@@ -434,6 +434,13 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                     onNewHolidayCreated={(newHoliday) => {
                         setHolidays([...holidays, newHoliday]);
                     }}
+                    onHolidayDeleted={(deletedId) => {
+                        setHolidays(holidays.filter(h => h.id !== deletedId));
+                        // Remove from current calendar assignment if present
+                        if ((data.public_holidays || []).includes(deletedId)) {
+                            onChange({ ...data, public_holidays: data.public_holidays.filter(id => id !== deletedId) });
+                        }
+                    }}
                 />
             )}
         </div >
@@ -968,12 +975,42 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         }
     };
 
-    const handleRemoveDate = (dateStr) => {
-        // Logic to remove holiday if clicked
+    const handleRemoveDate = async (dateStr) => {
+        // Find if there is a holiday on this date
         const holidayToRemove = allHolidays.find(h => h.date === dateStr);
+
         if (holidayToRemove) {
-            const newIds = selectedHolidayIds.filter(id => id !== holidayToRemove.id);
-            onUpdateSelection(newIds);
+            if (window.confirm(`${dateStr} tarihindeki "${holidayToRemove.name}" tatilini silmek istediğinize emin misiniz?`)) {
+                try {
+                    await api.delete(`/core/public-holidays/${holidayToRemove.id}/`);
+
+                    // Remove from parent list
+                    const newHolidays = allHolidays.filter(h => h.id !== holidayToRemove.id);
+                    // We need a way to propogate this up. 
+                    // Since we don't have a direct 'onRemoveHoliday' prop, we can re-use onUpdateSelection for local
+                    // BUT for the RED dots to go away, 'allHolidays' prop must change.
+                    // Assuming 'onNewHolidayCreated' might be the wrong name for "refresh list".
+                    // Let's check parent usage. If parent manages state, we need a callback.
+                    // For now, let's assume we can trigger a refresh or we need to add a callback.
+                    // Wait, 'onNewHolidayCreated' adds to list. checking parent...
+                    // The parent WorkSchedules passes 'publicHolidays' and 'setPublicHolidays' via props?
+                    // No, it handles it in 'handlePublicHolidaysChange' or similar?
+                    // Actually, let's just use a new callback prop 'onHolidayDeleted' and add it to usage.
+                    if (onHolidayDeleted) onHolidayDeleted(holidayToRemove.id);
+
+                    // Also clear from local selection if it was just selected
+                    const newIds = selectedHolidayIds.filter(id => id !== holidayToRemove.id);
+                    onUpdateSelection(newIds);
+
+                } catch (error) {
+                    alert("Silme işlemi başarısız: " + error.message);
+                }
+            }
+        } else {
+            // If not in global list but in local selection (draft), just remove from selection
+            // (Though usually drag select doesn't add to ID list until saved? Wait. 
+            //  The builder works by creating them immediately in confirmHolidayCreation.
+            //  So they should always be in allHolidays once created.)
         }
     };
 
