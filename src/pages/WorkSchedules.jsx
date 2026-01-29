@@ -359,24 +359,7 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                 </div>
             </div>
 
-            {/* Breaks & Lunch Config */}
-            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Mola & Yemek Ayarları</label>
-                <div className="grid grid-cols-3 gap-3">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Öğle Başlangıç</label>
-                        <input className="input-field w-full bg-white text-sm" type="time" value={data.lunch_start || ''} onChange={e => handleChange('lunch_start', e.target.value)} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Öğle Bitiş</label>
-                        <input className="input-field w-full bg-white text-sm" type="time" value={data.lunch_end || ''} onChange={e => handleChange('lunch_end', e.target.value)} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Günlük Mola (Dk)</label>
-                        <input className="input-field w-full bg-white text-sm" type="number" value={data.daily_break_allowance || 0} onChange={e => handleChange('daily_break_allowance', parseInt(e.target.value))} />
-                    </div>
-                </div>
-            </div>
+            {/* Breaks & Lunch Config MOVED TO SCHEDULE */}
 
             {/* Tolerances Config */}
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -482,46 +465,110 @@ const ScheduleSettingsForm = ({ data, onChange }) => {
 
     return (
         <div className="space-y-4">
-            <div className="grid gap-3">
-                {days.map(day => {
-                    const dayConfig = schedule[day.key] || { start: '08:30', end: '18:00', is_off: day.key === 'SUN' };
-                    return (
-                        <div key={day.key} className={`flex items-center gap-4 p-3 rounded-lg border ${dayConfig.is_off ? 'bg-slate-50 border-slate-100' : 'bg-white border-slate-200'}`}>
-                            <div className="w-24 font-bold text-slate-700">{day.label}</div>
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                                <div className={`w-10 h-6 rounded-full p-1 transition-colors ${dayConfig.is_off ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-                                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${dayConfig.is_off ? 'translate-x-4' : ''}`} />
-                                </div>
-                                <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={dayConfig.is_off}
-                                    onChange={e => handleChange(day.key, 'is_off', e.target.checked)}
-                                />
-                                <span className="text-sm font-medium text-slate-600">{dayConfig.is_off ? 'Tatil Günü' : 'Çalışma Günü'}</span>
-                            </label>
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs">Gün</th>
+                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs w-[140px]">Durum</th>
+                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs">Mesai Saatleri</th>
+                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs">Öğle Arası</th>
+                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs w-[100px]">Mola (dk)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {days.map(day => {
+                                const dayConfig = schedule[day.key] || {
+                                    start: '08:30',
+                                    end: '18:00',
+                                    is_off: day.key === 'SUN',
+                                    lunch_start: '12:30',
+                                    lunch_end: '13:30',
+                                    daily_break_allowance: 30
+                                };
+                                const isOff = dayConfig.is_off;
 
-                            {!dayConfig.is_off && (
-                                <div className="flex items-center gap-2 ml-auto">
-                                    <Clock size={16} className="text-slate-400" />
-                                    <input
-                                        type="time"
-                                        className="border rounded px-2 py-1 text-sm bg-slate-50 focus:bg-white focus:ring-2 ring-indigo-100 outline-none"
-                                        value={dayConfig.start}
-                                        onChange={e => handleChange(day.key, 'start', e.target.value)}
-                                    />
-                                    <span className="text-slate-400">-</span>
-                                    <input
-                                        type="time"
-                                        className="border rounded px-2 py-1 text-sm bg-slate-50 focus:bg-white focus:ring-2 ring-indigo-100 outline-none"
-                                        value={dayConfig.end}
-                                        onChange={e => handleChange(day.key, 'end', e.target.value)}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                return (
+                                    <tr key={day.key} className={`transition-colors ${isOff ? 'bg-slate-50 hover:bg-slate-100' : 'hover:bg-indigo-50/30'}`}>
+                                        <td className="px-4 py-3 font-bold text-slate-700">{day.label}</td>
+                                        <td className="px-4 py-3">
+                                            <label className="inline-flex items-center gap-2 cursor-pointer select-none relative group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="peer sr-only"
+                                                    checked={isOff}
+                                                    onChange={e => handleChange(day.key, 'is_off', e.target.checked)}
+                                                />
+                                                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ease-in-out flex items-center px-0.5 ${isOff ? 'bg-slate-300' : 'bg-emerald-500'}`}>
+                                                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${isOff ? 'translate-x-5' : 'translate-x-0'}`} />
+                                                </div>
+                                                <span className="text-xs font-semibold text-slate-600 w-16 px-1">{!isOff ? 'Çalışma' : 'Tatil'}</span>
+                                            </label>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {!isOff ? (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="relative">
+                                                        <Clock size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type="time"
+                                                            value={dayConfig.start}
+                                                            onChange={e => handleChange(day.key, 'start', e.target.value)}
+                                                            className="pl-7 pr-2 py-1.5 border rounded-lg text-xs font-medium focus:ring-2 ring-indigo-500 outline-none w-[90px]"
+                                                        />
+                                                    </div>
+                                                    <span className="text-slate-400 font-bold">-</span>
+                                                    <input
+                                                        type="time"
+                                                        value={dayConfig.end}
+                                                        onChange={e => handleChange(day.key, 'end', e.target.value)}
+                                                        className="px-2 py-1.5 border rounded-lg text-xs font-medium focus:ring-2 ring-indigo-500 outline-none w-[80px] text-center"
+                                                    />
+                                                </div>
+                                            ) : <span className="text-slate-400 text-xs italic pl-2">-- : --</span>}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {!isOff ? (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="relative">
+                                                        <input
+                                                            type="time"
+                                                            value={dayConfig.lunch_start}
+                                                            onChange={e => handleChange(day.key, 'lunch_start', e.target.value)}
+                                                            className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-600 focus:ring-2 ring-indigo-500 outline-none w-[80px]"
+                                                        />
+                                                    </div>
+                                                    <span className="text-slate-300">-</span>
+                                                    <input
+                                                        type="time"
+                                                        value={dayConfig.lunch_end}
+                                                        onChange={e => handleChange(day.key, 'lunch_end', e.target.value)}
+                                                        className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-600 focus:ring-2 ring-indigo-500 outline-none w-[80px]"
+                                                    />
+                                                </div>
+                                            ) : <span className="text-slate-400 text-xs italic pl-2">-- : --</span>}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {!isOff ? (
+                                                <input
+                                                    type="number"
+                                                    value={dayConfig.daily_break_allowance}
+                                                    onChange={e => handleChange(day.key, 'daily_break_allowance', parseInt(e.target.value))}
+                                                    className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-center focus:ring-2 ring-indigo-500 outline-none"
+                                                />
+                                            ) : <span className="text-slate-400 text-xs">-</span>}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-3 rounded border border-amber-100">
+                <AlertTriangle size={14} />
+                <span>Not: Günlük mola süreleri ve öğle arası saatleri, ilgili gün için varsayılan değerleri geçersiz kılar.</span>
             </div>
         </div>
     );
