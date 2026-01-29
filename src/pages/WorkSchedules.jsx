@@ -11,56 +11,13 @@ const WorkSchedules = () => {
 
     // Consolidated State
     const [draftData, setDraftData] = useState(null);
-    const [assignments, setAssignments] = useState([]);
-    const [saving, setSaving] = useState(false);
-
-    const [showRecalcModal, setShowRecalcModal] = useState(false);
-    const [recalcCalendarId, setRecalcCalendarId] = useState(null);
-
-    useEffect(() => {
-        fetchCalendars();
-    }, []);
-
-    useEffect(() => {
-        if (selectedCalendarId) {
-            fetchCalendarDetails(selectedCalendarId);
-        } else {
-            setDraftData(null);
-        }
-    }, [selectedCalendarId]);
-
-    const fetchCalendars = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/attendance/fiscal-calendars/');
-            const data = res.data.results || res.data;
-            setCalendars(data);
-            if (data.length > 0 && !selectedCalendarId) {
-                setSelectedCalendarId(data[0].id);
-            }
-        } catch (error) {
-            console.error("Error fetching calendars:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCalendarDetails = async (id) => {
-        try {
-            const [calRes, assignRes] = await Promise.all([
-                api.get(`/attendance/fiscal-calendars/${id}/`),
-                api.get(`/attendance/fiscal-calendars/${id}/assigned_employees/`)
-            ]);
-            setDraftData(calRes.data);
-            setAssignments(assignRes.data.map(e => e.id));
-        } catch (error) {
-            console.error("Error details:", error);
-        }
-    };
+    const [executionLogs, setExecutionLogs] = useState([]);
 
     const handleGlobalSave = async () => {
         if (!draftData) return;
         setSaving(true);
+        setExecutionLogs([]); // Clear old logs
+
         try {
             // 1. Update Calendar Settings
             await api.patch(`/attendance/fiscal-calendars/${draftData.id}/`, draftData);
@@ -70,9 +27,23 @@ const WorkSchedules = () => {
                 employee_ids: assignments
             });
 
-            // 3. Prompt Recalculation
-            setRecalcCalendarId(draftData.id);
-            setShowRecalcModal(true);
+            // 3. Auto-Recalculate Targets (Current Month + Future)
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+            const endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+
+            // We await this so the modal stays open until done
+            const res = await api.post(`/attendance/fiscal-calendars/${draftData.id}/recalculate/`, {
+                start_date: startOfMonth,
+                end_date: endOfYear
+            });
+
+            // Capture Logs
+            if (res.data.logs) {
+                setExecutionLogs(res.data.logs);
+            } else {
+                setExecutionLogs(["Log bilgisi alınamadı."]);
+            }
 
             // Refresh to ensure sync
             fetchCalendarDetails(draftData.id);
