@@ -12,6 +12,49 @@ const WorkSchedules = () => {
     // Consolidated State
     const [draftData, setDraftData] = useState(null);
     const [executionLogs, setExecutionLogs] = useState([]);
+    const [assignments, setAssignments] = useState([]);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        fetchCalendars();
+    }, []);
+
+    useEffect(() => {
+        if (selectedCalendarId) {
+            fetchCalendarDetails(selectedCalendarId);
+        } else {
+            setDraftData(null);
+        }
+    }, [selectedCalendarId]);
+
+    const fetchCalendars = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/attendance/fiscal-calendars/');
+            const data = res.data.results || res.data;
+            setCalendars(data);
+            if (data.length > 0 && !selectedCalendarId) {
+                setSelectedCalendarId(data[0].id);
+            }
+        } catch (error) {
+            console.error("Error fetching calendars:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchCalendarDetails = async (id) => {
+        try {
+            const [calRes, assignRes] = await Promise.all([
+                api.get(`/attendance/fiscal-calendars/${id}/`),
+                api.get(`/attendance/fiscal-calendars/${id}/assigned_employees/`)
+            ]);
+            setDraftData(calRes.data);
+            setAssignments(assignRes.data.map(e => e.id));
+        } catch (error) {
+            console.error("Error details:", error);
+        }
+    };
 
     const handleGlobalSave = async () => {
         if (!draftData) return;
