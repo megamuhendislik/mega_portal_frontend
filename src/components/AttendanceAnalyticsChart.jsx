@@ -26,7 +26,17 @@ const WeeklyView = ({ employeeId }) => {
                 const startStr = format(weekStart, 'yyyy-MM-dd');
                 const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
 
-                const response = await api.get(`/attendance/stats/?scope=WEEKLY&start_date=${startStr}&end_date=${endStr}&employee_id=${employeeId || ''}`);
+                const params = new URLSearchParams({
+                    scope: 'WEEKLY',
+                    start_date: startStr,
+                    end_date: endStr
+                });
+
+                if (employeeId) {
+                    params.append('employee_id', employeeId);
+                }
+
+                const response = await api.get(`/attendance/stats/?${params.toString()}`);
 
                 // Backend now returns pre-formatted data or raw logs?
                 // I implemented backend to return: [{ name, fullDate, normal, overtime, missing, target }]
@@ -53,8 +63,8 @@ const WeeklyView = ({ employeeId }) => {
                     <button onClick={() => setWeekStart(d => addDays(d, 7))} className="p-1 hover:bg-white rounded shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"><ChevronRight size={16} /></button>
                 </div>
             </div>
-            <div className="flex-1 w-full min-h-[300px]" style={{ minHeight: '300px' }}>
-                <ResponsiveContainer width="100%" height="100%" debounce={50}>
+            <div className="flex-1 w-full h-[320px] min-h-[320px]" style={{ minHeight: '320px' }}>
+                <ResponsiveContainer width="99%" height="100%" debounce={50}>
                     <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
                         {loading && <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="#94a3b8" fontSize="14">Yükleniyor...</text>}
                         <defs>
@@ -97,8 +107,8 @@ const WeeklyView = ({ employeeId }) => {
 // Sub-component for Trends (Line Chart)
 const TrendView = ({ data, xKey, unit = 'sa' }) => {
     return (
-        <div className="h-full w-full flex-1 min-h-[300px] pt-4" style={{ minHeight: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%" debounce={50}>
+        <div className="h-full w-full flex-1 min-h-[320px] pt-4" style={{ minHeight: '320px' }}>
+            <ResponsiveContainer width="99%" height="100%" debounce={50}>
                 <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis
