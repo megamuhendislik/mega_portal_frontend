@@ -698,72 +698,161 @@ const ClockIcon = () => <Clock size={20} className="text-slate-500" />;
 const CalendarIcon = () => <Calendar size={20} className="text-slate-500" />;
 const UsersIcon = () => <Users size={20} className="text-slate-500" />;
 
+const HolidayDetailModal = ({ range, onClose, onSave }) => {
+    const [name, setName] = useState('Resmi Tatil');
+    const [type, setType] = useState('FULL_DAY');
+    const [startTime, setStartTime] = useState('09:00');
+    const [endTime, setEndTime] = useState('13:00');
+
+    const handleSave = () => {
+        onSave({
+            name,
+            type,
+            start_time: type === 'HALF_DAY' ? startTime : null,
+            end_time: type === 'HALF_DAY' ? endTime : null
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Tatil Detayları</h3>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tarih Aralığı</label>
+                        <div className="text-sm bg-slate-50 p-2 rounded border border-slate-200 font-mono text-slate-600">
+                            {range.start} - {range.end}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tatil Adı</label>
+                        <input
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none"
+                            placeholder="Örn: Kurban Bayramı"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tür</label>
+                        <select
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none bg-white"
+                            value={type}
+                            onChange={e => setType(e.target.value)}
+                        >
+                            <option value="FULL_DAY">Tam Gün</option>
+                            <option value="HALF_DAY">Yarım Gün / Saatlik</option>
+                        </select>
+                    </div>
+
+                    {type === 'HALF_DAY' && (
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
+                                <input type="time" className="w-full border rounded px-2 py-1" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
+                                <input type="time" className="w-full border rounded px-2 py-1" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6">
+                    <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">İptal</button>
+                    <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdateSelection, onNewHolidayCreated }) => {
     const [year, setYear] = useState(new Date().getFullYear());
-
-    // Derived state for quick lookup
-    const holidayDateMap = useMemo(() => {
-        const map = {};
-        allHolidays.forEach(h => {
-            map[h.date] = h;
-        });
-        return map;
-    }, [allHolidays]);
-
     const selectedDates = useMemo(() => {
-        const set = new Set();
-        allHolidays.filter(h => selectedHolidayIds.includes(h.id)).forEach(h => {
-            set.add(h.date);
+        const dates = new Set();
+        selectedHolidayIds.forEach(id => {
+            const h = allHolidays.find(x => x.id === id);
+            if (h) dates.add(h.date);
         });
-        return set;
-    }, [allHolidays, selectedHolidayIds]);
+        return dates;
+    }, [selectedHolidayIds, allHolidays]);
 
-    const handleDateClick = async (dateStr) => {
-        // Check if a holiday exists on this date
-        const existingHoliday = holidayDateMap[dateStr];
+    // Detail Modal State
+    const [pendingRange, setPendingRange] = useState(null); // { start, end }
 
-        if (existingHoliday) {
-            // Toggle selection
-            const isSelected = selectedHolidayIds.includes(existingHoliday.id);
-            let newIds;
-            if (isSelected) {
-                newIds = selectedHolidayIds.filter(id => id !== existingHoliday.id);
-            } else {
-                newIds = [...selectedHolidayIds, existingHoliday.id];
+    const handleRangeSelect = (start, end) => {
+        setPendingRange({ start, end });
+    };
+
+    const confirmHolidayCreation = async (details) => {
+        if (!pendingRange) return;
+
+        // Iterate days in range
+        let current = moment(pendingRange.start);
+        const end = moment(pendingRange.end);
+
+        const createdIds = [];
+
+        try {
+            while (current.isSameOrBefore(end)) {
+                const dateStr = current.format('YYYY-MM-DD');
+
+                // Determine if this date is already selected or exists
+                const payload = {
+                    name: details.name,
+                    date: dateStr,
+                    type: details.type,
+                    start_time: details.start_time,
+                    end_time: details.end_time,
+                    category: 'OFFICIAL'
+                };
+
+                const res = await api.post('/core/public-holidays/', payload);
+                createdIds.push(res.data.id);
+                onNewHolidayCreated(res.data);
+
+                current.add(1, 'day');
             }
+
+            // Update Selection
+            onUpdateSelection([...selectedHolidayIds, ...createdIds]);
+            setPendingRange(null);
+
+        } catch (error) {
+            alert("Hata oluştu: " + error.message);
+        }
+    };
+
+    const handleRemoveDate = (dateStr) => {
+        // Logic to remove holiday if clicked
+        const holidayToRemove = allHolidays.find(h => h.date === dateStr);
+        if (holidayToRemove) {
+            const newIds = selectedHolidayIds.filter(id => id !== holidayToRemove.id);
             onUpdateSelection(newIds);
-        } else {
-            // Prompt to create NEW holiday
-            const name = prompt(`${dateStr} tarihine yeni bir tatil eklemek ister misiniz? Tatil Adı:`);
-            if (name) {
-                try {
-                    const res = await api.post('/public-holidays/', {
-                        name,
-                        date: dateStr,
-                        type: 'FULL_DAY',
-                        description: 'Görsel düzenleyici üzerinden eklendi'
-                    });
-
-                    const newHoliday = res.data;
-                    onNewHolidayCreated(newHoliday);
-
-                    // Auto-select the newly created holiday
-                    onUpdateSelection([...selectedHolidayIds, newHoliday.id]);
-
-                } catch (error) {
-                    alert('Tatil oluşturulamadı: ' + error.message);
-                }
-            }
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative">
+
+                {pendingRange && (
+                    <HolidayDetailModal
+                        range={pendingRange}
+                        onClose={() => setPendingRange(null)}
+                        onSave={confirmHolidayCreation}
+                    />
+                )}
+
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
                         <h3 className="text-xl font-bold text-slate-800">Görsel Tatil Düzenleyici</h3>
-                        <p className="text-sm text-slate-500">Tarihlere tıklayarak ekleyip çıkarabilirsiniz. Kırmızılar genel tatil, Maviler seçili tatillerdir.</p>
+                        <p className="text-sm text-slate-500">Tarihleri sürükleyerek seçin ve tatil detaylarını girin. Tıklayarak mevcutları kaldırabilirsiniz.</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
                         <X size={24} />
@@ -776,7 +865,8 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
                         onYearChange={setYear}
                         holidays={new Set(allHolidays.map(h => h.date))} // Global list (Red)
                         selectedDates={selectedDates} // Selected for this calendar (Blue)
-                        onDateClick={handleDateClick}
+                        onRangeSelect={handleRangeSelect}
+                        onDateClick={handleRemoveDate}
                     />
                 </div>
 

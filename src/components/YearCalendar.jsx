@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import 'moment/locale/tr';
@@ -12,6 +12,7 @@ const YearCalendar = ({
     selectedDates = new Set(),
     onMonthClick,
     onDateClick,
+    onRangeSelect, // Callback for range selection (start, end)
     customDayRenderer
 }) => {
     // Explicitly defining Turkish months to ensure localization consistency
@@ -22,6 +23,11 @@ const YearCalendar = ({
 
     const currentYear = year || new Date().getFullYear();
 
+    // Drag Selection State
+    const [dragStart, setDragStart] = useState(null);
+    const [dragEnd, setDragEnd] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+
     const handlePrevYear = () => {
         if (onYearChange) onYearChange(currentYear - 1);
     };
@@ -30,8 +36,43 @@ const YearCalendar = ({
         if (onYearChange) onYearChange(currentYear + 1);
     };
 
+    const handleMouseDown = (date) => {
+        if (!onRangeSelect) return;
+        setDragStart(date);
+        setDragEnd(date);
+        setIsDragging(true);
+    };
+
+    const handleMouseEnter = (date) => {
+        if (!isDragging) return;
+        setDragEnd(date);
+    };
+
+    const handleMouseUp = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+        if (onRangeSelect && dragStart && dragEnd) {
+            // Ensure chronological order
+            const start = moment(dragStart).isBefore(moment(dragEnd)) ? dragStart : dragEnd;
+            const end = moment(dragStart).isBefore(moment(dragEnd)) ? dragEnd : dragStart;
+            onRangeSelect(start, end);
+        }
+        setDragStart(null);
+        setDragEnd(null);
+    };
+
+    // Global mouse up to catch drops outside the grid
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            if (isDragging) handleMouseUp();
+        };
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, [isDragging, dragStart, dragEnd]);
+
+
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in duration-500">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in duration-500 select-none">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-slate-800">{currentYear}</h2>
                 <div className="flex items-center gap-2">
@@ -85,11 +126,19 @@ const YearCalendar = ({
                                     const isSelected = selectedDates.has(dateStr);
                                     const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;
 
-                                    let className = "aspect-square rounded-md flex items-center justify-center transition-all font-medium relative overflow-hidden";
+                                    // Drag Selection visual
+                                    let isInDragRange = false;
+                                    if (isDragging && dragStart && dragEnd) {
+                                        const s = moment(dragStart).isBefore(moment(dragEnd)) ? dragStart : dragEnd;
+                                        const e = moment(dragStart).isBefore(moment(dragEnd)) ? dragEnd : dragStart;
+                                        isInDragRange = currentDayDate.isBetween(moment(s).subtract(1, 'day'), moment(e).add(1, 'day'));
+                                    }
+
+                                    let className = "aspect-square rounded-md flex items-center justify-center transition-all font-medium relative overflow-hidden cursor-pointer";
                                     let style = {};
 
                                     if (onDateClick) {
-                                        className += " cursor-pointer hover:ring-2 hover:ring-indigo-300";
+                                        // className += " hover:ring-2 hover:ring-indigo-300";
                                     }
 
                                     if (customDayRenderer) {
@@ -97,7 +146,9 @@ const YearCalendar = ({
                                     }
 
                                     // 1. Base Colors
-                                    if (isSelected) {
+                                    if (isInDragRange) {
+                                        className += " bg-indigo-200 text-indigo-800 ring-2 ring-indigo-400 z-10";
+                                    } else if (isSelected) {
                                         className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200 scale-110 z-10";
                                     } else if (isToday) {
                                         className += " bg-indigo-50 text-indigo-700 font-bold border border-indigo-200";
@@ -115,9 +166,16 @@ const YearCalendar = ({
                                             className={className}
                                             style={style}
                                             title={isHoliday ? 'Resmi Tatil' : ''}
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                handleMouseDown(dateStr);
+                                            }}
+                                            onMouseEnter={() => handleMouseEnter(dateStr)}
+                                            onMouseUp={handleMouseUp}
                                             onClick={(e) => {
-                                                if (onDateClick) {
-                                                    e.stopPropagation();
+                                                e.stopPropagation();
+                                                // Only trigger click if NOT part of a drag operation
+                                                if (!isDragging && onDateClick) {
                                                     onDateClick(dateStr);
                                                 }
                                             }}
