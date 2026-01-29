@@ -70,14 +70,14 @@ const WorkSchedules = () => {
                 employee_ids: assignments
             });
 
-            // 3. Auto-Recalculate Targets (Current Month + Future)
+            // 3. Auto-Recalculate Targets (Entire Year for Safety)
             const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+            const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
             const endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
 
             // We await this so the modal stays open until done
             const res = await api.post(`/attendance/fiscal-calendars/${draftData.id}/recalculate/`, {
-                start_date: startOfMonth,
+                start_date: startOfYear,
                 end_date: endOfYear
             });
 
@@ -444,9 +444,9 @@ const GeneralSettingsForm = ({ data, onChange }) => {
             {showHolidayBuilder && (
                 <HolidayBuilderModal
                     onClose={() => setShowHolidayBuilder(false)}
-                    selectedHolidayIds={formData.public_holidays || []}
+                    selectedHolidayIds={data.public_holidays || []}
                     allHolidays={holidays}
-                    onUpdateSelection={(newIds) => setFormData({ ...formData, public_holidays: newIds })}
+                    onUpdateSelection={(newIds) => onChange({ ...data, public_holidays: newIds })}
                     onNewHolidayCreated={(newHoliday) => {
                         setHolidays([...holidays, newHoliday]);
                     }}
