@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle, X } from 'lucide-react';
+import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
 import YearCalendar from '../components/YearCalendar';
 
 const WorkSchedules = () => {
@@ -241,6 +241,22 @@ const WorkSchedules = () => {
                     )}
                 </div>
             </div>
+
+            {/* Processing Modal - Non-Interactive */}
+            {saving && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm text-center animate-in zoom-in-95">
+                        <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
+                        <h3 className="text-xl font-bold text-slate-800 mb-2">Ayarlar Kaydediliyor...</h3>
+                        <p className="text-slate-500 text-sm mb-6">
+                            Personel hedefleri ve devamlılık kayıtları güncelleniyor. Bu işlem personel sayısına göre birkaç saniye sürebilir.
+                        </p>
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div className="h-full bg-indigo-500 animate-pulse rounded-full w-2/3"></div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
