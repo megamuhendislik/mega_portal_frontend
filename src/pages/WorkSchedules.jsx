@@ -241,6 +241,14 @@ const WorkSchedules = () => {
                     )}
                 </div>
             </div>
+
+            {/* Recalculation Modal */}
+            {showRecalcModal && recalcCalendarId && (
+                <RecalculationPromptModal
+                    calendarId={recalcCalendarId}
+                    onClose={() => setShowRecalcModal(false)}
+                />
+            )}
         </div>
     );
 };
