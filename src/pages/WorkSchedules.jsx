@@ -1163,23 +1163,85 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
 };
 
 const RecalculationPromptModal = ({ calendarId, onClose }) => {
-    const [step, setStep] = useState('PROMPT'); // PROMPT | SELECT_DATE | PROCESSING | SUCCESS
+    const [step, setStep] = useState('PROMPT'); // PROMPT | SELECT_DATE | PROCESSING
     const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 7) + '-01'); // 1st of current month
     const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10)); // Today
-    const [result, setResult] = useState(null);
+
+    // Log State
+    const [logs, setLogs] = useState([]);
+    const [progress, setProgress] = useState(0); // 0-100
+    const [currentEmployee, setCurrentEmployee] = useState('');
+    const [isFinished, setIsFinished] = useState(false);
+    const logsEndRef = useRef(null);
+
+    const addLog = (msg, type = 'info') => {
+        const timestamp = new Date().toLocaleTimeString();
+        setLogs(prev => [...prev, { time: timestamp, msg, type }]);
+    };
+
+    // Auto-scroll logs
+    useEffect(() => {
+        if (logsEndRef.current) {
+            logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [logs]);
 
     const handleRecalculate = async () => {
         setStep('PROCESSING');
+        setIsFinished(false);
+        setLogs([]);
+        setProgress(0);
+
         try {
-            const res = await api.post(`/attendance/fiscal-calendars/${calendarId}/recalculate/`, {
-                start_date: startDate,
-                end_date: endDate
-            });
-            setResult(res.data);
-            setStep('SUCCESS');
+            addLog(`İşlem Başlatılıyor...`, 'system');
+
+            addLog('Personel listesi alınıyor...', 'info');
+            // Fetch ALL active employees (limit=1000 to be safe)
+            // Use 'is_active=true' if backend supports filter, otherwise filter in JS
+            const empRes = await api.get('/core/employees/?limit=1000&is_active=true');
+
+            const fetched = empRes.data.results || empRes.data;
+            let activeEmployees = Array.isArray(fetched) ? fetched : [];
+
+            // If backend ignored is_active param, filter manually just in case
+            if (activeEmployees.length > 0 && activeEmployees[0].is_active !== undefined) {
+                activeEmployees = activeEmployees.filter(e => e.is_active !== false);
+            }
+
+            const total = activeEmployees.length;
+            addLog(`${total} aktif personel bulundu.`, 'success');
+            addLog(`Hesaplama Aralığı: ${startDate} - ${endDate}`, 'system');
+
+            for (let i = 0; i < total; i++) {
+                const emp = activeEmployees[i];
+                setCurrentEmployee(emp.first_name + ' ' + emp.last_name);
+                setProgress(Math.round(((i) / total) * 100));
+
+                addLog(`[${emp.first_name} ${emp.last_name}] Hesaplanıyor...`, 'info');
+
+                try {
+                    // Correct endpoint: AttendanceViewSet is at /attendance/attendance/
+                    await api.post('/attendance/attendance/recalculate/', {
+                        employee_id: emp.id,
+                        start_date: startDate,
+                        end_date: endDate
+                    });
+
+                    // addLog(`[${emp.first_name} ${emp.last_name}] OK.`, 'success');
+
+                } catch (err) {
+                    addLog(`[${emp.first_name} ${emp.last_name}] HATA: ${err.message}`, 'error');
+                }
+            }
+
+            setProgress(100);
+            setIsFinished(true);
+            setCurrentEmployee('Tamamlandı');
+            addLog('Tüm işlemler başarıyla tamamlandı.', 'success');
+
         } catch (error) {
-            alert('Hata: ' + error.message);
-            setStep('SELECT_DATE'); // Go back
+            addLog('Genel Hata: ' + error.message, 'error');
+            setIsFinished(true);
         }
     };
 
@@ -1264,43 +1326,66 @@ const RecalculationPromptModal = ({ calendarId, onClose }) => {
         );
     }
 
-    if (step === 'PROCESSING') {
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm text-center">
-                    <div className="animate-spin text-indigo-600 mb-4 mx-auto w-8 h-8">
-                        <RefreshCw size={32} />
+    // PROCESSING / LOG VIEW
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                {/* Header */}
+                <div className="bg-slate-50 p-4 border-b flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-slate-800">
+                            {isFinished ? 'İşlem Tamamlandı' : 'Hesaplanıyor...'}
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            {isFinished ? 'Tüm personel verileri güncellendi.' : `${currentEmployee} işleniyor...`}
+                        </p>
                     </div>
-                    <h3 className="font-bold text-slate-800">Hesaplanıyor...</h3>
-                    <p className="text-sm text-slate-500 mt-2">Bu işlem personel sayısına göre biraz zaman alabilir.</p>
+                    {isFinished && (
+                        <button onClick={onClose}>
+                            <X size={20} className="text-slate-400 hover:text-slate-600" />
+                        </button>
+                    )}
                 </div>
-            </div>
-        );
-    }
 
-    if (step === 'SUCCESS' && result) {
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md text-center">
-                    <div className="bg-emerald-100 text-emerald-600 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle size={32} />
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-100 h-1">
+                    <div
+                        className="bg-indigo-600 h-1 transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+
+                {/* Terminal Window */}
+                <div className="flex-1 bg-[#1e1e1e] p-4 overflow-y-auto font-mono text-xs sm:text-sm space-y-1">
+                    {logs.map((log, i) => (
+                        <div key={i} className={`flex gap-2 ${log.type === 'error' ? 'text-red-400' :
+                            log.type === 'success' ? 'text-emerald-400' :
+                                log.type === 'system' ? 'text-yellow-400' :
+                                    'text-slate-300'
+                            }`}>
+                            <span className="text-slate-600 select-none">[{log.time}]</span>
+                            <span>{log.msg}</span>
+                        </div>
+                    ))}
+                    <div ref={logsEndRef} />
+                </div>
+
+                {/* Footer Actions */}
+                {isFinished && (
+                    <div className="p-4 border-t bg-white">
+                        <button
+                            onClick={onClose}
+                            className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors"
+                        >
+                            Kapat
+                        </button>
                     </div>
-                    <h3 className="text-xl font-bold text-slate-800 mb-2">İşlem Tamamlandı</h3>
-                    <p className="text-slate-600 mb-6">
-                        {result.message}
-                    </p>
-                    <button
-                        onClick={onClose}
-                        className="w-full bg-slate-800 text-white py-3 rounded-lg font-bold hover:bg-slate-900 transition-colors"
-                    >
-                        Kapat
-                    </button>
-                </div>
+                )}
             </div>
-        );
-    }
-
-    return null;
+        </div>
+    );
 };
+
+
 
 export default WorkSchedules;
