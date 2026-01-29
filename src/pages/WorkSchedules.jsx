@@ -930,9 +930,13 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         // holidayConfigs is now an array of objects: [{ name, date, type, start_time, end_time }, ...]
         if (!holidayConfigs || holidayConfigs.length === 0) return;
 
+        // Visual Feedback (could add loading state here if needed, but for now blocking interaction via modal)
+
+        const createdHolidays = [];
         const createdIds = [];
 
         try {
+            // 1. Create all holidays sequentially
             for (const config of holidayConfigs) {
                 const payload = {
                     name: config.name,
@@ -944,12 +948,19 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
                 };
 
                 const res = await api.post('/core/public-holidays/', payload);
+                createdHolidays.push(res.data);
                 createdIds.push(res.data.id);
-                onNewHolidayCreated(res.data);
             }
 
-            // Update Selection
+            // 2. Batch Update UI (Critical: Do this AFTER all async work)
+
+            // Allow parent to update global list (if onNewHolidayCreated supports batch, great, if not loop is safer here as it's synchronous state update)
+            createdHolidays.forEach(h => onNewHolidayCreated(h));
+
+            // Update local selection
             onUpdateSelection([...selectedHolidayIds, ...createdIds]);
+
+            // Close detail modal
             setPendingRange(null);
 
         } catch (error) {
