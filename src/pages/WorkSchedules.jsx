@@ -698,6 +698,8 @@ const ClockIcon = () => <Clock size={20} className="text-slate-500" />;
 const CalendarIcon = () => <Calendar size={20} className="text-slate-500" />;
 const UsersIcon = () => <Users size={20} className="text-slate-500" />;
 
+import { createPortal } from 'react-dom';
+
 const HolidayDetailModal = ({ range, onClose, onSave }) => {
     const [name, setName] = useState('Resmi Tatil');
     const [type, setType] = useState('FULL_DAY');
@@ -713,8 +715,8 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
         });
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
+    return createPortal(
+        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-in fade-in zoom-in-95" style={{ zIndex: 10000 }}>
             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">Tatil Detayları</h3>
 
@@ -767,7 +769,8 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
                     <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Kaydet</button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -837,8 +840,8 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in">
+    return createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in" style={{ zIndex: 9999 }}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative">
 
                 {pendingRange && (
@@ -879,7 +882,8 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
