@@ -242,18 +242,57 @@ const WorkSchedules = () => {
                 </div>
             </div>
 
-            {/* Processing Modal - Non-Interactive */}
-            {saving && (
+            {/* Processing Modal & Log Viewer */}
+            {(saving || executionLogs.length > 0) && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm text-center animate-in zoom-in-95">
-                        <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">Ayarlar Kaydediliyor...</h3>
-                        <p className="text-slate-500 text-sm mb-6">
-                            Personel hedefleri ve devamlılık kayıtları güncelleniyor. Bu işlem personel sayısına göre birkaç saniye sürebilir.
-                        </p>
-                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                            <div className="h-full bg-indigo-500 animate-pulse rounded-full w-2/3"></div>
-                        </div>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
+
+                        {saving ? (
+                            <div className="p-8 text-center">
+                                <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
+                                <h3 className="text-xl font-bold text-slate-800 mb-2">Ayarlar Kaydediliyor...</h3>
+                                <p className="text-slate-500 text-sm mb-6">
+                                    Personel hedefleri ve devamlılık kayıtları güncelleniyor. Bu işlem personel sayısına göre birkaç saniye sürebilir.
+                                </p>
+                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
+                                    <div className="h-full bg-indigo-500 animate-pulse rounded-full w-2/3"></div>
+                                </div>
+                                <p className="text-xs text-slate-400">Lütfen bekleyin...</p>
+                            </div>
+                        ) : (
+                            // Log Viewer Mode
+                            <>
+                                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="text-emerald-500" size={24} />
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-800">İşlem Tamamlandı</h3>
+                                            <p className="text-xs text-slate-500">Hesaplama detayları aşağıdadır.</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setExecutionLogs([])} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                                        <X size={20} className="text-slate-500" />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 bg-slate-900 text-slate-300 font-mono text-xs space-y-1">
+                                    {executionLogs.map((log, i) => (
+                                        <div key={i} className={`p-1 ${log.includes('HATA') ? 'text-red-400 bg-red-900/20' : 'border-l-2 border-slate-700 pl-2'}`}>
+                                            {log}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 border-t border-slate-100 bg-white rounded-b-xl flex justify-end">
+                                    <button
+                                        onClick={() => setExecutionLogs([])}
+                                        className="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors"
+                                    >
+                                        Kapat
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
