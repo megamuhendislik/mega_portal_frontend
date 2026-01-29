@@ -980,7 +980,7 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         const holidayToRemove = allHolidays.find(h => h.date === dateStr);
 
         if (holidayToRemove) {
-            if (window.confirm(`${dateStr} tarihindeki "${holidayToRemove.name}" tatilini silmek istediğinize emin misiniz?`)) {
+            if (window.confirm(`${dateStr} tarihindeki "${holidayToRemove.name}" tatilini silmek istediğinize emin misiniz?\n\nDikkat: Bu işlemden sonra puantajların düzelmesi için ana ekrandaki "Tüm Ayarları Kaydet" butonuna basarak hesaplama yapmanız gerekmektedir.`)) {
                 try {
                     await api.delete(`/core/public-holidays/${holidayToRemove.id}/`);
 
