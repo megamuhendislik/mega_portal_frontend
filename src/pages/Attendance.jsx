@@ -85,7 +85,7 @@ const Attendance = () => {
         const canViewTeam = user.user?.is_superuser || user.has_team;
         setHasTeam(canViewTeam);
         if (activeTab === 'my_attendance') {
-            setSelectedEmployeeId(user.id);
+            setSelectedEmployeeId(user.employee?.id || user.id);
         }
     };
 
@@ -305,7 +305,11 @@ const Attendance = () => {
                             {/* Stacked Attendance Chart (8 Cols) */}
                             {/* Stacked Attendance Chart */}
                             <div className={`${hasPermission('FEATURE_BREAK_ANALYSIS_VIEW') ? 'xl:col-span-8' : 'xl:col-span-12'} h-full transition-all duration-300`}>
-                                <AttendanceAnalyticsChart logs={logs} currentYear={viewYear} />
+                                <AttendanceAnalyticsChart
+                                    logs={logs}
+                                    currentYear={viewYear}
+                                    employeeId={selectedEmployeeId}
+                                />
                             </div>
 
                             {/* Break Analysis (4 Cols) */}
