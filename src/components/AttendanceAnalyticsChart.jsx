@@ -153,6 +153,52 @@ const TrendView = ({ data, xKey, unit = 'sa' }) => {
     );
 };
 
+// Sub-component for Yearly View (Bars + Cumulative Line)
+const YearlyView = ({ data }) => {
+    return (
+        <div className="h-full w-full flex-1 min-h-[320px] pt-4" style={{ minHeight: '320px' }}>
+            <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <ComposedChart data={data} barSize={20} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+                    <defs>
+                        <pattern id="striped-year" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                            <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
+                            <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
+                        </pattern>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }} dy={10} />
+                    <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                    <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#8b5cf6' }} />
+
+                    <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        itemStyle={{ fontSize: '12px', fontWeight: 600 }}
+                        cursor={{ fill: '#f8fafc' }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
+
+                    {/* Bars */}
+                    <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" />
+                    <Bar yAxisId="left" dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} name="Ek Mesai (Sa)" />
+                    <Bar yAxisId="left" dataKey="missing" stackId="a" fill="url(#striped-year)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} name="Eksik (Sa)" />
+
+                    {/* Cumulative Line */}
+                    <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="cumulative_net_hours"
+                        name="Kümülatif Net (Sa)"
+                        stroke="#8b5cf6"
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }}
+                        activeDot={{ r: 6 }}
+                    />
+                </ComposedChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
 const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1, employeeId }) => {
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
@@ -214,32 +260,10 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             const response = await api.get(`/attendance/stats/?scope=YEARLY&year=${currentYear}&employee_id=${employeeId || ''}`);
             const mapped = response.data.map(m => ({
                 name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }), // Oca, Şub
-                // "yıllık gösteriminde aylık ortalamalar".
-                // Total makes more sense for Year view usually, but if they want "Average Day" in that month?
-                // Use total for now, or divide by ~22 days?
-                // Let's assume TOTAL is safer unless explicitly asked for daily avg.
-                // Re-reading: "aylık ortalamalar". Could mean "Average of the month" vs other months? 
-                // Or "Average Daily Hours in that Month"?
-                // Let's show TOTAL first, usually user wants to see "How much did I work in Jan vs Feb".
-                // If the values are ~160, it's total. If ~8, it's avg.
-                // Let's calculate Avg Daily for consistency with user request "ortalamalar".
-                // Assuming ~22 working days or just divide by 30?
-                // Best to show TOTAL for Year view usually. "Aylık ortalamalar" might mean "Average Attendance Hours".
-                // Let's stick to TOTAL for visual impact, or add a toggle?
-                // I will use TOTAL but label it nicely options.
-                // Actually, user said: "aylık gösterimde yatay çizgide haftalık ortalamalar... yıllık gösteriminde aylık ortalamalar"
-                // This implies consistency.
-                // Monthly View: Weekly Average (e.g. 8.5h/day avg this week).
-                // Yearly View: Monthly Average (e.g. 8.2h/day avg in Jan).
-                // I need days count for month to do this accurately. The API response has 'completed_seconds'.
-                // I don't have day count in API response yet.
-                // I will just use TOTAL for now and label it "Toplam Saat".
-                // OR divide by 4 weeks?
-                // Let's stick to what data I have.
-                // I'll show TOTAL for Yearly for now to be safe.
-
-                normal: parseFloat((m.normal_hours / 22).toFixed(1)), // Estimating avg daily for now to test "Average" theory?
-                overtime: parseFloat((m.overtime_hours / 22).toFixed(1))
+                normal: parseFloat((m.normal_hours || 0).toFixed(1)),
+                overtime: parseFloat((m.overtime_hours || 0).toFixed(1)),
+                missing: parseFloat((m.missing_hours || 0).toFixed(1)),
+                cumulative_net_hours: parseFloat((m.cumulative_net_hours || 0).toFixed(1))
             }));
             setYearlyData(mapped);
         } catch (error) {
@@ -261,7 +285,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                             Performans Grafiği
                         </h3>
                         <p className="text-xs text-slate-400 font-medium">
-                            {scope === 'WEEKLY' ? 'Günlük çalışma süreleri' : (scope === 'MONTHLY' ? 'Haftalık ortalama çalışma' : 'Aylık ortalama çalışma')}
+                            {scope === 'WEEKLY' ? 'Günlük çalışma süreleri' : (scope === 'MONTHLY' ? 'Haftalık ortalama çalışma' : 'Aylık Toplam & Kümülatif')}
                         </p>
                     </div>
                 </div>
@@ -291,7 +315,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                 {scope === 'YEARLY' && (
                     loadingYearly
                         ? <div className="h-full flex items-center justify-center text-slate-400 text-xs">Yükleniyor...</div>
-                        : <TrendView data={yearlyData} xKey="name" />
+                        : <YearlyView data={yearlyData} />
                 )}
             </div>
         </div>

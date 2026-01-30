@@ -4,7 +4,7 @@ import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
 import UpcomingEventsCard from '../components/UpcomingEventsCard';
 
-import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
+import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
@@ -268,11 +268,14 @@ const Dashboard = () => {
 
             {/* 2. Main Charts Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                {/* Weekly Chart (8 cols) */}
+
+
+                {/* Main Chart (8 cols) */}
                 <div className="xl:col-span-8 h-[420px]">
-                    <WeeklyAttendanceChart
+                    <AttendanceAnalyticsChart
                         logs={logs}
-                        dailyTarget={todaySummary?.daily_expected ? todaySummary.daily_expected / 3600 : 9}
+                        employeeId={user?.id}
+                        currentYear={new Date().getFullYear()}
                     />
                 </div>
 
