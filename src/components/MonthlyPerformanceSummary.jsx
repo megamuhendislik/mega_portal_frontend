@@ -62,6 +62,21 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pTotal, // For Bar 2
                 lateCount,
 
+                cumulative: periodSummary.cumulative ? {
+                    carryOverHours: (periodSummary.cumulative.carry_over_seconds / 3600).toFixed(1),
+                    ytdTargetHours: (periodSummary.cumulative.ytd_target_seconds / 3600).toFixed(1),
+                    ytdCompletedHours: (periodSummary.cumulative.ytd_completed_seconds / 3600).toFixed(1),
+                    ytdNetBalanceHours: (periodSummary.cumulative.ytd_net_balance_seconds / 3600).toFixed(1),
+
+                    ytdTarget: periodSummary.cumulative.ytd_target_seconds,
+                    ytdCompleted: periodSummary.cumulative.ytd_completed_seconds,
+
+                    // Visualization Helper
+                    progressPercent: periodSummary.cumulative.ytd_target_seconds > 0
+                        ? (periodSummary.cumulative.ytd_completed_seconds / periodSummary.cumulative.ytd_target_seconds) * 100
+                        : 0
+                } : null,
+
                 annualLeave: {
                     entitlement: periodSummary.annual_leave_entitlement || 0,
                     used: periodSummary.annual_leave_used || 0,
@@ -140,6 +155,39 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     </p>
                 </div>
             </div>
+
+            {/* 3. Cumulative / YTD Bar (NEW) */}
+            {stats.cumulative && (
+                <div className="pt-4 border-t border-slate-200">
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold uppercase text-slate-500 flex items-center gap-2">
+                                3. Yıllık Kümülatif Durum (YTD)
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                                Geçen Aydan Devreden:
+                                <span className={`font-bold ml-1 ${parseFloat(stats.cumulative.carryOverHours) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                    {parseFloat(stats.cumulative.carryOverHours) > 0 ? '+' : ''}{stats.cumulative.carryOverHours} sa
+                                </span>
+                            </span>
+                        </div>
+                        <span className="text-xs font-bold text-slate-700">
+                            {parseFloat(stats.cumulative.ytdNetBalanceHours) > 0 ? '+' : ''}{stats.cumulative.ytdNetBalanceHours} sa (Net)
+                        </span>
+                    </div>
+
+                    <div className="relative h-4 w-full bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full transition-all duration-1000 ${parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                            style={{ width: `${Math.min(100, stats.cumulative.progressPercent)}%` }}
+                        />
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
+                        <span>Hedef: {stats.cumulative.ytdTargetHours} sa</span>
+                        <span>Gerçekleşen: {stats.cumulative.ytdCompletedHours} sa</span>
+                    </div>
+                </div>
+            )}
 
             {/* 3. Stats Grid with Colors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
