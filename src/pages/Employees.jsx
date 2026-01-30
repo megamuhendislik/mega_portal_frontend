@@ -60,6 +60,9 @@ const INITIAL_FORM_STATE = {
     password: '', // Default initial password
     username: '', // Will be auto-generated or manual
 
+    // Calendar
+    fiscal_calendar: '', // NEW
+
     // Annual Leave
     // Annual Leave
     annual_leave_balance: 0,
@@ -436,8 +439,8 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     // Sync customMode with parent if needed, but local toggle is fine for UI
     // Logic: If user selects "Custom" in dropdown -> set work_schedule = "" -> show Editor
 
-    // Find selected schedule to show defaults
-    const selectedSchedule = workSchedules.find(ws => ws.id == (formData.work_schedule || ''));
+    // Find selected Fiscal Calendar to show defaults
+    const selectedSchedule = workSchedules.find(ws => ws.id == (formData.fiscal_calendar || ''));
 
     // Helper to get default time from schedule JSON (assuming MON as standard)
     const getDefaultTime = (type) => {
@@ -522,26 +525,32 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         Çalışma Takvimi Planı
                     </h4>
 
-                    {/* Standard Mode Only */}
+                    {/* Fiscal Calendar Selection */}
                     <div className="space-y-4 animate-fade-in">
                         <SelectField
-                            label="Takvim Şablonu Seçiniz"
-                            value={formData.work_schedule || ''}
-                            onChange={e => handleChange('work_schedule', e.target.value)}
+                            label="Mali Takvim Seçiniz"
+                            value={formData.fiscal_calendar || ''}
+                            onChange={e => handleChange('fiscal_calendar', e.target.value)}
                             required
                             options={
                                 <>
                                     <option value="" disabled>Seçiniz...</option>
                                     {workSchedules.map(ws => (
                                         <option key={ws.id} value={ws.id}>
-                                            {ws.name} {ws.is_default ? '(Varsayılan)' : ''}
+                                            {ws.name} ({ws.year})
                                         </option>
                                     ))}
                                 </>
                             }
                         />
 
-
+                        {selectedSchedule && (
+                            <div className="p-3 bg-blue-50 text-blue-800 text-xs rounded-lg border border-blue-100">
+                                <strong>Seçili Takvim:</strong> {selectedSchedule.name} ({selectedSchedule.year})
+                                <br />
+                                Kapsam: {selectedSchedule.description || 'Genel Şirket Takvimi'}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -921,7 +930,7 @@ const Employees = () => {
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
-                api.get('/work-schedules/'),
+                api.get('/attendance/fiscal-calendars/'),
                 api.get('/roles/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
@@ -1344,7 +1353,7 @@ const Employees = () => {
                                                     <td className="px-6 py-4 align-top">
                                                         <div className="flex flex-col gap-1.5">
                                                             <div className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 w-fit">
-                                                                {emp.work_schedule_name || 'Varsayılan'}
+                                                                {emp.fiscal_calendar_name || 'Takvim Yok'}
                                                             </div>
                                                             <div className="text-xs text-slate-500 flex items-center gap-1">
                                                                 <span className="font-mono">{emp.shift_start?.slice(0, 5)} - {emp.shift_end?.slice(0, 5)}</span>
