@@ -334,6 +334,22 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                                         )}
                                     </select>
                                 </div>
+
+                                <div className="flex-1">
+                                    <select
+                                        value={asn.functional_unit_id || ''}
+                                        onChange={e => {
+                                            const newAsn = [...(formData.assignments || [])];
+                                            newAsn[idx].functional_unit_id = e.target.value;
+                                            handleChange('assignments', newAsn);
+                                        }}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    >
+                                        <option value="">Fonksiyonel Birim...</option>
+                                        <option value="">Yok / Genel</option>
+                                        {functionalDepts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                    </select>
+                                </div>
                                 <div className="flex-1">
                                     <select
                                         value={asn.job_position_id || ''}
@@ -416,8 +432,8 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                 <div>
                     <InputField label="İşe Başlama Tarihi" value={formData.hired_date} onChange={e => handleChange('hired_date', e.target.value)} type="date" />
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
@@ -1099,7 +1115,7 @@ const Employees = () => {
                 department: data.department?.id || data.department,
                 job_position: data.job_position?.id || data.job_position,
                 reports_to: data.reports_to || '',
-                functional_department: (data.secondary_departments?.[0]?.id) || '', // Simplify first dim
+                functional_department: data.functional_unit || '', // Updated to use new field
 
                 employee_code: data.employee_code,
                 card_uid: data.card_uid || '',
@@ -1126,7 +1142,8 @@ const Employees = () => {
                     .map(a => ({
                         department_id: a.department_id || a.department?.id || a.department,
                         job_position_id: a.job_position_id || a.job_position?.id || a.job_position,
-                        manager_id: a.manager_id || a.manager?.id || '' // New
+                        manager_id: a.manager_id || a.manager?.id || '', // New
+                        functional_unit_id: a.functional_unit_id || a.functional_unit?.id || '' // New
                     })),
 
                 // Schedule Overrides mapping
