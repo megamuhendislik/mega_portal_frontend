@@ -350,6 +350,24 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                                         ))}
                                     </select>
                                 </div>
+                                <div className="flex-1">
+                                    <select
+                                        value={asn.manager_id || ''} // New
+                                        onChange={e => {
+                                            const newAsn = [...(formData.assignments || [])];
+                                            newAsn[idx].manager_id = e.target.value;
+                                            handleChange('assignments', newAsn);
+                                        }}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    >
+                                        <option value="">Yönetici Seçiniz (Opsiyonel)...</option>
+                                        {potentialManagers.map(mgr => (
+                                            <option key={mgr.id} value={mgr.id}>
+                                                {mgr.first_name} {mgr.last_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -1106,8 +1124,9 @@ const Employees = () => {
                 assignments: (data.assignments || [])
                     .filter(a => !a.is_primary)
                     .map(a => ({
-                        department_id: a.department?.id || a.department,
-                        job_position_id: a.job_position?.id || a.job_position
+                        department_id: a.department_id || a.department?.id || a.department,
+                        job_position_id: a.job_position_id || a.job_position?.id || a.job_position,
+                        manager_id: a.manager_id || a.manager?.id || '' // New
                     })),
 
                 // Schedule Overrides mapping
