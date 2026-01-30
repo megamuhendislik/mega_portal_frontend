@@ -1097,8 +1097,18 @@ const Employees = () => {
                 annual_leave_advance_limit: data.annual_leave_advance_limit || 0,
                 annual_leave_accrual_rate: data.annual_leave_accrual_rate || 14,
 
+                // Calendar & Assignments
                 work_schedule: data.work_schedule?.id || '',
+                fiscal_calendar: data.fiscal_calendar || '', // Added (Backend returns ID)
                 weekly_schedule: data.weekly_schedule || {},
+
+                // Matrix Assignments (Map from backend format to frontend)
+                assignments: (data.assignments || [])
+                    .filter(a => !a.is_primary)
+                    .map(a => ({
+                        department_id: a.department?.id || a.department,
+                        job_position_id: a.job_position?.id || a.job_position
+                    })),
 
                 // Schedule Overrides mapping
                 daily_break_allowance: data.daily_break_allowance || '',
@@ -1164,7 +1174,7 @@ const Employees = () => {
                 lunch_start: null,
                 lunch_end: null,
                 daily_break_allowance: null,
-                attendance_tolerance_minutes: null,
+                // attendance_tolerance_minutes: null, // Allow editing/saving
                 service_tolerance_minutes: null,
                 weekly_schedule: null, // Force remove any legacy weekly schedule data
                 // assignments is already in cleanPayload
