@@ -1076,7 +1076,7 @@ const Employees = () => {
         // but for now we just load what we have. 
         // Ideally we fetch DETAIL for this employee to get full perms. 
         // We will do a Quick Fetch using ID.
-        loadEmployeeDetail(emp.id);
+        loadEmployeeDetail(emp.original_id || emp.id);
     };
 
     const loadEmployeeDetail = async (id) => {
@@ -1245,9 +1245,34 @@ const Employees = () => {
             .filter(e => !departmentFilter || (e.department?.id || e.department) == departmentFilter);
 
         const groupedEmployees = filteredEmployees.reduce((acc, emp) => {
+            // 1. Primary Department
             const deptName = emp.department?.name || emp.department_name || 'Departmanı Yok';
             if (!acc[deptName]) acc[deptName] = [];
             acc[deptName].push(emp);
+
+            // 2. Matrix Assignments (Secondary Departments)
+            if (emp.assignments && emp.assignments.length > 0) {
+                emp.assignments.forEach(asn => {
+                    if (!asn.is_primary && asn.department_name) {
+                        const matrixDeptName = asn.department_name;
+
+                        // Create a view model for this context
+                        // Inherit most fields, but override job position and mark as matrix
+                        const matrixEmp = {
+                            ...emp,
+                            id: `${emp.id}-matrix-${asn.id}`, // Unique key for list
+                            original_id: emp.id, // Keep reference for edit
+                            job_position: { name: asn.job_position_name || emp.job_position?.name },
+                            isMatrix: true,
+                            manager_name: asn.manager_name
+                        };
+
+                        if (!acc[matrixDeptName]) acc[matrixDeptName] = [];
+                        acc[matrixDeptName].push(matrixEmp);
+                    }
+                });
+            }
+
             return acc;
         }, {});
 
@@ -1403,7 +1428,7 @@ const Employees = () => {
                                                                         <Edit2 size={18} />
                                                                     </button>
 
-                                                                    {hasPermission('EMPLOYEE_DELETE') && (
+                                                                    {hasPermission('EMPLOYEE_DELETE') && !emp.isMatrix && (
                                                                         <button
                                                                             onClick={() => handleDelete(emp.id)}
                                                                             className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
