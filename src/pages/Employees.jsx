@@ -3,7 +3,7 @@ import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefc
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
-import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
+
 
 // --- Constants ---
 const STEPS = [
@@ -430,11 +430,8 @@ const StepContact = ({ formData, handleChange }) => (
 );
 
 const StepDetails = ({ formData, handleChange, workSchedules }) => {
-    const [customMode, setCustomMode] = useState(!formData.work_schedule);
-    const [showOverrides, setShowOverrides] = useState(
-        // Show overrides if ANY override field is populated
-        !!(formData.shift_start || formData.shift_end || formData.lunch_start || formData.daily_break_allowance || formData.attendance_tolerance_minutes || formData.uses_service || formData.service_tolerance_minutes)
-    );
+
+
 
     // Sync customMode with parent if needed, but local toggle is fine for UI
     // Logic: If user selects "Custom" in dropdown -> set work_schedule = "" -> show Editor
@@ -525,155 +522,27 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         Çalışma Takvimi Planı
                     </h4>
 
-                    {/* Mode Selection */}
-                    <div className="flex p-1 bg-slate-100 rounded-xl mb-4 w-full md:w-fit font-bold text-sm">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setCustomMode(false);
-                                // If switching back to standard, maybe select the first one if none selected?
-                                if (!formData.work_schedule && workSchedules.length > 0) {
-                                    handleChange('work_schedule', workSchedules[0].id);
-                                }
-                            }}
-                            className={`flex-1 md:flex-none px-6 py-2 rounded-lg transition-all ${!customMode ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Standart Mesai (Şablon)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setCustomMode(true);
-                                handleChange('work_schedule', null); // Clear standard schedule
-                            }}
-                            className={`flex-1 md:flex-none px-6 py-2 rounded-lg transition-all ${customMode ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Kişiye Özel Plan (Custom)
-                        </button>
+                    {/* Standard Mode Only */}
+                    <div className="space-y-4 animate-fade-in">
+                        <SelectField
+                            label="Takvim Şablonu Seçiniz"
+                            value={formData.work_schedule || ''}
+                            onChange={e => handleChange('work_schedule', e.target.value)}
+                            required
+                            options={
+                                <>
+                                    <option value="" disabled>Seçiniz...</option>
+                                    {workSchedules.map(ws => (
+                                        <option key={ws.id} value={ws.id}>
+                                            {ws.name} {ws.is_default ? '(Varsayılan)' : ''}
+                                        </option>
+                                    ))}
+                                </>
+                            }
+                        />
+
+
                     </div>
-
-                    {!customMode ? (
-                        <div className="space-y-4 animate-fade-in">
-                            <SelectField
-                                label="Takvim Şablonu Seçiniz"
-                                value={formData.work_schedule || ''}
-                                onChange={e => handleChange('work_schedule', e.target.value)}
-                                options={
-                                    <>
-                                        <option value="" disabled>Seçiniz...</option>
-                                        {workSchedules.map(ws => (
-                                            <option key={ws.id} value={ws.id}>
-                                                {ws.name} {ws.is_default ? '(Varsayılan)' : ''}
-                                            </option>
-                                        ))}
-                                    </>
-                                }
-                            />
-
-                            {/* Overrides Toggle */}
-                            <div className="flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-lg border border-slate-100 w-fit">
-                                <input
-                                    type="checkbox"
-                                    id="showOverrides"
-                                    checked={showOverrides}
-                                    onChange={(e) => setShowOverrides(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                                />
-                                <label htmlFor="showOverrides" className="text-sm font-bold text-slate-600 cursor-pointer select-none">
-                                    Özel Ayarlar / İstisnalar Tanımla
-                                </label>
-                            </div>
-
-                            {/* Overrides Section (Only for Standard) */}
-                            {showOverrides && (
-                                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4 animate-fade-in">
-                                    <h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm">
-                                        <Settings size={16} className="text-blue-500" />
-                                        İstisnalar & Ayarlar (Template Overrides)
-                                    </h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <InputField type="time" label="Mesai Başlangıç" value={formData.shift_start} onChange={e => handleChange('shift_start', e.target.value)} placeholder={defaultShiftStart} />
-                                        <InputField type="time" label="Mesai Bitiş" value={formData.shift_end} onChange={e => handleChange('shift_end', e.target.value)} placeholder={defaultShiftEnd} />
-                                        <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} placeholder={defaultLunchStart} />
-                                        <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} placeholder={defaultLunchEnd} />
-
-                                        <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} placeholder={defaultBreak} />
-                                        <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} placeholder={defaultTolerance} />
-                                        <InputField type="number" label="Servis Tol. (Dk)" value={formData.service_tolerance_minutes} onChange={e => handleChange('service_tolerance_minutes', e.target.value)} placeholder={defaultServiceTolerance} />
-                                    </div>
-
-                                    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mt-2">
-                                        <div className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${formData.uses_service ? 'bg-blue-600' : 'bg-slate-300'}`} onClick={() => handleChange('uses_service', !formData.uses_service)}>
-                                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.uses_service ? 'translate-x-4' : 'translate-x-0'}`} />
-                                        </div>
-                                        <div>
-                                            <span className="font-bold text-slate-700 text-sm block">Servis Kullanıyor</span>
-                                            <span className="text-xs text-slate-400">İşaretlenirse, geç kalma/erken çıkmada servis toleransı uygulanır.</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-4 animate-fade-in">
-                            <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800 flex gap-2">
-                                <Settings size={18} />
-                                <div>
-                                    <span className="font-bold block">Özel Plan Modu</span>
-                                    Bu personel için haftalık çalışma saatlerini aşağıdan manuel olarak belirleyebilirsiniz. Şablon kullanılmayacaktır.
-                                </div>
-                            </div>
-
-                            <SelectField
-                                label="Şablondan Kopyala (İsteğe Bağlı)"
-                                value=""
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (!val) return;
-                                    const template = workSchedules.find(ws => ws.id == val);
-                                    if (template) {
-                                        if (window.confirm(`${template.name} şablonunun saatleri buraya kopyalanacak. Onaylıyor musunuz?`)) {
-                                            handleChange('weekly_schedule', JSON.parse(JSON.stringify(template.schedule)));
-                                            // Optionally copy tolerances too?
-                                            // handleChange('daily_break_allowance', template.daily_break_allowance);
-                                        }
-                                    }
-                                }}
-                                options={
-                                    <>
-                                        <option value="">Seçiniz (Kopyalamak için)...</option>
-                                        {workSchedules.map(ws => (
-                                            <option key={ws.id} value={ws.id}>
-                                                {ws.name} {ws.is_default ? '(Varsayılan)' : ''}
-                                            </option>
-                                        ))}
-                                    </>
-                                }
-                            />
-
-                            <WeeklyScheduleEditor
-                                value={formData.weekly_schedule}
-                                onChange={(val) => handleChange('weekly_schedule', val)}
-                            />
-
-                            {/* Common Settings for Custom Mode */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                                <InputField type="time" label="Öğle Başlangıç" value={formData.lunch_start} onChange={e => handleChange('lunch_start', e.target.value)} placeholder="12:30" />
-                                <InputField type="time" label="Öğle Bitiş" value={formData.lunch_end} onChange={e => handleChange('lunch_end', e.target.value)} placeholder="13:30" />
-                                <InputField type="number" label="Mola Hakkı (Dk)" value={formData.daily_break_allowance} onChange={e => handleChange('daily_break_allowance', e.target.value)} placeholder="30" />
-                                <InputField type="number" label="Tolerans (Dk)" value={formData.attendance_tolerance_minutes} onChange={e => handleChange('attendance_tolerance_minutes', e.target.value)} placeholder="15" />
-                            </div>
-                            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 mt-2">
-                                <div className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${formData.uses_service ? 'bg-blue-600' : 'bg-slate-300'}`} onClick={() => handleChange('uses_service', !formData.uses_service)}>
-                                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.uses_service ? 'translate-x-4' : 'translate-x-0'}`} />
-                                </div>
-                                <div>
-                                    <span className="font-bold text-slate-700 text-sm block">Servis Kullanıyor</span>
-                                    <span className="text-xs text-slate-400">İşaretlenirse, geç kalma/erken çıkmada servis toleransı uygulanır.</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -1001,14 +870,7 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     </div>
                 )}
 
-                {(formData.shift_start || formData.lunch_start) && (
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-amber-50/30">
-                        <div className="w-1/3 text-slate-500 font-medium">Özel Kurallar</div>
-                        <div className="font-bold text-amber-700 text-sm">
-                            {formData.shift_start}-{formData.shift_end} (Mola: {formData.daily_break_allowance}dk)
-                        </div>
-                    </div>
-                )}
+
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-1/3 text-slate-500 font-medium">Yetkiler</div>
                     <div className="font-bold text-slate-800 flex items-center gap-2">
@@ -1287,6 +1149,15 @@ const Employees = () => {
             const payload = {
                 ...cleanPayload,
                 work_schedule: cleanPayload.work_schedule || null,
+                // Force null for override fields to strictly enforce Fiscal Calendar defaults
+                shift_start: null,
+                shift_end: null,
+                lunch_start: null,
+                lunch_end: null,
+                daily_break_allowance: null,
+                attendance_tolerance_minutes: null,
+                service_tolerance_minutes: null,
+                weekly_schedule: null, // Force remove any legacy weekly schedule data
                 // assignments is already in cleanPayload
             };
 

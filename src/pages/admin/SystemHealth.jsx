@@ -74,6 +74,7 @@ export default function SystemHealth() {
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
+                        { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -103,6 +104,7 @@ export default function SystemHealth() {
                 {activeTab === 'security' && <SecurityTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
+                {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
             </div>
 
         </div>
@@ -110,6 +112,170 @@ export default function SystemHealth() {
 }
 
 // --- SUB COMPONENTS ---
+
+function CalendarCleanupTab() {
+    const [calendars, setCalendars] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [result, setResult] = useState(null);
+
+    useEffect(() => {
+        scanCalendars();
+    }, []);
+
+    const scanCalendars = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/system/health-check/scan_junk_calendars/');
+            setCalendars(res.data);
+            setSelectedIds([]); // Reset selection on rescan
+            setResult(null);
+        } catch (e) {
+            console.error(e);
+            alert("Tarama Hatası!");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedIds.length) return;
+        if (!confirm(`${selectedIds.length} adet takvim silinecek. Bu işlem geri alınamaz. Onaylıyor musunuz?`)) return;
+
+        setLoading(true);
+        try {
+            const res = await api.post('/system/health-check/cleanup_calendars/', { calendar_ids: selectedIds });
+            setResult(res.data);
+            scanCalendars(); // Refresh list
+        } catch (e) {
+            alert("Silme hatası: " + (e.response?.data?.error || e.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === calendars.length) setSelectedIds([]);
+        else setSelectedIds(calendars.map(c => c.id));
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <TrashIcon className="w-6 h-6 text-red-600" />
+                        Gereksiz Takvim Temizliği
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Sistem tarafından otomatik oluşturulmuş veya kullanılmayan "Custom" takvimleri tespit eder ve siler.
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={scanCalendars}
+                        className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500 border border-gray-200"
+                        title="Yeniden Tara"
+                    >
+                        <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={handleDelete}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                            <TrashIcon className="w-4 h-4" />
+                            Seçilenleri Sil ({selectedIds.length})
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Success Message */}
+            {result && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-lg text-green-700 text-sm">
+                    <div className="font-bold flex items-center gap-2">
+                        <CheckCircleIcon className="w-5 h-5" />
+                        İşlem Başarılı
+                    </div>
+                    <div>{result.deleted_count} adet takvim silindi.</div>
+                    {result.errors?.length > 0 && (
+                        <div className="mt-2 text-red-600">
+                            <strong>Hatalar:</strong>
+                            <ul className="list-disc list-inside text-xs">
+                                {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* List */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                        <tr>
+                            <th className="px-4 py-3 w-[50px] text-center">
+                                <input
+                                    type="checkbox"
+                                    checked={calendars.length > 0 && selectedIds.length === calendars.length}
+                                    onChange={toggleSelectAll}
+                                    disabled={loading || calendars.length === 0}
+                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                            </th>
+                            <th className="px-4 py-3">Takvim Adı</th>
+                            <th className="px-4 py-3">Yıl</th>
+                            <th className="px-4 py-3">Kayıtlı Personel</th>
+                            <th className="px-4 py-3">Oluşturulma Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {loading && calendars.length === 0 && (
+                            <tr><td colSpan="5" className="p-12 text-center text-gray-400">Taranıyor...</td></tr>
+                        )}
+                        {!loading && calendars.length === 0 && (
+                            <tr><td colSpan="5" className="p-12 text-center text-gray-400 flex flex-col items-center gap-2">
+                                <ShieldCheckIcon className="w-12 h-12 text-gray-200" />
+                                <div>Temiz! Gereksiz takvim bulunamadı.</div>
+                            </td></tr>
+                        )}
+                        {calendars.map(cal => (
+                            <tr key={cal.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3 text-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(cal.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) setSelectedIds(p => [...p, cal.id]);
+                                            else setSelectedIds(p => p.filter(id => id !== cal.id));
+                                        }}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                </td>
+                                <td className="px-4 py-3 font-mono text-gray-700 font-medium">{cal.name}</td>
+                                <td className="px-4 py-3 text-gray-500">{cal.year}</td>
+                                <td className="px-4 py-3">
+                                    {cal.employee_count > 0 ? (
+                                        <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold border border-amber-200">
+                                            {cal.employee_count} Kişi
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs italic">Kullanılmıyor</span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3 text-gray-500 text-xs">{cal.created_at || '-'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <div className="mt-2 text-xs text-gray-400 text-right">
+                Toplam {calendars.length} adet "junk" potansiyeli taşıyan takvim bulundu.
+            </div>
+        </div>
+    );
+}
 
 function DataAuditTab() {
     const [data, setData] = useState(null);
