@@ -157,34 +157,68 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             </div>
 
             {/* 3. Cumulative / YTD Bar (NEW) */}
+            {/* 3. Cumulative / YTD Bar (NEW) */}
             {stats.cumulative && (
                 <div className="pt-4 border-t border-slate-200">
                     <div className="flex justify-between items-center mb-2">
-                        <div className="flex flex-col">
+                        <div className="flex flex-col gap-1">
                             <span className="text-xs font-bold uppercase text-slate-500 flex items-center gap-2">
                                 3. Yıllık Kümülatif Durum (YTD)
                             </span>
-                            <span className="text-[10px] text-slate-400">
-                                Geçen Aydan Devreden:
-                                <span className={`font-bold ml-1 ${parseFloat(stats.cumulative.carryOverHours) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                    {parseFloat(stats.cumulative.carryOverHours) > 0 ? '+' : ''}{stats.cumulative.carryOverHours} sa
+                            <div className="flex gap-4 text-[10px] text-slate-400">
+                                <span>
+                                    Geçen Aydan Devreden:
+                                    <span className={`font-bold ml-1 ${parseFloat(stats.cumulative.carryOverHours) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                        {parseFloat(stats.cumulative.carryOverHours) > 0 ? '+' : ''}{stats.cumulative.carryOverHours} sa
+                                    </span>
                                 </span>
-                            </span>
+                                <span className="hidden sm:inline text-slate-300">|</span>
+                                <span>
+                                    Bu Ay Yükümlülüğü:
+                                    <span className="font-bold text-slate-600 ml-1">
+                                        {stats.targetHours} sa
+                                    </span>
+                                </span>
+                            </div>
                         </div>
                         <span className="text-xs font-bold text-slate-700">
                             {parseFloat(stats.cumulative.ytdNetBalanceHours) > 0 ? '+' : ''}{stats.cumulative.ytdNetBalanceHours} sa (Net)
                         </span>
                     </div>
 
-                    <div className="relative h-4 w-full bg-slate-200 rounded-full overflow-hidden">
+                    {/* Stacked Bar */}
+                    <div className="relative h-4 w-full bg-slate-200 rounded-full overflow-hidden flex">
+                        {/* 1. Previous Months (Derived: YTD Completed - Current Net) */}
                         <div
-                            className={`h-full transition-all duration-1000 ${parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                            style={{ width: `${Math.min(100, stats.cumulative.progressPercent)}%` }}
+                            className="h-full bg-blue-300 transition-all duration-1000"
+                            style={{
+                                width: stats.cumulative.ytdTarget > 0
+                                    ? `${Math.max(0, ((stats.cumulative.ytdCompleted - (periodSummary.net_work_seconds || 0)) / stats.cumulative.ytdTarget) * 100)}%`
+                                    : '0%'
+                            }}
+                            title="Geçen Aydan Devreden (Tamamlanan)"
+                        />
+                        {/* 2. This Month */}
+                        <div
+                            className="h-full bg-blue-600 transition-all duration-1000"
+                            style={{
+                                width: stats.cumulative.ytdTarget > 0
+                                    ? `${Math.min(100, ((periodSummary.net_work_seconds || 0) / stats.cumulative.ytdTarget) * 100)}%`
+                                    : '0%'
+                            }}
+                            title="Bu Ayki Durum"
                         />
                     </div>
+
                     <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
-                        <span>Hedef: {stats.cumulative.ytdTargetHours} sa</span>
-                        <span>Gerçekleşen: {stats.cumulative.ytdCompletedHours} sa</span>
+                        <div className="flex gap-3">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-300"></span>Devreden</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-600"></span>Bu Ay</span>
+                        </div>
+                        <div className="flex gap-3">
+                            <span>Hedef: {stats.cumulative.ytdTargetHours} sa</span>
+                            <span>Gerçekleşen: {stats.cumulative.ytdCompletedHours} sa</span>
+                        </div>
                     </div>
                 </div>
             )}
