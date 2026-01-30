@@ -75,6 +75,7 @@ export default function SystemHealth() {
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
+                        { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -82,7 +83,7 @@ export default function SystemHealth() {
                             className={`
                                 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
                                 ${activeTab === tab.id
-                                    ? 'bg-indigo-50 text-indigo-700'
+                                    ? 'bg-red-50 text-red-700'
                                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}
                             `}
                         >
@@ -100,13 +101,75 @@ export default function SystemHealth() {
                 {activeTab === 'stress_test' && <StressTestTab />}
                 {activeTab === 'test_suite' && <TestSuiteTab />}
                 {activeTab === 'logs' && <ServiceLogsTab />}
-                {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
+                {activeTab === 'system_reset' && <SystemResetTab />}
             </div>
 
+        </div>
+    );
+}
+
+function SystemResetTab() {
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+
+    const handleWipeEmployees = async () => {
+        if (!confirm("DİKKAT! Adminler hariç TÜM personel kayıtları, izinler, ve tüm geçmiş veriler SİLİNECEK.\n\nBu işlem geri alınamaz!\n\nDevam etmek istiyor musunuz?")) return;
+
+        const verification = prompt("Onaylamak için lütfen 'SIL' yazınız:");
+        if (verification !== 'SIL') return;
+
+        setLoading(true);
+        try {
+            const res = await api.post('/system/health-check/wipe_all_employees/');
+            setResult(res.data);
+        } catch (e) {
+            alert("Hata: " + (e.response?.data?.error || e.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-red-100 animate-in fade-in duration-300">
+            <div className="flex items-center gap-4 mb-6 text-red-700 bg-red-50 p-4 rounded-xl border border-red-200">
+                <ExclamationTriangleIcon className="w-10 h-10" />
+                <div>
+                    <h3 className="text-xl font-bold">Tehlikeli Bölge (Danger Zone)</h3>
+                    <p className="text-sm opacity-80">Bu alandaki işlemler geri alınamaz veri kayıplarına yol açar. Lütfen dikkatli kullanınız.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Item 1: Wipe Employees */}
+                <div className="border border-red-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                    <h4 className="font-bold text-gray-800 text-lg mb-2">Tüm Personeli Sil (Sıfırla)</h4>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Süper Adminler hariç, sistemdeki <strong>tüm çalışanları</strong>, kullanıcı hesaplarını, izin taleplerini ve puantaj kayıtlarını kalıcı olarak siler via veritabanından kaldırır.
+                        <br /><br />
+                        Sistemi yeniden başlatmak veya test verilerini temizlemek için kullanın.
+                    </p>
+
+                    {result ? (
+                        <div className="bg-green-50 text-green-700 p-4 rounded-lg text-sm border border-green-200">
+                            <strong>İşlem Sonucu:</strong>
+                            <p>{result.message || result.status}</p>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleWipeEmployees}
+                            disabled={loading}
+                            className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-sm transition-all flex items-center justify-center gap-2 ${loading ? 'bg-gray-400 cursor-wait' : 'bg-red-600 hover:bg-red-700 active:scale-95'}`}
+                        >
+                            {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <TrashIcon className="w-5 h-5" />}
+                            {loading ? 'Siliniyor...' : 'Tüm Personeli Sil'}
+                        </button>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
