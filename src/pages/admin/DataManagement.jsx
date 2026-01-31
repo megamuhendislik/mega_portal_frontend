@@ -24,6 +24,10 @@ export default function DataManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loadingEmployees, setLoadingEmployees] = useState(false);
 
+    // List View Month Selection
+    const [listMonth, setListMonth] = useState(new Date());
+    const [bulkStats, setBulkStats] = useState({});
+
     // --- Calendar State ---
     const [selectedUser, setSelectedUser] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -31,7 +35,7 @@ export default function DataManagement() {
     const [loadingCalendar, setLoadingCalendar] = useState(false);
 
     // --- Edit Modal State ---
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModal] = useState(false);
     const [editingDate, setEditingDate] = useState(null); // Date object
 
     useEffect(() => {
@@ -44,6 +48,12 @@ export default function DataManagement() {
             }).finally(() => setLoadingEmployees(false));
         }
     }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab === 'browse_users') {
+            fetchBulkStats();
+        }
+    }, [activeTab, listMonth]);
 
     useEffect(() => {
         if (viewMode === 'calendar' && selectedUser) {
@@ -62,6 +72,17 @@ export default function DataManagement() {
         }).then(res => {
             setMonthlyData(res.data);
         }).finally(() => setLoadingCalendar(false));
+    };
+
+    const fetchBulkStats = () => {
+        api.get('/system-data/get_bulk_monthly_stats/', {
+            params: {
+                year: listMonth.getFullYear(),
+                month: listMonth.getMonth() + 1
+            }
+        }).then(res => {
+            setBulkStats(res.data);
+        });
     };
 
     const handleAutoFill = async () => {
@@ -96,12 +117,20 @@ export default function DataManagement() {
     const handleSelectUser = (user) => {
         setSelectedUser(user);
         setViewMode('calendar');
-        setCurrentMonth(new Date()); // Reset to today
+        // Start calendar at the same month we were viewing in list? Or current?
+        // Usually logical to view the same month.
+        setCurrentMonth(listMonth);
     };
 
     const handleDayClick = (day) => {
         setEditingDate(day);
         setIsEditModalOpen(true);
+    };
+
+    const formatDuration = (seconds) => {
+        if (!seconds) return '-';
+        const h = Math.round(seconds / 3600);
+        return `${h}s`;
     };
 
     const handleExport = (fmt) => {
@@ -229,15 +258,30 @@ export default function DataManagement() {
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                                 <h2 className="font-bold text-slate-700">Personel Listesi</h2>
-                                <div className="relative w-64">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <input
-                                        type="text"
-                                        placeholder="Ara..."
-                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                    />
+
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
+                                        <button onClick={() => setListMonth(subMonths(listMonth, 1))} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                                            <ChevronLeft size={18} />
+                                        </button>
+                                        <span className="text-sm font-bold text-slate-800 min-w-[120px] text-center select-none">
+                                            {format(listMonth, 'MMMM yyyy', { locale: tr })}
+                                        </span>
+                                        <button onClick={() => setListMonth(addMonths(listMonth, 1))} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                                            <ChevronRight size={18} />
+                                        </button>
+                                    </div>
+
+                                    <div className="relative w-64">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Ara..."
+                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -247,36 +291,52 @@ export default function DataManagement() {
                                         <tr>
                                             <th className="px-6 py-4">Personel</th>
                                             <th className="px-6 py-4">Departman</th>
-                                            <th className="px-6 py-4">Pozisyon</th>
+                                            <th className="px-6 py-4 text-center">Normal</th>
+                                            <th className="px-6 py-4 text-center">Mesai</th>
+                                            <th className="px-6 py-4 text-center">Eksik</th>
                                             <th className="px-6 py-4 text-right">İşlem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {filteredEmployees.map(emp => (
-                                            <tr key={emp.id} className="hover:bg-blue-50/50 transition-colors group">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                                                            {emp.first_name[0]}{emp.last_name[0]}
+                                        {filteredEmployees.map(emp => {
+                                            const stats = bulkStats[emp.id] || {};
+                                            return (
+                                                <tr key={emp.id} className="hover:bg-blue-50/50 transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                                                                {emp.first_name[0]}{emp.last_name[0]}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium text-slate-900">{emp.first_name} {emp.last_name}</div>
+                                                                <div className="text-xs text-slate-500">{emp.employee_code}</div>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <div className="font-medium text-slate-900">{emp.first_name} {emp.last_name}</div>
-                                                            <div className="text-xs text-slate-500">{emp.employee_code}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{emp.department?.name || '-'}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{emp.job_position?.name || '-'}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => handleSelectUser(emp)}
-                                                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm rounded-lg hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all font-medium"
-                                                    >
-                                                        Takvimi Aç
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600">{emp.department?.name || '-'}</td>
+
+                                                    {/* Monthly Stats Columns */}
+                                                    <td className="px-6 py-4 text-center text-sm font-medium text-green-600 bg-green-50/30">
+                                                        {formatDuration(stats.normal)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center text-sm font-medium text-amber-600 bg-amber-50/30">
+                                                        {formatDuration(stats.ot)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center text-sm font-medium text-red-600 bg-red-50/30">
+                                                        {formatDuration(stats.missing)}
+                                                    </td>
+
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button
+                                                            onClick={() => handleSelectUser(emp)}
+                                                            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm rounded-lg hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all font-medium"
+                                                        >
+                                                            Takvimi Aç
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                                 {filteredEmployees.length === 0 && (
@@ -497,6 +557,17 @@ function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
         }]);
     };
 
+    const fillStandardShift = () => {
+        // Adds standard 08:00 - 18:00 shift
+        setRecords([...records, {
+            id: null,
+            check_in: `${dateStr}T08:00`,
+            check_out: `${dateStr}T18:00`,
+            source: 'MANUAL',
+            status: 'OPEN'
+        }]);
+    };
+
     const updateRec = (idx, field, val) => {
         const n = [...records];
         n[idx][field] = val;
@@ -531,10 +602,16 @@ function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
                         <div className="text-center py-10">Yükleniyor...</div>
                     ) : (
                         <>
-                            <div className="flex justify-end mb-4">
-                                <button onClick={addRecord} className="flex items-center gap-2 text-blue-600 font-bold hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors">
-                                    <Plus size={18} /> Yeni Kayıt
-                                </button>
+                            <div className="flex justify-between mb-4 items-center">
+                                <div className="text-sm text-slate-500 font-medium">Hızlı İşlemler:</div>
+                                <div className="flex gap-2">
+                                    <button onClick={fillStandardShift} className="flex items-center gap-2 bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors text-sm">
+                                        Tam Gün Mesai Ekle (08:00 - 18:00)
+                                    </button>
+                                    <button onClick={addRecord} className="flex items-center gap-2 text-blue-600 font-bold hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors text-sm">
+                                        <Plus size={16} /> Yeni Kayıt Ekle
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-4">
