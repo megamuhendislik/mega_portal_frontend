@@ -110,7 +110,7 @@ const Attendance = () => {
         setLoading(true);
         try {
             // 1. Fetch Logs
-            const logsRes = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
+            const logsRes = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}&limit=1000`);
             setLogs(logsRes.data.results || logsRes.data);
 
             // 2. Fetch Period Summary (for Cards)
