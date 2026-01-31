@@ -122,6 +122,7 @@ const MainLayout = () => {
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'admin.full_access' },
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'page.meal_tracking.access' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'admin.full_access' },
+        { path: '/admin/data-management', label: 'Veri Yönetimi', icon: Database, permission: 'MENU_DATA_MANAGEMENT_VIEW' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'admin.full_access' },
     ];
 
