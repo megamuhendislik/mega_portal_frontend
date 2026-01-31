@@ -27,6 +27,8 @@ export default function DataManagement() {
     // --- Calendar State ---
     const [selectedUser, setSelectedUser] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [monthlyData, setMonthlyData] = useState({});
+    const [loadingCalendar, setLoadingCalendar] = useState(false);
 
     // --- Edit Modal State ---
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -42,6 +44,41 @@ export default function DataManagement() {
             }).finally(() => setLoadingEmployees(false));
         }
     }, [activeTab]);
+
+    useEffect(() => {
+        if (viewMode === 'calendar' && selectedUser) {
+            fetchMonthlyData();
+        }
+    }, [currentMonth, selectedUser, viewMode]);
+
+    const fetchMonthlyData = () => {
+        setLoadingCalendar(true);
+        api.get('/system-data/get_monthly_summary/', {
+            params: {
+                employee_id: selectedUser.id,
+                year: currentMonth.getFullYear(),
+                month: currentMonth.getMonth() + 1
+            }
+        }).then(res => {
+            setMonthlyData(res.data);
+        }).finally(() => setLoadingCalendar(false));
+    };
+
+    const handleAutoFill = async () => {
+        if (!window.confirm(`${format(currentMonth, 'MMMM', { locale: tr })} ayı için eksik günleri otomatik tamamlamak istiyor musunuz?`)) return;
+
+        try {
+            const res = await api.post('/system-data/auto_fill_month/', {
+                employee_id: selectedUser.id,
+                year: currentMonth.getFullYear(),
+                month: currentMonth.getMonth() + 1
+            });
+            alert(`${res.data.filled_days} gün otomatik tamamlandı.`);
+            fetchMonthlyData(); // Refresh calendar
+        } catch (e) {
+            alert('Hata: ' + e.message);
+        }
+    };
 
     useEffect(() => {
         if (!searchTerm) {
@@ -259,15 +296,23 @@ export default function DataManagement() {
                                     <span className="font-medium">Listeye Dön</span>
                                 </button>
 
-                                <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                                    <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-slate-600">
-                                        <ChevronLeft size={20} />
-                                    </button>
-                                    <span className="text-lg font-bold text-slate-800 min-w-[140px] text-center">
-                                        {format(currentMonth, 'MMMM yyyy', { locale: tr })}
-                                    </span>
-                                    <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-slate-600">
-                                        <ChevronRight size={20} />
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                                        <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-slate-600">
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        <span className="text-lg font-bold text-slate-800 min-w-[140px] text-center">
+                                            {format(currentMonth, 'MMMM yyyy', { locale: tr })}
+                                        </span>
+                                        <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-slate-600">
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
+                                    <button
+                                        onClick={handleAutoFill}
+                                        className="text-xs text-blue-600 hover:underline font-bold"
+                                    >
+                                        Ayı Otomatik Tamamla (Eksikleri Doldur)
                                     </button>
                                 </div>
 
@@ -283,10 +328,15 @@ export default function DataManagement() {
                             </div>
 
                             {/* Calendar Grid */}
-                            <CalendarGrid
-                                currentMonth={currentMonth}
-                                onDayClick={handleDayClick}
-                            />
+                            {loadingCalendar ? (
+                                <div className="h-[400px] flex items-center justify-center text-slate-400">Yükleniyor...</div>
+                            ) : (
+                                <CalendarGrid
+                                    currentMonth={currentMonth}
+                                    onDayClick={handleDayClick}
+                                    monthlyData={monthlyData}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -299,6 +349,7 @@ export default function DataManagement() {
                     onClose={() => setIsEditModalOpen(false)}
                     employee={selectedUser}
                     date={editingDate}
+                    onSaveSuccess={fetchMonthlyData}
                 />
             )}
         </div>
@@ -309,7 +360,7 @@ export default function DataManagement() {
 // Sub-Components
 // ----------------------------------------------------------------------
 
-function CalendarGrid({ currentMonth, onDayClick }) {
+function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -333,8 +384,11 @@ function CalendarGrid({ currentMonth, onDayClick }) {
                 {paddingArray.map((_, i) => <div key={`pad-${i}`} />)}
 
                 {days.map(day => {
+                    const dateStr = format(day, 'yyyy-MM-dd');
                     const isToday = isSameDay(day, new Date());
                     const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+                    const data = monthlyData[dateStr] || { normal: 0, ot: 0, missing: 0 };
+                    const hasStats = data.normal > 0 || data.ot > 0 || data.missing > 0;
 
                     return (
                         <div
@@ -349,13 +403,35 @@ function CalendarGrid({ currentMonth, onDayClick }) {
                                 <span className={`text-lg font-bold ${isWeekend ? 'text-red-400' : 'text-slate-700'}`}>
                                     {format(day, 'd')}
                                 </span>
-                                {/* Placeholder for status dot */}
-                                <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-400 transition-colors"></div>
+                                {/* Status dot? */}
                             </div>
 
-                            <div className="flex justify-center items-center h-full pb-6 text-xs text-slate-400 group-hover:text-blue-500 font-medium">
-                                Düzenle
-                            </div>
+                            {hasStats ? (
+                                <div className="space-y-1 mt-2">
+                                    {data.normal > 0 && (
+                                        <div className="bg-green-50 text-green-700 text-[10px] px-1.5 py-0.5 rounded flex justify-between font-medium">
+                                            <span>Normal</span>
+                                            <span>{Math.round(data.normal / 3600)}s</span>
+                                        </div>
+                                    )}
+                                    {data.ot > 0 && (
+                                        <div className="bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0.5 rounded flex justify-between font-medium">
+                                            <span>Mesai</span>
+                                            <span>{Math.round(data.ot / 3600)}s</span>
+                                        </div>
+                                    )}
+                                    {data.missing > 0 && (
+                                        <div className="bg-red-50 text-red-700 text-[10px] px-1.5 py-0.5 rounded flex justify-between font-medium">
+                                            <span>Eksik</span>
+                                            <span>{Math.round(data.missing / 3600)}s</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex justify-center items-center h-full pb-6 text-xs text-slate-300 group-hover:text-blue-500 font-medium mt-4">
+                                    Kayıt Yok
+                                </div>
+                            )}
                         </div>
                     );
                 })}
@@ -364,7 +440,7 @@ function CalendarGrid({ currentMonth, onDayClick }) {
     );
 }
 
-function DayEditModal({ isOpen, onClose, employee, date }) {
+function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
