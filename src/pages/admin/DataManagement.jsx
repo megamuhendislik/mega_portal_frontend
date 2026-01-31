@@ -9,6 +9,119 @@ import {
     Save, Trash2, Plus, ArrowLeft, Database, Download, Upload, ChevronDown, ChevronUp
 } from 'lucide-react';
 
+function YearlyStatsMatrix({ employee, initialYear }) {
+    const [year, setYear] = useState(initialYear);
+    const [stats, setStats] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        fetchStats();
+    }, [year, employee.id]);
+
+    const fetchStats = () => {
+        setLoading(true);
+        api.get('/system-data/get_yearly_summary/', {
+            params: { employee_id: employee.id, year: year }
+        }).then(res => {
+            setStats(res.data);
+        }).finally(() => setLoading(false));
+    };
+
+    const formatSeconds = (sec) => {
+        if (!sec) return '-';
+        const h = Math.round(sec / 3600);
+        return `${h}s`;
+    };
+
+    // Prepare matrix data: columns are months 1-12
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+    const getVal = (m, field) => {
+        const found = stats.find(s => s.month === m);
+        return found ? found[field] : 0;
+    };
+
+    return (
+        <div className="bg-white rounded-lg border shadow-sm p-4 overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-4">
+                    <h4 className="text-sm font-bold text-slate-800">Yıllık Özet Tablosu</h4>
+
+                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                        <button
+                            onClick={() => setYear(year - 1)}
+                            className="p-1 hover:bg-white rounded shadow-sm text-slate-600 transition-all"
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <span className="px-3 font-bold text-slate-700 text-sm">{year}</span>
+                        <button
+                            onClick={() => setYear(year + 1)}
+                            className="p-1 hover:bg-white rounded shadow-sm text-slate-600 transition-all"
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+                {loading && <span className="text-xs text-slate-400 animate-pulse">Yükleniyor...</span>}
+            </div>
+
+            <div className="overflow-x-auto pb-2">
+                <table className="w-full text-xs border-collapse min-w-[800px]">
+                    <thead>
+                        <tr>
+                            <th className="p-2 text-left bg-slate-50 text-slate-500 font-medium border border-slate-200 sticky left-0 z-10 w-24">Metrik</th>
+                            {monthNames.map(m => (
+                                <th key={m} className="p-2 text-center bg-slate-50 text-slate-500 font-medium border border-slate-200 min-w-[60px]">{m}</th>
+                            ))}
+                            <th className="p-2 text-center bg-slate-100 text-slate-700 font-bold border border-slate-200">Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {/* Normal */}
+                        <tr>
+                            <td className="p-2 font-medium text-slate-600 bg-slate-50 border border-slate-200 sticky left-0 z-10">Normal</td>
+                            {months.map(m => (
+                                <td key={m} className="p-2 text-center border border-slate-200 text-slate-600">
+                                    {formatSeconds(getVal(m, 'normal'))}
+                                </td>
+                            ))}
+                            <td className="p-2 text-center border border-slate-200 font-bold text-slate-800 bg-slate-50">
+                                {formatSeconds(stats.reduce((acc, curr) => acc + (curr.normal || 0), 0))}
+                            </td>
+                        </tr>
+                        {/* Overtime */}
+                        <tr>
+                            <td className="p-2 font-medium text-amber-600 bg-amber-50/30 border border-slate-200 sticky left-0 z-10">Mesai</td>
+                            {months.map(m => (
+                                <td key={m} className="p-2 text-center border border-slate-200 text-amber-600 font-medium bg-amber-50/10">
+                                    {formatSeconds(getVal(m, 'ot'))}
+                                </td>
+                            ))}
+                            <td className="p-2 text-center border border-slate-200 font-bold text-amber-700 bg-amber-50">
+                                {formatSeconds(stats.reduce((acc, curr) => acc + (curr.ot || 0), 0))}
+                            </td>
+                        </tr>
+                        {/* Missing */}
+                        <tr>
+                            <td className="p-2 font-medium text-red-600 bg-red-50/30 border border-slate-200 sticky left-0 z-10">Eksik</td>
+                            {months.map(m => (
+                                <td key={m} className="p-2 text-center border border-slate-200 text-red-600 font-medium bg-red-50/10">
+                                    {formatSeconds(getVal(m, 'missing'))}
+                                </td>
+                            ))}
+                            <td className="p-2 text-center border border-slate-200 font-bold text-red-700 bg-red-50">
+                                {formatSeconds(stats.reduce((acc, curr) => acc + (curr.missing || 0), 0))}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 export default function DataManagement() {
     const { hasPermission } = useAuth();
     const [activeTab, setActiveTab] = useState('browse_users'); // 'backup', 'browse_users'
@@ -604,118 +717,15 @@ function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
     };
 
 
-    function YearlyStatsMatrix({ employee, initialYear }) {
-        const [year, setYear] = useState(initialYear);
-        const [stats, setStats] = useState([]);
-        const [loading, setLoading] = useState(false);
 
-        useEffect(() => {
-            fetchStats();
-        }, [year, employee.id]);
 
-        const fetchStats = () => {
-            setLoading(true);
-            api.get('/system-data/get_yearly_summary/', {
-                params: { employee_id: employee.id, year: year }
-            }).then(res => {
-                setStats(res.data);
-            }).finally(() => setLoading(false));
-        };
 
-        const formatSeconds = (sec) => {
-            if (!sec) return '-';
-            const h = Math.round(sec / 3600);
-            return `${h}s`;
-        };
 
-        // Prepare matrix data: columns are months 1-12
-        const months = Array.from({ length: 12 }, (_, i) => i + 1);
-        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
-        const getVal = (m, field) => {
-            const found = stats.find(s => s.month === m);
-            return found ? found[field] : 0;
-        };
 
-        return (
-            <div className="bg-white rounded-lg border shadow-sm p-4 overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-4">
-                        <h4 className="text-sm font-bold text-slate-800">Yıllık Özet Tablosu</h4>
 
-                        <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                            <button
-                                onClick={() => setYear(year - 1)}
-                                className="p-1 hover:bg-white rounded shadow-sm text-slate-600 transition-all"
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <span className="px-3 font-bold text-slate-700 text-sm">{year}</span>
-                            <button
-                                onClick={() => setYear(year + 1)}
-                                className="p-1 hover:bg-white rounded shadow-sm text-slate-600 transition-all"
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
-                    {loading && <span className="text-xs text-slate-400 animate-pulse">Yükleniyor...</span>}
-                </div>
 
-                <div className="overflow-x-auto pb-2">
-                    <table className="w-full text-xs border-collapse min-w-[800px]">
-                        <thead>
-                            <tr>
-                                <th className="p-2 text-left bg-slate-50 text-slate-500 font-medium border border-slate-200 sticky left-0 z-10 w-24">Metrik</th>
-                                {monthNames.map(m => (
-                                    <th key={m} className="p-2 text-center bg-slate-50 text-slate-500 font-medium border border-slate-200 min-w-[60px]">{m}</th>
-                                ))}
-                                <th className="p-2 text-center bg-slate-100 text-slate-700 font-bold border border-slate-200">Toplam</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {/* Normal */}
-                            <tr>
-                                <td className="p-2 font-medium text-slate-600 bg-slate-50 border border-slate-200 sticky left-0 z-10">Normal</td>
-                                {months.map(m => (
-                                    <td key={m} className="p-2 text-center border border-slate-200 text-slate-600">
-                                        {formatSeconds(getVal(m, 'normal'))}
-                                    </td>
-                                ))}
-                                <td className="p-2 text-center border border-slate-200 font-bold text-slate-800 bg-slate-50">
-                                    {formatSeconds(stats.reduce((acc, curr) => acc + (curr.normal || 0), 0))}
-                                </td>
-                            </tr>
-                            {/* Overtime */}
-                            <tr>
-                                <td className="p-2 font-medium text-amber-600 bg-amber-50/30 border border-slate-200 sticky left-0 z-10">Mesai</td>
-                                {months.map(m => (
-                                    <td key={m} className="p-2 text-center border border-slate-200 text-amber-600 font-medium bg-amber-50/10">
-                                        {formatSeconds(getVal(m, 'ot'))}
-                                    </td>
-                                ))}
-                                <td className="p-2 text-center border border-slate-200 font-bold text-amber-700 bg-amber-50">
-                                    {formatSeconds(stats.reduce((acc, curr) => acc + (curr.ot || 0), 0))}
-                                </td>
-                            </tr>
-                            {/* Missing */}
-                            <tr>
-                                <td className="p-2 font-medium text-red-600 bg-red-50/30 border border-slate-200 sticky left-0 z-10">Eksik</td>
-                                {months.map(m => (
-                                    <td key={m} className="p-2 text-center border border-slate-200 text-red-600 font-medium bg-red-50/10">
-                                        {formatSeconds(getVal(m, 'missing'))}
-                                    </td>
-                                ))}
-                                <td className="p-2 text-center border border-slate-200 font-bold text-red-700 bg-red-50">
-                                    {formatSeconds(stats.reduce((acc, curr) => acc + (curr.missing || 0), 0))}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    }
+
 
 
     return (
