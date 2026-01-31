@@ -258,8 +258,6 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
         try {
             // Using existing endpoint with scope param
             const response = await api.get(`/attendance/stats/?scope=YEARLY&year=${currentYear}&employee_id=${employeeId || ''}`);
-            console.log("API RAW RESPONSE (YEARLY):", response.data);
-
             const mapped = response.data.map(m => ({
                 name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }), // Oca, Şub
                 normal: parseFloat((m.normal_hours || 0).toFixed(1)),
@@ -267,8 +265,6 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                 missing: parseFloat((m.missing_hours || 0).toFixed(1)),
                 cumulative_net_hours: parseFloat((m.cumulative_net_hours || 0).toFixed(1))
             }));
-            console.log("MAPPED YEARLY DATA:", mapped);
-
             setYearlyData(mapped);
         } catch (error) {
             console.error(error);
