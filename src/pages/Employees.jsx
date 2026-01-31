@@ -1299,11 +1299,12 @@ const Employees = () => {
                 const newId = res.data.id;
 
                 // [NEW] Update Entitlements for new employee
-                if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
-                    await api.post(`/employees/${newId}/update_entitlements/`, {
-                        entitlements: payload.leave_entitlements
-                    });
-                }
+                // (Now handled by POST /employees/)
+                // if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
+                //     await api.post(`/employees/${newId}/update_entitlements/`, {
+                //         entitlements: payload.leave_entitlements
+                //     });
+                // }
 
                 alert("Personel ve Kullanıcı Hesabı başarıyla oluşturuldu.");
             } else if (viewMode === 'edit') {
@@ -1315,16 +1316,17 @@ const Employees = () => {
                 await api.patch(`/employees/${payload.id}/`, payload);
 
                 // [NEW] Update Entitlements if changed
-                if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
-                    try {
-                        await api.post(`/employees/${payload.id}/update_entitlements/`, {
-                            entitlements: payload.leave_entitlements
-                        });
-                    } catch (entError) {
-                        console.error("Entitlement save error", entError);
-                        alert("Personel güncellendi ancak yıllık izin detayları kaydedilirken hata oluştu.");
-                    }
-                }
+                // (Now handled by PATCH /employees/:id/)
+                // if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
+                //     try {
+                //         await api.post(`/employees/${payload.id}/update_entitlements/`, {
+                //             entitlements: payload.leave_entitlements
+                //         });
+                //     } catch (entError) {
+                //         console.error("Entitlement save error", entError);
+                //         alert("Personel güncellendi ancak yıllık izin detayları kaydedilirken hata oluştu.");
+                //     }
+                // }
 
                 alert("Personel bilgileri güncellendi.");
             }
