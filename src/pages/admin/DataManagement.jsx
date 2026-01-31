@@ -30,8 +30,8 @@ export default function DataManagement() {
 
     // Expanded Rows for Yearly Stats
     const [expandedRowId, setExpandedRowId] = useState(null);
-    const [yearlyStats, setYearlyStats] = useState({}); // { empId: [stats...] }
-    const [loadingYearly, setLoadingYearly] = useState(false);
+    // yearlyStats removed - handled by child component
+    // loadingYearly removed - handled by child component
 
     // --- Calendar State ---
     const [selectedUser, setSelectedUser] = useState(null);
@@ -120,19 +120,7 @@ export default function DataManagement() {
     }, [searchTerm, employees]);
 
     const toggleRow = (empId) => {
-        if (expandedRowId === empId) {
-            setExpandedRowId(null);
-        } else {
-            setExpandedRowId(empId);
-            if (!yearlyStats[empId]) {
-                setLoadingYearly(true);
-                api.get('/system-data/get_yearly_summary/', {
-                    params: { employee_id: empId, year: listMonth.getFullYear() }
-                }).then(res => {
-                    setYearlyStats(prev => ({ ...prev, [empId]: res.data }));
-                }).finally(() => setLoadingYearly(false));
-            }
-        }
+        setExpandedRowId(expandedRowId === empId ? null : empId);
     };
 
     const handleSelectUser = (user) => {
@@ -371,37 +359,7 @@ export default function DataManagement() {
                                                     {isExpanded && (
                                                         <tr className="bg-slate-50/50 animate-fade-in">
                                                             <td colSpan="7" className="px-6 py-4">
-                                                                <div className="bg-white rounded-lg border shadow-sm p-4">
-                                                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex justify-between">
-                                                                        <span>{listMonth.getFullYear()} Yıllık Özeti</span>
-                                                                        {loadingYearly && <span className="text-xs font-normal text-slate-400">Yükleniyor...</span>}
-                                                                    </h4>
-                                                                    <div className="overflow-x-auto">
-                                                                        <table className="w-full text-xs text-left">
-                                                                            <thead className="bg-slate-50 text-slate-500">
-                                                                                <tr>
-                                                                                    <th className="p-2 pl-4">Ay</th>
-                                                                                    <th className="p-2">Normal Mesai</th>
-                                                                                    <th className="p-2">Fazla Mesai</th>
-                                                                                    <th className="p-2">Eksik Çalışma</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody className="divide-y divide-slate-100">
-                                                                                {(yearlyStats[emp.id] || []).map((m, idx) => (
-                                                                                    <tr key={idx} className="hover:bg-slate-50">
-                                                                                        <td className="p-2 pl-4 font-medium">{m.month_name || m.month}</td>
-                                                                                        <td className="p-2 text-green-600 font-medium">{formatDuration(m.normal)}</td>
-                                                                                        <td className="p-2 text-amber-600 font-medium">{formatDuration(m.ot)}</td>
-                                                                                        <td className="p-2 text-red-600 font-medium">{formatDuration(m.missing)}</td>
-                                                                                    </tr>
-                                                                                ))}
-                                                                                {(!yearlyStats[emp.id] && !loadingYearly) && (
-                                                                                    <tr><td colSpan="4" className="p-4 text-center text-slate-400">Veri yok</td></tr>
-                                                                                )}
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
-                                                                </div>
+                                                                <YearlyStatsMatrix employee={emp} initialYear={listMonth.getFullYear()} />
                                                             </td>
                                                         </tr>
                                                     )}
@@ -645,13 +603,120 @@ function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
         setRecords(n);
     };
 
-    const removeRec = (idx) => {
-        const r = records[idx];
-        if (r.id) setDeleteIds([...deleteIds, r.id]);
-        setRecords(records.filter((_, i) => i !== idx));
-    };
 
-    if (!isOpen) return null;
+    function YearlyStatsMatrix({ employee, initialYear }) {
+        const [year, setYear] = useState(initialYear);
+        const [stats, setStats] = useState([]);
+        const [loading, setLoading] = useState(false);
+
+        useEffect(() => {
+            fetchStats();
+        }, [year, employee.id]);
+
+        const fetchStats = () => {
+            setLoading(true);
+            api.get('/system-data/get_yearly_summary/', {
+                params: { employee_id: employee.id, year: year }
+            }).then(res => {
+                setStats(res.data);
+            }).finally(() => setLoading(false));
+        };
+
+        const formatSeconds = (sec) => {
+            if (!sec) return '-';
+            const h = Math.round(sec / 3600);
+            return `${h}s`;
+        };
+
+        // Prepare matrix data: columns are months 1-12
+        const months = Array.from({ length: 12 }, (_, i) => i + 1);
+        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+        const getVal = (m, field) => {
+            const found = stats.find(s => s.month === m);
+            return found ? found[field] : 0;
+        };
+
+        return (
+            <div className="bg-white rounded-lg border shadow-sm p-4 overflow-hidden">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-4">
+                        <h4 className="text-sm font-bold text-slate-800">Yıllık Özet Tablosu</h4>
+
+                        <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setYear(year - 1)}
+                                className="p-1 hover:bg-white rounded shadow-sm text-slate-600 transition-all"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="px-3 font-bold text-slate-700 text-sm">{year}</span>
+                            <button
+                                onClick={() => setYear(year + 1)}
+                                className="p-1 hover:bg-white rounded shadow-sm text-slate-600 transition-all"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                    {loading && <span className="text-xs text-slate-400 animate-pulse">Yükleniyor...</span>}
+                </div>
+
+                <div className="overflow-x-auto pb-2">
+                    <table className="w-full text-xs border-collapse min-w-[800px]">
+                        <thead>
+                            <tr>
+                                <th className="p-2 text-left bg-slate-50 text-slate-500 font-medium border border-slate-200 sticky left-0 z-10 w-24">Metrik</th>
+                                {monthNames.map(m => (
+                                    <th key={m} className="p-2 text-center bg-slate-50 text-slate-500 font-medium border border-slate-200 min-w-[60px]">{m}</th>
+                                ))}
+                                <th className="p-2 text-center bg-slate-100 text-slate-700 font-bold border border-slate-200">Toplam</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* Normal */}
+                            <tr>
+                                <td className="p-2 font-medium text-slate-600 bg-slate-50 border border-slate-200 sticky left-0 z-10">Normal</td>
+                                {months.map(m => (
+                                    <td key={m} className="p-2 text-center border border-slate-200 text-slate-600">
+                                        {formatSeconds(getVal(m, 'normal'))}
+                                    </td>
+                                ))}
+                                <td className="p-2 text-center border border-slate-200 font-bold text-slate-800 bg-slate-50">
+                                    {formatSeconds(stats.reduce((acc, curr) => acc + (curr.normal || 0), 0))}
+                                </td>
+                            </tr>
+                            {/* Overtime */}
+                            <tr>
+                                <td className="p-2 font-medium text-amber-600 bg-amber-50/30 border border-slate-200 sticky left-0 z-10">Mesai</td>
+                                {months.map(m => (
+                                    <td key={m} className="p-2 text-center border border-slate-200 text-amber-600 font-medium bg-amber-50/10">
+                                        {formatSeconds(getVal(m, 'ot'))}
+                                    </td>
+                                ))}
+                                <td className="p-2 text-center border border-slate-200 font-bold text-amber-700 bg-amber-50">
+                                    {formatSeconds(stats.reduce((acc, curr) => acc + (curr.ot || 0), 0))}
+                                </td>
+                            </tr>
+                            {/* Missing */}
+                            <tr>
+                                <td className="p-2 font-medium text-red-600 bg-red-50/30 border border-slate-200 sticky left-0 z-10">Eksik</td>
+                                {months.map(m => (
+                                    <td key={m} className="p-2 text-center border border-slate-200 text-red-600 font-medium bg-red-50/10">
+                                        {formatSeconds(getVal(m, 'missing'))}
+                                    </td>
+                                ))}
+                                <td className="p-2 text-center border border-slate-200 font-bold text-red-700 bg-red-50">
+                                    {formatSeconds(stats.reduce((acc, curr) => acc + (curr.missing || 0), 0))}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    }
+
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
