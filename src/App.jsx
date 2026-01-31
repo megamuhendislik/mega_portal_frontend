@@ -104,7 +104,7 @@ function App() {
             <Route path="meal-orders" element={<ProtectedRoute requiredPermission="page.meal_tracking.access"><MealOrders /></ProtectedRoute>} />
             {/* <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="admin.full_access"><FiscalCalendarSettings /></ProtectedRoute>} /> */}
 
-            <Route path="admin/data-management" element={<ProtectedRoute requiredPermission="MENU_DATA_MANAGEMENT_VIEW"><DataManagement /></ProtectedRoute>} />
+            <Route path="system-data-management" element={<ProtectedRoute requiredPermission="MENU_DATA_MANAGEMENT_VIEW"><DataManagement /></ProtectedRoute>} />
 
             <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="admin.full_access"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>

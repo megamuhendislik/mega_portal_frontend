@@ -284,7 +284,7 @@ export default function DataManagement() {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Database className="text-blue-600" />
-                    Sistem Veri Yönetimi
+                    Sistem Veri Yönetimi (Yıllık Matris)
                 </h1>
 
                 <div className="flex bg-white rounded-lg shadow-sm p-1 border">
