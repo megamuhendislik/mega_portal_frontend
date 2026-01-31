@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import {
-    ServerStackIcon,
+ServerStackIcon,
     CpuChipIcon,
-    ArrowPathIcon
+    ArrowPathIcon // Added
 } from '@heroicons/react/24/outline';
 
 const ResourceMonitor = () => {
@@ -83,6 +82,37 @@ const ResourceMonitor = () => {
                     {/* Progress Bar */}
                     <div className="w-full bg-slate-100 rounded-full h-2">
                         <div className={`h-2 rounded-full transition-all duration-500 ${memPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${memPercent}%` }}></div>
+                    </div>
+                </div>
+
+                {/* Attendance Loop Stats */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">PUANTAJ DÖNGÜSÜ</div>
+                            {data.attendance_loop ? (
+                                <>
+                                    <div className="text-3xl font-black text-slate-800 mt-1">
+                                        {data.attendance_loop.processed_employees} / {data.attendance_loop.total_employees}
+                                    </div>
+                                    <div className="text-xs text-slate-400 mt-1">
+                                        Hız: {data.attendance_loop.employees_per_second} kişi/sn | Süre: {data.attendance_loop.duration_seconds}s
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-sm text-slate-400 mt-2">Veri bekleniyor...</div>
+                            )}
+                        </div>
+                        <div className="p-3 bg-purple-100 text-purple-600 rounded-lg">
+                            <ArrowPathIcon className={`w-6 h-6 ${data.attendance_loop && data.attendance_loop.active ? 'animate-spin' : ''}`} />
+                        </div>
+                    </div>
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div
+                            className="bg-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${data.attendance_loop ? Math.min(100, (data.attendance_loop.processed_employees / (data.attendance_loop.total_employees || 1)) * 100) : 0}%` }}
+                        />
                     </div>
                 </div>
             </div>
