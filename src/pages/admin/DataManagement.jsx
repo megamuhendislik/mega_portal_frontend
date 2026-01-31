@@ -6,7 +6,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { tr } from 'date-fns/locale';
 import {
     Search, User, Calendar as CalendarIcon, ChevronLeft, ChevronRight,
-    Save, Trash2, Plus, ArrowLeft, Database, Download, Upload
+    Save, Trash2, Plus, ArrowLeft, Database, Download, Upload, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 export default function DataManagement() {
@@ -28,6 +28,11 @@ export default function DataManagement() {
     const [listMonth, setListMonth] = useState(new Date());
     const [bulkStats, setBulkStats] = useState({});
 
+    // Expanded Rows for Yearly Stats
+    const [expandedRowId, setExpandedRowId] = useState(null);
+    const [yearlyStats, setYearlyStats] = useState({}); // { empId: [stats...] }
+    const [loadingYearly, setLoadingYearly] = useState(false);
+
     // --- Calendar State ---
     const [selectedUser, setSelectedUser] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -35,7 +40,7 @@ export default function DataManagement() {
     const [loadingCalendar, setLoadingCalendar] = useState(false);
 
     // --- Edit Modal State ---
-    const [isEditModalOpen, setIsEditModal] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingDate, setEditingDate] = useState(null); // Date object
 
     useEffect(() => {
@@ -114,6 +119,22 @@ export default function DataManagement() {
         }
     }, [searchTerm, employees]);
 
+    const toggleRow = (empId) => {
+        if (expandedRowId === empId) {
+            setExpandedRowId(null);
+        } else {
+            setExpandedRowId(empId);
+            if (!yearlyStats[empId]) {
+                setLoadingYearly(true);
+                api.get('/system-data/get_yearly_summary/', {
+                    params: { employee_id: empId, year: listMonth.getFullYear() }
+                }).then(res => {
+                    setYearlyStats(prev => ({ ...prev, [empId]: res.data }));
+                }).finally(() => setLoadingYearly(false));
+            }
+        }
+    };
+
     const handleSelectUser = (user) => {
         setSelectedUser(user);
         setViewMode('calendar');
@@ -128,7 +149,7 @@ export default function DataManagement() {
     };
 
     const formatDuration = (seconds) => {
-        if (!seconds) return '-';
+        if (!seconds && seconds !== 0) return '-';
         const h = Math.round(seconds / 3600);
         return `${h}s`;
     };
@@ -289,6 +310,7 @@ export default function DataManagement() {
                                 <table className="w-full text-left">
                                     <thead className="bg-slate-50 sticky top-0 z-10 text-xs uppercase text-slate-500 font-semibold tracking-wider">
                                         <tr>
+                                            <th className="w-10 px-2 py-4"></th>
                                             <th className="px-6 py-4">Personel</th>
                                             <th className="px-6 py-4">Departman</th>
                                             <th className="px-6 py-4 text-center">Normal</th>
@@ -300,41 +322,90 @@ export default function DataManagement() {
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredEmployees.map(emp => {
                                             const stats = bulkStats[emp.id] || {};
+                                            const isExpanded = expandedRowId === emp.id;
+
                                             return (
-                                                <tr key={emp.id} className="hover:bg-blue-50/50 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs ring-2 ring-white">
-                                                                {emp.first_name[0]}{emp.last_name[0]}
+                                                <React.Fragment key={emp.id}>
+                                                    <tr className={`hover:bg-blue-50/50 transition-colors group ${isExpanded ? 'bg-blue-50/30' : ''}`}>
+                                                        <td className="px-2 py-4 text-center">
+                                                            <button
+                                                                onClick={() => toggleRow(emp.id)}
+                                                                className="text-slate-400 hover:text-blue-600 transition-colors"
+                                                            >
+                                                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                                                                    {emp.first_name[0]}{emp.last_name[0]}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-medium text-slate-900">{emp.first_name} {emp.last_name}</div>
+                                                                    <div className="text-xs text-slate-500">{emp.employee_code}</div>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <div className="font-medium text-slate-900">{emp.first_name} {emp.last_name}</div>
-                                                                <div className="text-xs text-slate-500">{emp.employee_code}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">{emp.department?.name || '-'}</td>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-slate-600">{emp.department_name || '-'}</td>
 
-                                                    {/* Monthly Stats Columns */}
-                                                    <td className="px-6 py-4 text-center text-sm font-medium text-green-600 bg-green-50/30">
-                                                        {formatDuration(stats.normal)}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center text-sm font-medium text-amber-600 bg-amber-50/30">
-                                                        {formatDuration(stats.ot)}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center text-sm font-medium text-red-600 bg-red-50/30">
-                                                        {formatDuration(stats.missing)}
-                                                    </td>
+                                                        <td className="px-6 py-4 text-center text-sm font-medium text-green-600 bg-green-50/30">
+                                                            {formatDuration(stats.normal)}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center text-sm font-medium text-amber-600 bg-amber-50/30">
+                                                            {formatDuration(stats.ot)}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center text-sm font-medium text-red-600 bg-red-50/30">
+                                                            {formatDuration(stats.missing)}
+                                                        </td>
 
-                                                    <td className="px-6 py-4 text-right">
-                                                        <button
-                                                            onClick={() => handleSelectUser(emp)}
-                                                            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm rounded-lg hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all font-medium"
-                                                        >
-                                                            Takvimi Aç
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <button
+                                                                onClick={() => handleSelectUser(emp)}
+                                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm rounded-lg hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all font-medium"
+                                                            >
+                                                                Takvimi Aç
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+
+                                                    {isExpanded && (
+                                                        <tr className="bg-slate-50/50 animate-fade-in">
+                                                            <td colSpan="7" className="px-6 py-4">
+                                                                <div className="bg-white rounded-lg border shadow-sm p-4">
+                                                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex justify-between">
+                                                                        <span>{listMonth.getFullYear()} Yıllık Özeti</span>
+                                                                        {loadingYearly && <span className="text-xs font-normal text-slate-400">Yükleniyor...</span>}
+                                                                    </h4>
+                                                                    <div className="overflow-x-auto">
+                                                                        <table className="w-full text-xs text-left">
+                                                                            <thead className="bg-slate-50 text-slate-500">
+                                                                                <tr>
+                                                                                    <th className="p-2 pl-4">Ay</th>
+                                                                                    <th className="p-2">Normal Mesai</th>
+                                                                                    <th className="p-2">Fazla Mesai</th>
+                                                                                    <th className="p-2">Eksik Çalışma</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-slate-100">
+                                                                                {(yearlyStats[emp.id] || []).map((m, idx) => (
+                                                                                    <tr key={idx} className="hover:bg-slate-50">
+                                                                                        <td className="p-2 pl-4 font-medium">{m.month_name || m.month}</td>
+                                                                                        <td className="p-2 text-green-600 font-medium">{formatDuration(m.normal)}</td>
+                                                                                        <td className="p-2 text-amber-600 font-medium">{formatDuration(m.ot)}</td>
+                                                                                        <td className="p-2 text-red-600 font-medium">{formatDuration(m.missing)}</td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                                {(!yearlyStats[emp.id] && !loadingYearly) && (
+                                                                                    <tr><td colSpan="4" className="p-4 text-center text-slate-400">Veri yok</td></tr>
+                                                                                )}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
                                             );
                                         })}
                                     </tbody>
@@ -694,4 +765,3 @@ function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
         </div>
     );
 }
-
