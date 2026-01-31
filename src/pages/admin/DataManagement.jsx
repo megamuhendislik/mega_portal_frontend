@@ -137,14 +137,11 @@ export default function DataManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loadingEmployees, setLoadingEmployees] = useState(false);
 
-    // List View Month Selection
-    const [listMonth, setListMonth] = useState(new Date());
-    const [bulkStats, setBulkStats] = useState({});
+    // List View Year Selection (Matrix Mode)
+    const [listYear, setListYear] = useState(new Date().getFullYear());
+    const [bulkStats, setBulkStats] = useState({}); // { empId: { month: { normal, ot, missing } } }
 
-    // Expanded Rows for Yearly Stats
     const [expandedRowId, setExpandedRowId] = useState(null);
-    // yearlyStats removed - handled by child component
-    // loadingYearly removed - handled by child component
 
     // --- Calendar State ---
     const [selectedUser, setSelectedUser] = useState(null);
@@ -171,7 +168,7 @@ export default function DataManagement() {
         if (activeTab === 'browse_users') {
             fetchBulkStats();
         }
-    }, [activeTab, listMonth]);
+    }, [activeTab, listYear]);
 
     useEffect(() => {
         if (viewMode === 'calendar' && selectedUser) {
@@ -193,10 +190,9 @@ export default function DataManagement() {
     };
 
     const fetchBulkStats = () => {
-        api.get('/system-data/get_bulk_monthly_stats/', {
+        api.get('/system-data/get_bulk_yearly_stats/', {
             params: {
-                year: listMonth.getFullYear(),
-                month: listMonth.getMonth() + 1
+                year: listYear
             }
         }).then(res => {
             setBulkStats(res.data);
@@ -239,9 +235,8 @@ export default function DataManagement() {
     const handleSelectUser = (user) => {
         setSelectedUser(user);
         setViewMode('calendar');
-        // Start calendar at the same month we were viewing in list? Or current?
-        // Usually logical to view the same month.
-        setCurrentMonth(listMonth);
+        // Start calendar at Jan of selected listYear (or keep month logic if preferred, but simpler to start clean)
+        setCurrentMonth(new Date(listYear, 0, 1));
     };
 
     const handleDayClick = (day) => {
@@ -250,9 +245,9 @@ export default function DataManagement() {
     };
 
     const formatDuration = (seconds) => {
-        if (!seconds && seconds !== 0) return '-';
+        if (!seconds) return null;
         const h = Math.round(seconds / 3600);
-        return `${h}s`;
+        return `${h}s`; // e.g. 5s (5 hours)
     };
 
     const handleExport = (fmt) => {
@@ -276,12 +271,16 @@ export default function DataManagement() {
         }
     };
 
+    // Matrix Helper
+    const monthCols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const monthNamesShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+
     if (!hasPermission('DATA_MANAGE_FULL') && !hasPermission('MENU_DATA_MANAGEMENT_VIEW')) {
         return <div className="p-8 text-center text-gray-500">Yetkiniz yok.</div>;
     }
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto min-h-screen">
+        <div className="p-6 max-w-[1800px] mx-auto min-h-screen">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Database className="text-blue-600" />
@@ -293,7 +292,7 @@ export default function DataManagement() {
                         onClick={() => setActiveTab('browse_users')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'browse_users' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-gray-50'}`}
                     >
-                        Veri Düzenleme
+                        Yıllık Matris
                     </button>
                     <button
                         onClick={() => setActiveTab('backup')}
@@ -379,17 +378,17 @@ export default function DataManagement() {
                     {viewMode === 'list' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                                <h2 className="font-bold text-slate-700">Personel Listesi</h2>
+                                <h2 className="font-bold text-slate-700">Yıllık Personel Özeti</h2>
 
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
-                                        <button onClick={() => setListMonth(subMonths(listMonth, 1))} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                                        <button onClick={() => setListYear(listYear - 1)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
                                             <ChevronLeft size={18} />
                                         </button>
-                                        <span className="text-sm font-bold text-slate-800 min-w-[120px] text-center select-none">
-                                            {format(listMonth, 'MMMM yyyy', { locale: tr })}
+                                        <span className="text-lg font-bold text-slate-800 min-w-[100px] text-center select-none">
+                                            {listYear}
                                         </span>
-                                        <button onClick={() => setListMonth(addMonths(listMonth, 1))} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                                        <button onClick={() => setListYear(listYear + 1)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
                                             <ChevronRight size={18} />
                                         </button>
                                     </div>
@@ -407,76 +406,72 @@ export default function DataManagement() {
                                 </div>
                             </div>
 
-                            <div className="max-h-[600px] overflow-y-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50 sticky top-0 z-10 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                            <div className="max-h-[700px] overflow-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-50 sticky top-0 z-20 text-xs uppercase text-slate-500 font-bold tracking-wider shadow-sm">
                                         <tr>
-                                            <th className="w-10 px-2 py-4"></th>
-                                            <th className="px-6 py-4">Personel</th>
-                                            <th className="px-6 py-4">Departman</th>
-                                            <th className="px-6 py-4 text-center">Normal</th>
-                                            <th className="px-6 py-4 text-center">Mesai</th>
-                                            <th className="px-6 py-4 text-center">Eksik</th>
-                                            <th className="px-6 py-4 text-right">İşlem</th>
+                                            <th className="px-4 py-3 border-b bg-slate-50/95 sticky left-0 z-30 min-w-[200px]">Personel</th>
+                                            {monthNamesShort.map((m, i) => (
+                                                <th key={m} className={`px-2 py-3 text-center border-b min-w-[70px] ${i % 2 === 0 ? 'bg-slate-50/95' : 'bg-white/95'}`}>{m}</th>
+                                            ))}
+                                            <th className="px-4 py-3 border-b text-right min-w-[100px]">İşlem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredEmployees.map(emp => {
-                                            const stats = bulkStats[emp.id] || {};
-                                            const isExpanded = expandedRowId === emp.id;
-
+                                            const empStats = bulkStats[emp.id] || {};
                                             return (
-                                                <React.Fragment key={emp.id}>
-                                                    <tr className={`hover:bg-blue-50/50 transition-colors group ${isExpanded ? 'bg-blue-50/30' : ''}`}>
-                                                        <td className="px-2 py-4 text-center">
-                                                            <button
-                                                                onClick={() => toggleRow(emp.id)}
-                                                                className="text-slate-400 hover:text-blue-600 transition-colors"
-                                                            >
-                                                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs ring-2 ring-white">
-                                                                    {emp.first_name[0]}{emp.last_name[0]}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-medium text-slate-900">{emp.first_name} {emp.last_name}</div>
-                                                                    <div className="text-xs text-slate-500">{emp.employee_code}</div>
-                                                                </div>
+                                                <tr key={emp.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                    <td className="px-4 py-3 bg-white group-hover:bg-blue-50/30 border-r border-slate-100 sticky left-0 z-10 w-[200px]">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                                                {emp.first_name[0]}{emp.last_name[0]}
                                                             </div>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-slate-600">{emp.department_name || '-'}</td>
+                                                            <div className="truncate">
+                                                                <div className="font-medium text-slate-900 text-sm">{emp.first_name} {emp.last_name}</div>
+                                                                <div className="text-[10px] text-slate-500">{emp.department_name || '-'}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
 
-                                                        <td className="px-6 py-4 text-center text-sm font-medium text-green-600 bg-green-50/30">
-                                                            {formatDuration(stats.normal)}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-center text-sm font-medium text-amber-600 bg-amber-50/30">
-                                                            {formatDuration(stats.ot)}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-center text-sm font-medium text-red-600 bg-red-50/30">
-                                                            {formatDuration(stats.missing)}
-                                                        </td>
+                                                    {monthCols.map(m => {
+                                                        const stat = empStats[m] || {};
+                                                        const hasOt = stat.ot > 300; // Show if > 5 mins
+                                                        const hasMissing = stat.missing > 300;
+                                                        const isEmpty = !hasOt && !hasMissing;
 
-                                                        <td className="px-6 py-4 text-right">
-                                                            <button
-                                                                onClick={() => handleSelectUser(emp)}
-                                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm rounded-lg hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all font-medium"
-                                                            >
-                                                                Takvimi Aç
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-
-                                                    {isExpanded && (
-                                                        <tr className="bg-slate-50/50 animate-fade-in">
-                                                            <td colSpan="7" className="px-6 py-4">
-                                                                <YearlyStatsMatrix employee={emp} initialYear={listMonth.getFullYear()} />
+                                                        return (
+                                                            <td key={m} className={`px-1 py-2 text-center border-r border-slate-50 text-xs ${m % 2 === 0 ? 'bg-slate-50/30' : ''}`}>
+                                                                {isEmpty ? (
+                                                                    <span className="text-slate-200">-</span>
+                                                                ) : (
+                                                                    <div className="flex flex-col items-center gap-0.5">
+                                                                        {hasOt && (
+                                                                            <span className="text-amber-700 bg-amber-50 px-1.5 rounded font-bold">
+                                                                                +{Math.round(stat.ot / 3600)}s
+                                                                            </span>
+                                                                        )}
+                                                                        {hasMissing && (
+                                                                            <span className="text-red-700 bg-red-50 px-1.5 rounded font-bold">
+                                                                                -{Math.round(stat.missing / 3600)}s
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </td>
-                                                        </tr>
-                                                    )}
-                                                </React.Fragment>
+                                                        );
+                                                    })}
+
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button
+                                                            onClick={() => handleSelectUser(emp)}
+                                                            className="text-slate-400 hover:text-blue-600 transition-colors"
+                                                            title="Takvimi Aç"
+                                                        >
+                                                            <CalendarIcon size={18} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
                                             );
                                         })}
                                     </tbody>
