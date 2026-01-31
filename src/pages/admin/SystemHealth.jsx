@@ -74,7 +74,6 @@ export default function SystemHealth() {
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
-                        { id: 'employee_dump', name: 'Personel Listesi (Ham Log)', icon: CommandLineIcon },
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
                     ].map((tab) => (
@@ -103,122 +102,12 @@ export default function SystemHealth() {
                 {activeTab === 'test_suite' && <TestSuiteTab />}
                 {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
-                {/* NEW: Employee Dump Tab */}
-                {activeTab === 'employee_dump' && <EmployeeDumpTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'system_reset' && <SystemResetTab />}
             </div>
 
-        </div>
-    );
-}
-
-function EmployeeDumpTab() {
-    const [employees, setEmployees] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [filter, setFilter] = useState('');
-
-    const fetchEmployees = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/system/health-check/dump_all_employees/');
-            setEmployees(res.data.data);
-        } catch (e) {
-            alert('Hata: ' + e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const filtered = employees.filter(e =>
-        e.full_name.toLowerCase().includes(filter.toLowerCase()) ||
-        e.employee_code.includes(filter) ||
-        e.card_uid.toLowerCase().includes(filter.toLowerCase())
-    );
-
-    return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <ClipboardDocumentCheckIcon className="w-6 h-6 text-indigo-600" />
-                        Tüm Personel Dökümü
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Veritabanındaki tüm personel kayıtlarını ham veri olarak listeler. Debug amaçlıdır.
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        placeholder="Ara..."
-                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                    />
-                    <button
-                        onClick={fetchEmployees}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
-                    >
-                        <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        Verileri Getir
-                    </button>
-                </div>
-            </div>
-
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto">
-                    <table className="w-full text-left text-xs">
-                        <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200 sticky top-0 z-10">
-                            <tr>
-                                <th className="px-4 py-2">ID</th>
-                                <th className="px-4 py-2">Sicil No (Code)</th>
-                                <th className="px-4 py-2">Kart ID (UID)</th>
-                                <th className="px-4 py-2">Ad Soyad</th>
-                                <th className="px-4 py-2">Departman</th>
-                                <th className="px-4 py-2">Pozisyon</th>
-                                <th className="px-4 py-2">Fonksiyonel Birim</th>
-                                <th className="px-4 py-2">Email / User</th>
-                                <th className="px-4 py-2">Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {loading && (
-                                <tr><td colSpan="9" className="p-8 text-center text-gray-400">Yükleniyor...</td></tr>
-                            )}
-                            {!loading && employees.length === 0 && (
-                                <tr><td colSpan="9" className="p-8 text-center text-gray-400">Veri yok veya henüz getirilmedi.</td></tr>
-                            )}
-                            {filtered.map(emp => (
-                                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-2 font-mono text-gray-400">{emp.id}</td>
-                                    <td className="px-4 py-2 font-mono font-bold text-indigo-600 bg-indigo-50/50">{emp.employee_code}</td>
-                                    <td className="px-4 py-2 font-mono text-amber-700 bg-amber-50/50">{emp.card_uid}</td>
-                                    <td className="px-4 py-2 font-bold text-gray-800">{emp.full_name}</td>
-                                    <td className="px-4 py-2 text-gray-600">{emp.department}</td>
-                                    <td className="px-4 py-2 text-gray-600">{emp.job_position}</td>
-                                    <td className="px-4 py-2 text-gray-500">{emp.functional_unit}</td>
-                                    <td className="px-4 py-2">
-                                        <div className="text-gray-900">{emp.email}</div>
-                                        <div className="text-[10px] text-gray-400">User: {emp.user_username}</div>
-                                    </td>
-                                    <td className="px-4 py-2">
-                                        {emp.is_active ?
-                                            <span className="text-green-600 font-bold text-[10px] bg-green-50 px-1 py-0.5 rounded border border-green-100">AKTİF</span> :
-                                            <span className="text-gray-400 font-bold text-[10px] bg-gray-100 px-1 py-0.5 rounded border border-gray-200">PASİF</span>
-                                        }
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-400 text-right">
-                Toplam {filtered.length} kayıt listelendi.
-            </div>
         </div>
     );
 }
