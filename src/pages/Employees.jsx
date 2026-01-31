@@ -69,7 +69,6 @@ const INITIAL_FORM_STATE = {
     completed_annual_leave_total: 0,
     completed_annual_leave_this_year: 0,
     annual_leave_advance_limit: 0,
-    annual_leave_advance_limit: 0,
     annual_leave_accrual_rate: 14,
     leave_entitlements: [] // [NEW] Granular History
 };

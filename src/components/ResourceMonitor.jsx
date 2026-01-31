@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-ServerStackIcon,
+import {
+    ServerStackIcon,
     CpuChipIcon,
     ArrowPathIcon // Added
 } from '@heroicons/react/24/outline';
