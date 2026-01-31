@@ -173,6 +173,12 @@ export default function DataManagement() {
                             >
                                 CSV Export
                             </button>
+                            <button
+                                onClick={() => handleExport('sql')}
+                                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+                            >
+                                SQL Export (Tam Veri)
+                            </button>
                         </div>
                     </div>
 
