@@ -69,7 +69,9 @@ const INITIAL_FORM_STATE = {
     completed_annual_leave_total: 0,
     completed_annual_leave_this_year: 0,
     annual_leave_advance_limit: 0,
-    annual_leave_accrual_rate: 14
+    annual_leave_advance_limit: 0,
+    annual_leave_accrual_rate: 14,
+    leave_entitlements: [] // [NEW] Granular History
 };
 
 // ...
@@ -594,82 +596,158 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     );
 };
 
-const StepLeave = ({ formData, handleChange }) => (
-    <div className="animate-fade-in-up">
-        <div className="mb-6 pb-4 border-b border-slate-100">
-            <h3 className="text-xl font-bold text-slate-800">İzin Yönetimi</h3>
-            <p className="text-slate-500 text-sm">Yıllık izin bakiyeleri ve hak ediş ayarları.</p>
-        </div>
+const StepLeave = ({ formData, handleChange }) => {
 
-        <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <Briefcase size={20} />
+    // Helper to calculate total from grid
+    const calculatedTotal = (formData.leave_entitlements || []).reduce((sum, item) => sum + (parseFloat(item.days_entitled) - (item.days_used || 0)), 0);
+
+    const addYearRow = () => {
+        const currentYears = (formData.leave_entitlements || []).map(x => x.year);
+        const nextYear = currentYears.length > 0 ? Math.max(...currentYears) + 1 : new Date().getFullYear();
+
+        const newRow = {
+            year: nextYear,
+            days_entitled: 14,
+            days_used: 0,
+            is_transferred: false
+        };
+        handleChange('leave_entitlements', [...(formData.leave_entitlements || []), newRow]);
+    };
+
+    const updateRow = (index, field, value) => {
+        const newRows = [...(formData.leave_entitlements || [])];
+        newRows[index] = { ...newRows[index], [field]: value };
+        handleChange('leave_entitlements', newRows);
+    };
+
+    const removeRow = (index) => {
+        const newRows = (formData.leave_entitlements || []).filter((_, i) => i !== index);
+        handleChange('leave_entitlements', newRows);
+    };
+
+    return (
+        <div className="animate-fade-in-up">
+            <div className="mb-6 pb-4 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800">İzin Yönetimi</h3>
+                <p className="text-slate-500 text-sm">Yıllık izin bakiyeleri ve hak ediş ayarları.</p>
+            </div>
+
+            <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl mb-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                        <Briefcase size={20} />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-emerald-900">Özet Durum</h4>
+                        <p className="text-xs text-emerald-700">Aşağıdaki tabloya göre hesaplanan toplamlar.</p>
+                    </div>
                 </div>
-                <div>
-                    <h4 className="font-bold text-emerald-900">Yıllık İzin Konfigürasyonu</h4>
-                    <p className="text-xs text-emerald-700">Personelin izin haklarını ve geçmiş kullanımlarını buradan yönetebilirsiniz.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+                        <div className="text-xs text-emerald-600 font-bold uppercase">Hesaplanan Bakiye</div>
+                        <div className="text-2xl font-bold text-slate-800 mt-1">{calculatedTotal} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+                        <div className="text-xs text-emerald-600 font-bold uppercase">Kullanılan (Bu Yıl)</div>
+                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.completed_annual_leave_this_year} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+                        <div className="text-xs text-emerald-600 font-bold uppercase">Avans Limiti</div>
+                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_advance_limit} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+                        <div className="text-xs text-emerald-600 font-bold uppercase">Yıllık Hakediş</div>
+                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_accrual_rate} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <InputField
+                        type="date"
+                        label="İşe Giriş Tarihi (Hak Ediş Bazı)"
+                        value={formData.hired_date}
+                        onChange={e => handleChange('hired_date', e.target.value)}
+                        className="bg-white border-blue-200"
+                    />
+                    <InputField
+                        type="number"
+                        label="Yıllık Hak Ediş (Varsayılan)"
+                        value={formData.annual_leave_accrual_rate}
+                        onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
+                        className="bg-white"
+                    />
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputField
-                    type="number"
-                    label="Güncel Bakiye (Gün)"
-                    value={formData.annual_leave_balance}
-                    onChange={e => handleChange('annual_leave_balance', e.target.value)}
-                    placeholder="0"
-                    className="bg-white font-bold text-slate-700"
-                    helpText="Şu an kullanılabilir bakiye (Devreden + Hak Edilen - Kullanılan)."
-                />
-                <InputField
-                    type="date"
-                    label="İşe Giriş Tarihi (Hak Ediş Bazı)"
-                    value={formData.hired_date}
-                    onChange={e => handleChange('hired_date', e.target.value)}
-                    className="bg-white border-blue-200"
-                    helpText="Yıllık izin hak ediş hesaplaması bu tarih baz alınarak yapılır."
-                />
-                <InputField
-                    type="number"
-                    label="Yıllık Hak Edilen İzin Miktarı"
-                    value={formData.annual_leave_accrual_rate}
-                    onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
-                    placeholder="14"
-                    className="bg-white"
-                    helpText="Her yıl dönümünde eklenecek gün sayısı (Varsayılan: 14)"
-                />
-                <InputField
-                    type="number"
-                    label="Kullanılan (Tüm Zamanlar)"
-                    value={formData.completed_annual_leave_total}
-                    onChange={e => handleChange('completed_annual_leave_total', e.target.value)}
-                    placeholder="0"
-                    className="bg-white"
-                    helpText="İşe girişten bugüne kullanılan toplam izin."
-                />
-                <InputField
-                    type="number"
-                    label="Kullanılan (Bu Yıl)"
-                    value={formData.completed_annual_leave_this_year}
-                    onChange={e => handleChange('completed_annual_leave_this_year', e.target.value)}
-                    placeholder="0"
-                    className="bg-white"
-                    helpText="Sadece bu takvim yılında kullanılan izin."
-                />
-                <InputField
-                    type="number"
-                    label="Avans Limiti (Gelecek Haktan)"
-                    value={formData.annual_leave_advance_limit}
-                    onChange={e => handleChange('annual_leave_advance_limit', e.target.value)}
-                    placeholder="0"
-                    className="bg-white"
-                    helpText="Gelecek yılın hakkından ne kadar kullanılabileceği (Kullanılırsa gelecek haktan düşer)."
-                />
+            {/* Granular History Editor */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                    <div>
+                        <h5 className="font-bold text-slate-700 text-sm flex items-center gap-2"><CalendarRange size={16} /> Yıllık İzin Geçmişi & Hak Edişler</h5>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Geçmiş yıllardan devreden veya bu yıl hak edilen izinleri yıl bazında giriniz.</p>
+                    </div>
+                    <button type="button" onClick={addYearRow} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-blue-200 shadow-md transition-all font-bold">+ Yıl Ekle</button>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50/50 text-slate-500 font-bold border-b border-slate-100 text-xs uppercase">
+                            <tr>
+                                <th className="px-4 py-3 w-24">Yıl</th>
+                                <th className="px-4 py-3 w-32">Hak Edilen</th>
+                                <th className="px-4 py-3 w-32">Kullanılan</th>
+                                <th className="px-4 py-3 w-32">Kalan</th>
+                                <th className="px-4 py-3">Not / Durum</th>
+                                <th className="px-4 py-3 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {(formData.leave_entitlements || []).length === 0 && (
+                                <tr><td colSpan="6" className="p-4 text-center text-slate-400 italic text-xs">Henüz veri girişi yapılmamış. Yeni yıl ekleyerek başlayın.</td></tr>
+                            )}
+                            {(formData.leave_entitlements || []).sort((a, b) => a.year - b.year).map((ent, idx) => {
+                                const remaining = (parseFloat(ent.days_entitled) || 0) - (parseFloat(ent.days_used) || 0);
+                                return (
+                                    <tr key={idx} className="group hover:bg-blue-50/20">
+                                        <td className="px-4 py-2">
+                                            <input type="number" value={ent.year} onChange={e => updateRow(idx, 'year', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none font-mono text-center font-bold text-slate-700" />
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            <input type="number" value={ent.days_entitled} onChange={e => updateRow(idx, 'days_entitled', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none text-center font-bold text-emerald-600" />
+                                        </td>
+                                        <td className="px-4 py-2 text-center text-slate-500 font-mono text-xs">
+                                            {ent.days_used}
+                                        </td>
+                                        <td className="px-4 py-2 text-center">
+                                            <span className={`font-bold px-2 py-0.5 rounded ${remaining > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                                                {remaining}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" checked={ent.is_transferred} onChange={e => updateRow(idx, 'is_transferred', e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+                                                <span className="text-xs text-slate-500">Devir</span>
+                                            </label>
+                                        </td>
+                                        <td className="px-4 py-2 text-right">
+                                            <button type="button" onClick={() => removeRow(idx)} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"><Trash2 size={16} /></button>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+                {/* ReadOnly Total */}
+                <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 text-right text-sm">
+                    <span className="text-slate-500 mr-2">Toplam Kalan İzin Hakkı:</span>
+                    <span className="font-bold text-slate-800 text-lg">{calculatedTotal} Gün</span>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const PERMISSION_CATEGORIES = [
     {
@@ -1130,6 +1208,7 @@ const Employees = () => {
                 completed_annual_leave_this_year: data.completed_annual_leave_this_year || 0,
                 annual_leave_advance_limit: data.annual_leave_advance_limit || 0,
                 annual_leave_accrual_rate: data.annual_leave_accrual_rate || 14,
+                leave_entitlements: data.leave_entitlements || [], // [NEW] Populate from backend
 
                 // Calendar & Assignments
                 work_schedule: data.work_schedule?.id || '',
@@ -1217,7 +1296,16 @@ const Employees = () => {
             };
 
             if (viewMode === 'create') {
-                await api.post('/employees/', payload);
+                const res = await api.post('/employees/', payload);
+                const newId = res.data.id;
+
+                // [NEW] Update Entitlements for new employee
+                if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
+                    await api.post(`/employees/${newId}/update_entitlements/`, {
+                        entitlements: payload.leave_entitlements
+                    });
+                }
+
                 alert("Personel ve Kullanıcı Hesabı başarıyla oluşturuldu.");
             } else if (viewMode === 'edit') {
                 // Update
@@ -1226,6 +1314,19 @@ const Employees = () => {
                 if (!payload.password) delete payload.password;
 
                 await api.patch(`/employees/${payload.id}/`, payload);
+
+                // [NEW] Update Entitlements if changed
+                if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
+                    try {
+                        await api.post(`/employees/${payload.id}/update_entitlements/`, {
+                            entitlements: payload.leave_entitlements
+                        });
+                    } catch (entError) {
+                        console.error("Entitlement save error", entError);
+                        alert("Personel güncellendi ancak yıllık izin detayları kaydedilirken hata oluştu.");
+                    }
+                }
+
                 alert("Personel bilgileri güncellendi.");
             }
 
