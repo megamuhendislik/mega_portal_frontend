@@ -16,8 +16,11 @@ import {
     TrashIcon,
     KeyIcon,
     SparklesIcon,
-    ClipboardDocumentCheckIcon
+    ClipboardDocumentCheckIcon,
+    ChartBarIcon // Added for Resource Monitor
 } from '@heroicons/react/24/outline';
+
+import ResourceMonitor from '../../components/ResourceMonitor'; // Import Component
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -74,6 +77,7 @@ export default function SystemHealth() {
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
+                        { id: 'resources', name: 'Kaynak Kullanımı', icon: ChartBarIcon }, // New Tab
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
                     ].map((tab) => (
@@ -104,6 +108,7 @@ export default function SystemHealth() {
                 {activeTab === 'security' && <SecurityTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
+                {activeTab === 'resources' && <ResourceMonitor />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'system_reset' && <SystemResetTab />}
             </div>
