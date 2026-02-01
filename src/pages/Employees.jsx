@@ -225,7 +225,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                                 <option value="">Bir Yönetici Seçiniz (Opsiyonel / En Üst Düzey)...</option>
                                 {potentialManagers.map(mgr => (
                                     <option key={mgr.id} value={mgr.id}>
-                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'} ({mgr.department?.name || '-'})
+                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position_name || 'Pozisyonsuz'} ({mgr.department_name || '-'})
                                     </option>
                                 ))}
                             </>
@@ -417,7 +417,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                             >
                                 {potentialManagers.map(mgr => ( // Re-using potentialManagers list as it contains employees
                                     <option key={mgr.id} value={mgr.id}>
-                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position?.name || 'Pozisyonsuz'}
+                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position_name || 'Pozisyonsuz'}
                                     </option>
                                 ))}
                             </select>
