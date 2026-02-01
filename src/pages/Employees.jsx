@@ -757,14 +757,14 @@ const PERMISSION_CATEGORIES = [
         label: 'Menü & Sayfa Erişimi',
         icon: FileText,
         color: 'text-emerald-500',
-        filter: (p) => p.category === 'PAGE'
+        filter: (p) => p.category === 'PAGE' || p.category === 'MENU'
     },
     {
         id: 'requests',
         label: 'Onay ve İşlemler', // Renamed from Talep & Mesai
         icon: CalendarRange,
         color: 'text-purple-500',
-        filter: (p) => p.category === 'APPROVAL' || p.category === 'ACTION'
+        filter: (p) => p.category === 'APPROVAL' || p.category === 'ACTION' || p.category === 'REQUEST' || p.category === 'FEATURE' // Comprehensive fallback
     },
     {
         id: 'system',
