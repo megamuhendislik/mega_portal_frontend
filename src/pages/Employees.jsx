@@ -1519,7 +1519,7 @@ const Employees = () => {
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                                                 <Briefcase size={14} className="text-slate-400" />
-                                                                {emp.job_position?.name || '-'}
+                                                                {emp.job_position_name || '-'}
                                                             </div>
                                                             <div className="flex items-center gap-2 text-xs text-slate-500">
                                                                 <div className="w-3.5 flex justify-center text-slate-300">@</div>
