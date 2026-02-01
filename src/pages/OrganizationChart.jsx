@@ -808,18 +808,19 @@ const OrganizationChart = () => {
             <style>{`
     /* Tree CSS - Robust Flexbox Implementation */
     .tree ul {
-        padding-top: 20px;
+        padding-top: 40px; /* Increased vertical spacing */
         position: relative;
         transition: all 0.5s;
         display: flex;
         justify-content: center;
+        gap: 40px; /* IMPORTANT: Add gap between sibling branches */
     }
 
     .tree li {
         text-align: center;
         list-style-type: none;
         position: relative;
-        padding: 20px 5px 0 5px;
+        padding: 40px 10px 0 10px; /* Increased padding */
         transition: all 0.5s;
         display: flex;
         flex-direction: column;
@@ -832,9 +833,9 @@ const OrganizationChart = () => {
         position: absolute;
         top: 0;
         right: 50%;
-        border-top: 2px solid #cbd5e1; /* Thicker, lighter line */
-        width: 50%;
-        height: 20px;
+        border-top: 2px solid #cbd5e1;
+        width: 55%; /* Slightly wider to bridge gaps if needed, but 50% usually fine with margin logic */
+        height: 40px; /* Match padding-top */
         z-index: -1;
     }
 
@@ -854,22 +855,27 @@ const OrganizationChart = () => {
         padding-top: 0;
     }
 
-    /* First Child: Remove left connector */
+    /* First Child: Remove left connector logic is TRICKY with gap */
+    /* With gap, the lines might break if we just use width 50%. */
+    /* Alternative approach: Use Pseudoelements on the PARENT UL? No, classic nested set. */
+    
+    /* Adjusted Logic for Gap Support: */
+    /* Instead of width 50%, we might need to rely on the fact that ::before/::after are absolute to the LI */
+    /* If we have gap, the line needs to extend? No, connecting lines are purely internal to the LI space towards the parent. */
+    /* The Horizontal line connects sibling centers effectively. */
+
     .tree li:first-child::before {
         border: 0 none;
     }
 
-    /* First Child: Add curve to right connector */
     .tree li:first-child::after {
         border-radius: 5px 0 0 0;
     }
 
-    /* Last Child: Remove right connector */
     .tree li:last-child::after {
         border: 0 none;
     }
 
-    /* Last Child: Add curve to left connector */
     .tree li:last-child::before {
         border-right: 2px solid #cbd5e1;
         border-radius: 0 5px 0 0;
@@ -883,8 +889,8 @@ const OrganizationChart = () => {
         left: 50%;
         border-left: 2px solid #cbd5e1;
         width: 0;
-        height: 20px;
-        transform: translateX(-50%); /* Perfectly center vertical line */
+        height: 40px; /* Match new spacing */
+        transform: translateX(-50%);
         z-index: -1;
     }
 `}</style>
