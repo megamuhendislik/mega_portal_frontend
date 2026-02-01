@@ -374,7 +374,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
         if (t.includes('mühendis') || t.includes('engineer') || t.includes('mim')) return 'Mühendislik Grubu';
 
         // Technicians
-        if (t.includes('tekniker') || t.includes('teknisyen')) return 'Teknik Ekip';
+        if (t.includes('tekniker') || t.includes('teknisyen') || t.includes('ressam')) return 'Teknik Ekip';
 
         // Design
         if (t.includes('tasarım') || t.includes('design') || t.includes('grafik') || t.includes('art')) return 'Tasarım Ekibi';
