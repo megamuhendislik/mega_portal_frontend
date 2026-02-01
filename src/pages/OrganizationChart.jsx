@@ -813,18 +813,24 @@ const OrganizationChart = () => {
         transition: all 0.5s;
         display: flex;
         justify-content: center;
-        gap: 40px; /* IMPORTANT: Add gap between sibling branches */
+        gap: 60px; /* IMPORTANT: Increased gap to prevent overlap */
+        /* Ensure the container can grow wide enough */
+        width: max-content;
+        min-width: 100%;
     }
 
     .tree li {
         text-align: center;
         list-style-type: none;
         position: relative;
-        padding: 40px 10px 0 10px; /* Increased padding */
+        padding: 40px 10px 0 10px;
         transition: all 0.5s;
         display: flex;
         flex-direction: column;
         align-items: center;
+        
+        /* CRITICAL: Prevent shrinking */
+        flex-shrink: 0;
     }
 
     /* Connectors */
