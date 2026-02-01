@@ -76,6 +76,9 @@ export const AuthProvider = ({ children }) => {
 
         if (!user.all_permissions) return false;
 
+        // System Admin Bypass
+        if (user.all_permissions.includes('SYSTEM_FULL_ACCESS')) return true;
+
         // Direct permission check - no mapping (new minimal permission system)
         return user.all_permissions.includes(permissionCode);
     };
