@@ -379,46 +379,12 @@ const OrganizationChart = () => {
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
     const containerRef = useRef(null);
 
-    useEffect(() => {
-        const fetchHierarchy = async () => {
-            try {
-                const response = await api.get('/departments/hierarchy/');
-                let data = response.data;
-                console.log('DEBUG: Organization Chart Data:', data);
-
-                // Filter Functional Groups
-                if (Array.isArray(data)) {
-                    data = data.filter(node =>
-                        node.is_chart_visible !== false && // Check explicit false
-                        !node.code.includes('ROOT_FUNC') &&
-                        !node.name.includes('Fonksiyonel')
-                    );
-                }
-
-                if (Array.isArray(data) && data.length > 1) {
-                    data = [{
-                        id: 'root-company',
-                        name: 'Mega Portal',
-                        code: 'COMPANY',
-                        employees: [],
-                        children: data
-                    }];
-                }
-                setTreeData(data);
-            } catch (err) {
-                console.error('Error fetching hierarchy:', err);
-                setError('Organizasyon şemasını görüntüleme yetkiniz yok.');
-            } finally {
-                setLoading(false);
-            }
-            fetchHierarchy();
-        }, []);
-
     const fetchHierarchy = async () => {
         setLoading(true);
         try {
             const response = await api.get('/departments/hierarchy/');
             let data = response.data;
+            // Filter Functional Groups
             if (Array.isArray(data)) {
                 data = data.filter(node =>
                     node.is_chart_visible !== false &&
@@ -426,6 +392,7 @@ const OrganizationChart = () => {
                     !node.name.includes('Fonksiyonel')
                 );
             }
+
             if (Array.isArray(data) && data.length > 1) {
                 data = [{ id: 'root-company', name: 'Mega Portal', code: 'COMPANY', employees: [], children: data }];
             }
@@ -437,6 +404,10 @@ const OrganizationChart = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchHierarchy();
+    }, []);
 
     const handleSaveDepartment = async (data) => {
         try {
