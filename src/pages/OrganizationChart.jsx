@@ -840,7 +840,8 @@ const OrganizationChart = () => {
         top: 0;
         right: 50%;
         border-top: 2px solid #cbd5e1;
-        width: 55%; /* Slightly wider to bridge gaps if needed, but 50% usually fine with margin logic */
+        /* CRITICAL FIX: Bridge the 60px gap. 50% + half-gap (30px) */
+        width: calc(50% + 30px);
         height: 40px; /* Match padding-top */
         z-index: -1;
     }
