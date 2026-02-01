@@ -206,46 +206,53 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 };
 
 // Horizontal Employee Card (Compact)
-const EmployeeNode = ({ emp, onClick, showTags }) => (
-    <div
-        className={`
-            relative z-10 p-1.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
-            bg-white border-blue-200 text-slate-800
-            flex flex-row items-center gap-2
-            w-[170px] h-[48px] group /* Fixed compact width/height */
-        `}
-        onClick={(e) => {
-            e.stopPropagation();
-            if (onClick) onClick(emp);
-        }}
-    >
-        {/* Avatar Left */}
-        <div className={`
-            w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm
-            ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-blue-600 text-white'}
-        `}>
-            {emp.name.charAt(0)}
-        </div>
+// Horizontal Employee Card (Compact)
+const EmployeeNode = ({ emp, onClick, showTags }) => {
+    const category = getRoleCategory(emp.title);
+    const colorKey = getColorForCategory(category);
+    const theme = getThemeClasses(colorKey);
 
-        {/* Info Right */}
-        <div className="flex flex-col min-w-0 flex-1">
-            <h4 className="font-bold text-[10px] leading-tight truncate text-slate-900">
-                {emp.name}
-            </h4>
-            {(!emp.title || emp.title === 'Temp') ? null : (
-                <p className="text-[9px] font-medium text-slate-500 truncate mt-0.5">
-                    {emp.title}
-                </p>
+    return (
+        <div
+            className={`
+                relative z-10 p-1.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
+                bg-white ${theme.border} ${theme.text}
+                flex flex-row items-center gap-2
+                w-[170px] h-[48px] group /* Fixed compact width/height */
+            `}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (onClick) onClick(emp);
+            }}
+        >
+            {/* Avatar Left */}
+            <div className={`
+                w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm
+                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : `${theme.badge} text-white`}
+            `}>
+                {emp.name.charAt(0)}
+            </div>
+
+            {/* Info Right */}
+            <div className="flex flex-col min-w-0 flex-1">
+                <h4 className="font-bold text-[10px] leading-tight truncate text-slate-900">
+                    {emp.name}
+                </h4>
+                {(!emp.title || emp.title === 'Temp') ? null : (
+                    <p className="text-[9px] font-medium opacity-80 truncate mt-0.5">
+                        {emp.title}
+                    </p>
+                )}
+            </div>
+
+            {emp.is_secondary && (
+                <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
+                    <Star size={10} className="text-amber-500 fill-amber-500" />
+                </div>
             )}
         </div>
-
-        {emp.is_secondary && (
-            <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
-                <Star size={10} className="text-amber-500 fill-amber-500" />
-            </div>
-        )}
-    </div>
-);
+    );
+};
 
 // White Department Card
 const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete }) => (
@@ -352,7 +359,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
     // Combine Sub-Departments AND Employees into branching children
     let branchingChildren = [];
 
-    // Grouping Helpers - CATEGORY BASED
+    // Grouping Helpers - CATEGORY BASED (Moved to Top Scope)
     const getRoleCategory = (title) => {
         if (!title) return 'Diğer';
         const t = title.toLowerCase();
@@ -390,6 +397,21 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
         if (category === 'Satış & Pazarlama') return 'emerald';
         if (category === 'Finans & Muhasebe') return 'amber';
         return 'slate';
+    };
+
+    // Color Theme Helper
+    const getThemeClasses = (colorName) => {
+        const themes = {
+            'blue': { border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-600' },
+            'emerald': { border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-600' },
+            'indigo': { border: 'border-indigo-200', text: 'text-indigo-800', badge: 'bg-indigo-600' },
+            'amber': { border: 'border-amber-200', text: 'text-amber-800', badge: 'bg-amber-600' },
+            'rose': { border: 'border-rose-200', text: 'text-rose-800', badge: 'bg-rose-600' },
+            'cyan': { border: 'border-cyan-200', text: 'text-cyan-800', badge: 'bg-cyan-600' },
+            'violet': { border: 'border-violet-200', text: 'text-violet-800', badge: 'bg-violet-600' },
+            'slate': { border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-slate-600' },
+        };
+        return themes[colorName] || themes['slate'];
     };
 
     // 4. Reusable Grouping Function
@@ -553,6 +575,64 @@ const OrganizationChart = () => {
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
     const containerRef = useRef(null);
 
+    // 5. Hierarchy Flattening for System Admins
+    // This function merges a Manager and their Subordinate Managers into a single "Group" node
+    const flattenSystemAdmins = (nodes) => {
+        if (!nodes) return [];
+
+        return nodes.map(node => {
+            // Check if this node is System Admin
+            const nodeCategory = getRoleCategory(node.title);
+
+            // Should we flatten? Only for 'Sistem Yönetimi' and if it has children of same category
+            if (nodeCategory === 'Sistem Yönetimi' && node.children && node.children.length > 0) {
+                // Find children that are ALSO System Admins
+                const adminChildren = node.children.filter(c => getRoleCategory(c.title) === 'Sistem Yönetimi' && !c.code && !c.employees); // Ensure checks for 'employee' type nodes
+                const otherChildren = node.children.filter(c => getRoleCategory(c.title) !== 'Sistem Yönetimi' || c.code || c.employees);
+
+                if (adminChildren.length > 0) {
+                    // Collect all Flattened Admins
+                    // Parent + Children
+                    const groupedEmployees = [
+                        { ...node, children: [] }, // Scalped Parent
+                        ...adminChildren.map(c => ({ ...c, children: [] })) // Scalped Children
+                    ];
+
+                    // Collect all 'Grandchildren' and 'Other Children' to be the new children of this group
+                    // 1. Children of the Parent (that weren't admins) -> 'otherChildren'
+                    // 2. Children of the Admin-Children (orphaned by grouping) -> we need to rescue them
+                    let adoptedChildren = [...otherChildren];
+                    adminChildren.forEach(adminChild => {
+                        if (adminChild.children) {
+                            adoptedChildren.push(...adminChild.children);
+                        }
+                    });
+
+                    // Recursive call for adopted children (in case they need flattening too)
+                    adoptedChildren = flattenSystemAdmins(adoptedChildren);
+
+                    // Create the Synthetic Group Node
+                    return {
+                        id: `merged-admins-${node.id}`,
+                        type: 'group',
+                        title: 'Sistem Yönetimi',
+                        color: 'violet',
+                        employees: groupedEmployees,
+                        children: adoptedChildren, // All branches now hang off this group
+                        // Mark as 'merged' to distinguishing specific behavior if needed
+                        _isMerged: true
+                    };
+                }
+            }
+
+            // Standard recursion if no merging happened
+            if (node.children) {
+                return { ...node, children: flattenSystemAdmins(node.children) };
+            }
+            return node;
+        });
+    };
+
     const fetchHierarchy = async () => {
         setLoading(true);
         try {
@@ -570,7 +650,34 @@ const OrganizationChart = () => {
             if (Array.isArray(data) && data.length > 1) {
                 data = [{ id: 'root-company', name: 'Mega Portal', code: 'COMPANY', employees: [], children: data }];
             }
-            setTreeData(data);
+
+            // APPLY FLATTENING
+            // We need to apply it to the `employees` of the root department essentially, or traverse the whole tree.
+            // Since data is usually [RootDept], we traverse it.
+
+            // Helper to traverse Departments and apply flattening to their 'employees' lists
+            // Because our logic above works on 'nodes' (employees), but the tree structure is Dept -> Employees
+            const applyFlatteningToTree = (deptNodes) => {
+                return deptNodes.map(d => {
+                    let newApp = { ...d };
+
+                    // 1. Flatten direct employees hierarchy
+                    if (newApp.employees) {
+                        newApp.employees = flattenSystemAdmins(newApp.employees);
+                    }
+
+                    // 2. Recurse for sub-departments
+                    if (newApp.children) {
+                        newApp.children = applyFlatteningToTree(newApp.children);
+                    }
+
+                    return newApp;
+                });
+            };
+
+            const processedData = applyFlatteningToTree(data);
+            setTreeData(processedData);
+
         } catch (err) {
             console.error('Error fetching hierarchy:', err);
             setError('Organizasyon şemasını görüntüleme yetkiniz yok.');
