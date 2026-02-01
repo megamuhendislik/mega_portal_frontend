@@ -102,7 +102,8 @@ function App() {
 
             {/* Meal Orders - Requires PAGE_MEAL_ORDERS */}
             <Route path="meal-orders" element={<ProtectedRoute requiredPermission="PAGE_MEAL_ORDERS"><MealOrders /></ProtectedRoute>} />
-            {/* <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="admin.full_access"><FiscalCalendarSettings /></ProtectedRoute>} /> */}
+
+
 
             <Route path="system-data-management" element={<ProtectedRoute requiredPermission="PAGE_DATA_MANAGEMENT"><DataManagement /></ProtectedRoute>} />
 

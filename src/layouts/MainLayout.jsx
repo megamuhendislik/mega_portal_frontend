@@ -115,7 +115,8 @@ const MainLayout = () => {
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'PAGE_WORK_SCHEDULES' },
 
-        // { path: '/admin/fiscal-calendar', label: 'Mali Takvim', icon: CalendarRange, permission: 'admin.full_access' }, // Merged into Work Schedules
+
+
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
         { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: null },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS' },

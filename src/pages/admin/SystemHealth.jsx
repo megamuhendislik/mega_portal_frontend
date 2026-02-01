@@ -614,7 +614,7 @@ function PermissionHealthView({ report, loading, runScan }) {
                             <CheckCircleIcon className="w-6 h-6" />
                             <div>
                                 <div className="font-bold">Doğrulanmış {report.menu_count} Adet Yetki Mevcut</div>
-                                <div className="text-xs opacity-80">"MENU" kategorisinde kayıtlı.</div>
+                                <div className="text-xs opacity-80">"PAGE" ve diğer kategorilerde kayıtlı.</div>
                             </div>
                         </div>
                     ) : (
