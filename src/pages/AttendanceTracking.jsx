@@ -271,7 +271,7 @@ const AttendanceTracking = () => {
                             </div>
                         </div>
 
-                        {hasPermission('feature.shift_break_analysis.view') && (
+                        {hasPermission('FEATURE_BREAK_ANALYSIS') && (
                             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
                                 <div className="p-3 bg-fuchsia-100 text-fuchsia-600 rounded-lg">
                                     <Coffee size={24} />

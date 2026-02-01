@@ -69,12 +69,12 @@ function App() {
             <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="profile" element={<Profile />} />
 
-            {/* Employees - Requires page.employees.access */}
-            <Route path="employees" element={<ProtectedRoute requiredPermission="page.employees.access"><Employees /></ProtectedRoute>} />
-            <Route path="employees/:id" element={<ProtectedRoute requiredPermission="page.employees.access"><EmployeeDetail /></ProtectedRoute>} />
+            {/* Employees - Requires PAGE_EMPLOYEES */}
+            <Route path="employees" element={<ProtectedRoute requiredPermission="PAGE_EMPLOYEES"><Employees /></ProtectedRoute>} />
+            <Route path="employees/:id" element={<ProtectedRoute requiredPermission="PAGE_EMPLOYEES"><EmployeeDetail /></ProtectedRoute>} />
 
-            {/* Organization Chart - Requires page.organization.view */}
-            <Route path="organization-chart" element={<ProtectedRoute requiredPermission="page.organization.view"><OrganizationChart /></ProtectedRoute>} />
+            {/* Organization Chart - Requires PAGE_ORG_CHART */}
+            <Route path="organization-chart" element={<ProtectedRoute requiredPermission="PAGE_ORG_CHART"><OrganizationChart /></ProtectedRoute>} />
 
             {/* Attendance - No permission required (everyone can access) */}
             <Route path="attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
@@ -83,30 +83,30 @@ function App() {
             {/* Calendar - No permission required (everyone can access) */}
             <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
 
-            {/* Work Schedules - Requires page.work_calendar.access */}
-            <Route path="work-schedules" element={<ProtectedRoute requiredPermission="page.work_calendar.access"><WorkSchedules /></ProtectedRoute>} />
-            <Route path="public-holidays" element={<ProtectedRoute requiredPermission="page.work_calendar.access"><PublicHolidays /></ProtectedRoute>} />
+            {/* Work Schedules - Requires PAGE_WORK_SCHEDULES */}
+            <Route path="work-schedules" element={<ProtectedRoute requiredPermission="PAGE_WORK_SCHEDULES"><WorkSchedules /></ProtectedRoute>} />
+            <Route path="public-holidays" element={<ProtectedRoute requiredPermission="PAGE_WORK_SCHEDULES"><PublicHolidays /></ProtectedRoute>} />
 
             {/* Requests - No permission required (everyone can access) */}
             <Route path="requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
 
-            {/* Substitute Management - Managers with request management permissions */}
-            <Route path="substitute-management" element={<ProtectedRoute requiredPermission={['request.annual_leave.manage', 'request.overtime.manage', 'request.cardless_entry.manage']}><SubstituteManagement /></ProtectedRoute>} />
+            {/* Substitute Management - Free for everyone now */}
+            <Route path="substitute-management" element={<ProtectedRoute><SubstituteManagement /></ProtectedRoute>} />
 
-            {/* Reports - Requires page.reports.access */}
-            <Route path="reports" element={<ProtectedRoute requiredPermission="page.reports.access"><Reports /></ProtectedRoute>} />
+            {/* Reports - Requires PAGE_REPORTS */}
+            <Route path="reports" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Reports /></ProtectedRoute>} />
 
             {/* Admin Pages */}
-            <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="admin.full_access"><SystemHealth /></ProtectedRoute>} />
-            <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="admin.full_access"><ServiceControl /></ProtectedRoute>} />
+            <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="PAGE_SYSTEM_HEALTH"><SystemHealth /></ProtectedRoute>} />
+            <Route path="admin/service-control" element={<ProtectedRoute requiredPermission="PAGE_SYSTEM_HEALTH"><ServiceControl /></ProtectedRoute>} />
 
-            {/* Meal Orders - Requires page.meal_tracking.access */}
-            <Route path="meal-orders" element={<ProtectedRoute requiredPermission="page.meal_tracking.access"><MealOrders /></ProtectedRoute>} />
+            {/* Meal Orders - Requires PAGE_MEAL_ORDERS */}
+            <Route path="meal-orders" element={<ProtectedRoute requiredPermission="PAGE_MEAL_ORDERS"><MealOrders /></ProtectedRoute>} />
             {/* <Route path="admin/fiscal-calendar" element={<ProtectedRoute requiredPermission="admin.full_access"><FiscalCalendarSettings /></ProtectedRoute>} /> */}
 
-            <Route path="system-data-management" element={<ProtectedRoute requiredPermission="MENU_DATA_MANAGEMENT_VIEW"><DataManagement /></ProtectedRoute>} />
+            <Route path="system-data-management" element={<ProtectedRoute requiredPermission="PAGE_DATA_MANAGEMENT"><DataManagement /></ProtectedRoute>} />
 
-            <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="admin.full_access"><AttendanceDebugger /></ProtectedRoute>} />
+            <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="PAGE_DEBUG"><AttendanceDebugger /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>

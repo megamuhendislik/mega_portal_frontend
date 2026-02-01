@@ -275,8 +275,14 @@ export default function DataManagement() {
     const monthCols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     const monthNamesShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
-    if (!hasPermission('DATA_MANAGE_FULL') && !hasPermission('MENU_DATA_MANAGEMENT_VIEW')) {
-        return <div className="p-8 text-center text-gray-500">Yetkiniz yok.</div>;
+    // Permission Check
+    if (!hasPermission('PAGE_DATA_MANAGEMENT') && !hasPermission('SYSTEM_FULL_ACCESS')) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
+                <h2 className="text-xl font-bold text-red-500 mb-2">Erişim Reddedildi</h2>
+                <p className="text-slate-600">Bu sayfayı görüntülemek için yeterli yetkiniz bulunmamaktadır.</p>
+            </div>
+        );
     }
 
     return (

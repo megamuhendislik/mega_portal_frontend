@@ -843,7 +843,7 @@ const OrganizationChart = () => {
                         {showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}
                     </button>
 
-                    {hasPermission('HR_ORG_MANAGE') && (
+                    {hasPermission('ACTION_ORG_CHART_EDIT') && (
                         <button
                             onClick={() => setIsEditMode(!isEditMode)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap ${isEditMode ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
