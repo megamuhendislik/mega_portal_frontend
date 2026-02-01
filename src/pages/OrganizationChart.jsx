@@ -285,18 +285,148 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete }) => (
     </div>
 );
 
+// Stacked Group Node (New)
+const GroupNode = ({ group, colorClass, onClick, showTags }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    // Define Color Styles
+    const colors = {
+        'blue': 'bg-blue-50 border-blue-200 text-blue-900',
+        'emerald': 'bg-emerald-50 border-emerald-200 text-emerald-900',
+        'indigo': 'bg-indigo-50 border-indigo-200 text-indigo-900',
+        'amber': 'bg-amber-50 border-amber-200 text-amber-900',
+        'rose': 'bg-rose-50 border-rose-200 text-rose-900',
+        'cyan': 'bg-cyan-50 border-cyan-200 text-cyan-900',
+        'slate': 'bg-slate-50 border-slate-200 text-slate-900',
+    };
+
+    const theme = colors[colorClass] || colors['slate'];
+    const badgeTheme = theme.replace('bg-', 'bg-opacity-100 bg-').replace('text-', 'text-white bg-').replace('border-', 'border-transparent ');
+    // Simplified Badge Theme logic:
+    // Actually, let's just use hardcoded matching logic for badges based on group color
+
+    return (
+        <div className="flex flex-col items-center">
+            <div
+                className={`
+                    relative z-10 p-2 rounded-xl border-2 shadow-sm transition-all cursor-pointer
+                    ${theme} hover:shadow-md hover:scale-105 active:scale-95 group
+                    min-w-[200px] max-w-[240px]
+                `}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded(!expanded);
+                }}
+            >
+                {/* Stack Effect Background */}
+                <div className={`absolute -top-1.5 left-2 right-2 h-4 rounded-t-lg -z-10 border ${theme} opacity-60 scale-95 origin-bottom`}></div>
+                <div className={`absolute -top-3 left-4 right-4 h-4 rounded-t-lg -z-20 border ${theme} opacity-30 scale-90 origin-bottom`}></div>
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold uppercase opacity-70 tracking-tight">{group.title} Grubu</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-white/50 border border-black/5`}>
+                        {group.employees.length}
+                    </span>
+                </div>
+
+                {/* Example Avatars */}
+                <div className="flex items-center gap-1 overflow-hidden h-8 mb-1 px-1">
+                    {group.employees.slice(0, 5).map((e, idx) => (
+                        <div key={e.id} className="w-6 h-6 rounded-full bg-white border border-current flex items-center justify-center text-[10px] font-bold shadow-sm -ml-1 first:ml-0 relative z-0 hover:z-10 transition-all">
+                            {e.name.charAt(0)}
+                        </div>
+                    ))}
+                    {group.employees.length > 5 && (
+                        <div className="w-6 h-6 rounded-full bg-white/80 border border-current flex items-center justify-center text-[9px] font-bold -ml-1 z-0">
+                            +{group.employees.length - 5}
+                        </div>
+                    )}
+                </div>
+
+                <div className="text-center">
+                    <ChevronDown size={14} className={`mx-auto transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </div>
+            </div>
+
+            {/* EXPANDED CONTENT */}
+            {expanded && (
+                <div className="mt-4 animate-fade-in-down grid grid-cols-1 gap-2 p-3 bg-slate-50/80 rounded-2xl border border-slate-200 shadow-inner max-w-[400px]">
+                    {group.employees.map(emp => (
+                        <EmployeeNode key={emp.id} emp={emp} onClick={onClick} showTags={showTags} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete }) => {
-    // 1. Determine Type Dynamicallly (Fix for "Departments appearing as Employees")
+    // 1. Determine Type Dynamically
     const isDepartment = node.type === 'department' || node.code || node.employees;
 
-    // Combine Sub-Departments AND Employees into branching children (Tree Structure)
+    // Combine Sub-Departments AND Employees into branching children
     let branchingChildren = [];
 
+    // Grouping Helpers
+    const getColorForPosition = (title) => {
+        if (!title) return 'slate';
+        const t = title.toLowerCase();
+        if (t.includes('mühendis') || t.includes('engineer') || t.includes('mim')) return 'indigo';
+        if (t.includes('yazılım') || t.includes('teknoloj') || t.includes('developer')) return 'blue';
+        if (t.includes('tasarım') || t.includes('design')) return 'rose';
+        if (t.includes('satış') || t.includes('pazarlama') || t.includes('sales')) return 'emerald';
+        if (t.includes('muhasebe') || t.includes('finans')) return 'amber';
+        if (t.includes('tekniker')) return 'cyan';
+        return 'slate';
+    };
+
     if (isDepartment) {
-        // 1. Employees (Managers -> Subordinates Tree)
+        // 1. Employees (Analyze and GROUP adjacent roles)
         if (showAllEmployees && node.employees && node.employees.length > 0) {
-            const empNodes = node.employees.map(e => ({ ...e, type: 'employee' }));
-            branchingChildren.push(...empNodes);
+
+            // GROUPING LOGIC
+            const groups = {}; // { 'Hardware Engineer': [emp1, emp2], ... }
+            const resultList = [];
+
+            // PRE-SORT to ensure grouping works well (optional, but good)
+            const sortedEmps = [...node.employees].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+            // Analyze frequencies
+            const counts = {};
+            sortedEmps.forEach(e => {
+                const t = e.title || 'Diğer';
+                counts[t] = (counts[t] || 0) + 1;
+            });
+
+            const processedIds = new Set();
+
+            sortedEmps.forEach(emp => {
+                if (processedIds.has(emp.id)) return;
+
+                const title = emp.title || 'Diğer';
+
+                // Threshold: If specific title has >= 2 people, group them
+                if (counts[title] >= 2) {
+                    // Find all with this title
+                    const groupMembers = sortedEmps.filter(e => (e.title || 'Diğer') === title);
+                    groupMembers.forEach(m => processedIds.add(m.id));
+
+                    resultList.push({
+                        type: 'group',
+                        title: title,
+                        employees: groupMembers,
+                        id: `group-${title}-${node.id}`,
+                        color: getColorForPosition(title)
+                    });
+                } else {
+                    // Single person, treated as normal employee node
+                    processedIds.add(emp.id);
+                    resultList.push({ ...emp, type: 'employee' });
+                }
+            });
+
+            branchingChildren.push(...resultList);
         }
 
         // 2. Sub-Departments
@@ -305,11 +435,9 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
             branchingChildren.push(...deptNodes);
         }
     } else {
-        // Employee Node (Manager -> Subordinates OR Mixed Departments)
+        // Employee Node
         if (node.children && node.children.length > 0) {
             branchingChildren = node.children.map(child => {
-                // Heuristic: If child has 'employees' array or 'code', treat as Department
-                // Otherwise treat as Employee
                 const childIsDept = child.employees || child.code;
                 return {
                     ...child,
@@ -332,6 +460,13 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         onAddChild={onAddChild}
                         onEdit={onEdit}
                         onDelete={onDelete}
+                    />
+                ) : node.type === 'group' ? (
+                    <GroupNode
+                        group={node}
+                        colorClass={node.color}
+                        onClick={onEmployeeClick}
+                        showTags={showTags}
                     />
                 ) : (
                     <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} />
