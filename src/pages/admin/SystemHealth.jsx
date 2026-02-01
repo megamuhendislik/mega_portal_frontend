@@ -574,15 +574,24 @@ function PermissionHealthView({ report, loading, runScan }) {
                     <div className="border-t border-gray-100 pt-4">
                         <h4 className="text-xs font-bold text-gray-400 uppercase mb-3">Kategori Dağılımı</h4>
                         <div className="space-y-2">
-                            {report?.breakdown?.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm">
-                                    <span className="text-gray-600 flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${item.category === 'MENU' ? 'bg-green-500' : (item.category === 'OTHER' ? 'bg-red-500' : 'bg-blue-300')}`}></span>
-                                        {item.category || 'TANIMSIZ'}
-                                    </span>
-                                    <span className="font-mono font-bold text-gray-700">{item.count}</span>
-                                </div>
-                            ))}
+                            {report?.breakdown?.map((item, idx) => {
+                                let colorClass = 'bg-gray-300';
+                                if (item.category === 'MENU' || item.category === 'PAGE') colorClass = 'bg-blue-500';
+                                else if (item.category === 'ACTION') colorClass = 'bg-orange-400';
+                                else if (item.category === 'APPROVAL') colorClass = 'bg-purple-500';
+                                else if (item.category === 'SYSTEM') colorClass = 'bg-slate-700';
+                                else if (item.category === 'OTHER') colorClass = 'bg-red-500';
+
+                                return (
+                                    <div key={idx} className="flex justify-between text-sm">
+                                        <span className="text-gray-600 flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${colorClass}`}></span>
+                                            {item.category || 'TANIMSIZ'}
+                                        </span>
+                                        <span className="font-mono font-bold text-gray-700">{item.count}</span>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
 
