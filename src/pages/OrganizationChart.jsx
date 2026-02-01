@@ -5,6 +5,61 @@ import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
 
+// --- Helper Functions (Module Scope) ---
+
+const getRoleCategory = (title) => {
+    if (!title) return 'Diğer';
+    const t = title.toLowerCase();
+
+    // System / Admin
+    if (t.includes('sistem') || t.includes('admin') || t.toLowerCase() === 'yönetici') return 'Sistem Yönetimi';
+
+    // Software / IT
+    if (t.includes('yazılım') || t.includes('software') || t.includes('developer') || t.includes('temsilcisi') || t.includes('php') || t.includes('frontend') || t.includes('backend') || t.includes('full stack')) return 'Yazılım Ekibi';
+
+    // Engineering (General)
+    if (t.includes('mühendis') || t.includes('engineer') || t.includes('mim')) return 'Mühendislik Grubu';
+
+    // Technicians
+    if (t.includes('tekniker') || t.includes('teknisyen') || t.includes('ressam')) return 'Teknik Ekip';
+
+    // Design
+    if (t.includes('tasarım') || t.includes('design') || t.includes('grafik') || t.includes('art')) return 'Tasarım Ekibi';
+
+    // Sales/Marketing
+    if (t.includes('satış') || t.includes('pazarlama') || t.includes('sales') || t.includes('marketing')) return 'Satış & Pazarlama';
+
+    // Finance/Accounting
+    if (t.includes('muhasebe') || t.includes('finans') || t.includes('account') || t.includes('mali')) return 'Finans & Muhasebe';
+
+    return title; // Fallback to exact title if no category matches
+};
+
+const getColorForCategory = (category) => {
+    if (category === 'Sistem Yönetimi') return 'violet';
+    if (category === 'Yazılım Ekibi') return 'blue';
+    if (category === 'Mühendislik Grubu') return 'indigo';
+    if (category === 'Teknik Ekip') return 'cyan';
+    if (category === 'Tasarım Ekibi') return 'rose';
+    if (category === 'Satış & Pazarlama') return 'emerald';
+    if (category === 'Finans & Muhasebe') return 'amber';
+    return 'slate';
+};
+
+const getThemeClasses = (colorName) => {
+    const themes = {
+        'blue': { border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-600' },
+        'emerald': { border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-600' },
+        'indigo': { border: 'border-indigo-200', text: 'text-indigo-800', badge: 'bg-indigo-600' },
+        'amber': { border: 'border-amber-200', text: 'text-amber-800', badge: 'bg-amber-600' },
+        'rose': { border: 'border-rose-200', text: 'text-rose-800', badge: 'bg-rose-600' },
+        'cyan': { border: 'border-cyan-200', text: 'text-cyan-800', badge: 'bg-cyan-600' },
+        'violet': { border: 'border-violet-200', text: 'text-violet-800', badge: 'bg-violet-600' },
+        'slate': { border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-slate-600' },
+    };
+    return themes[colorName] || themes['slate'];
+};
+
 const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
     const [name, setName] = useState(mode === 'edit' ? node.name : '');
     const [code, setCode] = useState(mode === 'edit' ? node.code : '');
@@ -359,60 +414,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
     // Combine Sub-Departments AND Employees into branching children
     let branchingChildren = [];
 
-    // Grouping Helpers - CATEGORY BASED (Moved to Top Scope)
-    const getRoleCategory = (title) => {
-        if (!title) return 'Diğer';
-        const t = title.toLowerCase();
 
-        // System / Admin
-        if (t.includes('sistem') || t.includes('admin') || t.toLowerCase() === 'yönetici') return 'Sistem Yönetimi';
-
-        // Software / IT
-        if (t.includes('yazılım') || t.includes('software') || t.includes('developer') || t.includes('temsilcisi') || t.includes('php') || t.includes('frontend') || t.includes('backend') || t.includes('full stack')) return 'Yazılım Ekibi';
-
-        // Engineering (General)
-        if (t.includes('mühendis') || t.includes('engineer') || t.includes('mim')) return 'Mühendislik Grubu';
-
-        // Technicians
-        if (t.includes('tekniker') || t.includes('teknisyen') || t.includes('ressam')) return 'Teknik Ekip';
-
-        // Design
-        if (t.includes('tasarım') || t.includes('design') || t.includes('grafik') || t.includes('art')) return 'Tasarım Ekibi';
-
-        // Sales/Marketing
-        if (t.includes('satış') || t.includes('pazarlama') || t.includes('sales') || t.includes('marketing')) return 'Satış & Pazarlama';
-
-        // Finance/Accounting
-        if (t.includes('muhasebe') || t.includes('finans') || t.includes('account') || t.includes('mali')) return 'Finans & Muhasebe';
-
-        return title; // Fallback to exact title if no category matches
-    };
-
-    const getColorForCategory = (category) => {
-        if (category === 'Sistem Yönetimi') return 'violet';
-        if (category === 'Yazılım Ekibi') return 'blue';
-        if (category === 'Mühendislik Grubu') return 'indigo';
-        if (category === 'Teknik Ekip') return 'cyan';
-        if (category === 'Tasarım Ekibi') return 'rose';
-        if (category === 'Satış & Pazarlama') return 'emerald';
-        if (category === 'Finans & Muhasebe') return 'amber';
-        return 'slate';
-    };
-
-    // Color Theme Helper
-    const getThemeClasses = (colorName) => {
-        const themes = {
-            'blue': { border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-600' },
-            'emerald': { border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-600' },
-            'indigo': { border: 'border-indigo-200', text: 'text-indigo-800', badge: 'bg-indigo-600' },
-            'amber': { border: 'border-amber-200', text: 'text-amber-800', badge: 'bg-amber-600' },
-            'rose': { border: 'border-rose-200', text: 'text-rose-800', badge: 'bg-rose-600' },
-            'cyan': { border: 'border-cyan-200', text: 'text-cyan-800', badge: 'bg-cyan-600' },
-            'violet': { border: 'border-violet-200', text: 'text-violet-800', badge: 'bg-violet-600' },
-            'slate': { border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-slate-600' },
-        };
-        return themes[colorName] || themes['slate'];
-    };
 
     // 4. Reusable Grouping Function
     const processChildrenWithGrouping = (nodes, childType = 'employee') => {
