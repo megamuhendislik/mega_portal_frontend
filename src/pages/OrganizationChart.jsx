@@ -205,14 +205,14 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
     );
 };
 
-// Horizontal Employee Card
+// Horizontal Employee Card (Compact)
 const EmployeeNode = ({ emp, onClick, showTags }) => (
     <div
         className={`
-            relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
+            relative z-10 p-1.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
             bg-white border-blue-200 text-slate-800
-            flex flex-row items-center gap-3
-            min-w-[220px] max-w-[280px] group h-[60px]
+            flex flex-row items-center gap-2
+            w-[170px] h-[48px] group /* Fixed compact width/height */
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -221,7 +221,7 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
     >
         {/* Avatar Left */}
         <div className={`
-            w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-sm font-bold border shadow-sm
+            w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm
             ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : 'bg-blue-600 text-white'}
         `}>
             {emp.name.charAt(0)}
@@ -229,11 +229,11 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
 
         {/* Info Right */}
         <div className="flex flex-col min-w-0 flex-1">
-            <h4 className="font-bold text-xs leading-tight truncate text-slate-900">
+            <h4 className="font-bold text-[10px] leading-tight truncate text-slate-900">
                 {emp.name}
             </h4>
             {(!emp.title || emp.title === 'Temp') ? null : (
-                <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                <p className="text-[9px] font-medium text-slate-500 truncate mt-0.5">
                     {emp.title}
                 </p>
             )}
@@ -241,7 +241,7 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
 
         {emp.is_secondary && (
             <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
-                <Star size={12} className="text-amber-500 fill-amber-500" />
+                <Star size={10} className="text-amber-500 fill-amber-500" />
             </div>
         )}
     </div>
@@ -317,17 +317,17 @@ const GroupNode = ({ group, colorClass, onClick, showTags }) => {
     const headerTheme = headerColors[colorClass] || headerColors['slate'];
 
     return (
-        <div className={`p-4 rounded-2xl border-2 border-dashed ${theme} flex flex-col items-center gap-3 relative animate-fade-in group-node-container`}>
+        <div className={`p-2.5 rounded-xl border-2 border-dashed ${theme} flex flex-col items-center gap-2 relative animate-fade-in group-node-container`}>
             {/* Group Header */}
             <div className={`
-                absolute -top-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm border border-white/50
+                absolute -top-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50
                 ${headerTheme}
             `}>
                 {group.title} ({group.employees.length})
             </div>
 
             {/* Grid Content */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mt-2">
                 {group.employees.map(emp => (
                     <div key={emp.id} className="transform transition-transform hover:scale-105 active:scale-95">
                         <EmployeeNode
