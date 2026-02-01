@@ -37,9 +37,9 @@ const INITIAL_FORM_STATE = {
     job_position: '',
     assignments: [], // Matrix (Dept+Title)
     reports_to: '', // Manager ID (Primary)
-    // cross_manager_ids: [], // REMOVED
     substitutes: [], // [NEW] Substitutes
-    functional_department: '', // Attribute (stored in secondary_departments)
+    // functional_department: '', // REMOVED
+    tags: [], // [NEW] Employee Tags
     roles: [],
     direct_permissions: [],
     excluded_permissions: [],
@@ -172,8 +172,8 @@ const StepPersonal = ({ formData, handleChange, canEditSensitive = true, canChan
     </div>
 );
 
-const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees }) => {
-    const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü';
+const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees, availableTags }) => {
+    // const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü'; // Removed logic
     const rootDepartments = departments.filter(d => !d.parent);
     const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
     const potentialManagers = employees.filter(e => e.is_active);
@@ -250,22 +250,39 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     />
                 </div>
 
-                {/* 3. FUNCTIONAL */}
+                {/* 3. TAGS / QUALITIES (Replaces Functional Unit) */}
                 <div>
-                    <SelectField
-                        label="Fonksiyonel Birim / Disiplin"
-                        value={formData.functional_department}
-                        onChange={e => handleChange('functional_department', e.target.value)}
-                        icon={Settings}
-                        className={isDeptManager ? 'border-amber-400 bg-amber-50/50' : ''}
-                        options={
-                            <>
-                                <option value="">Yok / Genel</option>
-                                {functionalDepts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                            </>
-                        }
-                    />
-                    {isDeptManager && <p className="text-xs text-amber-600 font-bold mt-1 ml-1 animate-pulse">bu alan zorunludur *</p>}
+                    <label className="block text-sm font-medium text-slate-700 mb-2 ml-1">Etiketler / Uzmanlıklar</label>
+                    <div className="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl min-h-[56px]">
+                        {availableTags && availableTags.length > 0 ? (
+                            availableTags.map(tag => {
+                                const isSelected = (formData.tags || []).includes(tag.id);
+                                return (
+                                    <button
+                                        key={tag.id}
+                                        type="button"
+                                        onClick={() => {
+                                            const current = formData.tags || [];
+                                            const newTags = isSelected
+                                                ? current.filter(id => id !== tag.id)
+                                                : [...current, tag.id];
+                                            handleChange('tags', newTags);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${isSelected
+                                            ? `bg-${tag.color}-100 text-${tag.color}-700 border-${tag.color}-200 shadow-sm`
+                                            : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
+                                            }`}
+                                        style={isSelected ? { backgroundColor: tag.color === 'blue' ? '#dbeafe' : undefined, color: tag.color === 'blue' ? '#1e40af' : undefined } : {}}
+                                    >
+                                        {tag.name}
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            <span className="text-xs text-slate-400 italic">Tanımlı etiket bulunmuyor.</span>
+                        )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 ml-1">Personelin teknik uzmanlık veya çalışma grubunu belirtmek için etiket seçiniz.</p>
                 </div>
 
                 {/* 4. JOB POSITION */}
@@ -336,21 +353,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                                     </select>
                                 </div>
 
-                                <div className="flex-1">
-                                    <select
-                                        value={asn.functional_unit_id || ''}
-                                        onChange={e => {
-                                            const newAsn = [...(formData.assignments || [])];
-                                            newAsn[idx].functional_unit_id = e.target.value;
-                                            handleChange('assignments', newAsn);
-                                        }}
-                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
-                                    >
-                                        <option value="">Fonksiyonel Birim...</option>
-                                        <option value="">Yok / Genel</option>
-                                        {functionalDepts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                                    </select>
-                                </div>
+                                {/* Functional Unit removed in Matrix too */}
                                 <div className="flex-1">
                                     <select
                                         value={asn.job_position_id || ''}
@@ -765,10 +768,10 @@ const PERMISSION_CATEGORIES = [
     },
     {
         id: 'features',
-        label: 'Özellikler',
+        label: 'İK & Yönetim (Özellikler)',
         icon: Briefcase,
         color: 'text-purple-500',
-        filter: (p) => p.category === 'FEATURE'
+        filter: (p) => p.category === 'HR_ORG' || p.category === 'FEATURE' // Support both just in case
     },
     {
         id: 'system',
@@ -941,7 +944,7 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
 const StepPreview = ({ formData, departments, jobPositions, employees }) => {
     const mgr = employees.find(e => e.id == formData.reports_to);
     const dept = departments.find(d => d.id == formData.department)?.name;
-    const func = departments.find(d => d.id == formData.functional_department)?.name || '-';
+    // const func = departments.find(d => d.id == formData.functional_department)?.name || '-'; // REMOVED
     const pos = jobPositions.find(p => p.id == formData.job_position)?.name;
 
     return (
@@ -971,10 +974,11 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     <div className="w-1/3 text-slate-500 font-medium">Yönetici</div>
                     <div className="font-bold text-blue-700">{mgr ? mgr.first_name + ' ' + mgr.last_name : '-'}</div>
                 </div>
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                {/* REMOVED FUNCTIONAL UNIT DISPLAY */}
+                {/* <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-1/3 text-slate-500 font-medium">Fonksiyonel</div>
                     <div className="font-bold text-slate-800">{func}</div>
-                </div>
+                </div> */}
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-1/3 text-slate-500 font-medium">Pozisyon</div>
                     <div className="font-bold text-slate-800">
@@ -1016,6 +1020,7 @@ const Employees = () => {
     const [permissions, setPermissions] = useState([]); // [RESTORED]
     const [workSchedules, setWorkSchedules] = useState([]); // Added
     const [roles, setRoles] = useState([]); // [NEW]
+    const [availableTags, setAvailableTags] = useState([]); // [NEW]
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -1036,13 +1041,14 @@ const Employees = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const [empRes, deptRes, posRes, permRes, schedRes, roleRes] = await Promise.all([
+            const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
                 api.get('/attendance/fiscal-calendars/'),
-                api.get('/roles/')
+                api.get('/roles/'),
+                api.get('/employee-tags/')
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
@@ -1050,6 +1056,7 @@ const Employees = () => {
             setPermissions(permRes.data.results || permRes.data);
             setWorkSchedules(schedRes.data.results || schedRes.data);
             setRoles(roleRes.data.results || roleRes.data);
+            setAvailableTags(tagsRes.data.results || tagsRes.data);
         } catch (error) {
             console.error("Data fetch error:", error);
         } finally {
@@ -1108,10 +1115,11 @@ const Employees = () => {
                 let valid = department && job_position && employee_code;
 
                 // Special Rule: If 'Departman Müdürü', strictly require functional_department
-                const posName = jobPositions.find(p => p.id == job_position)?.name;
-                if (posName === 'Departman Müdürü' && !functional_department) {
-                    return false;
-                }
+                // REMOVED: Functional Dept is deprecated.
+                // const posName = jobPositions.find(p => p.id == job_position)?.name;
+                // if (posName === 'Departman Müdürü' && !functional_department) {
+                //     return false;
+                // }
                 return valid;
             case 3: // Contact
                 return true; // Optional fields mostly
@@ -1192,7 +1200,8 @@ const Employees = () => {
                 department: data.department?.id || data.department,
                 job_position: data.job_position?.id || data.job_position,
                 reports_to: data.reports_to || '',
-                functional_department: data.functional_unit || '', // Updated to use new field
+                // functional_department: data.functional_unit || '', // REMOVED
+                tags: (data.tags || []).map(t => t.id), // Map Tags
 
                 employee_code: data.employee_code,
                 card_uid: data.card_uid || '',
@@ -1221,7 +1230,7 @@ const Employees = () => {
                         department_id: a.department_id || a.department?.id || a.department,
                         job_position_id: a.job_position_id || a.job_position?.id || a.job_position,
                         manager_id: a.manager_id || a.manager?.id || '', // New
-                        functional_unit_id: a.functional_unit_id || a.functional_unit?.id || '' // New
+                        // functional_unit_id: a.functional_unit_id || a.functional_unit?.id || '' // REMOVED
                     })),
 
                 // Schedule Overrides mapping
@@ -1281,7 +1290,7 @@ const Employees = () => {
 
             const payload = {
                 ...cleanPayload,
-                functional_unit: cleanPayload.functional_department || null, // Map frontend field to backend field
+                // functional_unit: cleanPayload.functional_department || null, // REMOVED
                 work_schedule: cleanPayload.work_schedule || null,
                 // Force null for override fields to strictly enforce Fiscal Calendar defaults
                 shift_start: null,

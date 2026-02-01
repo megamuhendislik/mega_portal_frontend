@@ -1,9 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star } from 'lucide-react';
+import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
+
+const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
+    const [name, setName] = useState(mode === 'edit' ? node.name : '');
+    const [code, setCode] = useState(mode === 'edit' ? node.code : '');
+    const [isChartVisible, setIsChartVisible] = useState(mode === 'edit' ? (node.is_chart_visible !== false) : true);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ name, code, is_chart_visible: isChartVisible });
+    };
+
+    return ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-bold mb-4">{mode === 'create' ? 'Yeni Departman Ekle' : 'Departman Düzenle'}</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Departman Adı</label>
+                        <input className="w-full border rounded-lg p-2" value={name} onChange={e => setName(e.target.value)} required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Kısaltma / Kod</label>
+                        <input className="w-full border rounded-lg p-2" value={code} onChange={e => setCode(e.target.value)} required placeholder="Örn: HR, IT" />
+                    </div>
+                    <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={isChartVisible} onChange={e => setIsChartVisible(e.target.checked)} className="rounded text-blue-600" />
+                            <span className="text-sm text-slate-700">Şemada Göster</span>
+                        </label>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">İptal</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>,
+        document.body
+    );
+};
 
 // Simple Modal Component for Employee Details
 // Live Employee Detail Modal
@@ -208,12 +248,12 @@ const EmployeeNode = ({ emp, onClick, showTags }) => (
 );
 
 // White Department Card
-const DepartmentNode = ({ node }) => (
+const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete }) => (
     <div
         className={`
             relative z-10 p-3 rounded-xl border-l-4 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer
             bg-white border-slate-200 border-l-emerald-500 text-slate-800
-            min-w-[220px] max-w-[260px]
+            min-w-[220px] max-w-[260px] group
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -230,11 +270,22 @@ const DepartmentNode = ({ node }) => (
                     {node.name}
                 </h3>
             </div>
+
+            {/* Edit Actions */}
+            {isEditMode && (
+                <div className="absolute -top-3 -right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-1.5 bg-blue-100 text-blue-600 rounded-full shadow hover:bg-blue-200" title="Düzenle"><Edit size={14} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} className="p-1.5 bg-emerald-100 text-emerald-600 rounded-full shadow hover:bg-emerald-200" title="Alt Birim Ekle"><PlusCircle size={14} /></button>
+                    {(!node.children || node.children.length === 0) && (!node.employees || node.employees.length === 0) && (
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} className="p-1.5 bg-red-100 text-red-600 rounded-full shadow hover:bg-red-200" title="Sil"><Trash2 size={14} /></button>
+                    )}
+                </div>
+            )}
         </div>
     </div>
 );
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete }) => {
     // 1. Determine Type Dynamicallly (Fix for "Departments appearing as Employees")
     const isDepartment = node.type === 'department' || node.code || node.employees;
 
@@ -275,7 +326,13 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
             <div className="flex flex-col items-center relative gap-6">
                 {/* Main Node Card */}
                 {isDepartment ? (
-                    <DepartmentNode node={node} />
+                    <DepartmentNode
+                        node={node}
+                        isEditMode={isEditMode}
+                        onAddChild={onAddChild}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                    />
                 ) : (
                     <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} />
                 )}
@@ -291,6 +348,10 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick }) => {
                             showAllEmployees={showAllEmployees}
                             showTags={showTags}
                             onEmployeeClick={onEmployeeClick}
+                            isEditMode={isEditMode}
+                            onAddChild={onAddChild}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
                         />
                     ))}
                 </ul>
@@ -307,6 +368,9 @@ const OrganizationChart = () => {
     const [showTags, setShowTags] = useState(false); // Default OFF
     const [showDebug, setShowDebug] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
+    const { hasPermission } = useAuth();
 
     // Zoom & Pan State
     const [scale, setScale] = useState(1); // Default 100% zoom as requested
@@ -347,10 +411,58 @@ const OrganizationChart = () => {
             } finally {
                 setLoading(false);
             }
-        };
+            fetchHierarchy();
+        }, []);
 
-        fetchHierarchy();
-    }, []);
+    const fetchHierarchy = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get('/departments/hierarchy/');
+            let data = response.data;
+            if (Array.isArray(data)) {
+                data = data.filter(node =>
+                    node.is_chart_visible !== false &&
+                    !node.code.includes('ROOT_FUNC') &&
+                    !node.name.includes('Fonksiyonel')
+                );
+            }
+            if (Array.isArray(data) && data.length > 1) {
+                data = [{ id: 'root-company', name: 'Mega Portal', code: 'COMPANY', employees: [], children: data }];
+            }
+            setTreeData(data);
+        } catch (err) {
+            console.error('Error fetching hierarchy:', err);
+            setError('Organizasyon şemasını görüntüleme yetkiniz yok.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSaveDepartment = async (data) => {
+        try {
+            if (modalConfig.mode === 'create') {
+                await api.post('/departments/', { ...data, parent: modalConfig.node.id });
+            } else {
+                await api.patch(`/departments/${modalConfig.node.id}/`, data);
+            }
+            setModalConfig(null);
+            fetchHierarchy();
+        } catch (err) {
+            console.error(err);
+            alert("İşlem başarısız.");
+        }
+    };
+
+    const handleDeleteDepartment = async (node) => {
+        if (!window.confirm(`${node.name} departmanını silmek istediğinize emin misiniz?`)) return;
+        try {
+            await api.delete(`/departments/${node.id}/`);
+            fetchHierarchy();
+        } catch (err) {
+            console.error(err);
+            alert("Silinemedi (Personel atanmış olabilir).");
+        }
+    };
 
     // Zoom Handlers
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
@@ -436,6 +548,15 @@ const OrganizationChart = () => {
                 />
             )}
 
+            {modalConfig && (
+                <EditDepartmentModal
+                    mode={modalConfig.mode}
+                    node={modalConfig.node}
+                    onClose={() => setModalConfig(null)}
+                    onSave={handleSaveDepartment}
+                />
+            )}
+
             <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 px-1 gap-2">
                 <div>
                     <h2 className="text-xl md:text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
@@ -469,6 +590,16 @@ const OrganizationChart = () => {
                         <Building size={16} />
                         {showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}
                     </button>
+
+                    {hasPermission('HR_ORG_MANAGE') && (
+                        <button
+                            onClick={() => setIsEditMode(!isEditMode)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap ${isEditMode ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <Edit size={16} />
+                            {isEditMode ? 'Düzenlemeyi Bitir' : 'Düzenle'}
+                        </button>
+                    )}
 
                     <div className="flex items-center gap-1 md:gap-2 bg-white p-1 rounded-lg border shadow-sm z-50">
                         <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18} /></button>
@@ -518,6 +649,10 @@ const OrganizationChart = () => {
                                     showAllEmployees={true} // ALWAYS FORCE SHOW
                                     showTags={showTags}
                                     onEmployeeClick={setSelectedEmployee}
+                                    isEditMode={isEditMode}
+                                    onAddChild={(node) => setModalConfig({ mode: 'create', node })}
+                                    onEdit={(node) => setModalConfig({ mode: 'edit', node })}
+                                    onDelete={handleDeleteDepartment}
                                 />
                             ))}
                         </ul>
