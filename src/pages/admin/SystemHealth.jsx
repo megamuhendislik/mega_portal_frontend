@@ -609,11 +609,11 @@ function PermissionHealthView({ report, loading, runScan }) {
                         "Yetkilendirme ve Roller" sayfasında "Menü Erişimi" sekmesinde görünecek yetkiler.
                     </p>
 
-                    {report?.menu_count > 0 ? (
+                    {report?.page_count > 0 ? (
                         <div className="flex items-center gap-3 text-green-700 bg-green-50 p-4 rounded-lg border border-green-100">
                             <CheckCircleIcon className="w-6 h-6" />
                             <div>
-                                <div className="font-bold">Doğrulanmış {report.menu_count} Adet Yetki Mevcut</div>
+                                <div className="font-bold">Doğrulanmış {report.page_count} Adet Yetki Mevcut</div>
                                 <div className="text-xs opacity-80">"PAGE" ve diğer kategorilerde kayıtlı.</div>
                             </div>
                         </div>
