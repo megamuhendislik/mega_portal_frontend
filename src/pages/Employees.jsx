@@ -757,21 +757,14 @@ const PERMISSION_CATEGORIES = [
         label: 'Menü & Sayfa Erişimi',
         icon: FileText,
         color: 'text-emerald-500',
-        filter: (p) => p.category === 'MENU'
+        filter: (p) => p.category === 'PAGE'
     },
     {
         id: 'requests',
-        label: 'Talep & Mesai Yönetimi',
+        label: 'Onay ve İşlemler', // Renamed from Talep & Mesai
         icon: CalendarRange,
-        color: 'text-blue-500',
-        filter: (p) => p.category === 'REQUEST'
-    },
-    {
-        id: 'features',
-        label: 'İK & Yönetim (Özellikler)',
-        icon: Briefcase,
         color: 'text-purple-500',
-        filter: (p) => p.category === 'HR_ORG' || p.category === 'FEATURE' // Support both just in case
+        filter: (p) => p.category === 'APPROVAL' || p.category === 'ACTION'
     },
     {
         id: 'system',
