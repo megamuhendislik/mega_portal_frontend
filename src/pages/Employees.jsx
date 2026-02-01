@@ -1281,6 +1281,7 @@ const Employees = () => {
 
             const payload = {
                 ...cleanPayload,
+                functional_unit: cleanPayload.functional_department || null, // Map frontend field to backend field
                 work_schedule: cleanPayload.work_schedule || null,
                 // Force null for override fields to strictly enforce Fiscal Calendar defaults
                 shift_start: null,
