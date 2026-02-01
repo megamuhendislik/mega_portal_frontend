@@ -368,16 +368,39 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
     // Combine Sub-Departments AND Employees into branching children
     let branchingChildren = [];
 
-    // Grouping Helpers
-    const getColorForPosition = (title) => {
-        if (!title) return 'slate';
+    // Grouping Helpers - CATEGORY BASED
+    const getRoleCategory = (title) => {
+        if (!title) return 'Diğer';
         const t = title.toLowerCase();
-        if (t.includes('mühendis') || t.includes('engineer') || t.includes('mim')) return 'indigo';
-        if (t.includes('yazılım') || t.includes('teknoloj') || t.includes('developer')) return 'blue';
-        if (t.includes('tasarım') || t.includes('design')) return 'rose';
-        if (t.includes('satış') || t.includes('pazarlama') || t.includes('sales')) return 'emerald';
-        if (t.includes('muhasebe') || t.includes('finans')) return 'amber';
-        if (t.includes('tekniker')) return 'cyan';
+
+        // Software / IT
+        if (t.includes('yazılım') || t.includes('software') || t.includes('developer') || t.includes('temsilcisi') || t.includes('php') || t.includes('frontend') || t.includes('backend') || t.includes('full stack')) return 'Yazılım Ekibi';
+
+        // Engineering (General)
+        if (t.includes('mühendis') || t.includes('engineer') || t.includes('mim')) return 'Mühendislik Grubu';
+
+        // Technicians
+        if (t.includes('tekniker') || t.includes('teknisyen')) return 'Teknik Ekip';
+
+        // Design
+        if (t.includes('tasarım') || t.includes('design') || t.includes('grafik') || t.includes('art')) return 'Tasarım Ekibi';
+
+        // Sales/Marketing
+        if (t.includes('satış') || t.includes('pazarlama') || t.includes('sales') || t.includes('marketing')) return 'Satış & Pazarlama';
+
+        // Finance/Accounting
+        if (t.includes('muhasebe') || t.includes('finans') || t.includes('account') || t.includes('mali')) return 'Finans & Muhasebe';
+
+        return title; // Fallback to exact title if no category matches
+    };
+
+    const getColorForCategory = (category) => {
+        if (category === 'Yazılım Ekibi') return 'blue';
+        if (category === 'Mühendislik Grubu') return 'indigo';
+        if (category === 'Teknik Ekip') return 'cyan';
+        if (category === 'Tasarım Ekibi') return 'rose';
+        if (category === 'Satış & Pazarlama') return 'emerald';
+        if (category === 'Finans & Muhasebe') return 'amber';
         return 'slate';
     };
 
@@ -385,44 +408,50 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
         // 1. Employees (Analyze and GROUP adjacent roles)
         if (showAllEmployees && node.employees && node.employees.length > 0) {
 
-            // GROUPING LOGIC
-            const groups = {}; // { 'Hardware Engineer': [emp1, emp2], ... }
+            // console.log(`DEBUG: Grouping for ${node.name}`, node.employees.map(e => e.title));
+
+            const groups = {};
             const resultList = [];
-
-            // PRE-SORT to ensure grouping works well (optional, but good)
-            const sortedEmps = [...node.employees].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-
-            // Analyze frequencies
-            const counts = {};
-            sortedEmps.forEach(e => {
-                const t = e.title || 'Diğer';
-                counts[t] = (counts[t] || 0) + 1;
-            });
-
             const processedIds = new Set();
 
-            sortedEmps.forEach(emp => {
+            // 1. Map Employees to Categories
+            const empCategories = node.employees.map(e => ({
+                ...e,
+                _category: getRoleCategory(e.title)
+            }));
+
+            // 2. Count Categories
+            const counts = {};
+            empCategories.forEach(e => {
+                const c = e._category;
+                counts[c] = (counts[c] || 0) + 1;
+            });
+
+            // 3. Create Groups or Individual Nodes
+            // Sort by category to keep groups together visually
+            const sortedByCat = [...empCategories].sort((a, b) => a._category.localeCompare(b._category));
+
+            sortedByCat.forEach(emp => {
                 if (processedIds.has(emp.id)) return;
 
-                const title = emp.title || 'Diğer';
+                const category = emp._category;
 
-                // Threshold: If specific title has >= 2 people, group them
-                if (counts[title] >= 2) {
-                    // Find all with this title
-                    const groupMembers = sortedEmps.filter(e => (e.title || 'Diğer') === title);
+                // THRESHOLD: Group if 2 or more people in this category
+                if (counts[category] >= 2) {
+                    const groupMembers = sortedByCat.filter(e => e._category === category);
                     groupMembers.forEach(m => processedIds.add(m.id));
 
+                    // Use the category name as the group title
                     resultList.push({
                         type: 'group',
-                        title: title,
-                        employees: groupMembers,
-                        id: `group-${title}-${node.id}`,
-                        color: getColorForPosition(title)
+                        title: category,
+                        employees: groupMembers, // These still have the original titles in them
+                        id: `group-${category}-${node.id}`,
+                        color: getColorForCategory(category)
                     });
                 } else {
-                    // Single person, treated as normal employee node
                     processedIds.add(emp.id);
-                    resultList.push({ ...emp, type: 'employee' });
+                    resultList.push({ ...emp, type: 'employee' }); // Render as normal employee
                 }
             });
 
