@@ -468,9 +468,9 @@ const Requests = () => {
                         { id: 'my_requests', label: 'İzin Taleplerim', show: true },
                         { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('APPROVAL_OVERTIME') },
                         { id: 'meal_requests', label: 'Yemek', show: hasPermission('PAGE_MEAL_ORDERS') },
-                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('APPROVAL_ENTRY_EXIT') },
-                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasPermission('APPROVAL_ENTRY_EXIT') },
-                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasPermission('APPROVAL_ENTRY_EXIT') }
+                        { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('APPROVAL_CARDLESS_ENTRY') },
+                        { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasPermission('APPROVAL_CARDLESS_ENTRY') || hasPermission('APPROVAL_EXTERNAL_TASK') },
+                        { id: 'team_history', label: 'Ekip Geçmişi', show: hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasPermission('APPROVAL_CARDLESS_ENTRY') || hasPermission('APPROVAL_EXTERNAL_TASK') }
                     ].filter(t => t.show).map(tab => (
                         <button
                             key={tab.id}
