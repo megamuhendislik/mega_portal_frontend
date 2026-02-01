@@ -363,7 +363,10 @@ const GroupNode = ({ group, colorClass, onClick, showTags }) => {
 
 const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete }) => {
     // 1. Determine Type Dynamically
-    const isDepartment = node.type === 'department' || node.code || node.employees;
+    // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
+    // because groups have 'employees' property which triggers the department logic
+    const isGroup = node.type === 'group';
+    const isDepartment = !isGroup && (node.type === 'department' || node.code || node.employees);
 
     // Combine Sub-Departments AND Employees into branching children
     let branchingChildren = [];
