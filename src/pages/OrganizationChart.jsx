@@ -404,75 +404,97 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
         return 'slate';
     };
 
-    if (isDepartment) {
-        // 1. Employees (Analyze and GROUP adjacent roles)
-        if (showAllEmployees && node.employees && node.employees.length > 0) {
+    // 4. Reusable Grouping Function
+    const processChildrenWithGrouping = (nodes, childType = 'employee') => {
+        if (!nodes || nodes.length === 0) return [];
 
-            // console.log(`DEBUG: Grouping for ${node.name}`, node.employees.map(e => e.title));
+        const groups = {};
+        const resultList = [];
+        const processedIds = new Set();
 
-            const groups = {};
-            const resultList = [];
-            const processedIds = new Set();
+        // 1. Map Employees to Categories
+        // Check if node is employee-like (has title). If it's a sub-department, category is 'Diğer' or irrelevant.
+        const nodesWithCat = nodes.map(n => ({
+            ...n,
+            type: n.type || childType,
+            _category: (n.employees || n.code) ? 'SUB_DEPT' : getRoleCategory(n.title) // Don't group sub-departments by title
+        }));
 
-            // 1. Map Employees to Categories
-            const empCategories = node.employees.map(e => ({
-                ...e,
-                _category: getRoleCategory(e.title)
-            }));
-
-            // 2. Count Categories
-            const counts = {};
-            empCategories.forEach(e => {
-                const c = e._category;
+        // 2. Count Categories
+        const counts = {};
+        nodesWithCat.forEach(n => {
+            const c = n._category;
+            if (c !== 'SUB_DEPT') {
                 counts[c] = (counts[c] || 0) + 1;
-            });
+            }
+        });
 
-            // 3. Create Groups or Individual Nodes
-            // Sort by category to keep groups together visually
-            const sortedByCat = [...empCategories].sort((a, b) => a._category.localeCompare(b._category));
+        // 3. Create Groups
+        const sortedNodes = [...nodesWithCat].sort((a, b) => {
+            if (a._category === 'SUB_DEPT' && b._category !== 'SUB_DEPT') return 1; // Put depts at end? or keep original order? 
+            if (b._category === 'SUB_DEPT' && a._category !== 'SUB_DEPT') return -1;
+            if (a._category === 'SUB_DEPT' && b._category === 'SUB_DEPT') return 0; // Maintain relative order for sub-depts
+            return a._category.localeCompare(b._category);
+        });
 
-            sortedByCat.forEach(emp => {
-                if (processedIds.has(emp.id)) return;
+        sortedNodes.forEach(nodeItem => {
+            if (processedIds.has(nodeItem.id)) return;
 
-                const category = emp._category;
+            const category = nodeItem._category;
 
-                // THRESHOLD: Group if 2 or more people in this category
-                if (counts[category] >= 2) {
-                    const groupMembers = sortedByCat.filter(e => e._category === category);
-                    groupMembers.forEach(m => processedIds.add(m.id));
+            // Only group employees, never departments
+            if (category !== 'SUB_DEPT' && counts[category] >= 2) {
+                const groupMembers = sortedNodes.filter(n => n._category === category);
+                groupMembers.forEach(m => processedIds.add(m.id));
 
-                    // Use the category name as the group title
-                    resultList.push({
-                        type: 'group',
-                        title: category,
-                        employees: groupMembers, // These still have the original titles in them
-                        id: `group-${category}-${node.id}`,
-                        color: getColorForCategory(category)
-                    });
-                } else {
-                    processedIds.add(emp.id);
-                    resultList.push({ ...emp, type: 'employee' }); // Render as normal employee
-                }
-            });
+                resultList.push({
+                    type: 'group',
+                    title: category,
+                    employees: groupMembers,
+                    id: `group-${category}-${nodeItem.id}`, // Unique ID base
+                    color: getColorForCategory(category)
+                });
+            } else {
+                processedIds.add(nodeItem.id);
+                resultList.push({ ...nodeItem });
+            }
+        });
 
-            branchingChildren.push(...resultList);
+        return resultList;
+    };
+
+    if (isDepartment) {
+        // 1. Employees (Managers -> Subordinates Tree)
+        if (showAllEmployees && node.employees && node.employees.length > 0) {
+            // Apply grouping to Department's direct employees
+            const groupedEmployees = processChildrenWithGrouping(node.employees, 'employee');
+            branchingChildren.push(...groupedEmployees);
         }
 
-        // 2. Sub-Departments
+        // 2. Sub-Departments (No grouping needed usually, just render)
         if (node.children && node.children.length > 0) {
             const deptNodes = node.children.map(d => ({ ...d, type: 'department' }));
             branchingChildren.push(...deptNodes);
         }
     } else {
-        // Employee Node
+        // Employee Node (Manager -> Subordinates)
         if (node.children && node.children.length > 0) {
-            branchingChildren = node.children.map(child => {
-                const childIsDept = child.employees || child.code;
-                return {
-                    ...child,
-                    type: childIsDept ? 'department' : 'employee'
-                };
-            });
+            // Check if children are employees or mixed
+            // If they are employees (subordinates), we SHOULD group them.
+            // But we need to distinguish if they are departments (rare in employee-children but possible in mixed trees)
+
+            // Heuristic: Filter children that are employees
+            const childEmployees = node.children.filter(c => !c.code && !c.employees); // Simple heuristic for employee
+            const childDepts = node.children.filter(c => c.code || c.employees);
+
+            // Group the employees
+            const groupedSubordinates = processChildrenWithGrouping(childEmployees, 'employee');
+
+            // Map depts as is
+            const mappedDepts = childDepts.map(d => ({ ...d, type: 'department' }));
+
+            branchingChildren.push(...groupedSubordinates);
+            branchingChildren.push(...mappedDepts);
         }
     }
 
