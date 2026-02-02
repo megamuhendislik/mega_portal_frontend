@@ -220,6 +220,47 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <span>Gerçekleşen: {stats.cumulative.ytdCompletedHours} sa</span>
                         </div>
                     </div>
+                    {/* Monthly Breakdown Tube */}
+                    {stats.cumulative.breakdown && stats.cumulative.breakdown.length > 0 && (
+                        <div className="mt-6 pt-4 border-t border-slate-200">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-bold uppercase text-slate-500">Aylık Kümülatif Dağılım</span>
+                            </div>
+                            <div className="flex w-full h-8 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                                {stats.cumulative.breakdown.map((m, idx) => {
+                                    let bgClass = 'bg-slate-200';
+                                    if (m.balance > 0) bgClass = 'bg-emerald-400';
+                                    else if (m.balance < 0) bgClass = 'bg-rose-400';
+                                    else if (m.completed > 0) bgClass = 'bg-blue-300';
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className={`flex-1 ${bgClass} border-r border-white last:border-r-0 relative group transition-all hover:opacity-90`}
+                                            title={`${m.month}. Ay: ${m.balance > 0 ? '+' : ''}${(m.balance / 3600).toFixed(1)} sa (Hedef: ${(m.target / 3600).toFixed(0)} sa)`}
+                                        >
+                                            <div className="hidden group-hover:flex absolute inset-0 items-center justify-center text-[10px] font-bold text-white drop-shadow-md bg-black/20">
+                                                {m.month}
+                                            </div>
+                                            <div className="flex items-center justify-center h-full w-full text-[9px] font-bold text-white/50 group-hover:hidden">
+                                                {m.month}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {[...Array(12 - stats.cumulative.breakdown.length)].map((_, i) => (
+                                    <div key={`empty-${i}`} className="flex-1 bg-slate-100 border-r border-white last:border-r-0 flex items-center justify-center">
+                                        <span className="text-[9px] text-slate-300 font-bold">{stats.cumulative.breakdown.length + i + 1}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex justify-between mt-1 text-[10px] text-slate-400 px-1">
+                                <span>Ocak</span>
+                                <span>Aralık</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -260,7 +301,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 </div>
             </div>
 
-        </div>
+        </div >
     );
 };
 
