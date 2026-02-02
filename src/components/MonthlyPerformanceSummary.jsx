@@ -239,54 +239,113 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                     <span className="text-[9px] font-medium text-slate-400">Detay için ayların üzerine gelin</span>
                                 </div>
 
-                                <div className="flex w-full h-16 rounded-xl overflow-visible border border-slate-200 bg-slate-50 shadow-inner">
+                                <div className="flex w-full h-20 rounded-xl overflow-visible border border-slate-200 bg-slate-50 shadow-inner items-end">
                                     {stats.cumulative.breakdown.map((m, idx) => {
-                                        let bgClass = 'bg-slate-200';
-                                        let textClass = 'text-slate-400';
-                                        let borderClass = 'border-white/50';
+                                        const currentMonthIdx = new Date().getMonth();
+                                        const isCurrentMonth = idx === currentMonthIdx;
+                                        const isFuture = idx > currentMonthIdx;
+                                        const isPast = idx < currentMonthIdx;
 
-                                        if (m.balance > 0) { bgClass = 'bg-emerald-400'; textClass = 'text-emerald-900'; borderClass = 'border-emerald-300/50'; }
-                                        else if (m.balance < 0) { bgClass = 'bg-rose-400'; textClass = 'text-rose-900'; borderClass = 'border-rose-300/50'; }
-                                        else if (m.completed > 0) { bgClass = 'bg-blue-300'; textClass = 'text-blue-900'; borderClass = 'border-blue-200/50'; }
+                                        const target = m.target;
+                                        const completed = m.completed;
+                                        const balance = m.balance;
 
-                                        const balanceHours = (m.balance / 3600).toFixed(1);
-                                        const isSurplus = m.balance >= 0;
+                                        // Percentages
+                                        const pctCompleted = Math.min(100, (completed / target) * 100);
+                                        let pctOvertime = 0;
+                                        if (completed > target) {
+                                            pctOvertime = ((completed - target) / target) * 100;
+                                        }
+
+                                        // Colors
+                                        let containerBg = 'bg-slate-100'; // Default Neutral (Remaining)
+                                        if (isPast && balance < 0) containerBg = 'bg-rose-100'; // Past Deficit = Red
+                                        if (completed >= target) containerBg = 'bg-blue-50'; // Target Met Base
+
+                                        const balanceHours = (balance / 3600).toFixed(1);
 
                                         return (
                                             <div
                                                 key={idx}
-                                                className={`flex-1 ${bgClass} border-r ${borderClass} last:border-r-0 relative group transition-all duration-300 hover:z-20 hover:scale-105 hover:shadow-xl hover:-translate-y-1 first:rounded-l-xl last:rounded-r-xl`}
+                                                className={`flex-1 h-full ${containerBg} border-r border-white/50 last:border-r-0 relative group transition-all duration-300 hover:z-20 hover:shadow-xl first:rounded-l-xl last:rounded-r-xl`}
                                             >
-                                                {/* Content Inside Bar */}
-                                                <div className="flex flex-col items-center justify-center h-full w-full pointer-events-none">
-                                                    <span className={`text-[10px] font-bold opacity-60 ${textClass} mb-0.5`}>{m.month}</span>
-                                                    <span className={`text-[11px] font-black ${textClass} tracking-tight`}>
-                                                        {m.balance !== 0 ? (isSurplus ? `+${balanceHours}` : balanceHours) : '-'}
-                                                    </span>
+                                                {/* Normal Work Bar (Blue) */}
+                                                <div
+                                                    className="absolute bottom-0 left-0 w-full bg-blue-400 transition-all duration-1000 border-t border-blue-300/50"
+                                                    style={{ height: `${pctCompleted}%` }}
+                                                ></div>
+
+                                                {/* Overtime Bar (Green - Pops out on top) */}
+                                                {pctOvertime > 0 && (
+                                                    <div
+                                                        className="absolute w-full bg-emerald-400 transition-all duration-1000 border-t border-emerald-300 shadow-sm"
+                                                        style={{
+                                                            bottom: '100%',
+                                                            height: `${Math.min(pctOvertime, 50)}%`, // Cap visual height to avoid breaking layout too much
+                                                            maxHeight: '30px'
+                                                        }}
+                                                    >
+                                                        {/* Overtime Label */}
+                                                        <span className="absolute -top-4 inset-x-0 text-center text-[9px] font-black text-emerald-600">
+                                                            +{balanceHours}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Label Inside */}
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-1">
+                                                    <span className="text-[9px] font-bold text-slate-500/80 mb-0.5">{m.month}</span>
+
+                                                    {/* Status Text */}
+                                                    {isCurrentMonth ? (
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-[9px] font-black text-slate-400">Kalan</span>
+                                                            <span className="text-[10px] font-black text-slate-600">{(Math.abs(balance) / 3600).toFixed(0)}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className={`text-[10px] font-black ${balance >= 0 ? 'text-white drop-shadow-md' : 'text-rose-600'}`}>
+                                                            {balance !== 0 ? (balance > 0 ? '' : balanceHours) : '-'}
+                                                        </span>
+                                                    )}
                                                 </div>
 
-                                                {/* HOVER POPUP TOOLTIP */}
-                                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 bg-slate-800 text-white text-[10px] rounded-xl py-3 px-4 pointer-events-none shadow-2xl ring-4 ring-black/5 transform origin-bottom scale-90 group-hover:scale-100">
+                                                {/* HOVER TOOLTIP */}
+                                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] rounded-xl py-3 px-4 pointer-events-none shadow-2xl ring-4 ring-black/5 transform origin-bottom scale-90 group-hover:scale-100 z-50">
                                                     <div className="flex justify-between items-center border-b border-slate-600 pb-2 mb-2">
-                                                        <span className="font-bold text-sm text-slate-200">{m.month}. Ay</span>
-                                                        <span className={`text-xs font-black px-1.5 py-0.5 rounded ${m.balance >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                                            {m.balance >= 0 ? 'FAZLA' : 'EKSİK'}
-                                                        </span>
+                                                        <span className="font-bold text-sm text-slate-200">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
+                                                        {isCurrentMonth ? (
+                                                            <span className="text-xs font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">DEVAM EDİYOR</span>
+                                                        ) : (
+                                                            <span className={`text-xs font-black px-1.5 py-0.5 rounded ${balance >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                                                {balance >= 0 ? 'FAZLA' : 'EKSİK'}
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     <div className="space-y-1.5">
                                                         <div className="flex justify-between">
-                                                            <span className="text-slate-400">Hedef:</span>
-                                                            <span className="font-mono">{(m.target / 3600).toFixed(1)} sa</span>
+                                                            <span className="text-slate-400">Hedef (Aylık):</span>
+                                                            <span className="font-mono">{(target / 3600).toFixed(1)} sa</span>
                                                         </div>
                                                         <div className="flex justify-between">
-                                                            <span className="text-slate-400">Çalışma:</span>
-                                                            <span className="font-mono font-bold text-white">{(m.completed / 3600).toFixed(1)} sa</span>
+                                                            <span className="text-slate-400">Tamamlanan (Normal):</span>
+                                                            <span className="font-mono font-bold text-blue-400">
+                                                                {((Math.min(completed, target)) / 3600).toFixed(1)} sa
+                                                            </span>
                                                         </div>
+                                                        {balance > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-emerald-400 font-bold">Ek Mesai:</span>
+                                                                <span className="font-mono font-bold text-white">{(balance / 3600).toFixed(1)} sa</span>
+                                                            </div>
+                                                        )}
+
                                                         <div className="flex justify-between pt-2 border-t border-slate-700/50 mt-1">
-                                                            <span className={m.balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
-                                                            <span className={`font-mono font-black text-lg ${m.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                                {m.balance > 0 ? '+' : ''}{balanceHours}
+                                                            <span className={balance >= 0 ? 'text-emerald-400 font-bold' : (isCurrentMonth ? 'text-slate-400 font-bold' : 'text-rose-400 font-bold')}>
+                                                                {isCurrentMonth && balance < 0 ? 'Kalan Süre:' : 'Net Fark:'}
+                                                            </span>
+                                                            <span className={`font-mono font-black text-lg ${balance >= 0 ? 'text-emerald-400' : (isCurrentMonth ? 'text-slate-300' : 'text-rose-400')}`}>
+                                                                {balance > 0 ? '+' : ''}{balanceHours}
                                                             </span>
                                                         </div>
                                                     </div>
