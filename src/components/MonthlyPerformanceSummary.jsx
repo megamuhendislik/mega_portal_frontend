@@ -162,149 +162,197 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             {/* 3. Cumulative / YTD Bar (NEW) */}
             {stats.cumulative && (
                 <div className="pt-4 border-t border-slate-200">
-                    <div className="flex justify-between items-center mb-2">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-xs font-bold uppercase text-slate-500 flex items-center gap-2">
-                                3. Yıllık Kümülatif Durum (YTD)
-                            </span>
-                            <div className="flex gap-4 text-[10px] text-slate-400">
-                                <span>
-                                    Geçen Aydan Devreden:
-                                    <span className={`font-bold ml-1 ${parseFloat(stats.cumulative.carryOverHours) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                        {parseFloat(stats.cumulative.carryOverHours) > 0 ? '+' : ''}{stats.cumulative.carryOverHours} sa
-                                    </span>
-                                </span>
-                                <span className="hidden sm:inline text-slate-300">|</span>
-                                <span>
-                                    Bu Ay Yükümlülüğü:
-                                    <span className="font-bold text-slate-600 ml-1">
-                                        {stats.targetHours} sa
-                                    </span>
-                                </span>
+                    {/* 3. YILLIK KÜMÜLATİF PERFORMANS DASHBOARD */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">2026 Yıllık Performans Özeti</h3>
+                                <p className="text-xs text-slate-400 font-medium">Yılbaşından bugüne kümülatif durum ve aylık dağılım.</p>
+                            </div>
+                            {/* Legend */}
+                            <div className="flex gap-3 text-[10px] font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400"></span>Fazla</div>
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"></span>Eksik</div>
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-300"></span>Nötr</div>
                             </div>
                         </div>
-                        <span className="text-xs font-bold text-slate-700">
-                            {parseFloat(stats.cumulative.ytdNetBalanceHours) > 0 ? '+' : ''}{stats.cumulative.ytdNetBalanceHours} sa (Net)
-                        </span>
-                    </div>
 
-                    {/* Stacked Bar */}
-                    <div className="relative h-4 w-full bg-slate-200 rounded-full overflow-hidden flex">
-                        {/* 1. Previous Months (Derived: YTD Completed - Current Net) */}
-                        <div
-                            className="h-full bg-blue-300 transition-all duration-1000"
-                            style={{
-                                width: stats.cumulative.ytdTarget > 0
-                                    ? `${Math.max(0, ((stats.cumulative.ytdCompleted - (periodSummary.net_work_seconds || 0)) / stats.cumulative.ytdTarget) * 100)}%`
-                                    : '0%'
-                            }}
-                            title="Geçen Aydan Devreden (Tamamlanan)"
-                        />
-                        {/* 2. This Month */}
-                        <div
-                            className="h-full bg-blue-600 transition-all duration-1000"
-                            style={{
-                                width: stats.cumulative.ytdTarget > 0
-                                    ? `${Math.min(100, ((periodSummary.net_work_seconds || 0) / stats.cumulative.ytdTarget) * 100)}%`
-                                    : '0%'
-                            }}
-                            title="Bu Ayki Durum"
-                        />
-                    </div>
-
-                    <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
-                        <div className="flex gap-3">
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-300"></span>Devreden</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-600"></span>Bu Ay</span>
-                        </div>
-                        <div className="flex gap-3">
-                            <span>Hedef: {stats.cumulative.ytdTargetHours} sa</span>
-                            <span>Gerçekleşen: {stats.cumulative.ytdCompletedHours} sa</span>
-                        </div>
-                    </div>
-                    {/* Monthly Breakdown Tube */}
-                    {stats.cumulative.breakdown && stats.cumulative.breakdown.length > 0 && (
-                        <div className="mt-6 pt-4 border-t border-slate-200">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold uppercase text-slate-500">Aylık Kümülatif Dağılım</span>
+                        {/* Top Metrics Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            {/* 1. Devreden (Carry Over) */}
+                            <div className={`p-4 rounded-xl border ${stats.cumulative.carryOver < 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'} flex flex-col justify-between`}>
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Geçen Yıldan Devir</div>
+                                <div className="flex items-end gap-1">
+                                    <span className={`text-2xl font-black ${stats.cumulative.carryOver < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {stats.cumulative.carryOver < 0 ? '' : '+'}{stats.cumulative.carryOverHours}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-1">{stats.cumulative.carryOver < 0 ? 'Borç ile başlandı' : 'Fazla mesai devretti'}</p>
                             </div>
-                            <div className="flex w-full h-8 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                                {stats.cumulative.breakdown.map((m, idx) => {
-                                    let bgClass = 'bg-slate-200';
-                                    if (m.balance > 0) bgClass = 'bg-emerald-400';
-                                    else if (m.balance < 0) bgClass = 'bg-rose-400';
-                                    else if (m.completed > 0) bgClass = 'bg-blue-300';
 
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className={`flex-1 ${bgClass} border-r border-white last:border-r-0 relative group transition-all hover:opacity-90`}
-                                            title={`${m.month}. Ay: ${m.balance > 0 ? '+' : ''}${(m.balance / 3600).toFixed(1)} sa (Hedef: ${(m.target / 3600).toFixed(0)} sa)`}
-                                        >
-                                            <div className="hidden group-hover:flex absolute inset-0 items-center justify-center text-[10px] font-bold text-white drop-shadow-md bg-black/20">
-                                                {m.month}
+                            {/* 2. YTD Target */}
+                            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex flex-col justify-between">
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Yıllık Hedef (YTD)</div>
+                                <div className="flex items-end gap-1">
+                                    <span className="text-2xl font-black text-slate-700">{stats.cumulative.ytdTargetHours}</span>
+                                    <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-1">Bugüne kadar olması gereken</p>
+                            </div>
+
+                            {/* 3. YTD Completed */}
+                            <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col justify-between">
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Yıllık Gerçekleşen</div>
+                                <div className="flex items-end gap-1">
+                                    <span className="text-2xl font-black text-indigo-600">{stats.cumulative.ytdCompletedHours}</span>
+                                    <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
+                                </div>
+                                <div className="w-full bg-white rounded-full h-1.5 mt-2 overflow-hidden border border-indigo-100">
+                                    <div className="bg-indigo-500 h-full" style={{ width: `${stats.cumulative.progressPercent}%` }}></div>
+                                </div>
+                            </div>
+
+                            {/* 4. YTD Net Balance (Big Result) */}
+                            <div className={`p-4 rounded-xl border ${parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-rose-100 border-rose-200'} flex flex-col justify-between relative overflow-hidden`}>
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <Scale size={48} />
+                                </div>
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Güncel Yıllık Bakiye</div>
+                                <div className="flex items-end gap-1 relative z-10">
+                                    <span className={`text-3xl font-black ${parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {parseFloat(stats.cumulative.ytdNetBalanceHours) > 0 ? '+' : ''}{stats.cumulative.ytdNetBalanceHours}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-500/70 mb-1">sa</span>
+                                </div>
+                                <p className="text-[9px] font-bold opacity-60 mt-1 relative z-10">
+                                    {parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'Hedefin üzerindesiniz' : 'Hedefin gerisindesiniz'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Monthly Breakdown Tube */}
+                        {stats.cumulative.breakdown && stats.cumulative.breakdown.length > 0 ? (
+                            <div>
+                                <div className="flex justify-between items-end mb-2 px-1">
+                                    <span className="text-[10px] font-bold uppercase text-slate-400">Aylık Performans Dağılımı</span>
+                                    <span className="text-[9px] font-medium text-slate-400">Detay için ayların üzerine gelin</span>
+                                </div>
+
+                                <div className="flex w-full h-16 rounded-xl overflow-visible border border-slate-200 bg-slate-50 shadow-inner">
+                                    {stats.cumulative.breakdown.map((m, idx) => {
+                                        let bgClass = 'bg-slate-200';
+                                        let textClass = 'text-slate-400';
+                                        let borderClass = 'border-white/50';
+
+                                        if (m.balance > 0) { bgClass = 'bg-emerald-400'; textClass = 'text-emerald-900'; borderClass = 'border-emerald-300/50'; }
+                                        else if (m.balance < 0) { bgClass = 'bg-rose-400'; textClass = 'text-rose-900'; borderClass = 'border-rose-300/50'; }
+                                        else if (m.completed > 0) { bgClass = 'bg-blue-300'; textClass = 'text-blue-900'; borderClass = 'border-blue-200/50'; }
+
+                                        const balanceHours = (m.balance / 3600).toFixed(1);
+                                        const isSurplus = m.balance >= 0;
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`flex-1 ${bgClass} border-r ${borderClass} last:border-r-0 relative group transition-all duration-300 hover:z-20 hover:scale-105 hover:shadow-xl hover:-translate-y-1 first:rounded-l-xl last:rounded-r-xl`}
+                                            >
+                                                {/* Content Inside Bar */}
+                                                <div className="flex flex-col items-center justify-center h-full w-full pointer-events-none">
+                                                    <span className={`text-[10px] font-bold opacity-60 ${textClass} mb-0.5`}>{m.month}</span>
+                                                    <span className={`text-[11px] font-black ${textClass} tracking-tight`}>
+                                                        {m.balance !== 0 ? (isSurplus ? `+${balanceHours}` : balanceHours) : '-'}
+                                                    </span>
+                                                </div>
+
+                                                {/* HOVER POPUP TOOLTIP */}
+                                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 bg-slate-800 text-white text-[10px] rounded-xl py-3 px-4 pointer-events-none shadow-2xl ring-4 ring-black/5 transform origin-bottom scale-90 group-hover:scale-100">
+                                                    <div className="flex justify-between items-center border-b border-slate-600 pb-2 mb-2">
+                                                        <span className="font-bold text-sm text-slate-200">{m.month}. Ay</span>
+                                                        <span className={`text-xs font-black px-1.5 py-0.5 rounded ${m.balance >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                                            {m.balance >= 0 ? 'FAZLA' : 'EKSİK'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-400">Hedef:</span>
+                                                            <span className="font-mono">{(m.target / 3600).toFixed(1)} sa</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-400">Çalışma:</span>
+                                                            <span className="font-mono font-bold text-white">{(m.completed / 3600).toFixed(1)} sa</span>
+                                                        </div>
+                                                        <div className="flex justify-between pt-2 border-t border-slate-700/50 mt-1">
+                                                            <span className={m.balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
+                                                            <span className={`font-mono font-black text-lg ${m.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                {m.balance > 0 ? '+' : ''}{balanceHours}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {/* Arrow */}
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-800"></div>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center justify-center h-full w-full text-[9px] font-bold text-white/50 group-hover:hidden">
-                                                {m.month}
-                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Fill empty months */}
+                                    {[...Array(12 - stats.cumulative.breakdown.length)].map((_, i) => (
+                                        <div key={`empty-${i}`} className="flex-1 bg-slate-50 border-r border-slate-100 last:border-r-0 flex flex-col items-center justify-center opacity-40">
+                                            <span className="text-[10px] text-slate-300 font-bold">{stats.cumulative.breakdown.length + i + 1}</span>
                                         </div>
-                                    );
-                                })}
-
-                                {[...Array(12 - stats.cumulative.breakdown.length)].map((_, i) => (
-                                    <div key={`empty-${i}`} className="flex-1 bg-slate-100 border-r border-white last:border-r-0 flex items-center justify-center">
-                                        <span className="text-[9px] text-slate-300 font-bold">{stats.cumulative.breakdown.length + i + 1}</span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                            <div className="flex justify-between mt-1 text-[10px] text-slate-400 px-1">
-                                <span>Ocak</span>
-                                <span>Aralık</span>
+                        ) : (
+                            <div className="mt-4 text-center text-xs text-slate-400 py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                <div className="mb-2 opacity-50"><Briefcase size={24} className="mx-auto" /></div>
+                                Henüz yıllık veri oluşmadı.
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
             )}
 
-            {/* 3. Stats Grid with Colors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 3. Stats Grid with Colors */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
 
-                {/* Net Surplus Card */}
-                <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className={`p-1.5 rounded-lg ${stats.isSurplus ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
-                            <Scale size={18} />
+                        {/* Net Surplus Card */}
+                        <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`p-1.5 rounded-lg ${stats.isSurplus ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
+                                    <Scale size={18} />
+                                </div>
+                                <span className="text-xs font-bold uppercase text-slate-500">Aylık Net Fazla Mesai</span>
+                            </div>
+                            <div>
+                                <span className={`text-2xl font-black ${stats.isSurplus ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                    {stats.isSurplus ? `+${stats.surplusHours}` : '0.0'}
+                                </span>
+                                <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">Normal + Ek Mesai - Hedef</p>
                         </div>
-                        <span className="text-xs font-bold uppercase text-slate-500">Aylık Net Fazla Mesai</span>
-                    </div>
-                    <div>
-                        <span className={`text-2xl font-black ${stats.isSurplus ? 'text-emerald-700' : 'text-slate-400'}`}>
-                            {stats.isSurplus ? `+${stats.surplusHours}` : '0.0'}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Normal + Ek Mesai - Hedef</p>
-                </div>
 
-                {/* Total Overtime Card (Raw) */}
-                <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-between">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600">
-                            <Zap size={18} />
+                        {/* Total Overtime Card (Raw) */}
+                        <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-between">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600">
+                                    <Zap size={18} />
+                                </div>
+                                <span className="text-xs font-bold uppercase text-slate-500">Toplam Ek Mesai</span>
+                            </div>
+                            <div>
+                                <span className="text-2xl font-black text-slate-800">{stats.overtimeHours}</span>
+                                <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
                         </div>
-                        <span className="text-xs font-bold uppercase text-slate-500">Toplam Ek Mesai</span>
                     </div>
-                    <div>
-                        <span className="text-2xl font-black text-slate-800">{stats.overtimeHours}</span>
-                        <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
-                </div>
-            </div>
 
-        </div >
-    );
+                </div >
+            );
 };
 
-export default MonthlyPerformanceSummary;
+            export default MonthlyPerformanceSummary;
