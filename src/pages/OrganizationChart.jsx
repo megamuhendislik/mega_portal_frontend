@@ -358,7 +358,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags }) => {
         'amber': 'bg-amber-50/50 border-amber-200 text-amber-900',
         'rose': 'bg-rose-50/50 border-rose-200 text-rose-900',
         'cyan': 'bg-cyan-50/50 border-cyan-200 text-cyan-900',
-        'cyan': 'bg-cyan-50/50 border-cyan-200 text-cyan-900',
+
         'violet': 'bg-violet-50/50 border-violet-200 text-violet-900',
         'slate': 'bg-slate-50/50 border-slate-200 text-slate-900',
     };

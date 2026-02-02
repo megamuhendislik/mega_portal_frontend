@@ -312,47 +312,48 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             </div>
                         )}
                     </div>
+                </div>
             )}
 
-                    {/* 3. Stats Grid with Colors */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 3. Stats Grid with Colors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
 
-                        {/* Net Surplus Card */}
-                        <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className={`p-1.5 rounded-lg ${stats.isSurplus ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
-                                    <Scale size={18} />
-                                </div>
-                                <span className="text-xs font-bold uppercase text-slate-500">Aylık Net Fazla Mesai</span>
-                            </div>
-                            <div>
-                                <span className={`text-2xl font-black ${stats.isSurplus ? 'text-emerald-700' : 'text-slate-400'}`}>
-                                    {stats.isSurplus ? `+${stats.surplusHours}` : '0.0'}
-                                </span>
-                                <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 mt-1">Normal + Ek Mesai - Hedef</p>
+                {/* Net Surplus Card */}
+                <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className={`p-1.5 rounded-lg ${stats.isSurplus ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
+                            <Scale size={18} />
                         </div>
-
-                        {/* Total Overtime Card (Raw) */}
-                        <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-between">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600">
-                                    <Zap size={18} />
-                                </div>
-                                <span className="text-xs font-bold uppercase text-slate-500">Toplam Ek Mesai</span>
-                            </div>
-                            <div>
-                                <span className="text-2xl font-black text-slate-800">{stats.overtimeHours}</span>
-                                <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
-                        </div>
+                        <span className="text-xs font-bold uppercase text-slate-500">Aylık Net Fazla Mesai</span>
                     </div>
+                    <div>
+                        <span className={`text-2xl font-black ${stats.isSurplus ? 'text-emerald-700' : 'text-slate-400'}`}>
+                            {stats.isSurplus ? `+${stats.surplusHours}` : '0.0'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Normal + Ek Mesai - Hedef</p>
+                </div>
 
-                </div >
-            );
+                {/* Total Overtime Card (Raw) */}
+                <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-between">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600">
+                            <Zap size={18} />
+                        </div>
+                        <span className="text-xs font-bold uppercase text-slate-500">Toplam Ek Mesai</span>
+                    </div>
+                    <div>
+                        <span className="text-2xl font-black text-slate-800">{stats.overtimeHours}</span>
+                        <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
+                </div>
+            </div>
+
+        </div >
+    );
 };
 
-            export default MonthlyPerformanceSummary;
+export default MonthlyPerformanceSummary;
