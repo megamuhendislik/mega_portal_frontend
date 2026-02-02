@@ -63,7 +63,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 lateCount,
 
                 cumulative: periodSummary.cumulative ? {
+                    carryOver: periodSummary.cumulative.carry_over_seconds, // Raw seconds (Intra-year) -> Maybe confusing if used directly
                     carryOverHours: (periodSummary.cumulative.carry_over_seconds / 3600).toFixed(1),
+
+                    prevYearBalance: (periodSummary.cumulative.previous_year_balance_seconds / 3600).toFixed(1),
+                    totalNetBalance: (periodSummary.cumulative.total_net_balance_seconds / 3600).toFixed(1),
+
                     ytdTargetHours: (periodSummary.cumulative.ytd_target_seconds / 3600).toFixed(1),
                     ytdCompletedHours: (periodSummary.cumulative.ytd_completed_seconds / 3600).toFixed(1),
                     ytdNetBalanceHours: (periodSummary.cumulative.ytd_net_balance_seconds / 3600).toFixed(1),
@@ -180,15 +185,15 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         {/* Top Metrics Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             {/* 1. Devreden (Carry Over) */}
-                            <div className={`p-4 rounded-xl border ${stats.cumulative.carryOver < 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'} flex flex-col justify-between`}>
-                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Geçen Yıldan Devir</div>
+                            <div className={`p-4 rounded-xl border ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'} flex flex-col justify-between`}>
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">2025'TEN DEVREDEN</div>
                                 <div className="flex items-end gap-1">
-                                    <span className={`text-2xl font-black ${stats.cumulative.carryOver < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                        {stats.cumulative.carryOver < 0 ? '' : '+'}{stats.cumulative.carryOverHours}
+                                    <span className={`text-2xl font-black ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {parseFloat(stats.cumulative.prevYearBalance) < 0 ? '' : '+'}{stats.cumulative.prevYearBalance}
                                     </span>
                                     <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
                                 </div>
-                                <p className="text-[9px] text-slate-400 mt-1">{stats.cumulative.carryOver < 0 ? 'Borç ile başlandı' : 'Fazla mesai devretti'}</p>
+                                <p className="text-[9px] text-slate-400 mt-1">{parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'Önceki yıldan borç' : 'Önceki yıldan fazla mesai'}</p>
                             </div>
 
                             {/* 2. YTD Target */}
@@ -214,19 +219,19 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             </div>
 
                             {/* 4. YTD Net Balance (Big Result) */}
-                            <div className={`p-4 rounded-xl border ${parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-rose-100 border-rose-200'} flex flex-col justify-between relative overflow-hidden`}>
+                            <div className={`p-4 rounded-xl border ${parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-rose-100 border-rose-200'} flex flex-col justify-between relative overflow-hidden`}>
                                 <div className="absolute top-0 right-0 p-4 opacity-10">
                                     <Scale size={48} />
                                 </div>
-                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Güncel Yıllık Bakiye</div>
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Toplam Yıllık Bakiye</div>
                                 <div className="flex items-end gap-1 relative z-10">
-                                    <span className={`text-3xl font-black ${parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                        {parseFloat(stats.cumulative.ytdNetBalanceHours) > 0 ? '+' : ''}{stats.cumulative.ytdNetBalanceHours}
+                                    <span className={`text-3xl font-black ${parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {parseFloat(stats.cumulative.totalNetBalance) > 0 ? '+' : ''}{stats.cumulative.totalNetBalance}
                                     </span>
                                     <span className="text-xs font-bold text-slate-500/70 mb-1">sa</span>
                                 </div>
                                 <p className="text-[9px] font-bold opacity-60 mt-1 relative z-10">
-                                    {parseFloat(stats.cumulative.ytdNetBalanceHours) >= 0 ? 'Hedefin üzerindesiniz' : 'Hedefin gerisindesiniz'}
+                                    {parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'Hedefin üzerindesiniz' : 'Hedefin gerisindesiniz'}
                                 </p>
                             </div>
                         </div>
