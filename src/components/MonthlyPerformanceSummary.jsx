@@ -70,6 +70,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                     ytdTarget: periodSummary.cumulative.ytd_target_seconds,
                     ytdCompleted: periodSummary.cumulative.ytd_completed_seconds,
+                    breakdown: periodSummary.cumulative.breakdown || [], // PASSING THE DATA
+
 
                     // Visualization Helper
                     progressPercent: periodSummary.cumulative.ytd_target_seconds > 0
