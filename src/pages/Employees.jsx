@@ -791,9 +791,15 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
 
     // Helper to check if a permission is granted by a selected Role
     const isGrantedByRole = (permId) => {
-        if (!formData.roles) return false;
-        const selectedRoles = roles.filter(r => formData.roles.includes(r.id));
-        return selectedRoles.some(r => r.permissions && r.permissions.some(p => p.id === permId));
+        if (!formData.roles || formData.roles.length === 0) return false;
+
+        // Ensure type safety (IDs can be string/number mismatch)
+        const selectedIds = formData.roles.map(id => Number(id));
+
+        const selectedRoles = roles.filter(r => selectedIds.includes(Number(r.id)));
+
+        // Check standard permissions field AND legacy_permissions if exists? No, just permissions.
+        return selectedRoles.some(r => r.permissions && r.permissions.some(p => Number(p.id) === Number(permId)));
     };
 
     const togglePermission = (permId) => {
@@ -841,7 +847,7 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
                     <p className="text-xs text-slate-400 mb-3">Roller, önceden tanımlı yetki gruplarıdır. Rol seçtiğinizde ilgili yetkiler otomatik tanımlanır.</p>
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
                         {roles.map(role => {
-                            const isChecked = (formData.roles || []).includes(role.id);
+                            const isChecked = (formData.roles || []).map(r => Number(r)).includes(Number(role.id));
                             return (
                                 <label key={role.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-slate-200 hover:border-indigo-200'} ${!canManageRoles ? 'opacity-60 cursor-not-allowed' : ''}`}>
                                     <input type="checkbox" className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" checked={isChecked} onChange={() => toggleRole(role.id)} disabled={!canManageRoles} />
@@ -890,11 +896,12 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
                                 const isChecked = (fromRole && !isExcluded) || isDirect;
 
                                 return (
-                                    <label key={perm.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? (fromRole ? 'bg-slate-50 border-slate-200' : 'bg-blue-50 border-blue-200 shadow-sm') : 'bg-white border-slate-100 hover:border-slate-300'}`}>
+                                    <label key={perm.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isChecked ? (fromRole ? 'bg-slate-50 border-slate-200 opacity-90' : 'bg-blue-50 border-blue-200 shadow-sm') : 'bg-white border-slate-100 hover:border-slate-300'}`}>
                                         <div className="mt-0.5">
                                             <input
                                                 type="checkbox"
-                                                className={`w-4 h-4 rounded focus:ring-blue-500 ${fromRole ? (isChecked ? 'text-indigo-500 bg-slate-100' : 'text-slate-300 bg-red-50 ring-red-200') : 'text-blue-600'}`}
+                                                // USER REQUEST: fromRole -> Gray tick (text-slate-500?), Direct -> Blue (text-blue-600)
+                                                className={`w-4 h-4 rounded focus:ring-blue-500 ${fromRole ? (isChecked ? 'text-slate-500 bg-slate-100 border-slate-300' : 'text-slate-300 bg-red-50 ring-red-200') : 'text-blue-600'}`}
                                                 checked={isChecked}
                                                 onChange={() => togglePermission(perm.id)}
                                                 disabled={!canManageRoles}
