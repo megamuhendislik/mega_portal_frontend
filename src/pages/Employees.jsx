@@ -290,7 +290,17 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     <SelectField
                         label="Unvan (Pozisyon)"
                         value={formData.job_position}
-                        onChange={e => handleChange('job_position', e.target.value)}
+                        onChange={e => {
+                            const val = e.target.value;
+                            handleChange('job_position', val);
+
+                            // Auto-select Default Roles based on mapping
+                            const selectedPos = jobPositions.find(p => Number(p.id) === Number(val));
+                            if (selectedPos && selectedPos.default_roles) {
+                                const newRoleIds = selectedPos.default_roles.map(r => r.id);
+                                handleChange('roles', newRoleIds);
+                            }
+                        }}
                         required
                         icon={Briefcase}
                         options={
