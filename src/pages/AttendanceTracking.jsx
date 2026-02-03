@@ -9,7 +9,7 @@ import api from '../services/api';
 import moment from 'moment';
 import useInterval from '../hooks/useInterval';
 
-const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY' }) => {
+const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
     const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
     const [matrixData, setMatrixData] = useState(null);
@@ -360,9 +360,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     <th className="p-6">Durum</th>
                                     {scope === 'DAILY' ? (
                                         <>
-                                            <th className="p-6 w-[35%]">Zaman Çizelgesi (07:00 - 22:00)</th>
-                                            <th className="p-6 w-[25%]">Günlük Detay</th>
-                                            <th className="p-6 w-[25%]">Aylık Durum</th>
+                                            <th className="p-6 w-[40%]">Günlük Detay</th>
+                                            <th className="p-6 w-[35%]">Aylık Durum</th>
                                         </>
                                     ) : (
                                         <>
@@ -389,7 +388,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
                                         return (
                                             <tr key={item.employee_id} className="hover:bg-slate-50/80 transition-all group">
-                                                <td className="p-6 cursor-pointer" onClick={() => setSelectedEmployee(item)}>
+                                                <td className="p-6 cursor-pointer" onClick={() => {
+                                                    if (embedded && onMemberClick) {
+                                                        onMemberClick(item.employee_id);
+                                                    } else {
+                                                        setSelectedEmployee(item);
+                                                    }
+                                                }}>
                                                     <div className="flex items-center gap-4 group-hover:translate-x-1 transition-transform">
                                                         <div className="relative">
                                                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold border-2 border-white shadow-sm">
@@ -428,63 +433,22 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                 {scope === 'DAILY' ? (
                                                     <>
                                                         <td className="p-6">
-                                                            {/* TIMELINE VISUALIZATION */}
-                                                            {(() => {
-                                                                if (!item.today_check_in) return <span className="text-slate-300 text-xs italic">Giriş Yok</span>;
-
-                                                                // Config: 07:00 (420m) to 22:00 (1320m) = 900 minutes total
-                                                                const startMin = 420;
-                                                                const totalRange = 900;
-
-                                                                const getMin = (iso) => {
-                                                                    if (!iso) return null;
-                                                                    const d = moment(iso);
-                                                                    return d.hours() * 60 + d.minutes();
-                                                                };
-
-                                                                const inMin = getMin(item.today_check_in);
-                                                                const outMin = getMin(item.today_check_out) || (item.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60); // Fallback
-
-                                                                // Clamp
-                                                                const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
-                                                                const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
-
-                                                                return (
-                                                                    <div className="relative w-full h-8 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
-                                                                        {/* Grid Lines (Every 3 hours: 07, 10, 13, 16, 19, 22) */}
-                                                                        {[0, 20, 40, 60, 80, 100].map(p => (
-                                                                            <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/50" style={{ left: `${p}%` }}></div>
-                                                                        ))}
-
-                                                                        {/* Work Bar */}
-                                                                        <div
-                                                                            className={`absolute top-1 bottom-1 rounded-md shadow-sm flex items-center justify-between px-2 text-[10px] font-bold text-white whitespace-nowrap transition-all duration-500 ${item.is_online ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-slate-400'}`}
-                                                                            style={{ left: `${barStart}%`, width: `${barWidth}%` }}
-                                                                        >
-                                                                            <span>{moment(item.today_check_in).format('HH:mm')}</span>
-                                                                            {item.today_check_out && <span>{moment(item.today_check_out).format('HH:mm')}</span>}
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </td>
-                                                        <td className="p-6">
-                                                            <div className="flex flex-col gap-1 text-xs font-mono font-semibold text-slate-600">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Normal:</span>
-                                                                    <span>{formatMinutes(item.today_normal)}</span>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex flex-col items-center justify-center">
+                                                                    <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Normal</div>
+                                                                    <div className="font-mono font-bold text-slate-700">{formatMinutes(item.today_normal)}</div>
                                                                 </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Fazla:</span>
-                                                                    <span className={item.today_overtime > 0 ? 'text-amber-600' : ''}>{formatMinutes(item.today_overtime)}</span>
+                                                                <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-100 flex flex-col items-center justify-center">
+                                                                    <div className="text-[10px] uppercase font-bold text-amber-500 mb-0.5">Fazla</div>
+                                                                    <div className="font-mono font-bold text-amber-700">+{formatMinutes(item.today_overtime)}</div>
                                                                 </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Eksik:</span>
-                                                                    <span className={item.today_missing > 0 ? 'text-red-500' : ''}>{formatMinutes(item.today_missing)}</span>
+                                                                <div className="bg-red-50 p-2.5 rounded-lg border border-red-100 flex flex-col items-center justify-center">
+                                                                    <div className="text-[10px] uppercase font-bold text-red-500 mb-0.5">Eksik</div>
+                                                                    <div className="font-mono font-bold text-red-700">-{formatMinutes(item.today_missing)}</div>
                                                                 </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Mola:</span>
-                                                                    <span>{formatMinutes(item.today_break)}</span>
+                                                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex flex-col items-center justify-center">
+                                                                    <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Mola</div>
+                                                                    <div className="font-mono font-bold text-slate-700">{formatMinutes(item.today_break)}</div>
                                                                 </div>
                                                             </div>
                                                         </td>

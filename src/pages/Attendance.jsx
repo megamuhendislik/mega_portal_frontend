@@ -356,7 +356,13 @@ const Attendance = () => {
                 ) : (
                     // OPTIMIZED TEAM DASHBOARD VIEW
                     // OPTIMIZED TEAM DASHBOARD VIEW
-                    <AttendanceTracking embedded={true} year={viewYear} month={viewMonth} scope={viewScope} />
+                    <AttendanceTracking
+                        embedded={true}
+                        year={viewYear}
+                        month={viewMonth}
+                        scope={viewScope}
+                        onMemberClick={handleTeamMemberClick}
+                    />
                 )
             }
         </div >
