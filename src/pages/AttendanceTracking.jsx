@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Calendar, Filter, Download, ChevronRight, Clock, AlertCircle,
     CheckCircle, Coffee, Users, TrendingUp, Activity, Briefcase,
-    MoreHorizontal, Search, ArrowUpRight, ArrowDownRight
+    MoreHorizontal, Search, ArrowUpRight, ArrowDownRight, X, LogIn, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -28,6 +28,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [loading, setLoading] = useState(false);
     const [departments, setDepartments] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -388,8 +389,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
                                         return (
                                             <tr key={item.employee_id} className="hover:bg-slate-50/80 transition-all group">
-                                                <td className="p-6">
-                                                    <div className="flex items-center gap-4">
+                                                <td className="p-6 cursor-pointer" onClick={() => setSelectedEmployee(item)}>
+                                                    <div className="flex items-center gap-4 group-hover:translate-x-1 transition-transform">
                                                         <div className="relative">
                                                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold border-2 border-white shadow-sm">
                                                                 {(item.employee_name || '?').charAt(0)}
@@ -569,6 +570,122 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 renderGridView()
             )
             }
+            {/* DETAIL MODAL */}
+            {selectedEmployee && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedEmployee(null)} />
+
+                    <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-200">
+                                    {(selectedEmployee.employee_name || '?').charAt(0)}
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800">{selectedEmployee.employee_name}</h3>
+                                    <p className="text-sm text-slate-500 font-medium">{selectedEmployee.department}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedEmployee(null)}
+                                className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body - Daily Details */}
+                        <div className="p-6 space-y-8">
+
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                    <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Normal</div>
+                                    <div className="text-2xl font-bold text-blue-700">{formatMinutes(selectedEmployee.today_normal || 0)}</div>
+                                </div>
+                                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                    <div className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Fazla</div>
+                                    <div className="text-2xl font-bold text-amber-700">+{formatMinutes(selectedEmployee.today_overtime || 0)}</div>
+                                </div>
+                                <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                                    <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Eksik</div>
+                                    <div className="text-2xl font-bold text-red-700">-{formatMinutes(selectedEmployee.today_missing || 0)}</div>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mola</div>
+                                    <div className="text-2xl font-bold text-slate-700">{formatMinutes(selectedEmployee.today_break || 0)}</div>
+                                </div>
+                            </div>
+
+                            {/* Timeline */}
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <Clock size={16} className="text-slate-400" />
+                                    Zaman Çizelgesi
+                                </h4>
+                                <div className="relative w-full h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
+                                    {/* Using same logic as row but bigger */}
+                                    {(() => {
+                                        if (!selectedEmployee.today_check_in) return <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">Giriş Yok</div>;
+
+                                        const startMin = 420; // 07:00
+                                        const totalRange = 900; // 15 hours
+                                        const getMin = (iso) => {
+                                            if (!iso) return null;
+                                            const d = moment(iso);
+                                            return d.hours() * 60 + d.minutes();
+                                        };
+                                        const inMin = getMin(selectedEmployee.today_check_in);
+                                        const outMin = getMin(selectedEmployee.today_check_out) || (selectedEmployee.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60);
+
+                                        const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
+                                        const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
+
+                                        return (
+                                            <>
+                                                {[0, 20, 40, 60, 80, 100].map(p => (
+                                                    <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/50" style={{ left: `${p}%` }}>
+                                                        <span className="absolute top-1 left-1 text-[10px] text-slate-400 font-mono">
+                                                            {moment().startOf('day').add(7 + (p / 100) * 15, 'hours').format('HH:mm')}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                <div
+                                                    className={`absolute top-4 bottom-4 rounded-md shadow-sm flex items-center justify-center px-4 text-xs font-bold text-white whitespace-nowrap transition-all duration-500 ${selectedEmployee.is_online ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-slate-400'}`}
+                                                    style={{ left: `${barStart}%`, width: `${barWidth}%` }}
+                                                >
+                                                    {moment(selectedEmployee.today_check_in).format('HH:mm')} - {selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm') : 'Şimdi'}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
+                            {/* Additional Details (Times) */}
+                            <div className="flex items-center justify-between text-sm p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogIn size={16} /></div>
+                                    <div>
+                                        <div className="text-xs text-slate-400 font-semibold">Giriş Saati</div>
+                                        <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_in ? moment(selectedEmployee.today_check_in).format('HH:mm:ss') : '-'}</div>
+                                    </div>
+                                </div>
+                                <div className="h-8 w-px bg-slate-200"></div>
+                                <div className="flex items-center gap-3 text-right">
+                                    <div>
+                                        <div className="text-xs text-slate-400 font-semibold">Çıkış Saati</div>
+                                        <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm:ss') : (selectedEmployee.is_online ? <span className="text-emerald-500 animate-pulse">Ofiste</span> : '-')}</div>
+                                    </div>
+                                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogOut size={16} /></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
