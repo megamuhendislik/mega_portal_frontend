@@ -15,6 +15,7 @@ import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import HeroDailySummary from '../components/HeroDailySummary';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import Skeleton from '../components/Skeleton';
+import AttendanceTracking from './AttendanceTracking';
 import { format } from 'date-fns';
 
 const Attendance = () => {
@@ -353,15 +354,8 @@ const Attendance = () => {
 
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-right-4">
-                        {/* Team View */}
-                        <div className="lg:col-span-2 space-y-6">
-                            <TeamAttendanceOverview teamData={teamMembers} onMemberClick={handleTeamMemberClick} />
-                        </div>
-                        <div>
-                            <TeamComparisonChart data={teamComparison} />
-                        </div>
-                    </div>
+                    // OPTIMIZED TEAM DASHBOARD VIEW
+                    <AttendanceTracking embedded={true} year={viewYear} month={viewMonth} />
                 )
             }
         </div >

@@ -9,14 +9,20 @@ import api from '../services/api';
 import moment from 'moment';
 import useInterval from '../hooks/useInterval';
 
-const AttendanceTracking = () => {
+const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth }) => {
     const { hasPermission } = useAuth();
     const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
     const [matrixData, setMatrixData] = useState(null);
 
     // State
-    const [year, setYear] = useState(moment().year());
-    const [month, setMonth] = useState(moment().month() + 1);
+    const [year, setYear] = useState(propYear || moment().year());
+    const [month, setMonth] = useState(propMonth || moment().month() + 1);
+
+    useEffect(() => {
+        if (propYear) setYear(propYear);
+        if (propMonth) setMonth(propMonth);
+    }, [propYear, propMonth]);
+
     const [selectedDept, setSelectedDept] = useState('');
     const [stats, setStats] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -185,55 +191,88 @@ const AttendanceTracking = () => {
         <div className="p-6 max-w-[1600px] mx-auto space-y-8">
 
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
-                        Yönetici Konsolu
-                    </h1>
-                    <p className="text-slate-500 mt-2 font-medium">Ekip performansı ve mesai durumunun gerçek zamanlı analizi.</p>
-                </div>
-
-                {/* Controls */}
-                <div className="flex flex-wrap gap-3 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 items-center">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Personel ara..."
-                            className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-48"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+            {!embedded && (
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
+                            Yönetici Konsolu
+                        </h1>
+                        <p className="text-slate-500 mt-2 font-medium">Ekip performansı ve mesai durumunun gerçek zamanlı analizi.</p>
                     </div>
-                    <div className="h-6 w-px bg-slate-200 mx-1"></div>
-                    <select
-                        value={year}
-                        onChange={(e) => setYear(e.target.value)}
-                        className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
-                    >
-                        {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    <select
-                        value={month}
-                        onChange={(e) => setMonth(e.target.value)}
-                        className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
-                    >
-                        {moment.months().map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                    </select>
-                    <select
-                        value={selectedDept}
-                        onChange={(e) => setSelectedDept(e.target.value)}
-                        className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors max-w-[200px]"
-                    >
-                        <option value="">Tüm Ekip</option>
-                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
+
+                    {/* Controls */}
+                    <div className="flex flex-wrap gap-3 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 items-center">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Personel ara..."
+                                className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-48"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                        <select
+                            value={year}
+                            onChange={(e) => setYear(e.target.value)}
+                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
+                        >
+                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                        <select
+                            value={month}
+                            onChange={(e) => setMonth(e.target.value)}
+                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
+                        >
+                            {moment.months().map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                        </select>
+                        <select
+                            value={selectedDept}
+                            onChange={(e) => setSelectedDept(e.target.value)}
+                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors max-w-[200px]"
+                        >
+                            <option value="">Tüm Ekip</option>
+                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Activity size={18} /></button>
+                            <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Calendar size={18} /></button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Embedded Controls */}
+            {embedded && (
+                <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+                    <div className="flex gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Ekip içinde ara..."
+                                className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-64 shadow-sm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <select
+                            value={selectedDept}
+                            onChange={(e) => setSelectedDept(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 py-2.5 pl-3 pr-8 cursor-pointer hover:border-indigo-300 transition-colors max-w-[200px] shadow-sm"
+                        >
+                            <option value="">Tüm Ekip</option>
+                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                    </div>
+                    {/* View Switcher */}
                     <div className="flex bg-slate-100 p-1 rounded-xl">
                         <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Activity size={18} /></button>
                         <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Calendar size={18} /></button>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Executive Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
