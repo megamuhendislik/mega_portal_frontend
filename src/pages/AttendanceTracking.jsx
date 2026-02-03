@@ -129,8 +129,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
     // Filter Logic
     const filteredStats = stats.filter(item =>
-        item.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.department.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.department || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const renderGridView = () => {
