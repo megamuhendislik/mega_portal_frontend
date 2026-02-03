@@ -85,15 +85,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             const missing = data.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
             const balance = data.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
 
-            // Efficiency: (Worked / Required) * 100
-            // If required is 0 (e.g. start of month), default to 100% or 0 based on context.
-            // Let's settle on: If required > 0, calculate. Else 0.
-            const efficiency = required > 0 ? Math.min(100, Math.round((worked / required) * 100)) : 0;
-
-            // Alternative Logic requested generally: 
-            // Some companies want (Worked / (Required - Holidays)) etc.
-            // But simple Worked/Required is standard for "Realization".
-
+            // Online Count (Real-Time)
+            const online = (data || []).filter(d => d.is_online).length;
             const active = data.length;
 
             setSummary({
@@ -102,7 +95,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 totalMissing: missing,
                 netBalance: balance,
                 activeCount: active,
-                efficiency: efficiency
+                onlineCount: online // Replaces Efficiency
             });
 
         } catch (error) {
@@ -300,19 +293,27 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 <div className="group relative overflow-hidden bg-white p-6 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-lg hover:-translate-y-1">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                            <TrendingUp size={28} />
+                            <div className="relative">
+                                <Users size={28} />
+                                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                </span>
+                            </div>
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Verimlilik</p>
-                                <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">+2.4%</span>
+                                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Şu an Ofiste</p>
                             </div>
-                            <h3 className="text-3xl font-bold text-slate-800">%94</h3>
+                            <h3 className="text-3xl font-bold text-slate-800">{summary.onlineCount} <span className="text-sm font-normal text-slate-400">Kişi</span></h3>
                         </div>
                     </div>
-                    {/* Tiny Chart Placeholder */}
+                    {/* Progress Bar for Online Ratio */}
                     <div className="h-1 w-full bg-slate-100 mt-4 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 w-[94%] rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                        <div
+                            className="h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000"
+                            style={{ width: `${summary.activeCount > 0 ? (summary.onlineCount / summary.activeCount) * 100 : 0}%` }}
+                        ></div>
                     </div>
                 </div>
 
@@ -375,8 +376,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             <tr key={item.employee_id} className="hover:bg-slate-50/80 transition-all group">
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold border-2 border-white shadow-sm">
-                                                            {(item.employee_name || '?').charAt(0)}
+                                                        <div className="relative">
+                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold border-2 border-white shadow-sm">
+                                                                {(item.employee_name || '?').charAt(0)}
+                                                            </div>
+                                                            {item.is_online && (
+                                                                <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white bg-emerald-500"></span>
+                                                            )}
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-slate-800">{item.employee_name}</div>
