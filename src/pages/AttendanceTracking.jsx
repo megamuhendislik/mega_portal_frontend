@@ -391,10 +391,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                     </div>
                                                 </td>
                                                 <td className="p-6">
-                                                    {/* Mock Status based on data logic for demo */}
-                                                    {item.total_missing > 300 ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-100">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div> Kritik
+                                                    {/* Status Priority: Online > Critical > High Performance > Normal */}
+                                                    {item.is_online ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Ofiste
+                                                        </span>
+                                                    ) : item.total_missing > 300 ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200">
+                                                            Dışarıda
                                                         </span>
                                                     ) : item.total_overtime > 600 ? (
                                                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100">
