@@ -9,7 +9,7 @@ import api from '../services/api';
 import moment from 'moment';
 import useInterval from '../hooks/useInterval';
 
-const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth }) => {
+const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY' }) => {
     const { hasPermission } = useAuth();
     const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
     const [matrixData, setMatrixData] = useState(null);
