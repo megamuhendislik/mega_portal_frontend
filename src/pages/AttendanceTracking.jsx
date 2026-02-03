@@ -361,6 +361,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                         <>
                                             <th className="p-6">Giriş Saati</th>
                                             <th className="p-6">Çıkış Saati</th>
+                                            <th className="p-6 text-right">Normal</th>
+                                            <th className="p-6 text-right">Fazla</th>
                                         </>
                                     ) : (
                                         <>
@@ -430,6 +432,12 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                         </td>
                                                         <td className="p-6 font-mono text-sm font-semibold text-slate-700">
                                                             {item.today_check_out ? moment(item.today_check_out).format('HH:mm') : '-'}
+                                                        </td>
+                                                        <td className="p-6 text-right font-mono text-sm font-semibold text-slate-600">
+                                                            {formatMinutes(item.today_normal)}
+                                                        </td>
+                                                        <td className="p-6 text-right font-mono text-sm font-bold text-amber-600">
+                                                            {item.today_overtime > 0 ? `+${formatMinutes(item.today_overtime)}` : '-'}
                                                         </td>
                                                     </>
                                                 ) : (
