@@ -305,7 +305,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     {isCurrentMonth ? (
                                                         <div className="flex flex-col items-center">
                                                             <span className="text-[9px] font-black text-slate-400">Kalan</span>
-                                                            <span className="text-[10px] font-black text-slate-600">{(Math.abs(balance) / 3600).toFixed(0)}</span>
+                                                            <span className="text-[10px] font-black text-slate-600">{((Math.abs(balance) - (m.missing || 0)) / 3600).toFixed(0)}</span>
                                                         </div>
                                                     ) : (
                                                         <span className={`text-[10px] font-black ${balance >= 0 ? 'text-white drop-shadow-md' : 'text-rose-600'}`}>
