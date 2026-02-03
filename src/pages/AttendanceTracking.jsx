@@ -359,8 +359,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     <th className="p-6">Durum</th>
                                     {scope === 'DAILY' ? (
                                         <>
-                                            <th className="p-6">Giriş Saati</th>
-                                            <th className="p-6">Çıkış Saati</th>
+                                            <th className="p-6 w-[35%]">Zaman Çizelgesi (07:00 - 22:00)</th>
                                             <th className="p-6 text-right">Normal</th>
                                             <th className="p-6 text-right">Fazla</th>
                                         </>
@@ -427,11 +426,46 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                 </td>
                                                 {scope === 'DAILY' ? (
                                                     <>
-                                                        <td className="p-6 font-mono text-sm font-semibold text-slate-700">
-                                                            {item.today_check_in ? moment(item.today_check_in).format('HH:mm') : '-'}
-                                                        </td>
-                                                        <td className="p-6 font-mono text-sm font-semibold text-slate-700">
-                                                            {item.today_check_out ? moment(item.today_check_out).format('HH:mm') : '-'}
+                                                        <td className="p-6">
+                                                            {/* TIMELINE VISUALIZATION */}
+                                                            {(() => {
+                                                                if (!item.today_check_in) return <span className="text-slate-300 text-xs italic">Giriş Yok</span>;
+
+                                                                // Config: 07:00 (420m) to 22:00 (1320m) = 900 minutes total
+                                                                const startMin = 420;
+                                                                const totalRange = 900;
+
+                                                                const getMin = (iso) => {
+                                                                    if (!iso) return null;
+                                                                    const d = moment(iso);
+                                                                    return d.hours() * 60 + d.minutes();
+                                                                };
+
+                                                                const inMin = getMin(item.today_check_in);
+                                                                const outMin = getMin(item.today_check_out) || (item.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60); // Fallback
+
+                                                                // Clamp
+                                                                const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
+                                                                const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
+
+                                                                return (
+                                                                    <div className="relative w-full h-8 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                                                                        {/* Grid Lines (Every 3 hours: 07, 10, 13, 16, 19, 22) */}
+                                                                        {[0, 20, 40, 60, 80, 100].map(p => (
+                                                                            <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/50" style={{ left: `${p}%` }}></div>
+                                                                        ))}
+
+                                                                        {/* Work Bar */}
+                                                                        <div
+                                                                            className={`absolute top-1 bottom-1 rounded-md shadow-sm flex items-center justify-between px-2 text-[10px] font-bold text-white whitespace-nowrap transition-all duration-500 ${item.is_online ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-slate-400'}`}
+                                                                            style={{ left: `${barStart}%`, width: `${barWidth}%` }}
+                                                                        >
+                                                                            <span>{moment(item.today_check_in).format('HH:mm')}</span>
+                                                                            {item.today_check_out && <span>{moment(item.today_check_out).format('HH:mm')}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </td>
                                                         <td className="p-6 text-right font-mono text-sm font-semibold text-slate-600">
                                                             {formatMinutes(item.today_normal)}
