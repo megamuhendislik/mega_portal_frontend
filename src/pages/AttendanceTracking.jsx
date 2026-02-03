@@ -369,7 +369,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold border-2 border-white shadow-sm">
-                                                            {item.employee_name.charAt(0)}
+                                                            {(item.employee_name || '?').charAt(0)}
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-slate-800">{item.employee_name}</div>
