@@ -80,14 +80,21 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             // Calculate Executive Summaries
             const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
+            const required = data.reduce((acc, curr) => acc + (curr.monthly_required || 0), 0);
             const overtime = data.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
             const missing = data.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
             const balance = data.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
 
-            // Efficiency: (Worked / (Worked + Missing)) * 100 roughly, or Worked / Required
-            // Let's use simple logic: If net balance > 0, 100%+, else proportional
-            // Alternative: Active employees count
-            const active = data.length; // Simplified for now
+            // Efficiency: (Worked / Required) * 100
+            // If required is 0 (e.g. start of month), default to 100% or 0 based on context.
+            // Let's settle on: If required > 0, calculate. Else 0.
+            const efficiency = required > 0 ? Math.min(100, Math.round((worked / required) * 100)) : 0;
+
+            // Alternative Logic requested generally: 
+            // Some companies want (Worked / (Required - Holidays)) etc.
+            // But simple Worked/Required is standard for "Realization".
+
+            const active = data.length;
 
             setSummary({
                 totalWorked: worked,
@@ -95,7 +102,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 totalMissing: missing,
                 netBalance: balance,
                 activeCount: active,
-                efficiency: 98 // Placeholder or calc
+                efficiency: efficiency
             });
 
         } catch (error) {
