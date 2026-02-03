@@ -61,7 +61,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const fetchDepartments = async () => {
         try {
             const res = await api.get('/departments/');
-            setDepartments(res.data);
+            setDepartments(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
             console.error('Error fetching departments:', error);
         }
@@ -75,7 +75,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             params.include_inactive = 'true'; // Backend supports this now
 
             const res = await api.get('/dashboard/stats/', { params });
-            const data = res.data;
+            const data = Array.isArray(res.data) ? res.data : [];
             setStats(data);
 
             // Calculate Executive Summaries
@@ -111,7 +111,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             const params = { year, month };
             if (selectedDept) params.department_id = selectedDept;
             const res = await api.get('/stats/team_matrix/', { params });
-            setMatrixData(res.data);
+            // Matrix data must have .data property which is array
+            setMatrixData(res.data && Array.isArray(res.data.data) ? res.data : null);
         } catch (error) {
             console.error('Error fetching matrix:', error);
         } finally {
