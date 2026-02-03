@@ -355,7 +355,8 @@ const Attendance = () => {
                     </div>
                 ) : (
                     // OPTIMIZED TEAM DASHBOARD VIEW
-                    <AttendanceTracking embedded={true} year={viewYear} month={viewMonth} />
+                    // OPTIMIZED TEAM DASHBOARD VIEW
+                    <AttendanceTracking embedded={true} year={viewYear} month={viewMonth} scope={viewScope} />
                 )
             }
         </div >

@@ -276,7 +276,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             )}
 
             {/* Executive Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className={`grid gap-6 ${scope === 'DAILY' ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
                 <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white p-6 rounded-3xl shadow-lg shadow-indigo-200 transition-all hover:shadow-xl hover:-translate-y-1">
                     <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
                     <div className="flex items-center gap-4 relative z-10">
@@ -317,31 +317,35 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     </div>
                 </div>
 
-                <div className="group relative overflow-hidden bg-white p-6 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-lg hover:-translate-y-1">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                            <Clock size={28} />
-                        </div>
-                        <div>
-                            <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Fazla Mesai</p>
-                            <div className="flex items-end gap-2">
-                                <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalOvertime)}</h3>
+                {scope !== 'DAILY' && (
+                    <>
+                        <div className="group relative overflow-hidden bg-white p-6 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-lg hover:-translate-y-1">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                                    <Clock size={28} />
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Fazla Mesai</p>
+                                    <div className="flex items-end gap-2">
+                                        <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalOvertime)}</h3>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div className="group relative overflow-hidden bg-white p-6 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-lg hover:-translate-y-1">
-                    <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-2xl ${summary.totalMissing > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
-                            <AlertCircle size={28} />
+                        <div className="group relative overflow-hidden bg-white p-6 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-lg hover:-translate-y-1">
+                            <div className="flex items-center gap-4">
+                                <div className={`p-3 rounded-2xl ${summary.totalMissing > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
+                                    <AlertCircle size={28} />
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Kayıp Zaman</p>
+                                    <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalMissing)}</h3>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Kayıp Zaman</p>
-                            <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalMissing)}</h3>
-                        </div>
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
 
             {/* Main Content Area */}
@@ -353,11 +357,20 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <tr className="bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
                                     <th className="p-6">Personel Detay</th>
                                     <th className="p-6">Durum</th>
-                                    <th className="p-6 w-1/4">Performans Hedefi</th>
-                                    <th className="p-6 text-right">Normal</th>
-                                    <th className="p-6 text-right">Fazla</th>
-                                    <th className="p-6 text-right">Eksik</th>
-                                    <th className="p-6 text-center">Bakiye</th>
+                                    {scope === 'DAILY' ? (
+                                        <>
+                                            <th className="p-6">Giriş Saati</th>
+                                            <th className="p-6">Çıkış Saati</th>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <th className="p-6 w-1/4">Performans Hedefi</th>
+                                            <th className="p-6 text-right">Normal</th>
+                                            <th className="p-6 text-right">Fazla</th>
+                                            <th className="p-6 text-right">Eksik</th>
+                                            <th className="p-6 text-center">Bakiye</th>
+                                        </>
+                                    )}
                                     <th className="p-6"></th>
                                 </tr>
                             </thead>
@@ -410,45 +423,59 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="p-6">
-                                                    <div className="flex justify-between text-xs mb-1 font-semibold text-slate-600">
-                                                        <span>İlerleme</span>
-                                                        <span>{Math.round(percent)}%</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                                        <div
-                                                            className={`h-full rounded-full transition-all duration-1000 ${percent < 80 ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'}`}
-                                                            style={{ width: `${percent}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 text-right font-mono text-sm font-semibold text-slate-600">
-                                                    {formatMinutes(item.total_worked)}
-                                                </td>
-                                                <td className="p-6 text-right">
-                                                    {item.total_overtime > 0 && (
-                                                        <span className="font-mono text-sm font-bold text-amber-600 flex items-center justify-end gap-1">
-                                                            <ArrowUpRight size={14} className="stroke-[3]" />
-                                                            {formatMinutes(item.total_overtime)}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6 text-right">
-                                                    {item.total_missing > 0 && (
-                                                        <span className="font-mono text-sm font-bold text-red-500 flex items-center justify-end gap-1">
-                                                            <ArrowDownRight size={14} className="stroke-[3]" />
-                                                            {formatMinutes(item.total_missing)}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6 text-center">
-                                                    <div className="inline-flex flex-col items-end">
-                                                        <div className="text-xs font-bold text-slate-400 mb-0.5">YILLIK İZİN</div>
-                                                        <div className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                                            {item.annual_leave_balance !== undefined ? `${item.effective_leave_balance} Gün` : '-'}
-                                                        </div>
-                                                    </div>
-                                                </td>
+                                                {scope === 'DAILY' ? (
+                                                    <>
+                                                        <td className="p-6 font-mono text-sm font-semibold text-slate-700">
+                                                            {item.today_check_in ? moment(item.today_check_in).format('HH:mm') : '-'}
+                                                        </td>
+                                                        <td className="p-6 font-mono text-sm font-semibold text-slate-700">
+                                                            {item.today_check_out ? moment(item.today_check_out).format('HH:mm') : '-'}
+                                                        </td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-6">
+                                                            <div className="flex justify-between text-xs mb-1 font-semibold text-slate-600">
+                                                                <span>İlerleme</span>
+                                                                <span>{Math.round(percent)}%</span>
+                                                            </div>
+                                                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all duration-1000 ${percent < 80 ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'}`}
+                                                                    style={{ width: `${percent}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-6 text-right font-mono text-sm font-semibold text-slate-600">
+                                                            {formatMinutes(item.total_worked)}
+                                                        </td>
+                                                        <td className="p-6 text-right">
+                                                            {item.total_overtime > 0 && (
+                                                                <span className="font-mono text-sm font-bold text-amber-600 flex items-center justify-end gap-1">
+                                                                    <ArrowUpRight size={14} className="stroke-[3]" />
+                                                                    {formatMinutes(item.total_overtime)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-6 text-right">
+                                                            {item.total_missing > 0 && (
+                                                                <span className="font-mono text-sm font-bold text-red-500 flex items-center justify-end gap-1">
+                                                                    <ArrowDownRight size={14} className="stroke-[3]" />
+                                                                    {formatMinutes(item.total_missing)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-6 text-center">
+                                                            <div className="inline-flex flex-col items-end">
+                                                                <div className="text-xs font-bold text-slate-400 mb-0.5">YILLIK İZİN</div>
+                                                                <div className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
+                                                                    {item.annual_leave_balance !== undefined ? `${item.effective_leave_balance} Gün` : '-'}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </>
+                                                )
+                                                }
                                                 <td className="p-6 text-right">
                                                     <button className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all group-hover:text-slate-500">
                                                         <MoreHorizontal size={20} />
@@ -464,8 +491,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </div>
             ) : (
                 renderGridView()
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 
