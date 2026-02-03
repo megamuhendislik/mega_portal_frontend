@@ -360,8 +360,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     {scope === 'DAILY' ? (
                                         <>
                                             <th className="p-6 w-[35%]">Zaman Çizelgesi (07:00 - 22:00)</th>
-                                            <th className="p-6 text-right">Normal</th>
-                                            <th className="p-6 text-right">Fazla</th>
+                                            <th className="p-6 w-[25%]">Günlük Detay</th>
+                                            <th className="p-6 w-[25%]">Aylık Durum</th>
                                         </>
                                     ) : (
                                         <>
@@ -467,11 +467,45 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                                 );
                                                             })()}
                                                         </td>
-                                                        <td className="p-6 text-right font-mono text-sm font-semibold text-slate-600">
-                                                            {formatMinutes(item.today_normal)}
+                                                        <td className="p-6">
+                                                            <div className="flex flex-col gap-1 text-xs font-mono font-semibold text-slate-600">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Normal:</span>
+                                                                    <span>{formatMinutes(item.today_normal)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Fazla:</span>
+                                                                    <span className={item.today_overtime > 0 ? 'text-amber-600' : ''}>{formatMinutes(item.today_overtime)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Eksik:</span>
+                                                                    <span className={item.today_missing > 0 ? 'text-red-500' : ''}>{formatMinutes(item.today_missing)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Mola:</span>
+                                                                    <span>{formatMinutes(item.today_break)}</span>
+                                                                </div>
+                                                            </div>
                                                         </td>
-                                                        <td className="p-6 text-right font-mono text-sm font-bold text-amber-600">
-                                                            {item.today_overtime > 0 ? `+${formatMinutes(item.today_overtime)}` : '-'}
+                                                        <td className="p-6">
+                                                            {/* MONTHLY STACKED BAR */}
+                                                            <div className="flex justify-between text-xs mb-1 font-semibold text-slate-600">
+                                                                <span>Aylık İlerleme</span>
+                                                                <span>% {Math.round(percent)}</span>
+                                                            </div>
+                                                            <div className="w-full h-3 bg-slate-100 rounded-full flex overflow-hidden">
+                                                                {/* Normal */}
+                                                                <div className="bg-blue-500 h-full" style={{ width: `${(item.total_worked / (item.total_worked + item.total_missing + 1)) * 100}%` }} title="Normal Çalışma"></div>
+                                                                {/* Overtime (Visualized as extra segment if needed, or included in total?) Overtime is technically 'worked', so maybe just overlay or separate segment. Simple approach: Worked vs Missing */}
+                                                                {/* Missing */}
+                                                                <div className="bg-slate-200 h-full flex-1"></div>
+                                                            </div>
+                                                            {/* Labels for Bar */}
+                                                            <div className="flex gap-2 text-[10px] mt-1 text-slate-400">
+                                                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Çalışılan</span>
+                                                                {item.total_overtime > 0 && <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500"></div>+{formatMinutes(item.total_overtime)} FM</span>}
+                                                                {item.total_missing > 0 && <span className="flex items-center gap-1 text-red-400"><div className="w-2 h-2 rounded-full bg-red-400"></div>-{formatMinutes(item.total_missing)} Eksik</span>}
+                                                            </div>
                                                         </td>
                                                     </>
                                                 ) : (
