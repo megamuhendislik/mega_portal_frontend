@@ -1631,8 +1631,8 @@ function MaintenanceTab() {
         setResult(null);
 
         try {
-            // Get token from localStorage (standard simple-jwt key)
-            const token = localStorage.getItem('access');
+            // Get token from localStorage or sessionStorage
+            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
             const headers = {
                 'Content-Type': 'application/json',
             };
