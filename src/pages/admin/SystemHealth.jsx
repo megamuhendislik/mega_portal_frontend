@@ -1141,10 +1141,34 @@ function DashboardTab({ stats, refresh, loading }) {
                         onClick={async () => {
                             if (confirm('DİKKAT! Bekleyen TÜM arka plan görevleri silinecek. Log taşması veya sıkışma varsa bunu kullanın.\n\nDevam edilsin mi?')) {
                                 try {
+                                    setRecalcConsoleOpen(true);
+                                    setRecalcLoading(true);
+                                    setRecalcLogs([
+                                        '> 🚀 Temizlik İşlemi Başlatılıyor...',
+                                        '> 🔌 Redis Sunucusuna Bağlanılıyor...',
+                                        '> ☢️ FLUSHALL komutu hazırlanıyor...'
+                                    ]);
+
+                                    // Artificial delay for UX
+                                    await new Promise(r => setTimeout(r, 1000));
+
                                     const res = await api.post('/system/health-check/purge_celery_queue/');
-                                    alert(res.data.message);
+
+                                    setRecalcLogs(prev => [
+                                        ...prev,
+                                        '> ☢️ KOMUT GÖNDERİLDİ: FLUSHALL',
+                                        `> ✅ SUNUCU YANITI: ${res.data.status.toUpperCase()}`,
+                                        `> 📄 MESAJ: ${res.data.message}`,
+                                        `> 🗑️ Silinen (Soft) Görev: ${res.data.purged_count}`,
+                                        '> 🏁 İŞLEM TAMAMLANDI.'
+                                    ]);
                                 } catch (e) {
-                                    alert("Hata: " + (e.response?.data?.error || e.message));
+                                    setRecalcLogs(prev => [
+                                        ...prev,
+                                        `> ❌ HATA: ${e.response?.data?.error || e.message}`
+                                    ]);
+                                } finally {
+                                    setRecalcLoading(false);
                                 }
                             }
                         }}
