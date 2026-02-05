@@ -1133,6 +1133,22 @@ function DashboardTab({ stats, refresh, loading }) {
                             }
                         }}
                     />
+
+                    <ActionButton
+                        label="Celery Kuyruğunu Temizle (ACİL)"
+                        description="Sistemdeki tüm bekleyen görevleri (Queue) siler. Log taşması veya görev birikmesi durumunda kullanın."
+                        hazard={true}
+                        onClick={async () => {
+                            if (confirm('DİKKAT! Bekleyen TÜM arka plan görevleri silinecek. Log taşması veya sıkışma varsa bunu kullanın.\n\nDevam edilsin mi?')) {
+                                try {
+                                    const res = await api.post('/system/health-check/purge_celery_queue/');
+                                    alert(res.data.message);
+                                } catch (e) {
+                                    alert("Hata: " + (e.response?.data?.error || e.message));
+                                }
+                            }
+                        }}
+                    />
                 </div>
             </div>
 
