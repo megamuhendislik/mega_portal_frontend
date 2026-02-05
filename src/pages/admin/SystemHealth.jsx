@@ -1624,19 +1624,58 @@ function MaintenanceTab() {
     const [logs, setLogs] = useState([]);
 
     const handleRunFix = async () => {
-        if (!confirm("Bu işlem tüm personelin 1 Ocak 2026'dan bugüne kadar olan puantaj verilerini YENİ MOLA MANTIĞINA göre tekrar hesaplayacaktır.\n\nİşlem uzun sürebilir. Devam etmek istiyor musunuz?")) return;
+        if (!confirm("Bu işlem tüm personelin 1 Ocak 2026'dan bugüne kadar olan puantaj verilerini YENİ MOLA MANTIĞINA göre tekrar hesaplayacaktır.\n\nİşlem uzun sürebilir ve canlı log akışı başlayacaktır. Devam etmek istiyor musunuz?")) return;
 
         setLoading(true);
         setLogs([]);
         setResult(null);
 
         try {
-            const res = await api.post('/system/health-check/fix_retroactive_breaks/');
-            setResult(res.data);
-            if (res.data.logs) setLogs(res.data.logs);
+            // Get token from localStorage (standard simple-jwt key)
+            const token = localStorage.getItem('access');
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch('https://web-production-6fe6a.up.railway.app/api/system/health-check/fix_retroactive_breaks/', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({})
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.replace('data: ', ''));
+                            if (data.message) {
+                                setLogs(prev => [...prev, {
+                                    time: new Date().toLocaleTimeString(),
+                                    message: data.message,
+                                    success: data.success !== false
+                                }]);
+                            }
+                            if (data.done) {
+                                setLoading(false);
+                            }
+                        } catch (e) {
+                            console.error("Parse Error", e);
+                        }
+                    }
+                }
+            }
         } catch (e) {
-            alert("Hata: " + (e.response?.data?.error || e.message));
-        } finally {
+            alert("Hata: " + e.message);
             setLoading(false);
         }
     };
