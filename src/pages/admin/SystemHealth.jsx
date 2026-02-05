@@ -17,6 +17,7 @@ import {
     KeyIcon,
     SparklesIcon,
     ClipboardDocumentCheckIcon,
+    WrenchScrewdriverIcon, // Added
     ChartBarIcon // Added for Resource Monitor
 } from '@heroicons/react/24/outline';
 
@@ -79,6 +80,7 @@ export default function SystemHealth() {
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                         { id: 'resources', name: 'Kaynak Kullanımı', icon: ChartBarIcon }, // New Tab
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
+                        { id: 'maintenance', name: 'Bakım & Onarım', icon: WrenchScrewdriverIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
                     ].map((tab) => (
                         <button
@@ -110,6 +112,7 @@ export default function SystemHealth() {
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'resources' && <ResourceMonitor />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
+                {activeTab === 'maintenance' && <MaintenanceTab />}
                 {activeTab === 'system_reset' && <SystemResetTab />}
             </div>
 
@@ -1608,6 +1611,90 @@ function SyntheticDataTab() {
                         })}
                         <div ref={consoleEndRef} />
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+function MaintenanceTab() {
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+    const [logs, setLogs] = useState([]);
+
+    const handleRunFix = async () => {
+        if (!confirm("Bu işlem tüm personelin 1 Ocak 2026'dan bugüne kadar olan puantaj verilerini YENİ MOLA MANTIĞINA göre tekrar hesaplayacaktır.\n\nİşlem uzun sürebilir. Devam etmek istiyor musunuz?")) return;
+
+        setLoading(true);
+        setLogs([]);
+        setResult(null);
+
+        try {
+            const res = await api.post('/system/health-check/fix_retroactive_breaks/');
+            setResult(res.data);
+            if (res.data.logs) setLogs(res.data.logs);
+        } catch (e) {
+            alert("Hata: " + (e.response?.data?.error || e.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
+            <div className="flex items-center gap-4 mb-6 text-indigo-700 bg-indigo-50 p-4 rounded-xl border border-indigo-200">
+                <WrenchScrewdriverIcon className="w-10 h-10" />
+                <div>
+                    <h3 className="text-xl font-bold">Sistem Bakım Araçları</h3>
+                    <p className="text-sm opacity-80">Otomatik düzeltme ve veri onarım araçları.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+                <div className="border border-indigo-100 rounded-xl p-6 hover:shadow-md transition-shadow">
+                    <h4 className="font-bold text-gray-800 text-lg mb-2 flex items-center gap-2">
+                        <ClockIcon className="w-5 h-5 text-indigo-600" />
+                        Geçmişe Yönelik Mola & Eksik Çalışma Düzeltmesi
+                    </h4>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Bu araç, sistemdeki yeni <strong>"Kullanılan Mola Kadar Kredi"</strong> mantığını tüm geçmiş kayıtlara uygular.
+                        <br />
+                        - Boşluk süresi mola hakkını (30dk) aşıyorsa, aşan kısım Eksik Mesaiye yansıtılır.
+                        <br />
+                        - "Mola" sütunu sadece kullanılan yasal hakkı gösterir.
+                    </p>
+
+                    <button
+                        onClick={handleRunFix}
+                        disabled={loading}
+                        className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-sm transition-all flex items-center justify-center gap-2 ${loading ? 'bg-gray-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'}`}
+                    >
+                        {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
+                        {loading ? 'Düzeltme Uygulanıyor...' : 'Düzeltme İşlemini Başlat'}
+                    </button>
+
+                    {/* LOGS */}
+                    {(logs.length > 0 || result) && (
+                        <div className="mt-6 bg-gray-900 rounded-lg p-4 font-mono text-xs text-green-400 max-h-[300px] overflow-y-auto">
+                            <div className="text-white font-bold border-b border-gray-700 pb-2 mb-2 sticky top-0 bg-gray-900">
+                                İşlem Logları:
+                            </div>
+                            {logs.map((log, i) => (
+                                <div key={i} className="mb-1 border-b border-gray-800 pb-1 last:border-0">
+                                    <span className="text-gray-500 mr-2">[{log.time}]</span>
+                                    <span className={log.success === false ? 'text-red-400' : 'text-green-400'}>
+                                        {log.message}
+                                    </span>
+                                </div>
+                            ))}
+                            {result && (
+                                <div className="mt-4 pt-4 border-t border-gray-700 text-yellow-400 font-bold">
+                                    SONUÇ: {result.message}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
