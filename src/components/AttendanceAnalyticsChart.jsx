@@ -13,44 +13,68 @@ import { tr } from 'date-fns/locale';
 import api from '../services/api';
 
 // Sub-component for Weekly Bar Chart (Legacy Logic)
-const WeeklyView = ({ employeeId }) => {
-    const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+// Sub-component for Weekly Bar Chart (Logs Based)
+const WeeklyView = ({ logs, showBreaks }) => {
+    // Default to start of logs or current week if no logs
+    const [weekStart, setWeekStart] = useState(() => {
+        if (logs && logs.length > 0) {
+            return startOfWeek(new Date(logs[0].work_date), { weekStartsOn: 1 });
+        }
+        return startOfWeek(new Date(), { weekStartsOn: 1 });
+    });
 
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
-
+    // Update weekStart if logs change drastically (e.g. month change)
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const startStr = format(weekStart, 'yyyy-MM-dd');
-                const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
-
-                const params = new URLSearchParams({
-                    scope: 'WEEKLY',
-                    start_date: startStr,
-                    end_date: endStr
-                });
-
-                if (employeeId) {
-                    params.append('employee_id', employeeId);
-                }
-
-                const response = await api.get(`/attendance/stats/?${params.toString()}`);
-
-                // Backend now returns pre-formatted data or raw logs?
-                // I implemented backend to return: [{ name, fullDate, normal, overtime, missing, target }]
-                // So I can just set data directly!
-                setData(response.data);
-            } catch (error) {
-                console.error("Error fetching weekly stats:", error);
-            } finally {
-                setLoading(false);
+        if (logs && logs.length > 0) {
+            const firstLog = new Date(logs[0].work_date);
+            // If current weekStart is far from logs (e.g. > 45 days), reset to first log
+            if (Math.abs(weekStart - firstLog) > 1000 * 60 * 60 * 24 * 45) {
+                setWeekStart(startOfWeek(firstLog, { weekStartsOn: 1 }));
             }
-        };
+        }
+    }, [logs]); // Reduced deps to avoid flicker
 
-        fetchData();
-    }, [weekStart, employeeId]);
+    // Compute Data for the selected Week from Logs
+    const data = useMemo(() => {
+        const start = weekStart;
+        const end = addDays(weekStart, 6);
+
+        // Init 7 days
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const d = addDays(start, i);
+            days.push({
+                date: format(d, 'yyyy-MM-dd'),
+                name: format(d, 'EEE', { locale: tr }), // Pzt, Sal
+                fullDate: format(d, 'd MMM yyyy', { locale: tr }),
+                normal: 0,
+                overtime: 0,
+                missing: 0,
+                break: 0,
+                target: 0,
+                isFuture: d > new Date()
+            });
+        }
+
+        if (!logs) return days;
+
+        // Map Logs
+        logs.forEach(log => {
+            const logDay = days.find(d => d.date === log.work_date);
+            if (logDay) {
+                logDay.normal = parseFloat(((log.normal_seconds || 0) / 3600).toFixed(1));
+                logDay.overtime = parseFloat(((log.overtime_seconds || 0) / 3600).toFixed(1));
+                logDay.missing = parseFloat(((log.missing_seconds || 0) / 3600).toFixed(1));
+                // Show Break in HOURS to match scale? Or Minutes?
+                // Chart Y-Axis is likely Hours (0-12). 30min = 0.5h. 
+                logDay.break = parseFloat(((log.break_seconds || 0) / 3600).toFixed(2));
+
+                logDay.target = parseFloat(((log.day_target_seconds || 0) / 3600).toFixed(1));
+            }
+        });
+
+        return days;
+    }, [logs, weekStart]);
 
     return (
         <div className="h-full flex flex-col">
@@ -66,7 +90,6 @@ const WeeklyView = ({ employeeId }) => {
             <div className="flex-1 w-full h-[320px] min-h-[320px]" style={{ minHeight: '320px' }}>
                 <ResponsiveContainer width="99%" height="100%" debounce={50}>
                     <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
-                        {loading && <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="#94a3b8" fontSize="14">Yükleniyor...</text>}
                         <defs>
                             <pattern id="striped-analytics" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                                 <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
@@ -94,9 +117,36 @@ const WeeklyView = ({ employeeId }) => {
                             name="Hedef"
                             connectNulls={false}
                         />
+
+                        {/* Bars stackId="a" means they stack. Break should be separate or stacked? 
+                            Ideally separate or overlay. Let's stack it on top? Or separate bar?
+                            User wants "Show breaks too".
+                            If I stack it, it adds to "Total Height".
+                            Break is NOT work. It shouldn't add to Work Hours visually if we want to compare to Target.
+                            Target is Work Target.
+                            So Break should be a separate bar or Line?
+                            Line is clearer. Let's use Line or separate Bar (no stackId).
+                            Let's use a Line because 0.5 is small compared to 8. Or a small bar.
+                            Let's try a separate Bar (barSize smaller) or just stacked if user wants "Total Time at Office"?
+                            Usually "Break Analysis" is distinct. 
+                            Let's use a Line for visibility if it's small hours.
+                            Actually, a Bar is better for "Duration" feel. I'll make it separate stackId="break" so it sits next to work bar?
+                            Or just render it if toggle is ON.
+                        */}
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal" />
                         <Bar dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} name="Ek Mesai" />
                         <Bar dataKey="missing" stackId="a" fill="url(#striped-analytics)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} name="Eksik" />
+
+                        {showBreaks && (
+                            <Bar
+                                dataKey="break"
+                                stackId="b" /* Separate stack so it stands next to work column */
+                                fill="#fbbf24"
+                                radius={[4, 4, 4, 4]}
+                                name="Mola (Sa)"
+                                barSize={12} /* Thinner bar for break */
+                            />
+                        )}
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
@@ -105,7 +155,7 @@ const WeeklyView = ({ employeeId }) => {
 };
 
 // Sub-component for Trends (Line Chart)
-const TrendView = ({ data, xKey, unit = 'sa' }) => {
+const TrendView = ({ data, xKey, unit = 'sa', showBreaks }) => {
     return (
         <div className="h-full w-full flex-1 min-h-[320px] pt-4" style={{ minHeight: '320px' }}>
             <ResponsiveContainer width="99%" height="100%" debounce={50}>
@@ -147,6 +197,17 @@ const TrendView = ({ data, xKey, unit = 'sa' }) => {
                         dot={{ r: 3 }}
                         activeDot={{ r: 6 }}
                     />
+                    {showBreaks && (
+                        <Line
+                            type="monotone"
+                            dataKey="break"
+                            name="Ort. Mola"
+                            stroke="#fbbf24"
+                            strokeWidth={3}
+                            dot={{ r: 3 }}
+                            activeDot={{ r: 6 }}
+                        />
+                    )}
                 </LineChart>
             </ResponsiveContainer>
         </div>
@@ -203,6 +264,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
     const [loadingYearly, setLoadingYearly] = useState(false);
+    const [showBreaks, setShowBreaks] = useState(false);
 
     // Prepare Monthly Trend Data (Aggregated by Week)
     const monthlyTrendData = useMemo(() => {
@@ -231,13 +293,15 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             weeks[weekLabel].count += 1;
             weeks[weekLabel].normal += (log.normal_seconds || 0) / 3600;
             weeks[weekLabel].overtime += (log.overtime_seconds || 0) / 3600;
+            weeks[weekLabel].break += (log.break_seconds || 0) / 3600; // Hours
         });
 
         // Calculate Averages
         return Object.keys(weeks).map(key => ({
             name: key,
             normal: parseFloat((weeks[key].normal / weeks[key].count).toFixed(1)), // Average per day in that week
-            overtime: parseFloat((weeks[key].overtime / weeks[key].count).toFixed(1))
+            overtime: parseFloat((weeks[key].overtime / weeks[key].count).toFixed(1)),
+            break: parseFloat((weeks[key].break / weeks[key].count).toFixed(2))
         }));
     }, [logs]);
 
@@ -290,6 +354,20 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                     </div>
                 </div>
 
+                {/* Show Breaks Toggle (Merged Logic) */}
+                <div className="flex items-center mr-4">
+                    <label className="flex items-center cursor-pointer relative">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={showBreaks}
+                            onChange={(e) => setShowBreaks(e.target.checked)}
+                        />
+                        <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-400"></div>
+                        <span className="ml-2 text-xs font-bold text-slate-500">Molaları Göster</span>
+                    </label>
+                </div>
+
                 {/* Tabs */}
                 <div className="bg-slate-50 p-1 rounded-lg flex border border-slate-100">
                     {['WEEKLY', 'MONTHLY', 'YEARLY'].map(s => (
@@ -308,7 +386,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             </div>
 
             <div className="flex-1 w-full min-h-0">
-                {scope === 'WEEKLY' && <WeeklyView employeeId={employeeId} />}
+                {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} />}
                 {scope === 'MONTHLY' && (
                     <TrendView data={monthlyTrendData} xKey="name" />
                 )}
