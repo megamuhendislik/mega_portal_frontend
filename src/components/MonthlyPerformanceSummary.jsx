@@ -368,39 +368,45 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {stats.cumulative.breakdown.map((m, idx) => {
-                                                    const targetH = (m.target / 3600).toFixed(1);
-                                                    const completedH = (m.completed / 3600).toFixed(1);
-                                                    const missingH = (m.missing / 3600).toFixed(1);
-                                                    const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
-                                                    const balanceH = (m.balance / 3600).toFixed(1);
-                                                    const isPositive = m.balance >= 0;
+                                                {stats.cumulative.breakdown
+                                                    .filter(m => {
+                                                        const currentMonth = new Date().getMonth() + 1;
+                                                        return m.month <= currentMonth;
+                                                    })
+                                                    .map((m, idx) => {
+                                                        const targetH = (m.target / 3600).toFixed(1);
+                                                        const completedH = (m.completed / 3600).toFixed(1);
+                                                        const missingH = (m.missing / 3600).toFixed(1);
+                                                        const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
+                                                        const balanceH = (m.balance / 3600).toFixed(1);
+                                                        const isPositive = m.balance >= 0;
 
-                                                    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-                                                    const monthName = monthNames[m.month - 1] || `${m.month}. Ay`;
+                                                        // Month Names
+                                                        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+                                                        const monthName = monthNames[m.month - 1] || `${m.month}. Ay`;
 
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                                                            <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
-                                                                <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                                                                {monthName}
-                                                            </td>
-                                                            <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
-                                                            <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">{completedH} <span className="text-[10px] text-slate-400">sa</span></td>
-                                                            <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
-                                                                {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
-                                                            </td>
-                                                            <td className="px-4 py-4 text-center font-mono font-bold text-emerald-500">
-                                                                {parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}
-                                                            </td>
-                                                            <td className="px-4 py-4 text-right">
-                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
-                                                                    {isPositive && parseFloat(balanceH) > 0 ? '+' : ''}{balanceH} sa
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                                                                <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
+                                                                    <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                                                                    {monthName}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
+                                                                <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">{completedH} <span className="text-[10px] text-slate-400">sa</span></td>
+                                                                <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
+                                                                    {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-center font-mono font-bold text-emerald-500">
+                                                                    {parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-right">
+                                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
+                                                                        {isPositive && parseFloat(balanceH) > 0 ? '+' : ''}{balanceH} sa
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                             </tbody>
                                         </table>
                                     </div>
