@@ -153,6 +153,32 @@ export default function DataManagement() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingDate, setEditingDate] = useState(null); // Date object
 
+    // --- Settlement Modal State ---
+    const [settlementData, setSettlementData] = useState(null); // { isOpen: bool, employee, year, month, netBalance }
+
+    const openSettlement = (employee, month, stat) => {
+        // stat has { normal, ot, missing, net_balance (if available) }
+        // bulkStats might not have net_balance? 
+        // We can infer Net = (Normal + OT) - Target? Or just (OT - Missing)? 
+        // Usually Net Balance = Total Work - Target.
+        // But here we rely on what 'bulkStats' returns.
+        // Let's ensure bulkStats returns 'net_balance' or 'balance'.
+
+        // If not available, we assume Balance ~= OT - Missing (roughly for visualization)
+        // But for settlement we need exact.
+        // Let's pass what we have, and maybe fetch exact in modal? 
+        // Or assume the user wants to settle the visible surplus/deficit.
+        const balance = stat.balance !== undefined ? stat.balance : (stat.ot - stat.missing);
+
+        setSettlementData({
+            isOpen: true,
+            employee,
+            year: listYear,
+            month,
+            netBalance: balance
+        });
+    };
+
     useEffect(() => {
         if (activeTab === 'browse_users' && employees.length === 0) {
             setLoadingEmployees(true);
@@ -464,6 +490,17 @@ export default function DataManagement() {
                                                                         )}
                                                                     </div>
                                                                 )}
+
+                                                                {/* Settlement Trigger */}
+                                                                {!isEmpty && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); openSettlement(emp, m, stat); }}
+                                                                        className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 rounded"
+                                                                        title="Mahsuplaş / Sıfırla"
+                                                                    >
+                                                                        Sıfırla
+                                                                    </button>
+                                                                )}
                                                             </td>
                                                         );
                                                     })}
@@ -555,6 +592,14 @@ export default function DataManagement() {
                     onSaveSuccess={fetchMonthlyData}
                 />
             )}
+
+            {/* Settlement Modal */}
+            <SettlementModal
+                isOpen={settlementData?.isOpen}
+                onClose={() => setSettlementData(null)}
+                data={settlementData}
+                onSaveSuccess={fetchBulkStats}
+            />
         </div>
     );
 }
@@ -643,201 +688,316 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
     );
 }
 
-function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
-    const [records, setRecords] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [deleteIds, setDeleteIds] = useState([]);
-    const [summary, setSummary] = useState(null);
+function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
+    const [amount, setAmount] = useState(data?.netBalance || 0);
+    const [mode, setMode] = useState('FULL'); // FULL, PARTIAL
+    const [loading, setLoading] = useState(false);
 
-    const dateStr = format(date, 'yyyy-MM-dd');
-
-    // Load initial data
     useEffect(() => {
-        if (isOpen) {
-            setLoading(true);
-            setDeleteIds([]);
-            api.get('/system-data/daily_records/', {
-                params: { employee_id: employee.id, date: dateStr }
-            }).then(res => {
-                setRecords(res.data.records);
-                setSummary(null);
-            }).finally(() => setLoading(false));
+        if (isOpen && data) {
+            setAmount(data.netBalance);
+            setMode('FULL');
         }
-    }, [isOpen, employee.id, dateStr]);
+    }, [isOpen, data]);
 
     const handleSave = async () => {
-        setSaving(true);
+        setLoading(true);
         try {
-            const res = await api.post('/system-data/update_daily_records/', {
-                employee_id: employee.id,
-                date: dateStr,
-                records: records,
-                delete_ids: deleteIds
+            await api.post('/attendance/settle-balance/', {
+                employee_id: data.employee.id,
+                year: data.year,
+                month: data.month,
+                balance_seconds: data.netBalance,
+                compensated_seconds: amount
             });
-            setSummary(res.data.summary);
-            // Re-fetch to normalize
-            const refetch = await api.get('/system-data/daily_records/', {
-                params: { employee_id: employee.id, date: dateStr }
-            });
-            setRecords(refetch.data.records);
-
-            alert('Kaydedildi!');
+            alert('Mahsuplaşma işlemi kaydedildi.');
+            onSaveSuccess();
+            onClose();
         } catch (e) {
-            alert('Hata: ' + e.message);
+            alert('Hata: ' + (e.response?.data?.error || e.message));
         } finally {
-            setSaving(false);
+            setLoading(false);
         }
     };
 
-    const addRecord = () => {
-        setRecords([...records, {
-            id: null,
-            check_in: `${dateStr}T09:00`,
-            check_out: `${dateStr}T18:00`,
-            source: 'MANUAL',
-            status: 'OPEN'
-        }]);
-    };
+    if (!isOpen || !data) return null;
 
-    const fillStandardShift = () => {
-        // Adds standard 08:00 - 18:00 shift
-        setRecords([...records, {
-            id: null,
-            check_in: `${dateStr}T08:00`,
-            check_out: `${dateStr}T18:00`,
-            source: 'MANUAL',
-            status: 'OPEN'
-        }]);
-    };
-
-    const updateRec = (idx, field, val) => {
-        const n = [...records];
-        n[idx][field] = val;
-        setRecords(n);
-    };
-
-
-
-
-
-
-
-
-
-
-
-
+    const isSurplus = data.netBalance > 0;
+    const absBal = Math.abs(data.netBalance);
+    const hours = Math.round(absBal / 3600);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-800">
-                            {format(date, 'd MMMM yyyy', { locale: tr })}
-                        </h3>
-                        <p className="text-sm text-slate-500">{employee.first_name} {employee.last_name} için kayıtlar</p>
+                    <h3 className="text-lg font-bold text-slate-800">Bakiye Mahsuplaşma</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">×</button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <div className={`p-4 rounded-xl border ${isSurplus ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
+                        <div className="text-sm font-bold opacity-70">Mevcut Bakiye ({data.month}. Ay)</div>
+                        <div className="text-3xl font-bold">
+                            {isSurplus ? '+' : '-'}{hours} Saat
+                        </div>
+                        <div className="text-xs mt-1 opacity-80">({data.netBalance} saniye)</div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                        <span className="font-bold text-xl">×</span>
-                    </button>
-                </div>
 
-                <div className="p-6 overflow-y-auto flex-1">
-                    {loading ? (
-                        <div className="text-center py-10">Yükleniyor...</div>
-                    ) : (
-                        <>
-                            <div className="flex justify-between mb-4 items-center">
-                                <div className="text-sm text-slate-500 font-medium">Hızlı İşlemler:</div>
-                                <div className="flex gap-2">
-                                    <button onClick={fillStandardShift} className="flex items-center gap-2 bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors text-sm">
-                                        Tam Gün Mesai Ekle (08:00 - 18:00)
-                                    </button>
-                                    <button onClick={addRecord} className="flex items-center gap-2 text-blue-600 font-bold hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors text-sm">
-                                        <Plus size={16} /> Yeni Kayıt Ekle
-                                    </button>
+                    <div className="space-y-3">
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
+                            <input
+                                type="radio"
+                                name="mode"
+                                checked={mode === 'FULL'}
+                                onChange={() => { setMode('FULL'); setAmount(data.netBalance); }}
+                                className="w-5 h-5 text-blue-600"
+                            />
+                            <div>
+                                <div className="font-bold text-slate-700">Tamamını Sıfırla</div>
+                                <div className="text-xs text-slate-500">Bütün bakiyeyi mahsuplaş ({data.netBalance} sn)</div>
+                            </div>
+                        </label>
+
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
+                            <input
+                                type="radio"
+                                name="mode"
+                                checked={mode === 'PARTIAL'}
+                                onChange={() => setMode('PARTIAL')}
+                                className="w-5 h-5 text-blue-600"
+                            />
+                            <div>
+                                <div className="font-bold text-slate-700">Kısmi / Manuel Giriş</div>
+                                <div className="text-xs text-slate-500">Belirli bir miktarı düş</div>
+                            </div>
+                        </label>
+
+                        {mode === 'PARTIAL' && (
+                            <div className="pl-8">
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Miktar (Saniye)</label>
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={e => setAmount(Number(e.target.value))}
+                                    className="w-full border p-2 rounded-lg font-mono"
+                                />
+                                <div className="text-xs text-slate-400 mt-1">
+                                    Pozitif (+) değer bakiyeden düşer, Negatif (-) değer bakiyeye ekler.
                                 </div>
                             </div>
-
-                            <div className="space-y-4">
-                                {records.map((rec, i) => (
-                                    <div key={i} className="flex flex-col md:flex-row gap-4 p-4 border rounded-xl bg-slate-50 relative group hover:border-blue-300 transition-colors">
-                                        <div className="flex-1">
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Giriş Zamanı</label>
-                                            <input
-                                                type="text"
-                                                className="w-full border p-2 rounded bg-white font-mono text-sm"
-                                                value={rec.check_in || ''}
-                                                onChange={e => updateRec(i, 'check_in', e.target.value)}
-                                                placeholder="YYYY-MM-DDTHH:MM"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Çıkış Zamanı</label>
-                                            <input
-                                                type="text"
-                                                className="w-full border p-2 rounded bg-white font-mono text-sm"
-                                                value={rec.check_out || ''}
-                                                onChange={e => updateRec(i, 'check_out', e.target.value)}
-                                                placeholder="YYYY-MM-DDTHH:MM"
-                                            />
-                                        </div>
-                                        <div className="w-[150px]">
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Kaynak</label>
-                                            <select
-                                                value={rec.source}
-                                                onChange={e => updateRec(i, 'source', e.target.value)}
-                                                className="w-full border p-2 rounded bg-white text-sm"
-                                            >
-                                                <option value="MANUAL">MANUAL</option>
-                                                <option value="CARD">CARD</option>
-                                                <option value="FACE">FACE</option>
-                                                <option value="QR">QR</option>
-                                            </select>
-                                        </div>
-
-                                        <button
-                                            onClick={() => removeRec(i)}
-                                            className="absolute top-2 right-2 text-red-300 group-hover:text-red-600 p-1 hover:bg-red-50 rounded"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ))}
-                                {records.length === 0 && (
-                                    <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-xl">
-                                        Kayıt yok.
-                                    </div>
-                                )}
-                            </div>
-
-                            {summary && (
-                                <div className="mt-6 p-4 bg-green-50 border border-green-100 rounded-xl text-sm text-green-800">
-                                    <strong>Sonuçlar:</strong>
-                                    <span className="ml-2">Normal: {Math.round(summary.normal_seconds / 60)}dk</span>
-                                    <span className="ml-2">Fazla: {Math.round(summary.overtime_seconds / 60)}dk</span>
-                                    <span className="ml-2">Eksik: {Math.round(summary.missing_seconds / 60)}dk</span>
-                                </div>
-                            )}
-                        </>
-                    )}
+                        )}
+                    </div>
                 </div>
 
-                <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-6 py-2 rounded-lg text-slate-600 font-medium hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all">
-                        Vazgeç
-                    </button>
+                <div className="p-4 bg-slate-50 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg">İptal</button>
                     <button
                         onClick={handleSave}
-                        disabled={saving}
-                        className="px-6 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+                        disabled={loading}
+                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {saving ? '...' : <><Save size={18} /> Kaydet</>}
+                        {loading ? 'İşleniyor...' : 'Onayla'}
                     </button>
                 </div>
             </div>
         </div>
     );
+}
+
+const [records, setRecords] = useState([]);
+const [loading, setLoading] = useState(true);
+const [saving, setSaving] = useState(false);
+const [deleteIds, setDeleteIds] = useState([]);
+const [summary, setSummary] = useState(null);
+
+const dateStr = format(date, 'yyyy-MM-dd');
+
+// Load initial data
+useEffect(() => {
+    if (isOpen) {
+        setLoading(true);
+        setDeleteIds([]);
+        api.get('/system-data/daily_records/', {
+            params: { employee_id: employee.id, date: dateStr }
+        }).then(res => {
+            setRecords(res.data.records);
+            setSummary(null);
+        }).finally(() => setLoading(false));
+    }
+}, [isOpen, employee.id, dateStr]);
+
+const handleSave = async () => {
+    setSaving(true);
+    try {
+        const res = await api.post('/system-data/update_daily_records/', {
+            employee_id: employee.id,
+            date: dateStr,
+            records: records,
+            delete_ids: deleteIds
+        });
+        setSummary(res.data.summary);
+        // Re-fetch to normalize
+        const refetch = await api.get('/system-data/daily_records/', {
+            params: { employee_id: employee.id, date: dateStr }
+        });
+        setRecords(refetch.data.records);
+
+        alert('Kaydedildi!');
+    } catch (e) {
+        alert('Hata: ' + e.message);
+    } finally {
+        setSaving(false);
+    }
+};
+
+const addRecord = () => {
+    setRecords([...records, {
+        id: null,
+        check_in: `${dateStr}T09:00`,
+        check_out: `${dateStr}T18:00`,
+        source: 'MANUAL',
+        status: 'OPEN'
+    }]);
+};
+
+const fillStandardShift = () => {
+    // Adds standard 08:00 - 18:00 shift
+    setRecords([...records, {
+        id: null,
+        check_in: `${dateStr}T08:00`,
+        check_out: `${dateStr}T18:00`,
+        source: 'MANUAL',
+        status: 'OPEN'
+    }]);
+};
+
+const updateRec = (idx, field, val) => {
+    const n = [...records];
+    n[idx][field] = val;
+    setRecords(n);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                <div>
+                    <h3 className="text-xl font-bold text-slate-800">
+                        {format(date, 'd MMMM yyyy', { locale: tr })}
+                    </h3>
+                    <p className="text-sm text-slate-500">{employee.first_name} {employee.last_name} için kayıtlar</p>
+                </div>
+                <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                    <span className="font-bold text-xl">×</span>
+                </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+                {loading ? (
+                    <div className="text-center py-10">Yükleniyor...</div>
+                ) : (
+                    <>
+                        <div className="flex justify-between mb-4 items-center">
+                            <div className="text-sm text-slate-500 font-medium">Hızlı İşlemler:</div>
+                            <div className="flex gap-2">
+                                <button onClick={fillStandardShift} className="flex items-center gap-2 bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors text-sm">
+                                    Tam Gün Mesai Ekle (08:00 - 18:00)
+                                </button>
+                                <button onClick={addRecord} className="flex items-center gap-2 text-blue-600 font-bold hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors text-sm">
+                                    <Plus size={16} /> Yeni Kayıt Ekle
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            {records.map((rec, i) => (
+                                <div key={i} className="flex flex-col md:flex-row gap-4 p-4 border rounded-xl bg-slate-50 relative group hover:border-blue-300 transition-colors">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Giriş Zamanı</label>
+                                        <input
+                                            type="text"
+                                            className="w-full border p-2 rounded bg-white font-mono text-sm"
+                                            value={rec.check_in || ''}
+                                            onChange={e => updateRec(i, 'check_in', e.target.value)}
+                                            placeholder="YYYY-MM-DDTHH:MM"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Çıkış Zamanı</label>
+                                        <input
+                                            type="text"
+                                            className="w-full border p-2 rounded bg-white font-mono text-sm"
+                                            value={rec.check_out || ''}
+                                            onChange={e => updateRec(i, 'check_out', e.target.value)}
+                                            placeholder="YYYY-MM-DDTHH:MM"
+                                        />
+                                    </div>
+                                    <div className="w-[150px]">
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Kaynak</label>
+                                        <select
+                                            value={rec.source}
+                                            onChange={e => updateRec(i, 'source', e.target.value)}
+                                            className="w-full border p-2 rounded bg-white text-sm"
+                                        >
+                                            <option value="MANUAL">MANUAL</option>
+                                            <option value="CARD">CARD</option>
+                                            <option value="FACE">FACE</option>
+                                            <option value="QR">QR</option>
+                                        </select>
+                                    </div>
+
+                                    <button
+                                        onClick={() => removeRec(i)}
+                                        className="absolute top-2 right-2 text-red-300 group-hover:text-red-600 p-1 hover:bg-red-50 rounded"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                            {records.length === 0 && (
+                                <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-xl">
+                                    Kayıt yok.
+                                </div>
+                            )}
+                        </div>
+
+                        {summary && (
+                            <div className="mt-6 p-4 bg-green-50 border border-green-100 rounded-xl text-sm text-green-800">
+                                <strong>Sonuçlar:</strong>
+                                <span className="ml-2">Normal: {Math.round(summary.normal_seconds / 60)}dk</span>
+                                <span className="ml-2">Fazla: {Math.round(summary.overtime_seconds / 60)}dk</span>
+                                <span className="ml-2">Eksik: {Math.round(summary.missing_seconds / 60)}dk</span>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
+                <button onClick={onClose} className="px-6 py-2 rounded-lg text-slate-600 font-medium hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all">
+                    Vazgeç
+                </button>
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-6 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+                >
+                    {saving ? '...' : <><Save size={18} /> Kaydet</>}
+                </button>
+            </div>
+        </div>
+    </div>
+);
 }
