@@ -35,7 +35,7 @@ const HeroDailySummary = ({ summary, loading }) => {
 
     return (
 
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
                     Bugünün Durumu
@@ -51,7 +51,7 @@ const HeroDailySummary = ({ summary, loading }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* 1. Work Widget - Blue/Indigo Theme */}
-                <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-white/20 shadow-xl shadow-indigo-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+                <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-indigo-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
                     {/* Background Decor */}
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-indigo-500/10 to-blue-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
 
@@ -99,7 +99,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                 </div>
 
                 {/* 2. Break Widget - Amber/Orange Theme */}
-                <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-white/20 shadow-xl shadow-amber-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1">
+                <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-amber-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1">
                     {/* Background Decor */}
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
 
@@ -154,7 +154,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                 </div>
 
                 {/* 3. Overtime Widget - Emerald/Teal Theme */}
-                <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-white/20 shadow-xl shadow-emerald-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1">
+                <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-emerald-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1">
                     {/* Background Decor */}
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
 

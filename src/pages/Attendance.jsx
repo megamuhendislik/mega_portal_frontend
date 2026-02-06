@@ -9,7 +9,7 @@ import AttendanceLogTable from '../components/AttendanceLogTable';
 import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
 import TeamComparisonChart from '../components/TeamComparisonChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
-import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
+
 
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import HeroDailySummary from '../components/HeroDailySummary';
@@ -302,39 +302,15 @@ const Attendance = () => {
                         </div>
 
                         {/* 3. Charts Row */}
-                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[450px]">
-                            {/* Stacked Attendance Chart (8 Cols) */}
-                            {/* Stacked Attendance Chart */}
-                            <div className={`${hasPermission('FEATURE_BREAK_ANALYSIS_VIEW') ? 'xl:col-span-8' : 'xl:col-span-12'} h-full transition-all duration-300`}>
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[500px]">
+                            {/* Stacked Attendance Chart (Full Width) */}
+                            <div className="xl:col-span-12 h-full transition-all duration-300">
                                 <AttendanceAnalyticsChart
                                     logs={logs}
                                     currentYear={viewYear}
                                     employeeId={selectedEmployeeId}
                                 />
                             </div>
-
-                            {/* Break Analysis (4 Cols) */}
-                            {hasPermission('FEATURE_BREAK_ANALYSIS_VIEW') && (
-                                <div className="xl:col-span-4 h-full">
-                                    {(activeTab === 'my_attendance' || hasPermission('FEATURE_BREAK_ANALYSIS_VIEW')) ? (
-                                        <BreakAnalysisWidget
-                                            employeeId={selectedEmployeeId}
-                                            logs={logs}
-                                            totalBreakSeconds={periodSummary?.total_break_seconds}
-                                            startDate={startDate}
-                                            endDate={endDate}
-                                        />
-                                    ) : (
-                                        <div className="h-full bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center">
-                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
-                                                <Users size={24} />
-                                            </div>
-                                            <h3 className="font-bold text-slate-700">Erişim Kısıtlı</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Bu personelin mola analizlerini görme yetkiniz yok.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
 
                         {/* 4. Detailed Logs Table */}

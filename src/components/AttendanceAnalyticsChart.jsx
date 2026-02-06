@@ -388,7 +388,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             <div className="flex-1 w-full min-h-0">
                 {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} />}
                 {scope === 'MONTHLY' && (
-                    <TrendView data={monthlyTrendData} xKey="name" />
+                    <TrendView data={monthlyTrendData} xKey="name" showBreaks={showBreaks} />
                 )}
                 {scope === 'YEARLY' && (
                     loadingYearly

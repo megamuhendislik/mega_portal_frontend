@@ -99,7 +99,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
     if (!stats) return <div className="p-4 text-center text-slate-400">Veri hesaplanıyor...</div>;
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div className="space-y-8">
 
             {/* Header / Target Overview */}
             <div className="flex items-end justify-between px-2">
@@ -114,7 +114,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             </div>
 
             {/* DUAL BAR LAYOUT */}
-            <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 space-y-10 border border-slate-100/50 relative overflow-hidden">
+            <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200 space-y-10 border border-slate-200 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-bl-full -mr-10 -mt-20 z-0 pointer-events-none opacity-50"></div>
 
                 {/* 1. Normal Work Bar */}
@@ -164,9 +164,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
             {/* 3. Cumulative / YTD Bar */}
             {stats.cumulative && (
-                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+                <div>
                     {/* 3. YILLIK KÜMÜLATİF PERFORMANS DASHBOARD */}
-                    <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100/50 p-8 relative overflow-hidden">
+                    <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 p-8 relative overflow-hidden">
                         <div className="flex justify-between items-center mb-8 relative z-10">
                             <div>
                                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
@@ -360,9 +360,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             )}
 
             {/* 3. Stats Grid with Colors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Net Surplus Card */}
-                <div className={`p-6 rounded-[2rem] border flex flex-col justify-between transition-all hover:shadow-xl ${stats.isSurplus ? 'bg-emerald-50/50 border-emerald-100/50 hover:bg-emerald-50' : 'bg-white border-slate-100 shadow-lg shadow-slate-100/50'}`}>
+                <div className={`p-6 rounded-[2rem] border flex flex-col justify-between transition-all hover:shadow-xl ${stats.isSurplus ? 'bg-emerald-50/50 border-emerald-100/50 hover:bg-emerald-50' : 'bg-white border-slate-200 shadow-lg shadow-slate-200'}`}>
                     <div className="flex items-center gap-3 mb-4">
                         <div className={`p-2 rounded-xl ${stats.isSurplus ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 text-slate-500'}`}>
                             <Scale size={20} />
@@ -378,7 +378,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 </div>
 
                 {/* Total Overtime Card (Raw) */}
-                <div className="bg-white p-6 rounded-[2rem] border border-indigo-100/50 shadow-lg shadow-indigo-100/20 flex flex-col justify-between hover:shadow-xl hover:shadow-indigo-500/10 transition-all">
+                <div className="bg-white p-6 rounded-[2rem] border border-indigo-100 shadow-lg shadow-indigo-100 flex flex-col justify-between hover:shadow-xl hover:shadow-indigo-500/10 transition-all">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/30">
                             <Zap size={20} />

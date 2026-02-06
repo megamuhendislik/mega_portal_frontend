@@ -61,7 +61,7 @@ const getStatusBadge = (log) => {
 
 const AttendanceLogTable = ({ logs }) => {
     return (
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100/50 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
