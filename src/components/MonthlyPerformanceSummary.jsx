@@ -99,156 +99,144 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
     if (!stats) return <div className="p-4 text-center text-slate-400">Veri hesaplanıyor...</div>;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
 
             {/* Header / Target Overview */}
             <div className="flex items-end justify-between px-2">
                 <div>
-                    <h4 className="font-bold text-slate-800 text-lg">Normal Mesai Hedefi</h4>
-                    <p className="text-sm text-slate-500">Planlanan dönem mesaisinin gerçekleşme durumu.</p>
+                    <h4 className="font-bold text-slate-800 text-lg tracking-tight">Normal Mesai Hedefi</h4>
+                    <p className="text-sm text-slate-500 font-medium">Planlanan dönem mesaisinin gerçekleşme durumu.</p>
                 </div>
                 <div className="text-right">
-                    <span className="text-3xl font-black text-slate-800">{stats.targetHours}</span>
-                    <span className="text-sm text-slate-400 font-bold ml-1">saat</span>
+                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.targetHours}</span>
+                    <span className="text-sm text-slate-400 font-bold ml-1 uppercase">saat</span>
                 </div>
             </div>
 
             {/* DUAL BAR LAYOUT */}
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-8">
+            <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 space-y-10 border border-slate-100/50 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-bl-full -mr-10 -mt-20 z-0 pointer-events-none opacity-50"></div>
 
                 {/* 1. Normal Work Bar */}
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold uppercase text-slate-500">1. Normal Mesai Dağılımı</span>
-                        <div className="flex gap-3 text-[10px] font-bold uppercase">
-                            <span className="flex items-center gap-1 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-600"></span>Tamamlanan</span>
-                            <span className="flex items-center gap-1 text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500"></span>Eksik</span>
-                            <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
+                <div className="relative z-10">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Normal Mesai Dağılımı</span>
+                        <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
+                            <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Tamamlanan</span>
+                            <span className="flex items-center gap-1.5 text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>Eksik</span>
+                            <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
                         </div>
                     </div>
-                    <div className="h-4 w-full bg-slate-200 rounded-full flex overflow-hidden">
-                        <div className="bg-blue-600 h-full transition-all duration-1000" style={{ width: `${stats.pCompleted}%` }} title={`Tamamlanan: ${stats.completedHours} sa`} />
-                        <div className="bg-rose-500 h-full transition-all duration-1000 relative" style={{ width: `${stats.pMissing}%` }} title={`Eksik: ${stats.missingHours} sa`}>
-                            <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.15)_50%,rgba(255,255,255,.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem]"></div>
+                    <div className="h-5 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.3)]" style={{ width: `${stats.pCompleted}%` }} title={`Tamamlanan: ${stats.completedHours} sa`} />
+                        <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_10px_rgba(244,63,94,0.3)]" style={{ width: `${stats.pMissing}%` }} title={`Eksik: ${stats.missingHours} sa`}>
+                            <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-50"></div>
                         </div>
-                        <div className="bg-slate-300 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} title={`Kalan: ${stats.remainingHours} sa`} />
+                        <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} title={`Kalan: ${stats.remainingHours} sa`} />
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
-                        <span>{stats.completedHours} sa</span>
+                        <span className="text-blue-700">{stats.completedHours} sa</span>
                         <span className="text-rose-600">{stats.missingHours > 0 ? `-${stats.missingHours} sa` : ''}</span>
                         <span className="text-slate-400">{stats.remainingHours} sa</span>
                     </div>
                 </div>
 
                 {/* 2. Total Work (Net) Bar */}
-                <div className="pt-4 border-t border-slate-200">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold uppercase text-slate-500 flex items-center gap-2">
-                            2. Mesai Dahil Gerçekleşen
-                            {stats.isSurplus && <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700">HEDEF AŞILDI</span>}
+                <div className="relative z-10 pt-6 border-t border-slate-100">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
+                            Toplam Efor (Mesai Dahil)
+                            {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                         </span>
-                        <span className="text-xs font-bold text-indigo-700">{stats.netWorkHours} / {stats.targetHours} sa</span>
+                        <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-2 py-1 rounded-lg">{stats.netWorkHours} / {stats.targetHours} sa</span>
                     </div>
-                    <div className="relative h-4 w-full bg-slate-200 rounded-full overflow-hidden">
-                        {/* Base Progress */}
+                    <div className="relative h-5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100">
                         <div
-                            className={`h-full transition-all duration-1000 ${stats.isSurplus ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                            className={`h-full transition-all duration-1000 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gradient-to-r from-indigo-400 to-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]'}`}
                             style={{ width: `${stats.pTotal}%` }}
                         />
-                        {/* If surplus, maybe a glow or marker? For now color change handles it */}
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                        Normal çalışma ve fazla mesai toplamının hedefe oranı.
+                    <p className="text-[10px] font-medium text-slate-400 mt-2">
+                        Normal çalışma süresi ve fazla mesailerin toplamının hedefe oranı.
                     </p>
                 </div>
             </div>
 
-            {/* 3. Cumulative / YTD Bar (NEW) */}
-            {/* 3. Cumulative / YTD Bar (NEW) */}
+            {/* 3. Cumulative / YTD Bar */}
             {stats.cumulative && (
-                <div className="pt-4 border-t border-slate-200">
+                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
                     {/* 3. YILLIK KÜMÜLATİF PERFORMANS DASHBOARD */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                        <div className="flex justify-between items-center mb-6">
+                    <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100/50 p-8 relative overflow-hidden">
+                        <div className="flex justify-between items-center mb-8 relative z-10">
                             <div>
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">2026 Yıllık Performans Özeti</h3>
-                                <p className="text-xs text-slate-400 font-medium">Yılbaşından bugüne kümülatif durum ve aylık dağılım.</p>
-                            </div>
-                            {/* Legend */}
-                            <div className="flex gap-3 text-[10px] font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400"></span>Fazla</div>
-                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"></span>Eksik</div>
-                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-300"></span>Nötr</div>
+                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                                    <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
+                                    2026 Yıllık Performans
+                                </h3>
+                                <p className="text-xs text-slate-400 font-medium pl-3.5 mt-1">Yılbaşından bugüne kümülatif durum.</p>
                             </div>
                         </div>
 
                         {/* Top Metrics Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 relative z-10">
                             {/* 1. Devreden (Carry Over) */}
-                            <div className={`p-4 rounded-xl border ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'} flex flex-col justify-between`}>
-                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">2025'TEN DEVREDEN</div>
-                                <div className="flex items-end gap-1">
-                                    <span className={`text-2xl font-black ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-emerald-50/50 border-emerald-100'} hover:shadow-lg transition-shadow duration-300`}>
+                                <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">2025'TEN DEVREDEN</div>
+                                <div className="flex items-baseline gap-1">
+                                    <span className={`text-3xl font-black tracking-tighter ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                                         {parseFloat(stats.cumulative.prevYearBalance) < 0 ? '' : '+'}{stats.cumulative.prevYearBalance}
                                     </span>
-                                    <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
-                                <p className="text-[9px] text-slate-400 mt-1">{parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'Önceki yıldan borç' : 'Önceki yıldan fazla mesai'}</p>
                             </div>
 
                             {/* 2. YTD Target */}
-                            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex flex-col justify-between">
-                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Yıllık Hedef (YTD)</div>
-                                <div className="flex items-end gap-1">
-                                    <span className="text-2xl font-black text-slate-700">{stats.cumulative.ytdTargetHours}</span>
-                                    <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
+                            <div className="p-5 rounded-2xl border border-slate-100 bg-white hover:shadow-lg transition-shadow duration-300 shadow-sm">
+                                <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">YILLIK HEDEF</div>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.ytdTargetHours}</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
-                                <p className="text-[9px] text-slate-400 mt-1">Bugüne kadar olması gereken</p>
                             </div>
 
                             {/* 3. YTD Completed */}
-                            <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col justify-between">
-                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Yıllık Gerçekleşen</div>
-                                <div className="flex items-end gap-1">
-                                    <span className="text-2xl font-black text-indigo-600">{stats.cumulative.ytdCompletedHours}</span>
-                                    <span className="text-xs font-bold text-slate-400 mb-1">sa</span>
+                            <div className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/30 hover:shadow-lg transition-shadow duration-300 group">
+                                <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">YILLIK GERÇEKLEŞEN</div>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-black text-indigo-600 tracking-tighter group-hover:scale-105 transition-transform">{stats.cumulative.ytdCompletedHours}</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
-                                <div className="w-full bg-white rounded-full h-1.5 mt-2 overflow-hidden border border-indigo-100">
-                                    <div className="bg-indigo-500 h-full" style={{ width: `${stats.cumulative.progressPercent}%` }}></div>
+                                <div className="w-full bg-indigo-100 rounded-full h-1.5 mt-3 overflow-hidden">
+                                    <div className="bg-indigo-500 h-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" style={{ width: `${stats.cumulative.progressPercent}%` }}></div>
                                 </div>
                             </div>
 
                             {/* 4. YTD Net Balance (Big Result) */}
-                            <div className={`p-4 rounded-xl border ${parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-rose-100 border-rose-200'} flex flex-col justify-between relative overflow-hidden`}>
-                                <div className="absolute top-0 right-0 p-4 opacity-10">
-                                    <Scale size={48} />
+                            <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-500 text-white shadow-emerald-500/20 shadow-xl' : 'bg-gradient-to-br from-rose-500 to-red-600 border-rose-500 text-white shadow-rose-500/20 shadow-xl'} flex flex-col justify-between relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}>
+                                <div className="absolute top-0 right-0 p-4 opacity-20 transform rotate-12 group-hover:rotate-0 transition-transform duration-500">
+                                    <Scale size={64} />
                                 </div>
-                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Toplam Yıllık Bakiye</div>
-                                <div className="flex items-end gap-1 relative z-10">
-                                    <span className={`text-3xl font-black ${parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                <div className="text-[10px] uppercase font-bold text-white/80 mb-2 tracking-widest relative z-10">TOPLAM BAKİYE</div>
+                                <div className="flex items-baseline gap-1 relative z-10">
+                                    <span className="text-4xl font-black tracking-tighter">
                                         {parseFloat(stats.cumulative.totalNetBalance) > 0 ? '+' : ''}{stats.cumulative.totalNetBalance}
                                     </span>
-                                    <span className="text-xs font-bold text-slate-500/70 mb-1">sa</span>
+                                    <span className="text-xs font-bold text-white/70 uppercase">sa</span>
                                 </div>
-                                <p className="text-[9px] font-bold opacity-60 mt-1 relative z-10">
-                                    {parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'Hedefin üzerindesiniz' : 'Hedefin gerisindesiniz'}
-                                </p>
                             </div>
                         </div>
 
                         {/* Monthly Breakdown Tube */}
                         {stats.cumulative.breakdown && stats.cumulative.breakdown.length > 0 ? (
-                            <div>
-                                <div className="flex justify-between items-end mb-2 px-1">
-                                    <span className="text-[10px] font-bold uppercase text-slate-400">Aylık Performans Dağılımı</span>
-                                    <span className="text-[9px] font-medium text-slate-400">Detay için ayların üzerine gelin</span>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-end mb-3 px-1">
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PERFORMANS DAĞILIMI</span>
                                 </div>
 
-                                <div className="flex w-full h-20 rounded-xl overflow-visible border border-slate-200 bg-slate-50 shadow-inner items-end">
+                                <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
                                     {stats.cumulative.breakdown.map((m, idx) => {
                                         const currentMonthIdx = new Date().getMonth();
                                         const isCurrentMonth = idx === currentMonthIdx;
-                                        const isFuture = idx > currentMonthIdx;
                                         const isPast = idx < currentMonthIdx;
 
                                         const target = m.target;
@@ -263,35 +251,35 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                         }
 
                                         // Colors
-                                        let containerBg = 'bg-slate-100'; // Default Neutral (Remaining)
-                                        if (isPast && balance < 0) containerBg = 'bg-rose-100'; // Past Deficit = Red
-                                        if (completed >= target) containerBg = 'bg-blue-50'; // Target Met Base
+                                        let containerBg = 'bg-transparent';
+                                        if (isPast && balance < 0) containerBg = 'bg-rose-50/30';
+                                        if (completed >= target) containerBg = 'bg-blue-50/30';
 
                                         const balanceHours = (balance / 3600).toFixed(1);
 
                                         return (
                                             <div
                                                 key={idx}
-                                                className={`flex-1 h-full ${containerBg} border-r border-white/50 last:border-r-0 relative group transition-all duration-300 hover:z-20 hover:shadow-xl first:rounded-l-xl last:rounded-r-xl`}
+                                                className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1`}
                                             >
                                                 {/* Normal Work Bar (Blue) */}
                                                 <div
-                                                    className="absolute bottom-0 left-0 w-full bg-blue-400 transition-all duration-1000 border-t border-blue-300/50"
+                                                    className="absolute bottom-0 left-0 w-full bg-blue-500 transition-all duration-1000 group-hover:bg-blue-600"
                                                     style={{ height: `${pctCompleted}%` }}
                                                 ></div>
 
                                                 {/* Overtime Bar (Green - Pops out on top) */}
                                                 {pctOvertime > 0 && (
                                                     <div
-                                                        className="absolute w-full bg-emerald-400 transition-all duration-1000 border-t border-emerald-300 shadow-sm"
+                                                        className="absolute w-full bg-emerald-400 transition-all duration-1000 shadow-sm group-hover:bg-emerald-500"
                                                         style={{
                                                             bottom: '100%',
-                                                            height: `${Math.min(pctOvertime, 50)}%`, // Cap visual height to avoid breaking layout too much
-                                                            maxHeight: '30px'
+                                                            height: `${Math.min(pctOvertime, 50)}%`,
+                                                            maxHeight: '40px'
                                                         }}
                                                     >
                                                         {/* Overtime Label */}
-                                                        <span className="absolute -top-4 inset-x-0 text-center text-[9px] font-black text-emerald-600">
+                                                        <span className="absolute -top-5 inset-x-0 text-center text-[10px] font-black text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             +{balanceHours}
                                                         </span>
                                                     </div>
@@ -299,41 +287,40 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                                 {/* Label Inside */}
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-1">
-                                                    <span className="text-[9px] font-bold text-slate-500/80 mb-0.5">{m.month}</span>
+                                                    <span className="text-[10px] font-bold text-slate-500/80 mb-0.5 mix-blend-multiply">{m.month}</span>
 
                                                     {/* Status Text */}
                                                     {isCurrentMonth ? (
-                                                        <div className="flex flex-col items-center">
-                                                            <span className="text-[9px] font-black text-slate-400">Kalan</span>
-                                                            <span className="text-[10px] font-black text-slate-600">{((Math.abs(balance) - (m.missing || 0)) / 3600).toFixed(0)}</span>
+                                                        <div className="flex flex-col items-center mt-1">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mb-0.5"></div>
                                                         </div>
                                                     ) : (
-                                                        <span className={`text-[10px] font-black ${balance >= 0 ? 'text-white drop-shadow-md' : 'text-rose-600'}`}>
+                                                        <span className={`text-[10px] font-black drop-shadow-sm ${balance >= 0 ? 'text-white' : 'text-rose-600/80'}`}>
                                                             {balance !== 0 ? (balance > 0 ? '' : balanceHours) : '-'}
                                                         </span>
                                                     )}
                                                 </div>
 
-                                                {/* HOVER TOOLTIP */}
-                                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] rounded-xl py-3 px-4 pointer-events-none shadow-2xl ring-4 ring-black/5 transform origin-bottom scale-90 group-hover:scale-100 z-50">
-                                                    <div className="flex justify-between items-center border-b border-slate-600 pb-2 mb-2">
-                                                        <span className="font-bold text-sm text-slate-200">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
+                                                {/* HOVER TOOLTIP - PRESERVED LOGIC but STYLED */}
+                                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-56 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
+                                                    <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+                                                        <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
                                                         {isCurrentMonth ? (
-                                                            <span className="text-xs font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">DEVAM EDİYOR</span>
+                                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-500 text-white">DEVAM EDİYOR</span>
                                                         ) : (
-                                                            <span className={`text-xs font-black px-1.5 py-0.5 rounded ${balance >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
                                                                 {balance >= 0 ? 'FAZLA' : 'EKSİK'}
                                                             </span>
                                                         )}
                                                     </div>
 
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-2">
                                                         <div className="flex justify-between">
                                                             <span className="text-slate-400">Hedef (Aylık):</span>
-                                                            <span className="font-mono">{(target / 3600).toFixed(1)} sa</span>
+                                                            <span className="font-mono text-slate-200">{(target / 3600).toFixed(1)} sa</span>
                                                         </div>
                                                         <div className="flex justify-between">
-                                                            <span className="text-slate-400">Tamamlanan (Normal):</span>
+                                                            <span className="text-slate-400">Tamamlanan:</span>
                                                             <span className="font-mono font-bold text-blue-400">
                                                                 {((Math.min(completed, target)) / 3600).toFixed(1)} sa
                                                             </span>
@@ -345,7 +332,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             </div>
                                                         )}
 
-                                                        <div className="flex justify-between pt-2 border-t border-slate-700/50 mt-1">
+                                                        <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
                                                             <span className={balance >= 0 ? 'text-emerald-400 font-bold' : (isCurrentMonth ? 'text-slate-400 font-bold' : 'text-rose-400 font-bold')}>
                                                                 {isCurrentMonth && balance < 0 ? 'Kalan Süre:' : 'Net Fark:'}
                                                             </span>
@@ -355,23 +342,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         </div>
                                                     </div>
                                                     {/* Arrow */}
-                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-800"></div>
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
                                                 </div>
                                             </div>
                                         );
                                     })}
-
-                                    {/* Fill empty months */}
-                                    {[...Array(12 - stats.cumulative.breakdown.length)].map((_, i) => (
-                                        <div key={`empty-${i}`} className="flex-1 bg-slate-50 border-r border-slate-100 last:border-r-0 flex flex-col items-center justify-center opacity-40">
-                                            <span className="text-[10px] text-slate-300 font-bold">{stats.cumulative.breakdown.length + i + 1}</span>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         ) : (
-                            <div className="mt-4 text-center text-xs text-slate-400 py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                <div className="mb-2 opacity-50"><Briefcase size={24} className="mx-auto" /></div>
+                            <div className="mt-4 text-center text-xs text-slate-400 py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                <div className="mb-3 opacity-50"><Briefcase size={32} className="mx-auto text-slate-300" /></div>
                                 Henüz yıllık veri oluşmadı.
                             </div>
                         )}
@@ -380,43 +360,39 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             )}
 
             {/* 3. Stats Grid with Colors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                 {/* Net Surplus Card */}
-                <div className={`p-4 rounded-xl border flex flex-col justify-between ${stats.isSurplus ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className={`p-1.5 rounded-lg ${stats.isSurplus ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
-                            <Scale size={18} />
+                <div className={`p-6 rounded-[2rem] border flex flex-col justify-between transition-all hover:shadow-xl ${stats.isSurplus ? 'bg-emerald-50/50 border-emerald-100/50 hover:bg-emerald-50' : 'bg-white border-slate-100 shadow-lg shadow-slate-100/50'}`}>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className={`p-2 rounded-xl ${stats.isSurplus ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 text-slate-500'}`}>
+                            <Scale size={20} />
                         </div>
-                        <span className="text-xs font-bold uppercase text-slate-500">Aylık Net Fazla Mesai</span>
+                        <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Ayın Bakiyesi</span>
                     </div>
                     <div>
-                        <span className={`text-2xl font-black ${stats.isSurplus ? 'text-emerald-700' : 'text-slate-400'}`}>
+                        <span className={`text-4xl font-black tracking-tighter ${stats.isSurplus ? 'text-emerald-600' : 'text-slate-300'}`}>
                             {stats.isSurplus ? `+${stats.surplusHours}` : '0.0'}
                         </span>
-                        <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
+                        <span className="text-xs font-bold text-slate-400 ml-1 uppercase">sa</span>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Normal + Ek Mesai - Hedef</p>
                 </div>
 
                 {/* Total Overtime Card (Raw) */}
-                <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-between">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600">
-                            <Zap size={18} />
+                <div className="bg-white p-6 rounded-[2rem] border border-indigo-100/50 shadow-lg shadow-indigo-100/20 flex flex-col justify-between hover:shadow-xl hover:shadow-indigo-500/10 transition-all">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/30">
+                            <Zap size={20} />
                         </div>
-                        <span className="text-xs font-bold uppercase text-slate-500">Toplam Ek Mesai</span>
+                        <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Toplam Ek Mesai</span>
                     </div>
                     <div>
-                        <span className="text-2xl font-black text-slate-800">{stats.overtimeHours}</span>
-                        <span className="text-xs font-bold text-slate-400 ml-1">sa</span>
+                        <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.overtimeHours}</span>
+                        <span className="text-xs font-bold text-slate-400 ml-1 uppercase">sa</span>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Brüt gerçekleşen ek mesai</p>
                 </div>
             </div>
 
-        </div >
+        </div>
     );
 };
 
