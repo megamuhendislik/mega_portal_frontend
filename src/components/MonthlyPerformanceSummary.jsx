@@ -226,64 +226,184 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             </div>
                         </div>
 
-                        {/* Detailed Monthly Breakdown Table */}
+                        {/* 4. Monthly Breakdown (Chart + Table) */}
                         {stats.cumulative.breakdown && stats.cumulative.breakdown.length > 0 ? (
                             <div className="relative z-10">
-                                <h4 className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-4 flex items-center gap-2">
-                                    <div className="w-4 h-[1px] bg-slate-200"></div>
-                                    AYLIK DETAYLI KIRILIM
-                                    <div className="flex-1 h-[1px] bg-slate-200"></div>
-                                </h4>
 
-                                <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-                                    <table className="w-full text-left text-sm">
-                                        <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                                                <th className="px-6 py-4">Ay</th>
-                                                <th className="px-4 py-4 text-center">Hedef</th>
-                                                <th className="px-4 py-4 text-center">Normal Çalışma</th>
-                                                <th className="px-4 py-4 text-center text-rose-500">Eksik</th>
-                                                <th className="px-4 py-4 text-center text-indigo-500">Ek Mesai</th>
-                                                <th className="px-4 py-4 text-right">Net Bakiye</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {stats.cumulative.breakdown.map((m, idx) => {
-                                                const targetH = (m.target / 3600).toFixed(1);
-                                                const completedH = (m.completed / 3600).toFixed(1);
-                                                const missingH = (m.missing / 3600).toFixed(1);
-                                                const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
-                                                const balanceH = (m.balance / 3600).toFixed(1);
-                                                const isPositive = m.balance >= 0;
+                                {/* A. Chart (Tube) */}
+                                <div className="mb-8">
+                                    <div className="flex justify-between items-end mb-3 px-1">
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PERFORMANS GRAFİĞİ</span>
+                                    </div>
 
-                                                // Month Names
-                                                const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-                                                const monthName = monthNames[m.month - 1] || `${m.month}. Ay`;
+                                    <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
+                                        {stats.cumulative.breakdown.map((m, idx) => {
+                                            const currentMonthIdx = new Date().getMonth();
+                                            const isCurrentMonth = idx === currentMonthIdx;
+                                            const isPast = idx < currentMonthIdx;
 
-                                                return (
-                                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                                                        <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
-                                                            <div className={`w-2 h-2 rounded-full ${parseFloat(balanceH) >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                                                            {monthName}
-                                                        </td>
-                                                        <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
-                                                        <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">{completedH} <span className="text-[10px] text-slate-400">sa</span></td>
-                                                        <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
-                                                            {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
-                                                        </td>
-                                                        <td className="px-4 py-4 text-center font-mono font-bold text-emerald-500">
-                                                            {parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}
-                                                        </td>
-                                                        <td className="px-4 py-4 text-right">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
-                                                                {isPositive && parseFloat(balanceH) > 0 ? '+' : ''}{balanceH} sa
+                                            const target = m.target;
+                                            const completed = m.completed;
+                                            const balance = m.balance;
+
+                                            // Percentages
+                                            let pctCompleted = 0;
+                                            let pctOvertime = 0;
+
+                                            if (target > 0) {
+                                                pctCompleted = Math.min(100, (completed / target) * 100);
+                                                if (completed > target) {
+                                                    pctOvertime = ((completed - target) / target) * 100;
+                                                }
+                                            } else if (completed > 0) {
+                                                pctCompleted = 100;
+                                                pctOvertime = 20;
+                                            }
+
+                                            // Colors
+                                            let containerBg = 'bg-transparent';
+                                            if (isPast && balance < 0) containerBg = 'bg-rose-50/30';
+                                            if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
+
+                                            const balanceHours = (balance / 3600).toFixed(1);
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1`}
+                                                >
+                                                    {/* Normal Work Bar (Indigo) */}
+                                                    <div
+                                                        className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
+                                                        style={{ height: `${pctCompleted}%` }}
+                                                    ></div>
+
+                                                    {/* Overtime Bar (Emerald) */}
+                                                    {pctOvertime > 0 && (
+                                                        <div
+                                                            className="absolute w-full bg-emerald-400 transition-all duration-1000 shadow-sm group-hover:bg-emerald-500"
+                                                            style={{
+                                                                bottom: '100%',
+                                                                height: `${Math.min(pctOvertime, 50)}%`,
+                                                                maxHeight: '40px'
+                                                            }}
+                                                        >
+                                                            <span className="absolute -top-5 inset-x-0 text-center text-[10px] font-black text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                +{balanceHours}
                                                             </span>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Label Inside */}
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-1">
+                                                        <span className="text-[10px] font-bold text-slate-500/80 mb-0.5 mix-blend-multiply">{m.month}</span>
+
+                                                        {isCurrentMonth ? (
+                                                            <div className="flex flex-col items-center mt-1">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mb-0.5"></div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className={`text-[10px] font-black drop-shadow-sm ${balance >= 0 ? 'text-white' : 'text-rose-600/80'}`}>
+                                                                {balance !== 0 ? (balance > 0 ? '' : balanceHours) : '-'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Tooltip */}
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-56 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
+                                                        <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+                                                            <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
+                                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                                                {balance >= 0 ? 'FAZLA' : 'EKSİK'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between">
+                                                                <span className="text-slate-400">Hedef:</span>
+                                                                <span className="font-mono text-slate-200">{(target / 3600).toFixed(1)} sa</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-slate-400">Gerçekleşen:</span>
+                                                                <span className="font-mono font-bold text-indigo-400">{((Math.min(completed, target)) / 3600).toFixed(1)} sa</span>
+                                                            </div>
+                                                            {balance > 0 && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-emerald-400 font-bold">Ek Mesai:</span>
+                                                                    <span className="font-mono font-bold text-white">{(balance / 3600).toFixed(1)} sa</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
+                                                                <span className={balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
+                                                                <span className={`font-mono font-black text-lg ${balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                    {balance > 0 ? '+' : ''}{balanceHours}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* B. Table (Detail) */}
+                                <div>
+                                    <h4 className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-4 flex items-center gap-2">
+                                        <div className="w-4 h-[1px] bg-slate-200"></div>
+                                        AYLIK DETAYLI KIRILIM
+                                        <div className="flex-1 h-[1px] bg-slate-200"></div>
+                                    </h4>
+
+                                    <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                                        <table className="w-full text-left text-sm">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                                                    <th className="px-6 py-4">Ay</th>
+                                                    <th className="px-4 py-4 text-center">Hedef</th>
+                                                    <th className="px-4 py-4 text-center">Normal Çalışma</th>
+                                                    <th className="px-4 py-4 text-center text-rose-500">Eksik</th>
+                                                    <th className="px-4 py-4 text-center text-emerald-500">Ek Mesai</th>
+                                                    <th className="px-4 py-4 text-right">Net Bakiye</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {stats.cumulative.breakdown.map((m, idx) => {
+                                                    const targetH = (m.target / 3600).toFixed(1);
+                                                    const completedH = (m.completed / 3600).toFixed(1);
+                                                    const missingH = (m.missing / 3600).toFixed(1);
+                                                    const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
+                                                    const balanceH = (m.balance / 3600).toFixed(1);
+                                                    const isPositive = m.balance >= 0;
+
+                                                    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+                                                    const monthName = monthNames[m.month - 1] || `${m.month}. Ay`;
+
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                                                            <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
+                                                                <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                                                                {monthName}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
+                                                            <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">{completedH} <span className="text-[10px] text-slate-400">sa</span></td>
+                                                            <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
+                                                                {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center font-mono font-bold text-emerald-500">
+                                                                {parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-right">
+                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
+                                                                    {isPositive && parseFloat(balanceH) > 0 ? '+' : ''}{balanceH} sa
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
