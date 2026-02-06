@@ -63,10 +63,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 lateCount,
 
                 cumulative: periodSummary.cumulative ? {
-                    carryOver: periodSummary.cumulative.carry_over_seconds, // Raw seconds (Intra-year) -> Maybe confusing if used directly
+                    carryOver: periodSummary.cumulative.carry_over_seconds,
                     carryOverHours: (periodSummary.cumulative.carry_over_seconds / 3600).toFixed(1),
 
                     prevYearBalance: (periodSummary.cumulative.previous_year_balance_seconds / 3600).toFixed(1),
+
+                    // Added for "From Previous Month" View (Total History until Start of Month)
+                    prevMonthCarryOver: ((periodSummary.cumulative.previous_year_balance_seconds + periodSummary.cumulative.carry_over_seconds) / 3600).toFixed(1),
+
                     totalNetBalance: (periodSummary.cumulative.total_net_balance_seconds / 3600).toFixed(1),
 
                     ytdTargetHours: (periodSummary.cumulative.ytd_target_seconds / 3600).toFixed(1),
@@ -75,7 +79,22 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                     ytdTarget: periodSummary.cumulative.ytd_target_seconds,
                     ytdCompleted: periodSummary.cumulative.ytd_completed_seconds,
-                    breakdown: periodSummary.cumulative.breakdown || [], // PASSING THE DATA
+
+                    // PASSING THE DATA form WITH CUMULATIVE CALCULATION
+                    breakdown: (periodSummary.cumulative.breakdown || []).reduce((acc, month, idx) => {
+                        const prevBalance = idx === 0
+                            ? (periodSummary.cumulative.previous_year_balance_seconds || 0)
+                            : acc[idx - 1].cumulativeBalanceRaw;
+
+                        const currentCumulative = prevBalance + (month.balance || 0);
+
+                        acc.push({
+                            ...month,
+                            cumulativeBalanceRaw: currentCumulative,
+                            cumulativeBalance: (currentCumulative / 3600).toFixed(1) // Store for UI
+                        });
+                        return acc;
+                    }, []) || [],
 
 
                     // Visualization Helper
@@ -179,12 +198,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                         {/* Top Metrics Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 relative z-10">
-                            {/* 1. Devreden (Carry Over) */}
-                            <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-emerald-50/50 border-emerald-100'} hover:shadow-lg transition-shadow duration-300`}>
-                                <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">2025'TEN DEVREDEN</div>
+                            {/* 1. Devreden (Carry Over) -> Modified to "Previous Month" context */}
+                            <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-emerald-50/50 border-emerald-100'} hover:shadow-lg transition-shadow duration-300`}>
+                                <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">BİR ÖNCEKİ AYDAN DEVREDEN</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className={`text-3xl font-black tracking-tighter ${parseFloat(stats.cumulative.prevYearBalance) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                        {parseFloat(stats.cumulative.prevYearBalance) < 0 ? '' : '+'}{stats.cumulative.prevYearBalance}
+                                    <span className={`text-3xl font-black tracking-tighter ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? '' : '+'}{stats.cumulative.prevMonthCarryOver}
                                     </span>
                                     <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
@@ -249,11 +268,15 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             // Percentages
                                             let pctCompleted = 0;
                                             let pctOvertime = 0;
+                                            let pctMissing = 0;
 
                                             if (target > 0) {
                                                 pctCompleted = Math.min(100, (completed / target) * 100);
                                                 if (completed > target) {
                                                     pctOvertime = ((completed - target) / target) * 100;
+                                                } else {
+                                                    // Calculate Missing % relative to Target
+                                                    pctMissing = ((target - completed) / target) * 100;
                                                 }
                                             } else if (completed > 0) {
                                                 pctCompleted = 100;
@@ -262,10 +285,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                             // Colors
                                             let containerBg = 'bg-transparent';
-                                            if (isPast && balance < 0) containerBg = 'bg-rose-50/30';
+                                            // if (isPast && balance < 0) containerBg = 'bg-rose-50/30'; // Handled by Missing Bar now
                                             if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
 
                                             const balanceHours = (balance / 3600).toFixed(1);
+                                            // Cumulative from reduced breakdown
+                                            const cumulativeHours = m.cumulativeBalance ? (m.cumulativeBalance / 3600).toFixed(1) : '0.0';
+                                            const isCumulativePos = m.cumulativeBalance >= 0;
 
                                             return (
                                                 <div
@@ -277,6 +303,19 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
                                                         style={{ height: `${pctCompleted}%` }}
                                                     ></div>
+
+                                                    {/* Missing Bar (Rose Striped) - Only for Past/Current */}
+                                                    {(isPast || isCurrentMonth) && pctMissing > 0 && (
+                                                        <div
+                                                            className="absolute left-0 w-full bg-rose-400/20"
+                                                            style={{
+                                                                bottom: `${pctCompleted}%`,
+                                                                height: `${pctMissing}%`,
+                                                                backgroundImage: 'linear-gradient(45deg, rgba(244, 63, 94, 0.1) 25%, transparent 25%, transparent 50%, rgba(244, 63, 94, 0.1) 50%, rgba(244, 63, 94, 0.1) 75%, transparent 75%, transparent)',
+                                                                backgroundSize: '4px 4px'
+                                                            }}
+                                                        ></div>
+                                                    )}
 
                                                     {/* Overtime Bar (Emerald) */}
                                                     {pctOvertime > 0 && (
@@ -303,14 +342,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mb-0.5"></div>
                                                             </div>
                                                         ) : (
-                                                            <span className={`text-[10px] font-black drop-shadow-sm ${balance >= 0 ? 'text-white' : 'text-rose-600/80'}`}>
+                                                            <span className={`text-[10px] font-black drop-shadow-sm ${balance >= 0 ? 'text-white' : 'text-rose-600/90'}`}>
                                                                 {balance !== 0 ? (balance > 0 ? '' : balanceHours) : '-'}
                                                             </span>
                                                         )}
                                                     </div>
 
                                                     {/* Tooltip */}
-                                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-56 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
                                                         <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
                                                             <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
@@ -338,6 +377,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     {balance > 0 ? '+' : ''}{balanceHours}
                                                                 </span>
                                                             </div>
+
+                                                            {/* Cumulative Balance Section in Tooltip */}
+                                                            {(isPast || isCurrentMonth) && (
+                                                                <div className="flex justify-between pt-2 mt-2 border-t border-white/5 bg-white/5 -mx-5 px-5 py-2 -mb-4 rounded-b-xl">
+                                                                    <span className="text-slate-300 font-bold">Kümülatif Bakiye:</span>
+                                                                    <span className={`font-mono font-black ${isCumulativePos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                        {isCumulativePos ? '+' : ''}{cumulativeHours} sa
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
                                                     </div>
@@ -379,16 +428,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const missingH = (m.missing / 3600).toFixed(1);
                                                         const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
                                                         const balanceH = (m.balance / 3600).toFixed(1);
-                                                        const isPositive = m.balance >= 0;
-
-                                                        // Month Names
-                                                        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-                                                        const monthName = monthNames[m.month - 1] || `${m.month}. Ay`;
+                                                        // Cumulative Balance Logic
+                                                        const cumulativeBalanceH = (m.cumulativeBalance / 3600).toFixed(1);
+                                                        const isCumulativePositive = m.cumulativeBalance >= 0;
 
                                                         return (
                                                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                                                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
-                                                                    <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                                                                    <div className={`w-2 h-2 rounded-full ${isCumulativePositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
                                                                     {monthName}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
@@ -400,8 +447,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     {parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right">
-                                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
-                                                                        {isPositive && parseFloat(balanceH) > 0 ? '+' : ''}{balanceH} sa
+                                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isCumulativePositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
+                                                                        {isCumulativePositive && parseFloat(cumulativeBalanceH) > 0 ? '+' : ''}{cumulativeBalanceH} sa
                                                                     </span>
                                                                 </td>
                                                             </tr>
