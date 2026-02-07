@@ -6,7 +6,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { tr } from 'date-fns/locale';
 import {
     Search, User, Calendar as CalendarIcon, ChevronLeft, ChevronRight,
-    Save, Trash2, Plus, ArrowLeft, Database, Download, Upload, ChevronDown, ChevronUp
+    Save, Trash2, Plus, ArrowLeft, Database, Download, Upload, ChevronDown, ChevronUp, X
 } from 'lucide-react';
 
 function YearlyStatsMatrix({ employee, initialYear }) {
@@ -129,6 +129,8 @@ export default function DataManagement() {
 
     // --- Backup State ---
     const [importing, setImporting] = useState(false);
+    const [dryRun, setDryRun] = useState(false);
+    const [simulationReport, setSimulationReport] = useState(null);
 
     // --- Browse State ---
     const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar'
@@ -315,17 +317,34 @@ export default function DataManagement() {
     const handleImport = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (!window.confirm('DİKKAT: Veriler güncellenecektir. Devam?')) return;
+
+        let msg = 'DİKKAT: Veriler güncellenecektir. Devam?';
+        if (dryRun) msg = 'SİMÜLASYON MODU: Veriler taranacak fakat veritabanı DEĞİŞTİRİLMEYECEKTİR. Devam?';
+
+        if (!window.confirm(msg)) {
+            e.target.value = null; // Reset input
+            return;
+        }
+
         setImporting(true);
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('dry_run', dryRun);
+
         try {
-            await api.post('/system-data/import_backup/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setMessage({ type: 'success', text: 'Geri yükleme başarılı.' });
+            const res = await api.post('/system-data/import_backup/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+            if (res.data.summary) {
+                setSimulationReport(res.data.summary);
+                setMessage({ type: 'success', text: 'Simülasyon Tamamlandı. Raporu inceleyin.' });
+            } else {
+                setMessage({ type: 'success', text: res.data.message || 'Geri yükleme başarılı.' });
+            }
         } catch (err) {
             setMessage({ type: 'error', text: 'Hata: ' + (err.response?.data?.error || err.message) });
         } finally {
             setImporting(false);
+            e.target.value = null;
         }
     };
 
@@ -434,6 +453,21 @@ export default function DataManagement() {
                                 </span>
                                 <span className="text-xs text-slate-400">Sadece .json dosyaları</span>
                             </label>
+
+                            <div className="mt-6 pt-4 border-t border-slate-100">
+                                <label className="flex items-center justify-center gap-3 cursor-pointer select-none group">
+                                    <input
+                                        type="checkbox"
+                                        checked={dryRun}
+                                        onChange={e => setDryRun(e.target.checked)}
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-slate-300 transition-colors"
+                                    />
+                                    <div className="text-left">
+                                        <div className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Sadece Doğrula (Simülasyon Modu)</div>
+                                        <div className="text-xs text-slate-500">İşaretlerseniz veritabanında değişiklik yapılmaz.</div>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -634,6 +668,52 @@ export default function DataManagement() {
                 data={settlementData}
                 onSaveSuccess={fetchBulkStats}
             />
+
+            {/* Simulation Report Modal */}
+            {simulationReport && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden m-4">
+                        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                Simülasyon Raporu
+                            </h3>
+                            <button onClick={() => setSimulationReport(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 max-h-[60vh] overflow-y-auto">
+                            <div className="mb-4 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
+                                <p className="font-bold mb-1">Doğrulama Başarılı!</p>
+                                <p>Aşağıdaki veriler veritabanına aktarılmak üzere başarıyla tarandı. (Şu an hiçbir değişiklik yapılmadı)</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider mb-3">Bulunan Kayıtlar</h4>
+                                {Object.entries(simulationReport).map(([model, count]) => (
+                                    <div key={model} className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-100">
+                                        <span className="font-mono text-sm text-slate-600">{model}</span>
+                                        <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded shadow-sm border">{count}</span>
+                                    </div>
+                                ))}
+                                {Object.keys(simulationReport).length === 0 && (
+                                    <div className="text-slate-500 italic text-center py-4">Özet oluşturulamadı veya dosya boş.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t bg-slate-50 flex justify-end">
+                            <button
+                                onClick={() => setSimulationReport(null)}
+                                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-medium transition-colors"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
