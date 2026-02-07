@@ -423,6 +423,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         return m.month <= currentMonth;
                                                     })
                                                     .map((m, idx) => {
+                                                        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
                                                         const targetH = (m.target / 3600).toFixed(1);
                                                         const completedH = (m.completed / 3600).toFixed(1);
                                                         const missingH = (m.missing / 3600).toFixed(1);
@@ -436,7 +437,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                                                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
                                                                     <div className={`w-2 h-2 rounded-full ${isCumulativePositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                                                                    {monthName}
+                                                                    {monthNames[m.month - 1]}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
                                                                 <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">{completedH} <span className="text-[10px] text-slate-400">sa</span></td>
