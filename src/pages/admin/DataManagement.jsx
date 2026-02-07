@@ -276,8 +276,40 @@ export default function DataManagement() {
         return `${h}s`; // e.g. 5s (5 hours)
     };
 
-    const handleExport = (fmt) => {
-        window.open(`${api.defaults.baseURL}/system-data/export_backup/?format=${fmt}`, '_blank');
+    const handleExport = async (fmt) => {
+        try {
+            setMessage({ type: 'info', text: 'Yedek hazırlanıyor, lütfen bekleyin...' });
+            const response = await api.get(`/system-data/export_backup/?format=${fmt}`, {
+                responseType: 'blob'
+            });
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Try to extract filename from content-disposition
+            let filename = `backup_${fmt}_${new Date().toISOString().slice(0, 10)}.json`;
+            if (fmt === 'sql') filename = filename.replace('.json', '.sql');
+            if (fmt === 'csv') filename = filename.replace('.json', '.zip');
+
+            const contentDisposition = response.headers['content-disposition'];
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (fileNameMatch && fileNameMatch.length === 2)
+                    filename = fileNameMatch[1];
+            }
+
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setMessage({ type: 'success', text: 'Yedek başarıyla indirildi.' });
+        } catch (err) {
+            console.error(err);
+            setMessage({ type: 'error', text: 'İndirme başarısız: ' + (err.response?.data?.error || err.message) });
+        }
     };
 
     const handleImport = async (e) => {
