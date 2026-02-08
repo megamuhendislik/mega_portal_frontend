@@ -127,8 +127,8 @@ const SubstituteManagement = () => {
   const isCurrentlyValid = (delegation) => {
     const today = new Date().toISOString().split('T')[0];
     return delegation.is_active &&
-           delegation.valid_from <= today &&
-           delegation.valid_to >= today;
+      delegation.valid_from <= today &&
+      delegation.valid_to >= today;
   };
 
   const getStatusBadge = (delegation) => {
@@ -201,7 +201,8 @@ const SubstituteManagement = () => {
                   value={formData.principal}
                   onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!hasPermission('SYSTEM_ADMIN_ACCESS')}
+                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission('SYSTEM_ADMIN_ACCESS') ? 'bg-slate-100' : ''}`}
                 >
                   <option value="">Seçiniz...</option>
                   {employees.map(emp => (
@@ -345,11 +346,10 @@ const SubstituteManagement = () => {
                         </button>
                         <button
                           onClick={() => handleToggleActive(delegation)}
-                          className={`p-2 rounded transition ${
-                            delegation.is_active
+                          className={`p-2 rounded transition ${delegation.is_active
                               ? 'text-yellow-600 hover:bg-yellow-50'
                               : 'text-green-600 hover:bg-green-50'
-                          }`}
+                            }`}
                           title={delegation.is_active ? 'Pasif Yap' : 'Aktif Yap'}
                         >
                           {delegation.is_active ? <X size={16} /> : <Check size={16} />}

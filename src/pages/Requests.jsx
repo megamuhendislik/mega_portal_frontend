@@ -28,12 +28,29 @@ const Requests = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedRequestType, setSelectedRequestType] = useState(null);
 
+    // Filter State
+    const [subordinates, setSubordinates] = useState([]);
+    const [activeApprover, setActiveApprover] = useState(null);
+
+    useEffect(() => {
+        if (hasPermission('REQUEST_LEAVE_APPROVE')) {
+            fetchSubordinates();
+        }
+    }, [hasPermission]);
+
+    const fetchSubordinates = async () => {
+        try {
+            const res = await api.get('/employees/subordinates/');
+            setSubordinates(res.data);
+        } catch (error) {
+            console.error('Error fetching subordinates:', error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-
+    }, [activeApprover]);
 
     // Auto-Refresh (Smart Polling every 30s)
     useSmartPolling(() => {
@@ -47,20 +64,22 @@ const Requests = () => {
 
     // Fetch history when filter changes to HISTORY
     useEffect(() => {
-        if (activeTab === 'team_history' && teamHistoryRequests.length === 0) {
+        if (activeTab === 'team_history') {
             fetchTeamHistory();
         }
-    }, [activeTab]);
+    }, [activeTab, activeApprover]);
 
     const fetchData = async () => {
         try {
+            const queryParams = activeApprover ? { approver_id: activeApprover } : {};
+
             const [reqRes, typesRes, overtimeRes, mealRes, cardlessRes, teamRes] = await Promise.all([
                 api.get('/leave/requests/'),
                 api.get('/leave/types/'),
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
                 api.get('/cardless-entry-requests/'),
-                api.get('/team-requests/'), // Unified Team Requests
+                api.get('/team-requests/', { params: queryParams }), // Unified Team Requests
             ]);
             setRequests(reqRes.data.results || reqRes.data);
             setRequestTypes(typesRes.data.results || typesRes.data);
@@ -81,7 +100,8 @@ const Requests = () => {
 
     const fetchTeamHistory = async () => {
         try {
-            const res = await api.get('/leave/requests/team_history/');
+            const queryParams = activeApprover ? { approver_id: activeApprover } : {};
+            const res = await api.get('/leave/requests/team_history/', { params: queryParams });
             setTeamHistoryRequests(res.data.results || res.data);
         } catch (error) {
             console.error('Error fetching team history:', error);
@@ -491,10 +511,32 @@ const Requests = () => {
                     ))}
                 </div>
 
-                {/* Filter Button */}
-                <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
-                    <SlidersHorizontal size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Subordinate Filter Dropdown (Only for Manager Tabs) */}
+                    {(activeTab === 'incoming' || activeTab === 'team_history') && subordinates.length > 0 && (
+                        <div className="relative">
+                            <select
+                                value={activeApprover || ''}
+                                onChange={(e) => setActiveApprover(e.target.value || null)}
+                                className="pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[200px]"
+                            >
+                                <option value="">Tümü (Ekibim)</option>
+                                <optgroup label="Yöneticiler">
+                                    {subordinates.map(sub => (
+                                        <option key={sub.id} value={sub.id}>
+                                            {sub.first_name} {sub.last_name}'e Gelenler
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Filter Button */}
+                    <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
+                        <SlidersHorizontal size={20} />
+                    </button>
+                </div>
             </div>
 
             {/* Content Area */}
