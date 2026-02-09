@@ -61,7 +61,7 @@ const YearCalendar = ({
         setDragEnd(null);
     };
 
-    // Global mouse up to catch drops outside the grid
+    // Check Global Mouse Up
     useEffect(() => {
         const handleGlobalMouseUp = () => {
             if (isDragging) handleMouseUp();
@@ -96,9 +96,7 @@ const YearCalendar = ({
                     const monthDate = moment().year(currentYear).month(index);
                     const daysInMonth = monthDate.daysInMonth();
                     const startDay = monthDate.startOf('month').day(); // 0=Sun
-
                     // Adjust for Monday start (Turkey)
-                    // 0(Sun) -> 6, 1(Mon) -> 0
                     const adjustedStartDay = startDay === 0 ? 6 : startDay - 1;
 
                     const days = [];
@@ -121,12 +119,13 @@ const YearCalendar = ({
 
                                     const currentDayDate = moment([currentYear, index, d]);
                                     const dateStr = currentDayDate.format('YYYY-MM-DD');
+
+                                    // Optimization: Calculate props efficiently
                                     const isToday = currentDayDate.isSame(moment(), 'day');
                                     const isHoliday = holidays.has(dateStr);
                                     const isSelected = selectedDates.has(dateStr);
                                     const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;
 
-                                    // Drag Selection visual
                                     let isInDragRange = false;
                                     if (isDragging && dragStart && dragEnd) {
                                         const s = moment(dragStart).isBefore(moment(dragEnd)) ? dragStart : dragEnd;
@@ -134,54 +133,22 @@ const YearCalendar = ({
                                         isInDragRange = currentDayDate.isBetween(moment(s).subtract(1, 'day'), moment(e).add(1, 'day'));
                                     }
 
-                                    let className = "aspect-square rounded-md flex items-center justify-center transition-all font-medium relative overflow-hidden cursor-pointer";
-                                    let style = {};
-
-                                    if (onDateClick) {
-                                        // className += " hover:ring-2 hover:ring-indigo-300";
-                                    }
-
-                                    if (customDayRenderer) {
-                                        // Allow external override if needed
-                                    }
-
-                                    // 1. Base Colors
-                                    if (isInDragRange) {
-                                        className += " bg-indigo-200 text-indigo-800 ring-2 ring-indigo-400 z-10";
-                                    } else if (isSelected) {
-                                        className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200 scale-110 z-10";
-                                    } else if (isToday) {
-                                        className += " bg-indigo-50 text-indigo-700 font-bold border border-indigo-200";
-                                    } else if (isHoliday) {
-                                        className += " bg-red-100 text-red-700 font-bold ring-1 ring-red-200";
-                                    } else if (isWeekend) {
-                                        className += " bg-slate-100 text-slate-500";
-                                    } else {
-                                        className += " text-slate-600 hover:bg-indigo-50";
-                                    }
-
                                     return (
-                                        <div
-                                            key={i}
-                                            className={className}
-                                            style={style}
-                                            title={isHoliday ? 'Resmi Tatil' : ''}
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                                handleMouseDown(dateStr);
-                                            }}
-                                            onMouseEnter={() => handleMouseEnter(dateStr)}
+                                        <CalendarDay
+                                            key={dateStr}
+                                            day={d}
+                                            dateStr={dateStr}
+                                            isToday={isToday}
+                                            isHoliday={isHoliday}
+                                            isSelected={isSelected}
+                                            isWeekend={isWeekend}
+                                            isInDragRange={isInDragRange}
+                                            onMouseDown={handleMouseDown}
+                                            onMouseEnter={handleMouseEnter}
                                             onMouseUp={handleMouseUp}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Only trigger click if NOT part of a drag operation
-                                                if (!isDragging && onDateClick) {
-                                                    onDateClick(dateStr);
-                                                }
-                                            }}
-                                        >
-                                            {d}
-                                        </div>
+                                            onDateClick={onDateClick}
+                                            isDragging={isDragging} // Passed to prevent click during drag
+                                        />
                                     );
                                 })}
                             </div>
@@ -192,5 +159,62 @@ const YearCalendar = ({
         </div>
     );
 };
+
+// Memoized Sub-Component for Performance
+// Only re-renders if props change (e.g. isInDragRange toggles)
+const CalendarDay = React.memo(({
+    day, dateStr, isToday, isHoliday, isSelected, isWeekend, isInDragRange,
+    onMouseDown, onMouseEnter, onMouseUp, onDateClick, isDragging
+}) => {
+    let className = "aspect-square rounded-md flex items-center justify-center transition-all font-medium relative overflow-hidden cursor-pointer";
+
+    if (isInDragRange) {
+        className += " bg-indigo-200 text-indigo-800 ring-2 ring-indigo-400 z-10";
+    } else if (isSelected) {
+        className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200 scale-110 z-10";
+    } else if (isToday) {
+        className += " bg-indigo-50 text-indigo-700 font-bold border border-indigo-200";
+    } else if (isHoliday) {
+        className += " bg-red-100 text-red-700 font-bold ring-1 ring-red-200";
+    } else if (isWeekend) {
+        className += " bg-slate-100 text-slate-500";
+    } else {
+        className += " text-slate-600 hover:bg-indigo-50";
+    }
+
+    return (
+        <div
+            className={className}
+            title={isHoliday ? 'Resmi Tatil' : ''}
+            onMouseDown={(e) => {
+                e.stopPropagation();
+                onMouseDown(dateStr);
+            }}
+            onMouseEnter={() => onMouseEnter(dateStr)}
+            onMouseUp={onMouseUp}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (!isDragging && onDateClick) {
+                    onDateClick(dateStr);
+                }
+            }}
+        >
+            {day}
+        </div>
+    );
+}, (prevProps, nextProps) => {
+    // Custom comparison if needed, but shallow comparison usually fine for primitives
+    return (
+        prevProps.isInDragRange === nextProps.isInDragRange &&
+        prevProps.isSelected === nextProps.isSelected &&
+        prevProps.isHoliday === nextProps.isHoliday &&
+        prevProps.dateStr === nextProps.dateStr &&
+        prevProps.isDragging === nextProps.isDragging
+        // Note: isDragging change will trigger re-render for ALL, which is expected 
+        // because we use it in onClick.
+        // Optimization: We could remove isDragging from props and check a ref?
+        // But drag start/end happens once. The issue was MOUSE MOVE causing re-renders.
+    );
+});
 
 export default YearCalendar;
