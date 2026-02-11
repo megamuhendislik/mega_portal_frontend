@@ -45,18 +45,29 @@ const WeeklyView = ({ logs, showBreaks }) => {
             const d = addDays(start, i);
             const dateStr = format(d, 'yyyy-MM-dd');
 
-            // Find Log for this day
-            const log = logs ? logs.find(l => l.work_date === dateStr) : null;
+            // Find ALL Logs for this day
+            const dayLogs = logs ? logs.filter(l => l.work_date === dateStr) : [];
+
+            // Aggregate totals
+            const totalNormal = dayLogs.reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
+            const totalOvertime = dayLogs.reduce((acc, l) => acc + (l.overtime_seconds || 0), 0);
+            const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
+            const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
+
+            // Target is usually per day, not per shift. 
+            // We assume the first log contains the correct target for the day or we take the max?
+            // Usually target is fixed per day. Let's take the first one or 0.
+            const dayTarget = dayLogs.length > 0 ? (dayLogs[0].day_target_seconds || 0) : 0;
 
             days.push({
                 date: dateStr,
                 name: format(d, 'EEE', { locale: tr }), // Pzt, Sal
                 fullDate: format(d, 'd MMM yyyy', { locale: tr }),
-                normal: log ? parseFloat(((log.normal_seconds || 0) / 3600).toFixed(1)) : 0,
-                overtime: log ? parseFloat(((log.overtime_seconds || 0) / 3600).toFixed(1)) : 0,
-                missing: log ? parseFloat(((log.missing_seconds || 0) / 3600).toFixed(1)) : 0,
-                break: log ? parseFloat(((log.break_seconds || 0) / 3600).toFixed(2)) : 0,
-                target: log ? parseFloat(((log.day_target_seconds || 0) / 3600).toFixed(1)) : 0,
+                normal: parseFloat((totalNormal / 3600).toFixed(1)),
+                overtime: parseFloat((totalOvertime / 3600).toFixed(1)),
+                missing: parseFloat((totalMissing / 3600).toFixed(1)),
+                break: parseFloat((totalBreak / 3600).toFixed(2)),
+                target: parseFloat((dayTarget / 3600).toFixed(1)),
                 isFuture: d > new Date()
             });
         }
