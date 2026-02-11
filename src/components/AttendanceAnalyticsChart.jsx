@@ -14,7 +14,7 @@ import api from '../services/api';
 
 // Sub-component for Weekly Bar Chart (Legacy Logic)
 // Sub-component for Weekly Bar Chart (Logs Based)
-const WeeklyView = ({ logs, showBreaks }) => {
+const WeeklyView = ({ logs, showBreaks, employeeId }) => {
     // Default to start of logs or current week if no logs
     const [weekStart, setWeekStart] = useState(() => {
         if (logs && logs.length > 0) {
@@ -23,21 +23,97 @@ const WeeklyView = ({ logs, showBreaks }) => {
         return startOfWeek(new Date(), { weekStartsOn: 1 });
     });
 
-    // Update weekStart if logs change drastically (e.g. month change)
+    const [fetchedLogs, setFetchedLogs] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Update weekStart if logs change drastically (e.g. month change from parent)
     useEffect(() => {
         if (logs && logs.length > 0) {
             const firstLog = new Date(logs[0].work_date);
-            // If current weekStart is far from logs (e.g. > 45 days), reset to first log
+            // If current weekStart is far from logs (e.g. > 45 days), reset to first log.
+            // This allows the parent to reset the view, but doesn't block local navigation.
             if (Math.abs(weekStart - firstLog) > 1000 * 60 * 60 * 24 * 45) {
                 setWeekStart(startOfWeek(firstLog, { weekStartsOn: 1 }));
+                setFetchedLogs([]); // Reset fetched logs on major context switch
             }
         }
-    }, [logs]); // Reduced deps to avoid flicker
+    }, [logs]);
+
+    // Combine Parent Logs + Locally Fetched Logs
+    const allLogs = useMemo(() => {
+        // Map by date to remove duplicates, prioritize fetched logs? or parent?
+        // Usually parent logs are "fresh" for the current month. Fetched are for history.
+        const combined = [...(logs || []), ...fetchedLogs];
+        // Deduplicate
+        const unique = new Map();
+        combined.forEach(l => unique.set(l.work_date, l));
+        return Array.from(unique.values());
+    }, [logs, fetchedLogs]);
+
+    // Check & Fetch Data when Week Changes
+    useEffect(() => {
+        const checkAndFetch = async () => {
+            if (!employeeId) return;
+
+            const startStr = format(weekStart, 'yyyy-MM-dd');
+            const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
+
+            // Quick Check: Do we have ANY logs for this week in our combined set?
+            // "Having logs" is loose check. 
+            // Better: Check if this range is theoretically covered by "Parent Logs Range".
+            // If parent logs are for "Feb", and we are in "Jan", we definitely need to fetch.
+
+            // Heuristic: If we don't have logs for the start OR end of the week, fetch it.
+            // This is safer to ensure we have data.
+            // Optimization: Keep a "fetchedWeeks" set? 
+            // But what if the user was absent all week? Then we fetch again and again.
+
+            // Robust Approach: Fetch if we haven't fetched this *specific week* during this session yet.
+            // But implementing a cache here is complex. 
+
+            // Let's assume: If the week falls outside the Min/Max of `logs` prop, we fetch.
+            let needsFetch = false;
+            if (logs && logs.length > 0) {
+                const logsMin = new Date(logs[0].work_date);
+                const logsMax = new Date(logs[logs.length - 1].work_date);
+                const viewStart = weekStart;
+                const viewEnd = addDays(weekStart, 6);
+
+                // If view is strictly before min logs or strictly after max logs
+                if (viewEnd < logsMin || viewStart > logsMax) {
+                    needsFetch = true;
+                }
+            } else {
+                needsFetch = true;
+            }
+
+            // Also check if we already fetched it locally (prevent loops)
+            const alreadyHasLocal = fetchedLogs.some(l => l.work_date >= startStr && l.work_date <= endStr);
+            if (alreadyHasLocal) needsFetch = false; // We already fetched something for this range
+
+            if (needsFetch) {
+                setLoading(true);
+                try {
+                    const res = await api.get(`/attendance/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}&limit=100`);
+                    const newLogs = res.data.results || res.data;
+
+                    if (newLogs && newLogs.length > 0) {
+                        setFetchedLogs(prev => [...prev, ...newLogs]);
+                    }
+                } catch (err) {
+                    console.error("Historical data fetch failed", err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        checkAndFetch();
+    }, [weekStart, employeeId]); // logs dependency removed to prevent loops, we rely on weekStart change
 
     // Compute Data for the selected Week from Logs
     const data = useMemo(() => {
         const start = weekStart;
-        const end = addDays(weekStart, 6);
 
         // Init 7 days
         const days = [];
@@ -45,28 +121,24 @@ const WeeklyView = ({ logs, showBreaks }) => {
             const d = addDays(start, i);
             const dateStr = format(d, 'yyyy-MM-dd');
 
-            // Find ALL Logs for this day
-            const dayLogs = logs ? logs.filter(l => l.work_date === dateStr) : [];
+            // Find ALL Logs for this day from ALL available logs
+            const dayLogs = allLogs.filter(l => l.work_date === dateStr);
 
             // Aggregate totals
-            // NOTE: We do NOT sum missing_seconds from logs because for partial days, 
-            // the segments might not carry the 'missing' info. We calculate it against the target.
             const totalNormal = dayLogs.reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
             const totalOvertime = dayLogs.reduce((acc, l) => acc + (l.overtime_seconds || 0), 0);
             const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
 
-            // Target: Scan all logs for the day and find the valid target (take the max)
-            // This prevents issues where some segments have 0 target.
+            // Target
             const dayTarget = dayLogs.reduce((max, l) => Math.max(max, l.day_target_seconds || 0), 0);
 
-            // Calculate Missing: Target - Normal
-            // Hide missing for future days
+            // Calculate Missing
             const isFuture = d > new Date();
             const calculatedMissing = isFuture ? 0 : Math.max(0, dayTarget - totalNormal);
 
             days.push({
                 date: dateStr,
-                name: format(d, 'EEE', { locale: tr }), // Pzt, Sal
+                name: format(d, 'EEE', { locale: tr }),
                 fullDate: format(d, 'd MMM yyyy', { locale: tr }),
                 normal: parseFloat((totalNormal / 3600).toFixed(1)),
                 overtime: parseFloat((totalOvertime / 3600).toFixed(1)),
@@ -78,10 +150,11 @@ const WeeklyView = ({ logs, showBreaks }) => {
         }
 
         return days;
-    }, [logs, weekStart]);
+    }, [allLogs, weekStart]);
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col relative">
+            {loading && <div className="absolute top-2 right-12 text-xs text-indigo-500 font-bold animate-pulse">Veri yükleniyor...</div>}
             <div className="flex justify-between items-center mb-4 px-2">
                 <span className="text-xs font-bold text-slate-500">
                     {format(weekStart, 'd MMM', { locale: tr })} - {format(addDays(weekStart, 6), 'd MMM', { locale: tr })}
@@ -404,7 +477,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             </div>
 
             <div className="flex-1 w-full min-h-0">
-                {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} />}
+                {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} employeeId={employeeId} />}
                 {scope === 'MONTHLY' && (
                     <TrendView data={monthlyTrendData} xKey="name" showBreaks={showBreaks} />
                 )}
