@@ -50,6 +50,7 @@ const Attendance = () => {
     const [viewScope, setViewScope] = useState('DAILY'); // 'DAILY' | 'MONTHLY'
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [selectedDate, setSelectedDate] = useState(format(today, 'yyyy-MM-dd'));
 
     const months = [
         'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -78,7 +79,7 @@ const Attendance = () => {
         if (activeTab === 'team_attendance') {
             fetchTeamData();
         }
-    }, [selectedEmployeeId, startDate, endDate, activeTab]);
+    }, [selectedEmployeeId, startDate, endDate, activeTab, selectedDate]);
 
     // --- HANDLERS ---
     const checkTeamVisibility = () => {
@@ -121,7 +122,9 @@ const Attendance = () => {
             // 3. Fetch Today's Summary (For Hero Widget)
             // Only if we are viewing "My Attendance" or a specific Team Member (Detail)
             if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
-                const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}`);
+                // Pass selectedDate if viewing DAILY scope
+                const dateParam = viewScope === 'DAILY' ? `&date=${selectedDate}` : '';
+                const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}${dateParam}`);
                 setTodaySummary(todayRes.data);
             }
 
@@ -190,8 +193,11 @@ const Attendance = () => {
                     {/* View Switcher (Today / Month) */}
                     <div className="bg-slate-100 p-1 rounded-xl flex items-center">
                         <button
-                            onClick={() => setViewScope('DAILY')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'DAILY'
+                            onClick={() => {
+                                setViewScope('DAILY');
+                                setSelectedDate(format(new Date(), 'yyyy-MM-dd')); // Reset to actual today
+                            }}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'DAILY' && selectedDate === format(new Date(), 'yyyy-MM-dd')
                                 ? 'bg-white text-indigo-600 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-700'
                                 }`}
@@ -199,6 +205,19 @@ const Attendance = () => {
                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                             Bugün
                         </button>
+
+                        {/* Custom Date Picker Trigger if DAILY */}
+                        {viewScope === 'DAILY' && (
+                            <div className="relative flex items-center px-2 border-l border-slate-200 ml-1">
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="text-xs font-bold text-slate-600 bg-transparent outline-none focus:text-indigo-600 cursor-pointer"
+                                />
+                            </div>
+                        )}
+
                         <button
                             onClick={() => setViewScope('MONTHLY')}
                             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'MONTHLY'
@@ -292,7 +311,9 @@ const Attendance = () => {
 
                         {/* 1.5. Hero Daily Summary (Today) - ONLY IF DAILY SCOPE */}
                         {viewScope === 'DAILY' && (
-                            <HeroDailySummary summary={todaySummary} loading={loading} />
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+                                <HeroDailySummary summary={todaySummary} loading={loading} />
+                            </div>
                         )}
 
                         {/* 2. Monthly Summary Section */}
@@ -319,13 +340,14 @@ const Attendance = () => {
                                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                                     <Clock size={20} className="text-slate-400" />
                                     Detaylı Günlük Hareketler
+                                    {viewScope === 'DAILY' && <span className="text-xs text-slate-400 font-medium ml-2">({selectedDate})</span>}
                                 </h3>
                                 <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2">
                                     <Download size={14} />
                                     Excel İndir
                                 </button>
                             </div>
-                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === new Date().toISOString().split('T')[0]) : logs} />
+                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === selectedDate) : logs} />
                         </div>
 
                     </div>
