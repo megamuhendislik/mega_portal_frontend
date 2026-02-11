@@ -189,83 +189,96 @@ const Attendance = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-                    {/* View Switcher */}
-                    {/* View Switcher (Today / Month) */}
-                    <div className="bg-slate-100 p-1 rounded-xl flex items-center">
-                        <button
-                            onClick={() => {
-                                setViewScope('DAILY');
-                                setSelectedDate(format(new Date(), 'yyyy-MM-dd')); // Reset to actual today
-                            }}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'DAILY' && selectedDate === format(new Date(), 'yyyy-MM-dd')
-                                ? 'bg-white text-indigo-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                        >
-                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            Bugün
-                        </button>
+                    {/* View Switcher & Date Controls */}
+                    <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
 
-                        {/* Custom Date Picker Trigger if DAILY */}
-                        {viewScope === 'DAILY' && (
-                            <div className="relative flex items-center px-2 border-l border-slate-200 ml-1">
-                                <input
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    className="text-xs font-bold text-slate-600 bg-transparent outline-none focus:text-indigo-600 cursor-pointer"
-                                />
-                            </div>
-                        )}
-
-                        <button
-                            onClick={() => setViewScope('MONTHLY')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewScope === 'MONTHLY'
-                                ? 'bg-white text-indigo-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                        >
-                            <Calendar size={14} />
-                            Ay
-                        </button>
-                    </div>
-
-                    {/* Year/Month Selectors (Only visible/active if in Monthly mode or always? User said 'ay seçilebilsin') */}
-                    {/* Better UX: If I click Month Selector, it auto-switches to MONTHLY scope. */}
-                    <div className={`flex flex-col items-end gap-1 transition-opacity duration-300 ${viewScope === 'DAILY' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-                            <div className="h-6 w-px bg-slate-200"></div>
-
-                            <select
-                                value={viewMonth}
-                                onChange={(e) => {
-                                    setViewMonth(parseInt(e.target.value));
-                                    setViewScope('MONTHLY');
+                        {/* 1. Mode Toggle (Segmented Control) */}
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            <button
+                                onClick={() => {
+                                    setViewScope('DAILY');
+                                    if (selectedDate === '') setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
                                 }}
-                                className="text-sm font-bold text-slate-700 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors appearance-none"
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${viewScope === 'DAILY'
+                                    ? 'bg-white text-indigo-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                    }`}
                             >
-                                {months.map((m, i) => (
-                                    <option key={i} value={i}>{m}</option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={viewYear}
-                                onChange={(e) => {
-                                    setViewYear(parseInt(e.target.value));
-                                    setViewScope('MONTHLY');
-                                }}
-                                className="text-sm font-bold text-slate-500 bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors appearance-none"
+                                <span className={`w-2 h-2 rounded-full ${viewScope === 'DAILY' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                Günlük
+                            </button>
+                            <button
+                                onClick={() => setViewScope('MONTHLY')}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${viewScope === 'MONTHLY'
+                                    ? 'bg-white text-indigo-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                    }`}
                             >
-                                {years.map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                ))}
-                            </select>
+                                <Calendar size={16} />
+                                Aylık
+                            </button>
                         </div>
-                        {viewScope === 'MONTHLY' && startDate && endDate && (
-                            <span className="text-[10px] font-medium text-slate-400">
-                                Dönem: {new Date(startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {new Date(endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-                            </span>
+
+                        <div className="w-px h-8 bg-slate-100 hidden sm:block"></div>
+
+                        {/* 2. Conditional Controls */}
+                        {viewScope === 'DAILY' ? (
+                            <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                {/* Today Shortcut */}
+                                <button
+                                    onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))}
+                                    className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${selectedDate === format(new Date(), 'yyyy-MM-dd')
+                                        ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                        : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
+                                        }`}
+                                >
+                                    Bugün
+                                </button>
+
+                                {/* Date Picker */}
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Calendar size={14} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all cursor-pointer hover:bg-white"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                                    <select
+                                        value={viewMonth}
+                                        onChange={(e) => setViewMonth(parseInt(e.target.value))}
+                                        className="bg-transparent text-sm font-bold text-slate-700 py-1 pl-2 pr-1 cursor-pointer outline-none hover:text-indigo-600"
+                                    >
+                                        {months.map((m, i) => (
+                                            <option key={i} value={i}>{m}</option>
+                                        ))}
+                                    </select>
+                                    <div className="w-px h-4 bg-slate-300"></div>
+                                    <select
+                                        value={viewYear}
+                                        onChange={(e) => setViewYear(parseInt(e.target.value))}
+                                        className="bg-transparent text-sm font-bold text-slate-700 py-1 pl-1 pr-2 cursor-pointer outline-none hover:text-indigo-600"
+                                    >
+                                        {years.map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {startDate && endDate && (
+                                    <div className="text-[10px] font-medium text-slate-400 px-2 leading-tight hidden xl:block">
+                                        {new Date(startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                        {' - '}
+                                        {new Date(endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
 
