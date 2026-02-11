@@ -49,15 +49,20 @@ const WeeklyView = ({ logs, showBreaks }) => {
             const dayLogs = logs ? logs.filter(l => l.work_date === dateStr) : [];
 
             // Aggregate totals
+            // NOTE: We do NOT sum missing_seconds from logs because for partial days, 
+            // the segments might not carry the 'missing' info. We calculate it against the target.
             const totalNormal = dayLogs.reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
             const totalOvertime = dayLogs.reduce((acc, l) => acc + (l.overtime_seconds || 0), 0);
-            const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
             const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
 
-            // Target is usually per day, not per shift. 
-            // We assume the first log contains the correct target for the day or we take the max?
-            // Usually target is fixed per day. Let's take the first one or 0.
-            const dayTarget = dayLogs.length > 0 ? (dayLogs[0].day_target_seconds || 0) : 0;
+            // Target: Scan all logs for the day and find the valid target (take the max)
+            // This prevents issues where some segments have 0 target.
+            const dayTarget = dayLogs.reduce((max, l) => Math.max(max, l.day_target_seconds || 0), 0);
+
+            // Calculate Missing: Target - Normal
+            // Hide missing for future days
+            const isFuture = d > new Date();
+            const calculatedMissing = isFuture ? 0 : Math.max(0, dayTarget - totalNormal);
 
             days.push({
                 date: dateStr,
@@ -65,10 +70,10 @@ const WeeklyView = ({ logs, showBreaks }) => {
                 fullDate: format(d, 'd MMM yyyy', { locale: tr }),
                 normal: parseFloat((totalNormal / 3600).toFixed(1)),
                 overtime: parseFloat((totalOvertime / 3600).toFixed(1)),
-                missing: parseFloat((totalMissing / 3600).toFixed(1)),
+                missing: parseFloat((calculatedMissing / 3600).toFixed(1)),
                 break: parseFloat((totalBreak / 3600).toFixed(2)),
                 target: parseFloat((dayTarget / 3600).toFixed(1)),
-                isFuture: d > new Date()
+                isFuture: isFuture
             });
         }
 
