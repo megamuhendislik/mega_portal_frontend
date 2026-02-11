@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Calendar, UserPlus, Edit2, Trash2, Check, X, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
 const SubstituteManagement = () => {
+  const { hasPermission } = useAuth();
   const [delegations, setDelegations] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ const SubstituteManagement = () => {
 
   const fetchDelegations = async () => {
     try {
-      const response = await api.get('/api/substitute-authority/');
+      const response = await api.get('/substitute-authority/');
       setDelegations(response.data);
     } catch (err) {
       setError('Vekalet kayıtları yüklenemedi');
@@ -38,7 +40,7 @@ const SubstituteManagement = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await api.get('/api/employees/');
+      const response = await api.get('/employees/');
       setEmployees(response.data);
     } catch (err) {
       console.error('Çalışanlar yüklenemedi:', err);
@@ -52,10 +54,10 @@ const SubstituteManagement = () => {
 
     try {
       if (editingId) {
-        await api.put(`/api/substitute-authority/${editingId}/`, formData);
+        await api.put(`/substitute-authority/${editingId}/`, formData);
         setSuccess('Vekalet kaydı güncellendi');
       } else {
-        await api.post('/api/substitute-authority/', formData);
+        await api.post('/substitute-authority/', formData);
         setSuccess('Vekalet kaydı oluşturuldu');
       }
 
@@ -90,7 +92,7 @@ const SubstituteManagement = () => {
     }
 
     try {
-      await api.delete(`/api/substitute-authority/${id}/`);
+      await api.delete(`/substitute-authority/${id}/`);
       setSuccess('Vekalet kaydı silindi');
       fetchDelegations();
       setTimeout(() => setSuccess(''), 3000);
@@ -101,7 +103,7 @@ const SubstituteManagement = () => {
 
   const handleToggleActive = async (delegation) => {
     try {
-      await api.patch(`/api/substitute-authority/${delegation.id}/`, {
+      await api.patch(`/substitute-authority/${delegation.id}/`, {
         is_active: !delegation.is_active
       });
       setSuccess(`Vekalet kaydı ${!delegation.is_active ? 'aktif' : 'pasif'} edildi`);
@@ -347,8 +349,8 @@ const SubstituteManagement = () => {
                         <button
                           onClick={() => handleToggleActive(delegation)}
                           className={`p-2 rounded transition ${delegation.is_active
-                              ? 'text-yellow-600 hover:bg-yellow-50'
-                              : 'text-green-600 hover:bg-green-50'
+                            ? 'text-yellow-600 hover:bg-yellow-50'
+                            : 'text-green-600 hover:bg-green-50'
                             }`}
                           title={delegation.is_active ? 'Pasif Yap' : 'Aktif Yap'}
                         >
