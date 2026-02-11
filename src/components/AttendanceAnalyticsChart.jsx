@@ -43,35 +43,23 @@ const WeeklyView = ({ logs, showBreaks }) => {
         const days = [];
         for (let i = 0; i < 7; i++) {
             const d = addDays(start, i);
+            const dateStr = format(d, 'yyyy-MM-dd');
+
+            // Find Log for this day
+            const log = logs ? logs.find(l => l.work_date === dateStr) : null;
+
             days.push({
-                date: format(d, 'yyyy-MM-dd'),
+                date: dateStr,
                 name: format(d, 'EEE', { locale: tr }), // Pzt, Sal
                 fullDate: format(d, 'd MMM yyyy', { locale: tr }),
-                normal: 0,
-                overtime: 0,
-                missing: 0,
-                break: 0,
-                target: 0,
+                normal: log ? parseFloat(((log.normal_seconds || 0) / 3600).toFixed(1)) : 0,
+                overtime: log ? parseFloat(((log.overtime_seconds || 0) / 3600).toFixed(1)) : 0,
+                missing: log ? parseFloat(((log.missing_seconds || 0) / 3600).toFixed(1)) : 0,
+                break: log ? parseFloat(((log.break_seconds || 0) / 3600).toFixed(2)) : 0,
+                target: log ? parseFloat(((log.day_target_seconds || 0) / 3600).toFixed(1)) : 0,
                 isFuture: d > new Date()
             });
         }
-
-        if (!logs) return days;
-
-        // Map Logs
-        logs.forEach(log => {
-            const logDay = days.find(d => d.date === log.work_date);
-            if (logDay) {
-                logDay.normal = parseFloat(((log.normal_seconds || 0) / 3600).toFixed(1));
-                logDay.overtime = parseFloat(((log.overtime_seconds || 0) / 3600).toFixed(1));
-                logDay.missing = parseFloat(((log.missing_seconds || 0) / 3600).toFixed(1));
-                // Show Break in HOURS to match scale? Or Minutes?
-                // Chart Y-Axis is likely Hours (0-12). 30min = 0.5h. 
-                logDay.break = parseFloat(((log.break_seconds || 0) / 3600).toFixed(2));
-
-                logDay.target = parseFloat(((log.day_target_seconds || 0) / 3600).toFixed(1));
-            }
-        });
 
         return days;
     }, [logs, weekStart]);
@@ -270,38 +258,52 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
     const monthlyTrendData = useMemo(() => {
         if (!logs || logs.length === 0) return [];
 
-        // Group by Week
-        const weeks = {};
-        // Sort logs by date first to ensure order
+        // Determine Range (Ideally passed prop, but infer from logs or defaults)
+        // If logs exist, take min/max. If not, maybe empty?
+        // But the chart is "Monthly", so we should ideally show the 4-5 weeks of that month.
+        // Let's us the logs extent for now as the "Period".
         const sortedLogs = [...logs].sort((a, b) => new Date(a.work_date) - new Date(b.work_date));
-
         if (sortedLogs.length === 0) return [];
-        const firstLogDate = new Date(sortedLogs[0].work_date);
-        const firstWeekStart = startOfWeek(firstLogDate, { weekStartsOn: 1 });
 
+        const firstLogDate = new Date(sortedLogs[0].work_date);
+        const lastLogDate = new Date(sortedLogs[sortedLogs.length - 1].work_date);
+
+        const start = startOfWeek(firstLogDate, { weekStartsOn: 1 });
+        const end = endOfWeek(lastLogDate, { weekStartsOn: 1 });
+
+        // Generate All Weeks in Interval
+        const weeksMap = {};
+        const weeksList = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 });
+
+        weeksList.forEach((weekStart, index) => {
+            const label = `${index + 1}. Hafta`;
+            weeksMap[label] = { count: 0, normal: 0, overtime: 0, break: 0 };
+        });
+
+        // Fill Data
         sortedLogs.forEach(log => {
             const date = new Date(log.work_date);
             const weekStart = startOfWeek(date, { weekStartsOn: 1 });
 
-            // Calculate week index relative to the start of the period
-            const diffTime = Math.abs(weekStart - firstWeekStart);
-            const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-            const weekLabel = `${diffWeeks + 1}. Hafta`;
-
-            if (!weeks[weekLabel]) weeks[weekLabel] = { count: 0, normal: 0, overtime: 0 };
-
-            weeks[weekLabel].count += 1;
-            weeks[weekLabel].normal += (log.normal_seconds || 0) / 3600;
-            weeks[weekLabel].overtime += (log.overtime_seconds || 0) / 3600;
-            weeks[weekLabel].break += (log.break_seconds || 0) / 3600; // Hours
+            // Find which week this belongs to in our generated list
+            const index = weeksList.findIndex(w => isSameDay(w, weekStart));
+            if (index !== -1) {
+                const label = `${index + 1}. Hafta`;
+                if (weeksMap[label]) {
+                    weeksMap[label].count += 1;
+                    weeksMap[label].normal += (log.normal_seconds || 0) / 3600;
+                    weeksMap[label].overtime += (log.overtime_seconds || 0) / 3600;
+                    weeksMap[label].break += (log.break_seconds || 0) / 3600;
+                }
+            }
         });
 
-        // Calculate Averages
-        return Object.keys(weeks).map(key => ({
+        // Calculate Averages (or Totals?) Label says "Haftalık ortalama" (Weekly Average)
+        return Object.keys(weeksMap).map(key => ({
             name: key,
-            normal: parseFloat((weeks[key].normal / weeks[key].count).toFixed(1)), // Average per day in that week
-            overtime: parseFloat((weeks[key].overtime / weeks[key].count).toFixed(1)),
-            break: parseFloat((weeks[key].break / weeks[key].count).toFixed(2))
+            normal: weeksMap[key].count > 0 ? parseFloat((weeksMap[key].normal / weeksMap[key].count).toFixed(1)) : 0,
+            overtime: weeksMap[key].count > 0 ? parseFloat((weeksMap[key].overtime / weeksMap[key].count).toFixed(1)) : 0,
+            break: weeksMap[key].count > 0 ? parseFloat((weeksMap[key].break / weeksMap[key].count).toFixed(2)) : 0
         }));
     }, [logs]);
 
