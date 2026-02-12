@@ -123,7 +123,8 @@ const Attendance = () => {
             // Only if we are viewing "My Attendance" or a specific Team Member (Detail)
             if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
                 // Pass selectedDate if viewing DAILY scope
-                const dateParam = viewScope === 'DAILY' ? `&date=${selectedDate}` : '';
+                // Ensure selectedDate is valid date string? It is from chart/date picker.
+                const dateParam = viewScope === 'DAILY' && selectedDate ? `&date=${selectedDate}` : '';
                 const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}${dateParam}`);
                 setTodaySummary(todayRes.data);
             }
