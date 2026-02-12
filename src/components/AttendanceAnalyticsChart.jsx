@@ -134,7 +134,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
 
             // Target
-            const dayTarget = dayLogs.reduce((max, l) => Math.max(max, l.day_target_seconds || 0), 0);
+            // Target: Use 9 hours (32400s) default if missing from DB, as it's not a model field currently.
+            // Ideally should come from Daily Work Schedule, but static fallback is better than 0.
+            const dayTarget = 32400; // 9 Hours default
 
             // Calculate Missing
             const isFuture = d > new Date();
@@ -357,93 +359,58 @@ const YearlyView = ({ data }) => {
 const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1, employeeId, onDateClick }) => {
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
-    const [loadingYearly, setLoadingYearly] = useState(false);
+    const [monthlyTrendData, setMonthlyTrendData] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [showBreaks, setShowBreaks] = useState(false);
 
-    // Prepare Monthly Trend Data (Aggregated by Week)
-    const monthlyTrendData = useMemo(() => {
-        if (!logs || logs.length === 0) return [];
-
-        // Determine Range (Ideally passed prop, but infer from logs or defaults)
-        // If logs exist, take min/max. If not, maybe empty?
-        // But the chart is "Monthly", so we should ideally show the 4-5 weeks of that month.
-        // Let's us the logs extent for now as the "Period".
-        const sortedLogs = [...logs].sort((a, b) => new Date(a.work_date) - new Date(b.work_date));
-        if (sortedLogs.length === 0) return [];
-
-        const firstLogDate = new Date(sortedLogs[0].work_date);
-        const lastLogDate = new Date(sortedLogs[sortedLogs.length - 1].work_date);
-
-        const start = startOfWeek(firstLogDate, { weekStartsOn: 1 });
-        const end = endOfWeek(lastLogDate, { weekStartsOn: 1 });
-
-        // Generate All Weeks in Interval
-        const weeksMap = {};
-        const weeksList = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 });
-
-        weeksList.forEach((weekStart, index) => {
-            const label = `${index + 1}. Hafta`;
-            weeksMap[label] = { count: 0, normal: 0, overtime: 0, break: 0 };
-        });
-
-        // Fill Data
-        sortedLogs.forEach(log => {
-            const date = new Date(log.work_date);
-            const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-
-            // Find which week this belongs to in our generated list
-            const index = weeksList.findIndex(w => isSameDay(w, weekStart));
-            if (index !== -1) {
-                const label = `${index + 1}. Hafta`;
-                if (weeksMap[label]) {
-                    weeksMap[label].count += 1;
-                    weeksMap[label].normal += (log.normal_seconds || 0) / 3600;
-                    weeksMap[label].overtime += (log.overtime_seconds || 0) / 3600;
-                    weeksMap[label].break += (log.break_seconds || 0) / 3600;
-                }
-            }
-        });
-
-        // Calculate Averages (or Totals?) Label says "Haftalık ortalama" (Weekly Average)
-        return Object.keys(weeksMap).map(key => ({
-            name: key,
-            normal: weeksMap[key].count > 0 ? parseFloat((weeksMap[key].normal / weeksMap[key].count).toFixed(1)) : 0,
-            overtime: weeksMap[key].count > 0 ? parseFloat((weeksMap[key].overtime / weeksMap[key].count).toFixed(1)) : 0,
-            break: weeksMap[key].count > 0 ? parseFloat((weeksMap[key].break / weeksMap[key].count).toFixed(2)) : 0
-        }));
-    }, [logs]);
-
-    // Check if we need to fetch yearly data
+    // Fetch Stats for Monthly/Yearly scopes
     useEffect(() => {
-        // Reset yearly data if employee changes
-        if (scope === 'YEARLY') {
-            fetchYearlyData();
-        } else {
-            // Optional: if switching back to yearly for same employee, we check if yearlyData is empty?
-            // But if employee changes, we MUST refetch.
-            // Simplest: If Scope is YEARLY, always ensure data is fresh-ish OR just rely on deps
-        }
-    }, [scope, currentYear, employeeId]);
+        if (scope === 'WEEKLY') return; // Weekly uses 'logs' prop (or fetches its own history inside WeeklyView)
 
-    const fetchYearlyData = async () => {
-        setLoadingYearly(true);
-        try {
-            // Using existing endpoint with scope param
-            const response = await api.get(`/attendance/stats/?scope=YEARLY&year=${currentYear}&employee_id=${employeeId || ''}`);
-            const mapped = response.data.map(m => ({
-                name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }), // Oca, Şub
-                normal: parseFloat((m.normal_hours || 0).toFixed(1)),
-                overtime: parseFloat((m.overtime_hours || 0).toFixed(1)),
-                missing: parseFloat((m.missing_hours || 0).toFixed(1)),
-                cumulative_net_hours: parseFloat((m.cumulative_net_hours || 0).toFixed(1))
-            }));
-            setYearlyData(mapped);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoadingYearly(false);
-        }
-    };
+        const fetchStats = async () => {
+            setLoading(true);
+            try {
+                // Determine params based on scope
+                const params = {
+                    scope,
+                    year: currentYear,
+                    employee_id: employeeId
+                };
+                if (scope === 'MONTHLY') {
+                    params.month = currentMonth;
+                }
+
+                const res = await api.get('/attendance/stats/', { params });
+
+                if (scope === 'YEARLY') {
+                    const mapped = res.data.map(m => ({
+                        name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }),
+                        normal: m.normal_hours,
+                        overtime: m.overtime_hours,
+                        missing: m.missing_hours,
+                        cumulative_net_hours: m.cumulative_net_hours
+                    }));
+                    setYearlyData(mapped);
+                } else if (scope === 'MONTHLY') {
+                    // API returns { label: "1. Hafta", normal: ..., overtime: ... }
+                    const mapped = res.data.map(w => ({
+                        name: w.label,
+                        normal: w.normal,
+                        overtime: w.overtime,
+                        break: w.break
+                    }));
+                    setMonthlyTrendData(mapped);
+                }
+
+            } catch (err) {
+                console.error("Stats Fetch Error", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, [scope, currentYear, currentMonth, employeeId]);
 
     return (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col">
@@ -462,7 +429,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                     </div>
                 </div>
 
-                {/* Show Breaks Toggle (Merged Logic) */}
+                {/* Show Breaks Toggle */}
                 <div className="flex items-center mr-4">
                     <label className="flex items-center cursor-pointer relative">
                         <input
@@ -493,15 +460,15 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                 </div>
             </div>
 
-            <div className="flex-1 w-full min-h-0">
+            <div className="flex-1 w-full min-h-0 relative">
+                {loading && <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center text-indigo-600 text-xs font-bold">Yükleniyor...</div>}
+
                 {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} employeeId={employeeId} onDateClick={onDateClick} />}
                 {scope === 'MONTHLY' && (
                     <TrendView data={monthlyTrendData} xKey="name" showBreaks={showBreaks} />
                 )}
                 {scope === 'YEARLY' && (
-                    loadingYearly
-                        ? <div className="h-full flex items-center justify-center text-slate-400 text-xs">Yükleniyor...</div>
-                        : <YearlyView data={yearlyData} />
+                    <YearlyView data={yearlyData} />
                 )}
             </div>
         </div>
