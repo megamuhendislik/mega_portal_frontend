@@ -3,8 +3,11 @@ import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, 
 
 const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
+    console.log("MonthlyPerformanceSummary RENDER:", { periodSummary, logs });
+
     const stats = useMemo(() => {
         if (periodSummary) {
+            console.log("Processing Period Summary:", periodSummary);
             const targetSec = periodSummary.target_seconds || 0;
             const realizedSec = periodSummary.completed_seconds || 0; // Normal work
             const overtimeSec = periodSummary.overtime_seconds || 0;
