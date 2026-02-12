@@ -129,12 +129,17 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             const totalOvertime = dayLogs.reduce((acc, l) => acc + (l.overtime_seconds || 0), 0);
             const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
 
+            // Revert: Use sum of missing_seconds from logs, as requested.
+            // "if it's not processed as absent... don't show it"
+            const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
+
             // Target
             const dayTarget = dayLogs.reduce((max, l) => Math.max(max, l.day_target_seconds || 0), 0);
 
             // Calculate Missing
             const isFuture = d > new Date();
-            const calculatedMissing = isFuture ? 0 : Math.max(0, dayTarget - totalNormal);
+            // Don't calculate dynamically. Use DB value.
+            const calculatedMissing = totalMissing;
 
             days.push({
                 date: dateStr,
