@@ -344,6 +344,10 @@ const Attendance = () => {
                                     logs={logs}
                                     currentYear={viewYear}
                                     employeeId={selectedEmployeeId}
+                                    onDateClick={(date) => {
+                                        setSelectedDate(date);
+                                        setViewScope('DAILY');
+                                    }}
                                 />
                             </div>
                         </div>

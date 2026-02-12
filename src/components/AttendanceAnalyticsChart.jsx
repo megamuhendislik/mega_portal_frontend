@@ -14,7 +14,7 @@ import api from '../services/api';
 
 // Sub-component for Weekly Bar Chart (Legacy Logic)
 // Sub-component for Weekly Bar Chart (Logs Based)
-const WeeklyView = ({ logs, showBreaks, employeeId }) => {
+const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
     // Default to start of logs or current week if no logs
     const [weekStart, setWeekStart] = useState(() => {
         if (logs && logs.length > 0) {
@@ -166,7 +166,19 @@ const WeeklyView = ({ logs, showBreaks, employeeId }) => {
             </div>
             <div className="flex-1 w-full h-[320px] min-h-[320px]" style={{ minHeight: '320px' }}>
                 <ResponsiveContainer width="99%" height="100%" debounce={50}>
-                    <ComposedChart data={data} barSize={32} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+                    <ComposedChart
+                        data={data}
+                        barSize={32}
+                        margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
+                        onClick={(e) => {
+                            if (e && e.activePayload && e.activePayload.length > 0) {
+                                const payload = e.activePayload[0].payload;
+                                if (payload && payload.date && onDateClick) {
+                                    onDateClick(payload.date);
+                                }
+                            }
+                        }}
+                    >
                         <defs>
                             <pattern id="striped-analytics" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                                 <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
@@ -180,7 +192,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId }) => {
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             itemStyle={{ fontSize: '12px', fontWeight: 600 }}
                             labelStyle={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
-                            cursor={{ fill: '#f8fafc' }}
+                            cursor={{ fill: '#f8fafc', cursor: 'pointer' }}
                         />
                         {/* Dynamic Target Line */}
                         <Line
@@ -337,7 +349,7 @@ const YearlyView = ({ data }) => {
     );
 };
 
-const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1, employeeId }) => {
+const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1, employeeId, onDateClick }) => {
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
     const [loadingYearly, setLoadingYearly] = useState(false);
@@ -477,7 +489,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
             </div>
 
             <div className="flex-1 w-full min-h-0">
-                {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} employeeId={employeeId} />}
+                {scope === 'WEEKLY' && <WeeklyView logs={logs} showBreaks={showBreaks} employeeId={employeeId} onDateClick={onDateClick} />}
                 {scope === 'MONTHLY' && (
                     <TrendView data={monthlyTrendData} xKey="name" showBreaks={showBreaks} />
                 )}
