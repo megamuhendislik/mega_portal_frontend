@@ -46,7 +46,14 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
         const combined = [...(logs || []), ...fetchedLogs];
         // Deduplicate
         const unique = new Map();
-        combined.forEach(l => unique.set(l.work_date, l));
+        combined.forEach(l => {
+            if (l.id) unique.set(l.id, l);
+            else {
+                // Determine a unique key for optimistic updates or non-ID logs
+                const key = `${l.work_date}-${l.check_in || 'no-in'}`;
+                unique.set(key, l);
+            }
+        });
         return Array.from(unique.values());
     }, [logs, fetchedLogs]);
 
@@ -171,8 +178,8 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                     <button onClick={() => setWeekStart(d => addDays(d, 7))} className="p-1 hover:bg-white rounded shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"><ChevronRight size={16} /></button>
                 </div>
             </div>
-            <div className="flex-1 w-full h-[320px] min-h-[320px]" style={{ minHeight: '320px' }}>
-                <ResponsiveContainer width="99%" height="100%" debounce={50}>
+            <div className="flex-1 w-full" style={{ height: 320, minHeight: 320 }}>
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <ComposedChart
                         data={data}
                         barSize={32}
@@ -253,8 +260,8 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
 // Sub-component for Trends (Line Chart)
 const TrendView = ({ data, xKey, unit = 'sa', showBreaks }) => {
     return (
-        <div className="h-full w-full flex-1 min-h-[320px] pt-4" style={{ minHeight: '320px' }}>
-            <ResponsiveContainer width="99%" height="100%" debounce={50}>
+        <div className="w-full pt-4" style={{ height: 320, minHeight: 320 }}>
+            <ResponsiveContainer width="100%" height="100%" debounce={100}>
                 <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis
@@ -313,8 +320,8 @@ const TrendView = ({ data, xKey, unit = 'sa', showBreaks }) => {
 // Sub-component for Yearly View (Bars + Cumulative Line)
 const YearlyView = ({ data }) => {
     return (
-        <div className="h-full w-full flex-1 min-h-[320px] pt-4" style={{ minHeight: '320px' }}>
-            <ResponsiveContainer width="99%" height="100%" debounce={50}>
+        <div className="w-full pt-4" style={{ height: 320, minHeight: 320 }}>
+            <ResponsiveContainer width="100%" height="100%" debounce={100}>
                 <ComposedChart data={data} barSize={20} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
                     <defs>
                         <pattern id="striped-year" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
