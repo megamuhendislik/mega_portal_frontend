@@ -5,12 +5,18 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
     const stats = useMemo(() => {
         if (periodSummary) {
+            // Fix: Backend sends 'target_gross' and 'total_work_seconds'
             const targetSec = periodSummary.target_gross || periodSummary.target_seconds || 0;
             const realizedSec = periodSummary.completed_seconds || 0; // Normal work
             const overtimeSec = periodSummary.overtime_seconds || 0;
             const missingSec = periodSummary.missing_seconds || 0;
             const remainingSec = periodSummary.remaining_seconds || 0;
-            const netWorkSec = periodSummary.net_work_seconds || 0; // Normal + OT
+
+            // Fix: Backend sends 'total_work_seconds', not 'net_work_seconds'
+            const netWorkSec = periodSummary.total_work_seconds || periodSummary.net_work_seconds || 0; // Normal + OT
+
+            // True Balance computation if not provided
+            const netBalanceReal = periodSummary.net_balance_seconds || (netWorkSec - targetSec);
 
             const breakSec = periodSummary.total_break_seconds || 0;
             const lateSec = periodSummary.total_late_seconds || 0;
@@ -44,7 +50,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             return {
                 targetHours: (targetSec / 3600).toFixed(1),
                 completedHours: (realizedSec / 3600).toFixed(1),
+
+                // Visual Improvement: Formatting missing hours (remove negative sign if confusing, but kept for clarity in formula context)
+                // User confusingly sees -107.7. Let's make it absolute for the label "X hours missing"
                 missingHours: (missingSec / 3600).toFixed(1),
+
                 remainingHours: (remainingSec / 3600).toFixed(1),
 
                 overtimeHours: (overtimeSec / 3600).toFixed(1),
@@ -52,6 +62,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                 surplusHours: (surplusSec / 3600).toFixed(1),
                 isSurplus,
+                netBalanceHours: (netBalanceReal / 3600).toFixed(1),
 
                 breakHours: (breakSec / 3600).toFixed(1),
                 lateMinutes: Math.floor(lateSec / 60),
@@ -146,15 +157,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
                         </div>
                     </div>
-                    <div className="h-5 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.3)]" style={{ width: `${stats.pCompleted}%` }} title={`Tamamlanan: ${stats.completedHours} sa`} />
-                        <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_10px_rgba(244,63,94,0.3)]" style={{ width: `${stats.pMissing}%` }} title={`Eksik: ${stats.missingHours} sa`}>
-                            <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-50"></div>
+                    {/* ENHANCED BAR VISUALS */}
+                    <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)] relative group" style={{ width: `${stats.pCompleted}%` }}>
+                            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         </div>
-                        <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} title={`Kalan: ${stats.remainingHours} sa`} />
+                        <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
+                            {/* Striped pattern for Missing */}
+                            <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
+                        </div>
+                        <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} />
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
                         <span className="text-blue-700">{stats.completedHours} sa</span>
+                        {/* Improved Missing Text: show negative if it's confusing, but maybe user wants it clearer */}
                         <span className="text-rose-600">{stats.missingHours > 0 ? `-${stats.missingHours} sa` : ''}</span>
                         <span className="text-slate-400">{stats.remainingHours} sa</span>
                     </div>
@@ -167,13 +183,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             Toplam Efor (Mesai Dahil)
                             {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                         </span>
-                        <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-2 py-1 rounded-lg">{stats.netWorkHours} / {stats.targetHours} sa</span>
+                        <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.netWorkHours} / {stats.targetHours} sa</span>
                     </div>
-                    <div className="relative h-5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100">
+                    {/* ENHANCED BAR */}
+                    <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
+                        {/* Background Marker for Target */}
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-slate-300 left-[100%] z-0"></div>
+
                         <div
-                            className={`h-full transition-all duration-1000 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gradient-to-r from-indigo-400 to-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]'}`}
+                            className={`h-full transition-all duration-1000 relative z-10 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.5)]'}`}
                             style={{ width: `${stats.pTotal}%` }}
-                        />
+                        >
+                            {/* Shine Effect */}
+                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent"></div>
+                        </div>
                     </div>
                     <p className="text-[10px] font-medium text-slate-400 mt-2">
                         Normal çalışma süresi ve fazla mesailerin toplamının hedefe oranı.
@@ -327,9 +350,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                 maxHeight: '40px'
                                                             }}
                                                         >
-                                                            <span className="absolute -top-5 inset-x-0 text-center text-[10px] font-black text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                +{balanceHours}
-                                                            </span>
+                                                            {/* Label for Overtime if huge */}
                                                         </div>
                                                     )}
 
