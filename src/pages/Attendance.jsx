@@ -347,6 +347,25 @@ const Attendance = () => {
                                     employeeId={selectedEmployeeId}
                                     onDateClick={(date) => {
                                         setSelectedDate(date);
+                                        // Auto-switch period if outside current range
+                                        const d = new Date(date);
+                                        // 26-25 rule logic:
+                                        // If date is >= 26th of Month M, it belongs to Period M+1
+                                        // If date is <= 25th of Month M, it belongs to Period M
+                                        let targetMonth = d.getDate() >= 26 ? d.getMonth() + 1 : d.getMonth();
+                                        let targetYear = d.getFullYear();
+
+                                        if (targetMonth > 11) {
+                                            targetMonth = 0;
+                                            targetYear += 1;
+                                        }
+
+                                        // Only update if different (to avoid loop/re-fetch if not needed)
+                                        if (targetMonth !== viewMonth || targetYear !== viewYear) {
+                                            setViewMonth(targetMonth);
+                                            setViewYear(targetYear);
+                                        }
+
                                         setViewScope('DAILY');
                                     }}
                                 />

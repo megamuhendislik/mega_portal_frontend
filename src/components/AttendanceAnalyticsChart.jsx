@@ -192,6 +192,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                                 }
                             }
                         }}
+                        style={{ cursor: 'pointer' }}
                     >
                         <defs>
                             <pattern id="striped-analytics" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
@@ -221,33 +222,43 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                             connectNulls={false}
                         />
 
-                        {/* Bars stackId="a" means they stack. Break should be separate or stacked? 
-                            Ideally separate or overlay. Let's stack it on top? Or separate bar?
-                            User wants "Show breaks too".
-                            If I stack it, it adds to "Total Height".
-                            Break is NOT work. It shouldn't add to Work Hours visually if we want to compare to Target.
-                            Target is Work Target.
-                            So Break should be a separate bar or Line?
-                            Line is clearer. Let's use Line or separate Bar (no stackId).
-                            Let's use a Line because 0.5 is small compared to 8. Or a small bar.
-                            Let's try a separate Bar (barSize smaller) or just stacked if user wants "Total Time at Office"?
-                            Usually "Break Analysis" is distinct. 
-                            Let's use a Line for visibility if it's small hours.
-                            Actually, a Bar is better for "Duration" feel. I'll make it separate stackId="break" so it sits next to work bar?
-                            Or just render it if toggle is ON.
-                        */}
-                        <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal" />
-                        <Bar dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} name="Ek Mesai" />
-                        <Bar dataKey="missing" stackId="a" fill="url(#striped-analytics)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} name="Eksik" />
+                        {/* Bars with direct onClick for better touch/click targets */}
+                        <Bar
+                            dataKey="normal"
+                            stackId="a"
+                            fill="#3b82f6"
+                            radius={[0, 0, 4, 4]}
+                            name="Normal"
+                            onClick={(data) => onDateClick && onDateClick(data.date)}
+                        />
+                        <Bar
+                            dataKey="overtime"
+                            stackId="a"
+                            fill="#10b981"
+                            radius={[4, 4, 0, 0]}
+                            name="Ek Mesai"
+                            onClick={(data) => onDateClick && onDateClick(data.date)}
+                        />
+                        <Bar
+                            dataKey="missing"
+                            stackId="a"
+                            fill="url(#striped-analytics)"
+                            stroke="#f43f5e"
+                            strokeWidth={1}
+                            radius={[4, 4, 0, 0]}
+                            name="Eksik"
+                            onClick={(data) => onDateClick && onDateClick(data.date)}
+                        />
 
                         {showBreaks && (
                             <Bar
                                 dataKey="break"
-                                stackId="b" /* Separate stack so it stands next to work column */
+                                stackId="b"
                                 fill="#fbbf24"
                                 radius={[4, 4, 4, 4]}
                                 name="Mola (Sa)"
-                                barSize={12} /* Thinner bar for break */
+                                barSize={12}
+                                onClick={(data) => onDateClick && onDateClick(data.date)}
                             />
                         )}
                     </ComposedChart>
