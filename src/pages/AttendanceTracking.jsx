@@ -223,6 +223,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const calculateTotalEmployees = (node) => {
+        let count = (node.employees || []).length;
+        if (node.children && node.children.length > 0) {
+            node.children.forEach(child => {
+                count += calculateTotalEmployees(child);
+            });
+        }
+        return count;
+    };
+
     const renderHierarchyRows = (nodes, depth = 0) => {
         if (!nodes) return null;
 
@@ -335,7 +345,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
                                     </div>
                                     <span className="font-bold text-sm text-slate-700">{node.name}</span>
-                                    <span className="text-xs text-slate-400 font-normal">({(node.employees || []).length} Kişi)</span>
+                                    <span className="text-xs text-slate-400 font-normal">({calculateTotalEmployees(node)} Kişi)</span>
                                 </div>
                             </td>
                         </tr>
