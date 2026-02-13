@@ -70,16 +70,13 @@ const Attendance = () => {
     }, [viewYear, viewMonth, viewScope]);
 
     // --- EFFECT: Load Data ---
+    // --- EFFECT: Load Data ---
+    // Team Data fetch logic
     useEffect(() => {
-        if (selectedEmployeeId && startDate && endDate) {
-            if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
-                fetchAttendanceData();
-            }
-        }
         if (activeTab === 'team_attendance') {
             fetchTeamData();
         }
-    }, [selectedEmployeeId, startDate, endDate, activeTab, selectedDate]);
+    }, [activeTab]);
 
     // --- HANDLERS ---
     const checkTeamVisibility = () => {
@@ -108,8 +105,15 @@ const Attendance = () => {
         setEndDate(format(end, 'yyyy-MM-dd'));
     };
 
-    const fetchAttendanceData = async () => {
-        setLoading(true);
+    // Separate loading states
+    const [isPeriodLoading, setIsPeriodLoading] = useState(true);
+    const [isDailyLoading, setIsDailyLoading] = useState(false);
+
+    // Consolidated loading for initial render
+    const isLoading = isPeriodLoading && !logs.length;
+
+    const fetchPeriodData = async () => {
+        setIsPeriodLoading(true);
         try {
             // 1. Fetch Logs
             const logsRes = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}&limit=1000`);
@@ -118,23 +122,46 @@ const Attendance = () => {
             // 2. Fetch Period Summary (for Cards)
             const sumRes = await api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             setPeriodSummary(sumRes.data);
-
-            // 3. Fetch Today's Summary (For Hero Widget)
-            // Only if we are viewing "My Attendance" or a specific Team Member (Detail)
-            if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
-                // Pass selectedDate if viewing DAILY scope
-                // Ensure selectedDate is valid date string? It is from chart/date picker.
-                const dateParam = viewScope === 'DAILY' && selectedDate ? `&date=${selectedDate}` : '';
-                const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}${dateParam}`);
-                setTodaySummary(todayRes.data);
-            }
-
         } catch (error) {
             console.error(error);
         } finally {
-            setLoading(false);
+            setIsPeriodLoading(false);
+            setLoading(false); // Ensure global loading is off
         }
     };
+
+    const fetchDailyData = async () => {
+        if (activeTab !== 'my_attendance' && activeTab !== 'team_detail') return;
+
+        setIsDailyLoading(true);
+        try {
+            // Pass selectedDate if viewing DAILY scope
+            const dateParam = viewScope === 'DAILY' && selectedDate ? `&date=${selectedDate}` : '';
+            const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}${dateParam}`);
+            setTodaySummary(todayRes.data);
+        } catch (error) {
+            console.error("Daily summary fetch error", error);
+        } finally {
+            setIsDailyLoading(false);
+        }
+    };
+
+    // --- EFFECT: Load Period Data ---
+    useEffect(() => {
+        if (selectedEmployeeId && startDate && endDate) {
+            if (activeTab === 'my_attendance' || activeTab === 'team_detail') {
+                fetchPeriodData();
+            }
+        }
+    }, [selectedEmployeeId, startDate, endDate, activeTab]);
+
+    // --- EFFECT: Load Daily Summary ---
+    // Only triggered when selectedDate changes (or tab/employee)
+    useEffect(() => {
+        if (selectedEmployeeId) {
+            fetchDailyData();
+        }
+    }, [selectedDate, selectedEmployeeId, activeTab, viewScope]);
 
     const fetchTeamData = async () => {
         setLoading(true);
@@ -315,7 +342,7 @@ const Attendance = () => {
             }
 
             {
-                loading ? (
+                isLoading ? (
                     <div className="space-y-6">
                         <Skeleton className="h-48 rounded-2xl" />
                         <div className="grid grid-cols-2 gap-6"><Skeleton className="h-64 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>
@@ -327,7 +354,7 @@ const Attendance = () => {
                         {/* 1.5. Hero Daily Summary (Today) - ONLY IF DAILY SCOPE */}
                         {viewScope === 'DAILY' && (
                             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
-                                <HeroDailySummary summary={todaySummary} loading={loading} />
+                                <HeroDailySummary summary={todaySummary} loading={isDailyLoading} />
                             </div>
                         )}
 
