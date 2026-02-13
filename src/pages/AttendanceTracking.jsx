@@ -223,14 +223,44 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const calculateTotalEmployees = (node) => {
-        let count = (node.employees || []).length;
-        if (node.children && node.children.length > 0) {
-            node.children.forEach(child => {
-                count += calculateTotalEmployees(child);
+    // Recursive function to aggregate stats for a node (dept) and its children
+    const calculateNodeStats = (node) => {
+        let stats = {
+            count: 0,
+            onlineCount: 0,
+            total_worked: 0,
+            total_overtime: 0,
+            total_missing: 0
+        };
+
+        // 1. Stats from direct employees
+        if (node.employees && node.employees.length > 0) {
+            node.employees.forEach(empNode => {
+                const s = empNode.stats || {};
+                // Only count if employee stats exist (real person)
+                if (s.employee_id) {
+                    stats.count += 1;
+                    if (s.is_online) stats.onlineCount += 1;
+                    stats.total_worked += (s.total_worked || 0);
+                    stats.total_overtime += (s.total_overtime || 0);
+                    stats.total_missing += (s.total_missing || 0);
+                }
             });
         }
-        return count;
+
+        // 2. Stats from sub-departments (children)
+        if (node.children && node.children.length > 0) {
+            node.children.forEach(child => {
+                const childStats = calculateNodeStats(child);
+                stats.count += childStats.count;
+                stats.onlineCount += childStats.onlineCount;
+                stats.total_worked += childStats.total_worked;
+                stats.total_overtime += childStats.total_overtime;
+                stats.total_missing += childStats.total_missing;
+            });
+        }
+
+        return stats;
     };
 
     const renderHierarchyRows = (nodes, depth = 0) => {
@@ -331,23 +361,37 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 // Check if dept has relevant children after filtering?
                 // For efficiency, just render.
                 const isExpanded = expandedDepts[node.id];
-
-                // Filter Logic: If filtering by search/status, always expand? 
-                // Or if filtered, and no match in children, hide dept?
-                // Simple implementation: Always show dept if it matches params (or just show all depts)
+                const nodeStats = calculateNodeStats(node);
 
                 return (
                     <React.Fragment key={'dept-' + node.id}>
                         <tr className="bg-slate-50/50 border-b border-slate-100">
-                            <td colSpan="6" className="p-3">
+                            <td className="p-3">
                                 <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => toggleDept(node.id)} style={{ paddingLeft: `${depth * 20}px` }}>
                                     <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-slate-200 text-slate-600' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
                                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
                                     </div>
                                     <span className="font-bold text-sm text-slate-700">{node.name}</span>
-                                    <span className="text-xs text-slate-400 font-normal">({calculateTotalEmployees(node)} Kişi)</span>
+                                    <span className="text-xs text-slate-400 font-normal">({nodeStats.count} Kişi)</span>
                                 </div>
                             </td>
+                            <td className="p-3">
+                                {nodeStats.onlineCount > 0 && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                        {nodeStats.onlineCount} Ofiste
+                                    </span>
+                                )}
+                            </td>
+                            <td className="p-3">
+                                {nodeStats.total_worked > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.total_worked)}</span>}
+                            </td>
+                            <td className="p-3 text-right">
+                                {nodeStats.total_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.total_overtime)}</span>}
+                            </td>
+                            <td className="p-3 text-right">
+                                {nodeStats.total_missing > 0 && <span className="text-xs font-mono font-bold text-red-500">-{formatMinutes(nodeStats.total_missing)}</span>}
+                            </td>
+                            <td className="p-3"></td>
                         </tr>
                         {isExpanded && (
                             <>
