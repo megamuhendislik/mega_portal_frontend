@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Calendar, Filter, Download, ChevronRight, Clock, AlertCircle,
     CheckCircle, Coffee, Users, TrendingUp, Activity, Briefcase,
-    MoreHorizontal, Search, ArrowUpRight, ArrowDownRight, X, LogIn, LogOut
+    MoreHorizontal, Search, ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
+    Network, Filter as FilterIcon, ChevronDown, ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -11,8 +12,9 @@ import useInterval from '../hooks/useInterval';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
-    const [viewMode, setViewMode] = useState('LIST'); // LIST, GRID
+    const [viewMode, setViewMode] = useState('HIERARCHY'); // LIST, GRID, HIERARCHY
     const [matrixData, setMatrixData] = useState(null);
+    const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
 
     // State
     const [year, setYear] = useState(propYear || moment().year());
@@ -28,7 +30,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [loading, setLoading] = useState(false);
     const [departments, setDepartments] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, PARAM_ONLINE, PARAM_LATE, PARAM_OVERTIME, PARAM_MISSING
     const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -47,6 +51,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     useEffect(() => {
         if (viewMode === 'GRID') {
             fetchTeamMatrix();
+        } else if (viewMode === 'HIERARCHY') {
+            fetchHierarchy(); // Hierarchy needs stats too, but we fetch hierarchy structure first/parallel
+            fetchStats();
         } else {
             fetchStats();
         }
@@ -121,6 +128,24 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         }
     };
 
+    const fetchHierarchy = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/departments/hierarchy/');
+            setHierarchyData(Array.isArray(res.data) ? res.data : []);
+            // Auto expand all roots initially
+            if (Array.isArray(res.data)) {
+                const initialExpanded = {};
+                res.data.forEach(d => initialExpanded[d.id] = true);
+                setExpandedDepts(prev => ({ ...prev, ...initialExpanded }));
+            }
+        } catch (error) {
+            console.error('Error fetching hierarchy:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const formatMinutes = (minutes) => {
         if (!minutes) return '0s 0dk';
         const hours = Math.floor(Math.abs(minutes) / 60);
@@ -128,11 +153,236 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return `${hours}s ${mins}dk`;
     };
 
-    // Filter Logic
-    const filteredStats = stats.filter(item =>
-        (item.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.department || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter Logic (Common for List)
+    const filteredStats = stats.filter(item => {
+        const matchesSearch = (item.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.department || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.job_title || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        if (filterStatus === 'ALL') return true;
+        if (filterStatus === 'ONLINE') return item.is_online;
+        if (filterStatus === 'LATE') return item.total_late > 0; // Assuming total_late is available or derived
+        if (filterStatus === 'OVERTIME') return item.total_overtime > 0;
+        if (filterStatus === 'MISSING') return item.total_missing > 0;
+
+        return true;
+    });
+
+    // --- HIERARCHY HELPERS ---
+
+    // Merge Stats into Hierarchy Tree
+    const getMergedHierarchy = () => {
+        if (!hierarchyData || hierarchyData.length === 0) return [];
+
+        // Create a map of stats for O(1) lookup
+        const statsMap = {};
+        stats.forEach(s => statsMap[s.employee_id] = s);
+
+        const attachStats = (nodes) => {
+            return nodes.map(node => {
+                // If it's an employee node (has no 'employees' array, but might have 'children' as subs)
+                // Actually structure from backend: Dept -> employees [], children [Depts]
+                // Employee Node from backend: { id, name, title, children: [Subs] }
+
+                // Let's normalize. 
+                // Department Node: { id, name, employees: [], children: [] }
+                // Employee Node: { id, name, children: [] }
+
+                // We need to attach 'stats' to employee nodes
+                // And filter them based on criteria
+
+                let newNode = { ...node };
+
+                // Check if it's an employee (usually doesn't have 'employees' list, but has 'manager_id' or similar if from build_employee_tree)
+                // The API returns Depts at root.
+
+                if (node.employees) {
+                    // It's a Department
+                    newNode.type = 'DEPT';
+                    newNode.employees = attachStats(node.employees);
+                    newNode.children = attachStats(node.children); // Sub-depts
+
+                    // Filter: If active filters, remove empty depts?
+                    // Optional: keep strict structure
+                } else {
+                    // It's an Employee
+                    newNode.type = 'EMP';
+                    newNode.stats = statsMap[node.id] || null;
+                    newNode.children = attachStats(node.children || []);
+                }
+                return newNode;
+            });
+        };
+
+        return attachStats(hierarchyData);
+    };
+
+    const toggleDept = (id) => {
+        setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const renderHierarchyRows = (nodes, depth = 0) => {
+        if (!nodes) return null;
+
+        return nodes.map(node => {
+            // Filter Check for Employees
+            if (node.type === 'EMP') {
+                const s = node.stats || {};
+
+                // Apply Search & Status Filter
+                const matchesSearch = searchTerm === '' ||
+                    (node.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (node.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+                let matchesStatus = true;
+                if (filterStatus === 'ONLINE') matchesStatus = s.is_online;
+                else if (filterStatus === 'OVERTIME') matchesStatus = s.total_overtime > 0;
+                else if (filterStatus === 'MISSING') matchesStatus = s.total_missing > 0;
+
+                // If not match, strictly hide? Or show if children match?
+                // Simple strict filtering for now.
+                if (!matchesSearch || !matchesStatus) {
+                    // If it has children that match, maybe show? 
+                    // For now, return null to hide.
+                    // BUT, if we hide a manager, do we hide subs? Yes usually.
+                    // Unless we want to show path.
+                    return null;
+                }
+
+                // Check Department Filter
+                if (selectedDept && s.department_id !== parseInt(selectedDept)) {
+                    // Relaxed check: if selectedDept is selected, we might only show employees of that dept.
+                    // The stats API filter handles this usually, but hierarchy might load all.
+                    // If stats are empty (filtered out by API), s is empty.
+                    if (!s.employee_id) return null;
+                }
+
+                if (!s.employee_id && stats.length > 0) return null; // No stats found (filtered out server side)
+
+                return (
+                    <React.Fragment key={'emp-' + node.id}>
+                        <tr className="hover:bg-slate-50/80 transition-all group border-b border-slate-50">
+                            <td className="p-4 pl-6">
+                                <div className="flex items-center gap-3" style={{ paddingLeft: `${depth * 20}px` }}>
+                                    {/* Avatar / Icon */}
+                                    <div className="relative shrink-0">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border border-slate-100 shadow-sm ${node.manager_id ? 'bg-white text-slate-600' : 'bg-slate-100 text-slate-700'}`}>
+                                            {(node.name || '?').charAt(0)}
+                                        </div>
+                                        {s.is_online && (
+                                            <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-slate-700 text-sm whitespace-nowrap">{node.name}</span>
+                                            {node.is_secondary && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">Vekil</span>}
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                                            {node.title && <span>{node.title}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            {/* Status */}
+                            <td className="p-4">
+                                {s.is_online ?
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span> :
+                                    s.total_missing > 0 ? <span className="text-[10px] font-bold text-red-400">-{formatMinutes(s.total_missing)}</span> :
+                                        <span className="text-[10px] text-slate-400">Normal</span>
+                                }
+                            </td>
+
+                            {/* Performans (Simplified for Tree) */}
+                            <td className="p-4">
+                                <div className="flex items-center gap-2 text-xs font-mono">
+                                    <span className="text-slate-600 font-bold">{formatMinutes(s.total_worked)}</span>
+                                </div>
+                            </td>
+                            <td className="p-4 text-right">{s.total_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.total_overtime)}</span> : '-'}</td>
+                            <td className="p-4 text-right">{s.total_missing > 0 ? <span className="text-red-500 font-bold text-xs">-{formatMinutes(s.total_missing)}</span> : '-'}</td>
+
+                            <td className="p-4 text-center">
+                                {/* Optional Action */}
+                                <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
+                                    <Activity size={14} />
+                                </button>
+                            </td>
+                        </tr>
+                        {/* Recursive Children (Subordinates) */}
+                        {renderHierarchyRows(node.children, depth + 1)}
+                    </React.Fragment>
+                );
+            } else if (node.type === 'DEPT') {
+                // Check if dept has relevant children after filtering?
+                // For efficiency, just render.
+                const isExpanded = expandedDepts[node.id];
+
+                // Filter Logic: If filtering by search/status, always expand? 
+                // Or if filtered, and no match in children, hide dept?
+                // Simple implementation: Always show dept if it matches params (or just show all depts)
+
+                return (
+                    <React.Fragment key={'dept-' + node.id}>
+                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                            <td colSpan="6" className="p-3">
+                                <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => toggleDept(node.id)} style={{ paddingLeft: `${depth * 20}px` }}>
+                                    <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-slate-200 text-slate-600' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
+                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
+                                    </div>
+                                    <span className="font-bold text-sm text-slate-700">{node.name}</span>
+                                    <span className="text-xs text-slate-400 font-normal">({(node.employees || []).length} Kişi)</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {isExpanded && (
+                            <>
+                                {renderHierarchyRows(node.employees, depth + 1)}
+                                {renderHierarchyRows(node.children, depth + 1)}
+                            </>
+                        )}
+                    </React.Fragment>
+                );
+            }
+            return null;
+        });
+    };
+
+    const renderHierarchyView = () => {
+        const mergedData = getMergedHierarchy();
+
+        return (
+            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <th className="p-4 pl-6">Organizasyon / Personel</th>
+                                <th className="p-4 w-24">Durum</th>
+                                <th className="p-4 w-32">Çalışma</th>
+                                <th className="p-4 text-right w-24">F. Mesai</th>
+                                <th className="p-4 text-right w-24">Eksik</th>
+                                <th className="p-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {loading ? (
+                                <tr><td colSpan="6" className="p-12 text-center text-slate-400 animate-pulse">Organizasyon şeması yükleniyor...</td></tr>
+                            ) : mergedData.length === 0 ? (
+                                <tr><td colSpan="6" className="p-12 text-center text-slate-400">Veri bulunamadı.</td></tr>
+                            ) : (
+                                renderHierarchyRows(mergedData)
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    };
 
     const renderGridView = () => {
         if (!matrixData) return null;
@@ -215,6 +465,21 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             />
                         </div>
                         <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+                        {/* Status Filter */}
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
+                        >
+                            <option value="ALL">Tüm Durumlar</option>
+                            <option value="ONLINE">Ofiste 🟢</option>
+                            <option value="OVERTIME">Fazla Mesai 🟠</option>
+                            <option value="MISSING">Eksik 🔴</option>
+                            <option value="LATE">Geç Kalanlar ⏱️</option>
+                        </select>
+                        <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
                         <select
                             value={year}
                             onChange={(e) => setYear(e.target.value)}
@@ -234,12 +499,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             onChange={(e) => setSelectedDept(e.target.value)}
                             className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors max-w-[200px]"
                         >
-                            <option value="">Tüm Ekip</option>
+                            <option value="">Tüm Departmanlar</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
                         <div className="flex bg-slate-100 p-1 rounded-xl">
-                            <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Activity size={18} /></button>
-                            <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Calendar size={18} /></button>
+                            <button onClick={() => setViewMode('HIERARCHY')} className={`p-2 rounded-lg transition-all ${viewMode === 'HIERARCHY' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Hiyerarşik Liste"><Network size={18} /></button>
+                            <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Düz Liste"><Activity size={18} /></button>
+                            <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Matris Görünüm"><Calendar size={18} /></button>
                         </div>
                     </div>
                 </div>
@@ -270,6 +536,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     </div>
                     {/* View Switcher */}
                     <div className="flex bg-slate-100 p-1 rounded-xl">
+                        <button onClick={() => setViewMode('HIERARCHY')} className={`p-2 rounded-lg transition-all ${viewMode === 'HIERARCHY' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Network size={18} /></button>
                         <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Activity size={18} /></button>
                         <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Calendar size={18} /></button>
                     </div>
@@ -530,126 +797,130 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         </table>
                     </div>
                 </div>
-            ) : (
+            ) : viewMode === 'GRID' ? (
                 renderGridView()
-            )
-            }
+            ) : (
+                renderHierarchyView()
+            )}
+
             {/* DETAIL MODAL */}
-            {selectedEmployee && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedEmployee(null)} />
+            {
+                selectedEmployee && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedEmployee(null)} />
 
-                    <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-200">
-                                    {(selectedEmployee.employee_name || '?').charAt(0)}
+                        <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-200">
+                                        {(selectedEmployee.employee_name || '?').charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">{selectedEmployee.employee_name}</h3>
+                                        <p className="text-sm text-slate-500 font-medium">{selectedEmployee.department}</p>
+                                    </div>
                                 </div>
+                                <button
+                                    onClick={() => setSelectedEmployee(null)}
+                                    className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Body - Daily Details */}
+                            <div className="p-6 space-y-8">
+
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                        <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Normal</div>
+                                        <div className="text-2xl font-bold text-blue-700">{formatMinutes(selectedEmployee.today_normal || 0)}</div>
+                                    </div>
+                                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                        <div className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Fazla</div>
+                                        <div className="text-2xl font-bold text-amber-700">+{formatMinutes(selectedEmployee.today_overtime || 0)}</div>
+                                    </div>
+                                    <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                                        <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Eksik</div>
+                                        <div className="text-2xl font-bold text-red-700">-{formatMinutes(selectedEmployee.today_missing || 0)}</div>
+                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mola</div>
+                                        <div className="text-2xl font-bold text-slate-700">{formatMinutes(selectedEmployee.today_break || 0)}</div>
+                                    </div>
+                                </div>
+
+                                {/* Timeline */}
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-800">{selectedEmployee.employee_name}</h3>
-                                    <p className="text-sm text-slate-500 font-medium">{selectedEmployee.department}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setSelectedEmployee(null)}
-                                className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
+                                    <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                        <Clock size={16} className="text-slate-400" />
+                                        Zaman Çizelgesi
+                                    </h4>
+                                    <div className="relative w-full h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
+                                        {/* Using same logic as row but bigger */}
+                                        {(() => {
+                                            if (!selectedEmployee.today_check_in) return <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">Giriş Yok</div>;
 
-                        {/* Body - Daily Details */}
-                        <div className="p-6 space-y-8">
+                                            const startMin = 420; // 07:00
+                                            const totalRange = 900; // 15 hours
+                                            const getMin = (iso) => {
+                                                if (!iso) return null;
+                                                const d = moment(iso);
+                                                return d.hours() * 60 + d.minutes();
+                                            };
+                                            const inMin = getMin(selectedEmployee.today_check_in);
+                                            const outMin = getMin(selectedEmployee.today_check_out) || (selectedEmployee.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60);
 
-                            {/* Stats Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                    <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Normal</div>
-                                    <div className="text-2xl font-bold text-blue-700">{formatMinutes(selectedEmployee.today_normal || 0)}</div>
-                                </div>
-                                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                                    <div className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Fazla</div>
-                                    <div className="text-2xl font-bold text-amber-700">+{formatMinutes(selectedEmployee.today_overtime || 0)}</div>
-                                </div>
-                                <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-                                    <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Eksik</div>
-                                    <div className="text-2xl font-bold text-red-700">-{formatMinutes(selectedEmployee.today_missing || 0)}</div>
-                                </div>
-                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mola</div>
-                                    <div className="text-2xl font-bold text-slate-700">{formatMinutes(selectedEmployee.today_break || 0)}</div>
-                                </div>
-                            </div>
+                                            const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
+                                            const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
 
-                            {/* Timeline */}
-                            <div>
-                                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                    <Clock size={16} className="text-slate-400" />
-                                    Zaman Çizelgesi
-                                </h4>
-                                <div className="relative w-full h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                                    {/* Using same logic as row but bigger */}
-                                    {(() => {
-                                        if (!selectedEmployee.today_check_in) return <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">Giriş Yok</div>;
-
-                                        const startMin = 420; // 07:00
-                                        const totalRange = 900; // 15 hours
-                                        const getMin = (iso) => {
-                                            if (!iso) return null;
-                                            const d = moment(iso);
-                                            return d.hours() * 60 + d.minutes();
-                                        };
-                                        const inMin = getMin(selectedEmployee.today_check_in);
-                                        const outMin = getMin(selectedEmployee.today_check_out) || (selectedEmployee.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60);
-
-                                        const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
-                                        const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
-
-                                        return (
-                                            <>
-                                                {[0, 20, 40, 60, 80, 100].map(p => (
-                                                    <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/50" style={{ left: `${p}%` }}>
-                                                        <span className="absolute top-1 left-1 text-[10px] text-slate-400 font-mono">
-                                                            {moment().startOf('day').add(7 + (p / 100) * 15, 'hours').format('HH:mm')}
-                                                        </span>
+                                            return (
+                                                <>
+                                                    {[0, 20, 40, 60, 80, 100].map(p => (
+                                                        <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/50" style={{ left: `${p}%` }}>
+                                                            <span className="absolute top-1 left-1 text-[10px] text-slate-400 font-mono">
+                                                                {moment().startOf('day').add(7 + (p / 100) * 15, 'hours').format('HH:mm')}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        className={`absolute top-4 bottom-4 rounded-md shadow-sm flex items-center justify-center px-4 text-xs font-bold text-white whitespace-nowrap transition-all duration-500 ${selectedEmployee.is_online ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-slate-400'}`}
+                                                        style={{ left: `${barStart}%`, width: `${barWidth}%` }}
+                                                    >
+                                                        {moment(selectedEmployee.today_check_in).format('HH:mm')} - {selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm') : 'Şimdi'}
                                                     </div>
-                                                ))}
-                                                <div
-                                                    className={`absolute top-4 bottom-4 rounded-md shadow-sm flex items-center justify-center px-4 text-xs font-bold text-white whitespace-nowrap transition-all duration-500 ${selectedEmployee.is_online ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-slate-400'}`}
-                                                    style={{ left: `${barStart}%`, width: `${barWidth}%` }}
-                                                >
-                                                    {moment(selectedEmployee.today_check_in).format('HH:mm')} - {selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm') : 'Şimdi'}
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
-                                </div>
-                            </div>
-
-                            {/* Additional Details (Times) */}
-                            <div className="flex items-center justify-between text-sm p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogIn size={16} /></div>
-                                    <div>
-                                        <div className="text-xs text-slate-400 font-semibold">Giriş Saati</div>
-                                        <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_in ? moment(selectedEmployee.today_check_in).format('HH:mm:ss') : '-'}</div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
-                                <div className="h-8 w-px bg-slate-200"></div>
-                                <div className="flex items-center gap-3 text-right">
-                                    <div>
-                                        <div className="text-xs text-slate-400 font-semibold">Çıkış Saati</div>
-                                        <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm:ss') : (selectedEmployee.is_online ? <span className="text-emerald-500 animate-pulse">Ofiste</span> : '-')}</div>
-                                    </div>
-                                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogOut size={16} /></div>
-                                </div>
-                            </div>
 
+                                {/* Additional Details (Times) */}
+                                <div className="flex items-center justify-between text-sm p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogIn size={16} /></div>
+                                        <div>
+                                            <div className="text-xs text-slate-400 font-semibold">Giriş Saati</div>
+                                            <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_in ? moment(selectedEmployee.today_check_in).format('HH:mm:ss') : '-'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-200"></div>
+                                    <div className="flex items-center gap-3 text-right">
+                                        <div>
+                                            <div className="text-xs text-slate-400 font-semibold">Çıkış Saati</div>
+                                            <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm:ss') : (selectedEmployee.is_online ? <span className="text-emerald-500 animate-pulse">Ofiste</span> : '-')}</div>
+                                        </div>
+                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogOut size={16} /></div>
+                                    </div>
+                                </div>
+
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 };
