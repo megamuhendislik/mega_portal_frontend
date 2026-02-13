@@ -115,6 +115,60 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             )}
                         </div>
                     )}
+
+                    {/* Monthly Work Stats (For Incoming Overtime Requests) */}
+                    {isIncoming && type === 'OVERTIME' && request.employee_monthly_stats && (() => {
+                        const s = request.employee_monthly_stats;
+                        return (
+                            <div className="bg-amber-50/50 rounded-xl p-3 border border-amber-100 text-xs text-slate-600 space-y-2">
+                                <h5 className="font-bold text-amber-700 mb-1.5 flex items-center gap-1.5">
+                                    <Clock size={12} />
+                                    Aylık Mesai Özeti
+                                </h5>
+                                <div className="grid grid-cols-3 gap-1.5 text-center">
+                                    <div className="bg-white/60 p-1.5 rounded">
+                                        <span className="block text-[10px] text-slate-400 font-bold">Hedef</span>
+                                        <span className="font-black text-slate-700 text-sm">{s.target_hours}s</span>
+                                    </div>
+                                    <div className="bg-white/60 p-1.5 rounded">
+                                        <span className="block text-[10px] text-slate-400 font-bold">Tamamlanan</span>
+                                        <span className="font-black text-emerald-600 text-sm">{s.completed_hours}s</span>
+                                    </div>
+                                    <div className="bg-white/60 p-1.5 rounded">
+                                        <span className="block text-[10px] text-slate-400 font-bold">Eksik</span>
+                                        <span className={`font-black text-sm ${s.missing_hours > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{s.missing_hours}s</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 text-center">
+                                    <div className="bg-white/60 p-1.5 rounded">
+                                        <span className="block text-[10px] text-slate-400 font-bold">Fazla Mesai</span>
+                                        <span className="font-black text-amber-600 text-sm">{s.overtime_hours}s</span>
+                                    </div>
+                                    <div className="bg-white/60 p-1.5 rounded">
+                                        <span className="block text-[10px] text-slate-400 font-bold">Net Bakiye</span>
+                                        <span className={`font-black text-sm ${s.is_surplus ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {s.net_balance_hours > 0 ? '+' : ''}{s.net_balance_hours}s
+                                        </span>
+                                    </div>
+                                </div>
+                                {/* OT Request Counts */}
+                                <div className="bg-white/60 rounded p-1.5 flex items-center justify-between">
+                                    <span className="text-[10px] text-slate-500 font-bold">Bu Ay Onaylanan EK Mesai:</span>
+                                    <span className="text-xs font-black text-amber-700">{s.ot_requests_approved} talep • {s.ot_total_approved_minutes} dk</span>
+                                </div>
+                                {(s.ot_requests_pending > 0 || s.ot_requests_rejected > 0) && (
+                                    <div className="flex gap-2 text-[10px]">
+                                        {s.ot_requests_pending > 0 && (
+                                            <span className="text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">⏳ {s.ot_requests_pending} Askıda</span>
+                                        )}
+                                        {s.ot_requests_rejected > 0 && (
+                                            <span className="text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded">❌ {s.ot_requests_rejected} Reddedilmiş</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 

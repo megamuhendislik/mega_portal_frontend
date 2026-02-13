@@ -391,9 +391,10 @@ const Requests = () => {
                             key={req.uniqueId || req.id}
                             request={{
                                 ...req,
-                                leave_type_name: req.request_type_detail?.name, // For Leave
-                                employee_name: req.employee_detail?.full_name || req.employee_name // Fallback
+                                leave_type_name: req.request_type_detail?.name || req.details?.type_name,
+                                employee_name: req.employee_detail?.full_name || req.employee?.name || req.employee_name
                             }}
+                            type={req.type}
                             isIncoming={true}
                             statusBadge={getStatusBadge}
                             onApprove={(id, notes) => handleApprove(req, notes)}
