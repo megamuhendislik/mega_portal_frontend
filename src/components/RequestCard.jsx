@@ -172,6 +172,29 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                 </div>
             )}
 
+            {/* Meal Order Info (For Incoming Overtime Requests) */}
+            {isIncoming && type === 'OVERTIME' && request.employee_meal_info && (
+                <div className="bg-orange-50/50 rounded-xl p-2.5 border border-orange-100 text-xs text-slate-600">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="w-6 h-6 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                                <span className="text-sm">🍽️</span>
+                            </div>
+                            <span className="font-medium text-slate-700 truncate">{request.employee_meal_info.description}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ml-2 ${request.employee_meal_info.is_ordered
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}>
+                            {request.employee_meal_info.is_ordered ? 'Sipariş Verildi' : 'Bekliyor'}
+                        </span>
+                    </div>
+                    {request.employee_meal_info.order_note && (
+                        <p className="text-[10px] text-slate-500 mt-1 pl-8 italic">{request.employee_meal_info.order_note}</p>
+                    )}
+                </div>
+            )}
+
 
             {/* Details */}
             <div className="space-y-3 mb-4 flex-1">
