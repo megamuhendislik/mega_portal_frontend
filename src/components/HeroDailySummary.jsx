@@ -24,8 +24,7 @@ const HeroDailySummary = ({ summary, loading }) => {
     const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((totalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
     const usedBreakSeconds = safeSummary.break_used || 0;
-    // Standard 60 mins allowance = 3600 seconds
-    const totalBreakAllowanceSeconds = (safeSummary.remaining_break || 0) + usedBreakSeconds;
+    const totalBreakAllowanceSeconds = safeSummary.break_allowance || ((safeSummary.remaining_break || 0) + usedBreakSeconds);
     const breakPercent = totalBreakAllowanceSeconds > 0
         ? Math.min(100, Math.round((usedBreakSeconds / totalBreakAllowanceSeconds) * 100))
         : 0;
