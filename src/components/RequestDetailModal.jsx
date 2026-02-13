@@ -51,8 +51,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       const endpoint = requestType === 'LEAVE'
         ? `/api/leave/requests/${request.id}/override_decision/`
         : requestType === 'OVERTIME'
-        ? `/api/overtime-requests/${request.id}/override_decision/`
-        : `/api/cardless-entry-requests/${request.id}/override_decision/`;
+          ? `/api/overtime-requests/${request.id}/override_decision/`
+          : `/api/cardless-entry-requests/${request.id}/override_decision/`;
 
       await api.post(endpoint, {
         action: overrideAction,
@@ -116,8 +116,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             <h2 className="text-2xl font-bold text-slate-800">Talep Detayları</h2>
             <p className="text-sm text-slate-600 mt-1">
               {requestType === 'LEAVE' ? 'İzin Talebi' :
-               requestType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
-               requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' : 'Talep'}
+                requestType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
+                  requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' : 'Talep'}
             </p>
           </div>
           <button
@@ -229,6 +229,19 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 <p className="text-sm text-slate-700">{request.approved_by_name}</p>
               </div>
             )}
+
+            {/* Rejection Reason */}
+            {request.status === 'REJECTED' && request.rejection_reason && (
+              <div className="pt-3 border-t border-red-200">
+                <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                  <div className="flex items-center gap-2 text-red-700 font-bold mb-2">
+                    <XCircle size={16} />
+                    Red Sebebi
+                  </div>
+                  <p className="text-sm text-red-600 leading-relaxed">{request.rejection_reason}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Override Button */}
@@ -302,22 +315,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <div className="flex gap-3">
                 <button
                   onClick={() => setOverrideAction('approve')}
-                  className={`flex-1 px-4 py-2 rounded-lg border-2 transition ${
-                    overrideAction === 'approve'
+                  className={`flex-1 px-4 py-2 rounded-lg border-2 transition ${overrideAction === 'approve'
                       ? 'border-green-500 bg-green-50 text-green-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-green-300'
-                  }`}
+                    }`}
                 >
                   <CheckCircle size={18} className="inline mr-2" />
                   Onayla
                 </button>
                 <button
                   onClick={() => setOverrideAction('reject')}
-                  className={`flex-1 px-4 py-2 rounded-lg border-2 transition ${
-                    overrideAction === 'reject'
+                  className={`flex-1 px-4 py-2 rounded-lg border-2 transition ${overrideAction === 'reject'
                       ? 'border-red-500 bg-red-50 text-red-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-red-300'
-                  }`}
+                    }`}
                 >
                   <XCircle size={18} className="inline mr-2" />
                   Reddet

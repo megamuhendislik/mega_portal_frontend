@@ -59,14 +59,16 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
 
     const [externalDutyForm, setExternalDutyForm] = useState({
-        date: new Date().toISOString().split('T')[0],
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date().toISOString().split('T')[0],
         start_time: '',
         end_time: '',
         reason: '',
         destination: '',
-        trip_type: 'NONE', // INNER_CITY, OUT_OF_CITY
-        budget_amount: '',
+        trip_type: 'NONE',
+        needs_transportation: false,
         transport_description: '',
+        needs_accommodation: false,
         send_to_substitute: false
     });
 
@@ -177,14 +179,17 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                 await api.post('/leave/requests/', {
                     request_type: typeObj.id,
-                    start_date: externalDutyForm.date,
-                    end_date: externalDutyForm.date, // Single day assumption
+                    start_date: externalDutyForm.start_date,
+                    end_date: externalDutyForm.end_date,
+                    start_time: externalDutyForm.start_time || null,
+                    end_time: externalDutyForm.end_time || null,
                     reason: externalDutyForm.reason,
                     destination: externalDutyForm.destination,
-                    // New Fields
                     trip_type: externalDutyForm.trip_type,
-                    budget_amount: externalDutyForm.budget_amount,
-                    transport_description: externalDutyForm.transport_description
+                    needs_transportation: externalDutyForm.needs_transportation,
+                    transport_description: externalDutyForm.needs_transportation ? externalDutyForm.transport_description : '',
+                    needs_accommodation: externalDutyForm.needs_accommodation,
+                    send_to_substitute: externalDutyForm.send_to_substitute
                 });
             } else if (selectedType === 'CARDLESS_ENTRY') {
                 await api.post('/cardless-entry-requests/', cardlessEntryForm);
@@ -680,66 +685,98 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         );
     };
 
-    const renderExternalDutyForm = () => (
-        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="date"
-                    value={externalDutyForm.date}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, date: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                />
-            </div>
+    const calculateExternalDutyDuration = () => {
+        if (!externalDutyForm.start_date || !externalDutyForm.end_date) return 0;
+        const start = new Date(externalDutyForm.start_date);
+        const end = new Date(externalDutyForm.end_date);
+        if (isNaN(start) || isNaN(end)) return 0;
+        const diffTime = Math.abs(end - start);
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
 
-            <div className="grid grid-cols-2 gap-5">
+    const renderExternalDutyForm = () => {
+        const duration = calculateExternalDutyDuration();
+        return (
+            <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+                {/* Info Note */}
+                <div className="bg-purple-50 p-4 rounded-xl flex items-start gap-3 text-purple-800 text-sm border border-purple-100">
+                    <AlertCircle className="shrink-0 mt-0.5" size={18} />
+                    <div>
+                        <h4 className="font-bold">Mesai Hesaplama</h4>
+                        <p className="mt-1">Görev tarihleri içinde normal mesai saatlerine denk gelen saatler <strong>normal mesai</strong>, mesai dışı saatler <strong>ek mesai (fazla mesai)</strong> olarak değerlendirilecektir.</p>
+                    </div>
+                </div>
+
+                {/* Date Range */}
+                <div className="grid grid-cols-2 gap-5">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="date"
+                            value={externalDutyForm.start_date}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, start_date: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="date"
+                            value={externalDutyForm.end_date}
+                            min={externalDutyForm.start_date}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, end_date: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                </div>
+
+                {/* Duration Display */}
+                {externalDutyForm.start_date && externalDutyForm.end_date && (
+                    <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
+                        <span>Toplam Görev Süresi:</span>
+                        <span className="font-bold text-purple-700">{duration} Gün</span>
+                    </div>
+                )}
+
+                {/* Time Range */}
+                <div className="grid grid-cols-2 gap-5">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="time"
+                            value={externalDutyForm.start_time}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, start_time: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="time"
+                            value={externalDutyForm.end_time}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, end_time: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                </div>
+
+                {/* Destination */}
                 <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer <span className="text-red-500">*</span></label>
                     <input
                         required
-                        type="time"
-                        value={externalDutyForm.start_time}
-                        onChange={e => setExternalDutyForm({ ...externalDutyForm, start_time: e.target.value })}
+                        value={externalDutyForm.destination}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, destination: e.target.value })}
                         className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        placeholder="Örn: Müşteri ziyareti, Eğitim..."
                     />
                 </div>
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
-                    <input
-                        required
-                        type="time"
-                        value={externalDutyForm.end_time}
-                        onChange={e => setExternalDutyForm({ ...externalDutyForm, end_time: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                    />
-                </div>
-            </div>
 
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
-                <textarea
-                    required
-                    rows="3"
-                    value={externalDutyForm.reason}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, reason: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
-                    placeholder="Şirket dışı görevin gerekçesini belirtiniz..."
-                ></textarea>
-            </div>
-
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    value={externalDutyForm.destination}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, destination: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                    placeholder="Örn: Müşteri ziyareti, Eğitim..."
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-5">
+                {/* Trip Type */}
                 <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Yeri Türü</label>
                     <select
@@ -752,45 +789,90 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <option value="OUT_OF_CITY">Şehir Dışı</option>
                     </select>
                 </div>
+
+                {/* Reason */}
                 <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bütçe / Ödenek</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
+                    <textarea
+                        required
+                        rows="3"
+                        value={externalDutyForm.reason}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, reason: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                        placeholder="Şirket dışı görevin gerekçesini belirtiniz..."
+                    ></textarea>
+                </div>
+
+                {/* Transportation & Accommodation Checkboxes */}
+                <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-slate-700">Ek Talepler</h4>
+
+                    {/* Transportation */}
+                    <div className={`p-3.5 rounded-xl border transition-all ${externalDutyForm.needs_transportation
+                            ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="needs_transportation"
+                                checked={externalDutyForm.needs_transportation}
+                                onChange={e => setExternalDutyForm({ ...externalDutyForm, needs_transportation: e.target.checked })}
+                                className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                            />
+                            <label htmlFor="needs_transportation" className="text-sm font-bold text-slate-700 cursor-pointer select-none flex items-center gap-2">
+                                🚗 Ulaşım Talep Ediyorum
+                            </label>
+                        </div>
+                        {externalDutyForm.needs_transportation && (
+                            <div className="mt-3 ml-8 animate-in slide-in-from-top-2 duration-200">
+                                <textarea
+                                    rows="2"
+                                    value={externalDutyForm.transport_description}
+                                    onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_description: e.target.value })}
+                                    className="w-full p-3 bg-white border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none font-medium text-slate-700 text-sm"
+                                    placeholder="Ulaşım detayları (uçak, otobüs, araç talebi vb.)"
+                                ></textarea>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Accommodation */}
+                    <div className={`p-3.5 rounded-xl border transition-all ${externalDutyForm.needs_accommodation
+                            ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="needs_accommodation"
+                                checked={externalDutyForm.needs_accommodation}
+                                onChange={e => setExternalDutyForm({ ...externalDutyForm, needs_accommodation: e.target.checked })}
+                                className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                            />
+                            <label htmlFor="needs_accommodation" className="text-sm font-bold text-slate-700 cursor-pointer select-none flex items-center gap-2">
+                                🏨 Konaklama Talep Ediyorum
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Send to Substitute */}
+                <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
                     <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={externalDutyForm.budget_amount}
-                        onChange={e => setExternalDutyForm({ ...externalDutyForm, budget_amount: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none font-medium text-slate-700"
-                        placeholder="0.00 TL"
+                        type="checkbox"
+                        id="send_to_sub_duty"
+                        checked={externalDutyForm.send_to_substitute}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, send_to_substitute: e.target.checked })}
+                        className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
                     />
+                    <label htmlFor="send_to_sub_duty" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                        Vekil yöneticiye de gönder
+                    </label>
                 </div>
             </div>
-
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Ulaşım ve Konaklama Detayları</label>
-                <textarea
-                    rows="2"
-                    value={externalDutyForm.transport_description}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_description: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none font-medium text-slate-700"
-                    placeholder="Uçak, otobüs, otel vb. detayları..."
-                ></textarea>
-            </div>
-
-            <div className="flex items-center gap-2 p-3 bg-purple-50\50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
-                <input
-                    type="checkbox"
-                    id="send_to_sub_duty"
-                    checked={externalDutyForm.send_to_substitute}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, send_to_substitute: e.target.checked })}
-                    className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
-                />
-                <label htmlFor="send_to_sub_duty" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
-                    Vekil yöneticiye de gönder
-                </label>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const renderCardlessEntryForm = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">

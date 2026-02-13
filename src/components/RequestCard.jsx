@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard } from 'lucide-react';
 
 const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming, onViewDetails }) => {
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
     // Helper to format dates
     const formatDate = (dateString) => {
         if (!dateString) return '-';
@@ -183,8 +185,8 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             <span className="font-medium text-slate-700 truncate">{request.employee_meal_info.description}</span>
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ml-2 ${request.employee_meal_info.is_ordered
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-slate-100 text-slate-500'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
                             }`}>
                             {request.employee_meal_info.is_ordered ? 'Sipariş Verildi' : 'Bekliyor'}
                         </span>
@@ -218,6 +220,17 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                 <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed min-h-[3rem]">
                     {type === 'MEAL' ? request.description : request.reason || <span className="text-slate-400 italic">Açıklama belirtilmemiş.</span>}
                 </div>
+
+                {/* Rejection Reason Display */}
+                {request.status === 'REJECTED' && request.rejection_reason && (
+                    <div className="bg-red-50 rounded-xl p-3 border border-red-200 text-sm">
+                        <div className="flex items-center gap-2 text-red-700 font-bold mb-1">
+                            <XCircle size={14} />
+                            Red Sebebi
+                        </div>
+                        <p className="text-red-600 text-sm leading-relaxed">{request.rejection_reason}</p>
+                    </div>
+                )}
             </div>
 
             {/* Actions Footer */}
@@ -264,14 +277,14 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                 {canAction && onApprove && onReject && (
                     <div className="flex gap-2 w-full">
                         <button
-                            onClick={() => onReject(request.id, prompt('Red sebebi:'))}
+                            onClick={(e) => { e.stopPropagation(); setShowRejectModal(true); }}
                             className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm font-bold flex items-center justify-center gap-2"
                         >
                             <X size={16} />
                             Reddet
                         </button>
                         <button
-                            onClick={() => onApprove(request.id)}
+                            onClick={(e) => { e.stopPropagation(); onApprove(request.id); }}
                             className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                         >
                             <Check size={16} />
@@ -280,6 +293,73 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                     </div>
                 )}
             </div>
+
+            {/* Reject Reason Modal */}
+            {showRejectModal && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+                    onClick={(e) => { e.stopPropagation(); setShowRejectModal(false); setRejectReason(''); }}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <XCircle size={20} className="text-red-500" />
+                                Talebi Reddet
+                            </h3>
+                            <button
+                                onClick={() => { setShowRejectModal(false); setRejectReason(''); }}
+                                className="text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
+                            Bu talebi reddetmek istediğinize emin misiniz? Lütfen bir sebep belirtiniz.
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                Red Sebebi <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                rows="3"
+                                autoFocus
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-sm"
+                                placeholder="Talebin reddedilme sebebini yazınız..."
+                            />
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => { setShowRejectModal(false); setRejectReason(''); }}
+                                className="flex-1 px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition font-medium text-sm"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (!rejectReason.trim()) {
+                                        alert('Red sebebi girmelisiniz.');
+                                        return;
+                                    }
+                                    onReject(request.id, rejectReason.trim());
+                                    setShowRejectModal(false);
+                                    setRejectReason('');
+                                }}
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold text-sm shadow-lg shadow-red-500/20"
+                            >
+                                Reddet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
