@@ -349,7 +349,7 @@ const MainLayout = () => {
 
                 {/* Content */}
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-                    <div className="max-w-[1600px] mx-auto animate-fade-in w-full pb-10">
+                    <div key={location.pathname} className="max-w-[1600px] mx-auto page-transition w-full pb-10">
                         <Outlet />
                     </div>
                 </main>
