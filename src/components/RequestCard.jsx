@@ -159,10 +159,10 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                                 {(s.ot_requests_pending > 0 || s.ot_requests_rejected > 0) && (
                                     <div className="flex gap-2 text-[10px]">
                                         {s.ot_requests_pending > 0 && (
-                                            <span className="text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">⏳ {s.ot_requests_pending} Askıda</span>
+                                            <span className="text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-1"><Clock size={10} /> {s.ot_requests_pending} Askıda</span>
                                         )}
                                         {s.ot_requests_rejected > 0 && (
-                                            <span className="text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded">❌ {s.ot_requests_rejected} Reddedilmiş</span>
+                                            <span className="text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded flex items-center gap-1"><XCircle size={10} /> {s.ot_requests_rejected} Reddedilmiş</span>
                                         )}
                                     </div>
                                 )}
