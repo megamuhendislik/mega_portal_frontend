@@ -128,12 +128,18 @@ const AttendanceLogTable = ({ logs }) => {
                                 <td className="p-5 pr-8 text-right">
                                     {log.note && (
                                         <div className="group/note relative inline-block">
-                                            <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center cursor-help border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-colors">
-                                                <span className="text-xs font-bold font-serif">i</span>
-                                            </div>
-                                            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 w-56 p-3 bg-slate-800 text-white text-[10px] leading-relaxed rounded-xl opacity-0 group-hover/note:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl">
+                                            {log.note.includes('eşik altı') ? (
+                                                <div className="w-6 h-6 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center cursor-help border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors">
+                                                    <span className="text-xs font-bold">!</span>
+                                                </div>
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center cursor-help border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-colors">
+                                                    <span className="text-xs font-bold font-serif">i</span>
+                                                </div>
+                                            )}
+                                            <div className={`absolute right-full top-1/2 -translate-y-1/2 mr-2 w-56 p-3 ${log.note.includes('eşik altı') ? 'bg-amber-700' : 'bg-slate-800'} text-white text-[10px] leading-relaxed rounded-xl opacity-0 group-hover/note:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl`}>
                                                 {log.note}
-                                                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-slate-800"></div>
+                                                <div className={`absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent ${log.note.includes('eşik altı') ? 'border-l-amber-700' : 'border-l-slate-800'}`}></div>
                                             </div>
                                         </div>
                                     )}

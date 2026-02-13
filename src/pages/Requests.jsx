@@ -241,6 +241,8 @@ const Requests = () => {
             case 'APPROVED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 gap-1"><CheckCircle2 size={12} /> Onaylandı</span>;
             case 'REJECTED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-700 border border-red-200 gap-1"><XCircle size={12} /> Reddedildi</span>;
             case 'PENDING': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200 gap-1"><Clock size={12} /> Bekliyor</span>;
+            case 'POTENTIAL': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200 gap-1"><AlertCircle size={12} /> Taslak</span>;
+            case 'CANCELLED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 gap-1"><XCircle size={12} /> İptal Edildi</span>;
             case 'DELIVERED': return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 gap-1"><CheckCircle2 size={12} /> Teslim Edildi</span>;
             default: return <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">{status}</span>;
         }
@@ -498,7 +500,7 @@ const Requests = () => {
                 <div className="flex p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {[
                         { id: 'my_requests', label: 'İzin Taleplerim', show: true },
-                        { id: 'overtime_requests', label: 'Fazla Mesai', show: hasPermission('APPROVAL_OVERTIME') },
+                        { id: 'overtime_requests', label: 'Fazla Mesai', show: true },
                         { id: 'meal_requests', label: 'Yemek', show: hasPermission('PAGE_MEAL_ORDERS') },
                         { id: 'cardless_entry_requests', label: 'Kartsız Giriş', show: hasPermission('APPROVAL_CARDLESS_ENTRY') },
                         { id: 'incoming', label: 'Ekip Talepleri', badge: incomingRequests.length, show: hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasPermission('APPROVAL_CARDLESS_ENTRY') || hasPermission('APPROVAL_EXTERNAL_TASK') },
