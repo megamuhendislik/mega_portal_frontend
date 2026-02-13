@@ -230,7 +230,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             onlineCount: 0,
             total_worked: 0,
             total_overtime: 0,
-            total_missing: 0
+            total_missing: 0,
+
+            // Daily Stats Aggregation
+            today_normal: 0,
+            today_overtime: 0,
+            today_break: 0,
+
+            // Monthly Net Balance
+            monthly_net_balance: 0
         };
 
         // 1. Stats from direct employees
@@ -241,9 +249,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 if (s.employee_id) {
                     stats.count += 1;
                     if (s.is_online) stats.onlineCount += 1;
+
                     stats.total_worked += (s.total_worked || 0);
                     stats.total_overtime += (s.total_overtime || 0);
                     stats.total_missing += (s.total_missing || 0);
+
+                    stats.today_normal += (s.today_normal || 0);
+                    stats.today_overtime += (s.today_overtime || 0);
+                    stats.today_break += (s.today_break || 0);
+                    stats.monthly_net_balance += (s.monthly_net_balance || 0);
                 }
             });
         }
@@ -254,9 +268,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 const childStats = calculateNodeStats(child);
                 stats.count += childStats.count;
                 stats.onlineCount += childStats.onlineCount;
+
                 stats.total_worked += childStats.total_worked;
                 stats.total_overtime += childStats.total_overtime;
                 stats.total_missing += childStats.total_missing;
+
+                stats.today_normal += childStats.today_normal;
+                stats.today_overtime += childStats.today_overtime;
+                stats.today_break += childStats.today_break;
+                stats.monthly_net_balance += childStats.monthly_net_balance;
             });
         }
 
@@ -332,19 +352,32 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <td className="p-4">
                                 {s.is_online ?
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span> :
-                                    s.total_missing > 0 ? <span className="text-[10px] font-bold text-red-400">-{formatMinutes(s.total_missing)}</span> :
+                                    s.total_missing > 0 ? <span className="text-[10px] font-bold text-slate-400">Dışarıda</span> :
                                         <span className="text-[10px] text-slate-400">Normal</span>
                                 }
                             </td>
 
-                            {/* Performans (Simplified for Tree) */}
+                            {/* Daily Stats */}
                             <td className="p-4">
-                                <div className="flex items-center gap-2 text-xs font-mono">
-                                    <span className="text-slate-600 font-bold">{formatMinutes(s.total_worked)}</span>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-bold text-slate-700">{formatMinutes(s.today_normal)}</span>
                                 </div>
                             </td>
-                            <td className="p-4 text-right">{s.total_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.total_overtime)}</span> : '-'}</td>
-                            <td className="p-4 text-right">{s.total_missing > 0 ? <span className="text-red-500 font-bold text-xs">-{formatMinutes(s.total_missing)}</span> : '-'}</td>
+                            <td className="p-4 text-center">
+                                {s.today_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.today_overtime)}</span> : <span className="text-slate-300">-</span>}
+                            </td>
+                            <td className="p-4 text-center">
+                                {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
+                            </td>
+
+                            {/* Monthly Balance */}
+                            <td className="p-4 text-right">
+                                {s.monthly_net_balance !== 0 ? (
+                                    <span className={`text-xs font-mono font-bold ${s.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {s.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(s.monthly_net_balance)}
+                                    </span>
+                                ) : <span className="text-slate-300">-</span>}
+                            </td>
 
                             <td className="p-4 text-center">
                                 {/* Optional Action */}
@@ -382,16 +415,25 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     </span>
                                 )}
                             </td>
+                            {/* Daily Aggregates for Dept */}
                             <td className="p-3">
-                                {nodeStats.total_worked > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.total_worked)}</span>}
+                                {nodeStats.today_normal > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.today_normal)}</span>}
                             </td>
+                            <td className="p-3 text-center">
+                                {nodeStats.today_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.today_overtime)}</span>}
+                            </td>
+                            <td className="p-3 text-center">
+                                {nodeStats.today_break > 0 && <span className="text-xs font-mono font-bold text-slate-500">{formatMinutes(nodeStats.today_break)}</span>}
+                            </td>
+
+                            {/* Monthly Balance Aggregate */}
                             <td className="p-3 text-right">
-                                {nodeStats.total_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.total_overtime)}</span>}
+                                {nodeStats.monthly_net_balance !== 0 && (
+                                    <span className={`text-xs font-mono font-bold ${nodeStats.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {nodeStats.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(nodeStats.monthly_net_balance)}
+                                    </span>
+                                )}
                             </td>
-                            <td className="p-3 text-right">
-                                {nodeStats.total_missing > 0 && <span className="text-xs font-mono font-bold text-red-500">-{formatMinutes(nodeStats.total_missing)}</span>}
-                            </td>
-                            <td className="p-3"></td>
                         </tr>
                         {isExpanded && (
                             <>
@@ -417,9 +459,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                                 <th className="p-4 pl-6">Organizasyon / Personel</th>
                                 <th className="p-4 w-24">Durum</th>
-                                <th className="p-4 w-32">Çalışma</th>
-                                <th className="p-4 text-right w-24">F. Mesai</th>
-                                <th className="p-4 text-right w-24">Eksik</th>
+                                <th className="p-4 w-32">Bugün Çalışma</th>
+                                <th className="p-4 text-center w-24">F. Mesai</th>
+                                <th className="p-4 text-center w-24">Mola</th>
+                                <th className="p-4 text-right w-24">Aylık Bakiye</th>
                                 <th className="p-4"></th>
                             </tr>
                         </thead>
