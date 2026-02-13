@@ -54,6 +54,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
 
     const [mealForm, setMealForm] = useState({
+        date: new Date().toISOString().split('T')[0],
         description: ''
     });
 
@@ -630,29 +631,54 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         </div >
     );
 
-    const renderMealForm = () => (
-        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
-            <div className="bg-emerald-50 p-4 rounded-xl flex items-start gap-3 text-emerald-800 text-sm border border-emerald-100">
-                <CheckCircle2 className="shrink-0 mt-0.5" size={18} />
+    const renderMealForm = () => {
+        // Tarih sınırları: 2 hafta geri, 2 gün ileri
+        const today = new Date();
+        const minDate = new Date(today);
+        minDate.setDate(minDate.getDate() - 14);
+        const maxDate = new Date(today);
+        maxDate.setDate(maxDate.getDate() + 2);
+        const minStr = minDate.toISOString().split('T')[0];
+        const maxStr = maxDate.toISOString().split('T')[0];
+
+        return (
+            <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+                <div className="bg-emerald-50 p-4 rounded-xl flex items-start gap-3 text-emerald-800 text-sm border border-emerald-100">
+                    <Check className="shrink-0 mt-0.5" size={18} />
+                    <div>
+                        <h4 className="font-bold">Otomatik Onay</h4>
+                        <p className="mt-1">Yemek talepleriniz için yönetici onayı gerekmez. Talebiniz direkt olarak idari işlere iletilecektir.</p>
+                    </div>
+                </div>
+
                 <div>
-                    <h4 className="font-bold">Otomatik Onay</h4>
-                    <p className="mt-1">Yemek talepleriniz için yönetici onayı gerekmez. Talebiniz direkt olarak idari işlere iletilecektir.</p>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
+                    <input
+                        required
+                        type="date"
+                        value={mealForm.date}
+                        min={minStr}
+                        max={maxStr}
+                        onChange={e => setMealForm({ ...mealForm, date: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Varsayılan bugün. Geçmişe yönelik düzeltme için farklı tarih seçebilirsiniz.</p>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Yemek Tercihi / Açıklama <span className="text-red-500">*</span></label>
+                    <textarea
+                        required
+                        rows="3"
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none font-medium text-slate-700"
+                        placeholder="Örn: Vejetaryen menü, Diyet kola vb."
+                        value={mealForm.description}
+                        onChange={e => setMealForm({ ...mealForm, description: e.target.value })}
+                    ></textarea>
                 </div>
             </div>
-
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Yemek Tercihi / Açıklama <span className="text-red-500">*</span></label>
-                <textarea
-                    required
-                    rows="3"
-                    className="input-field"
-                    placeholder="Örn: Vejetaryen menü, Diyet kola vb."
-                    value={mealForm.description}
-                    onChange={e => setMealForm({ ...mealForm, description: e.target.value })}
-                ></textarea>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const renderExternalDutyForm = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
