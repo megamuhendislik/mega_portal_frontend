@@ -149,19 +149,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 await api.post('/leave/requests/', leaveForm);
             } else if (selectedType === 'OVERTIME') {
                 if (overtimeForm.potentialId) {
-                    // Claim Existing Potential Request -> Updated to PENDING
-                    await api.patch(`/overtime-requests/${overtimeForm.potentialId}/`, {
-                        start_time: overtimeForm.start_time, // Allow editing
+                    // Mevcut POTENTIAL talebi PENDING'e dönüştür (submit endpoint)
+                    await api.post(`/overtime-requests/${overtimeForm.potentialId}/submit/`, {
+                        start_time: overtimeForm.start_time,
                         end_time: overtimeForm.end_time,
                         reason: overtimeForm.reason,
-                        status: 'PENDING',
                         send_to_substitute: overtimeForm.send_to_substitute
                     });
                 } else {
-                    // Create New Manual Request
+                    // Manuel yeni talep oluştur (PENDING olarak)
                     await api.post('/overtime-requests/', {
-                        ...overtimeForm,
-                        is_manual: true
+                        date: overtimeForm.date,
+                        start_time: overtimeForm.start_time,
+                        end_time: overtimeForm.end_time,
+                        reason: overtimeForm.reason,
+                        is_manual: true,
+                        send_to_substitute: overtimeForm.send_to_substitute
                     });
                 }
             } else if (selectedType === 'MEAL') {

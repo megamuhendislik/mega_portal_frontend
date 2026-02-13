@@ -92,7 +92,6 @@ const Requests = () => {
 
         } catch (error) {
             console.error('Error fetching requests:', error);
-            message.error("Veriler yüklenirken hata oluştu.");
         } finally {
             setLoading(false);
         }
@@ -279,23 +278,50 @@ const Requests = () => {
                 </div>
             );
         } else if (activeTab === 'overtime_requests') {
-            const drafts = overtimeRequests.filter(r => r.status === 'POTENTIAL');
-            const submitted = overtimeRequests.filter(r => r.status !== 'POTENTIAL');
+            const potential = overtimeRequests.filter(r => r.status === 'POTENTIAL');
+            const pending = overtimeRequests.filter(r => r.status === 'PENDING');
+            const rejected = overtimeRequests.filter(r => r.status === 'REJECTED');
+            const approved = overtimeRequests.filter(r => r.status === 'APPROVED');
 
             if (overtimeRequests.length === 0) return <EmptyState title="Fazla Mesai Yok" desc="Henüz oluşturulmuş bir fazla mesai talebiniz bulunmuyor." />;
 
+            const OTSection = ({ title, icon, color, items, showActions = false }) => {
+                if (items.length === 0) return null;
+                return (
+                    <div className="space-y-3">
+                        <div className={`flex items-center gap-2 px-1`}>
+                            <div className={`w-2 h-2 rounded-full ${color}`}></div>
+                            <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">{title} ({items.length})</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {items.map(req => (
+                                <RequestCard
+                                    onViewDetails={handleViewDetails}
+                                    key={req.id}
+                                    request={{ ...req, onResubmit: () => handleResubmitOvertime(req) }}
+                                    type="OVERTIME"
+                                    statusBadge={getStatusBadge}
+                                    onEdit={req.status === 'PENDING' ? handleEditOvertimeClick : undefined}
+                                    onDelete={['POTENTIAL', 'PENDING'].includes(req.status) ? (r) => handleDeleteRequest(r, 'OVERTIME') : undefined}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
             content = (
-                <div className="space-y-6">
-                    {/* Drafts Banner */}
-                    {drafts.length > 0 && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between shadow-sm animate-in slide-in-from-top-4">
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                    {/* Talep Edilebilir Banner */}
+                    {potential.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between shadow-sm">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
                                     <Clock size={24} />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold text-slate-800">
-                                        {drafts.length} Adet Taslak Mesai Kaydı Mevcut
+                                        {potential.length} Adet Talep Edilebilir Mesai
                                     </h3>
                                     <p className="text-slate-500 text-sm">
                                         Sistem tarafından tespit edilen ve henüz talep edilmemiş mesaileriniz var.
@@ -305,9 +331,6 @@ const Requests = () => {
                             <button
                                 onClick={() => {
                                     setShowCreateModal(true);
-                                    // Optionally pre-select OVERTIME tab via state/props hack or context
-                                    // Here we just open, user selects type easily. 
-                                    // Or better: pass initialType='OVERTIME' to modal? Modal supports 'initialData' which sets type.
                                     setCreateModalInitialData({ type: 'OVERTIME', data: {} });
                                 }}
                                 className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
@@ -318,23 +341,11 @@ const Requests = () => {
                         </div>
                     )}
 
-                    {submitted.length === 0 && drafts.length > 0 ? (
-                        <div className="text-center py-10 text-slate-400">gönderilmiş talep bulunamadı</div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
-                            {submitted.map(req => (
-                                <RequestCard
-                                    onViewDetails={handleViewDetails}
-                                    key={req.id}
-                                    request={{ ...req, onResubmit: () => handleResubmitOvertime(req) }}
-                                    type="OVERTIME"
-                                    statusBadge={getStatusBadge}
-                                    onEdit={handleEditOvertimeClick}
-                                    onDelete={(r) => handleDeleteRequest(r, 'OVERTIME')}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    {/* 4 Kategori */}
+                    <OTSection title="Talep Edilebilir" color="bg-amber-400" items={potential} />
+                    <OTSection title="Onay Bekliyor" color="bg-blue-400" items={pending} />
+                    <OTSection title="Reddedilmiş" color="bg-red-400" items={rejected} />
+                    <OTSection title="Onaylanmış" color="bg-emerald-400" items={approved} />
                 </div>
             );
         } else if (activeTab === 'meal_requests') {
