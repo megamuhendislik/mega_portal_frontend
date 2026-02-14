@@ -80,6 +80,37 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         send_to_substitute: false
     });
 
+    // Cardless entry: schedule info for the selected date
+    const [cardlessSchedule, setCardlessSchedule] = useState(null);
+    const [cardlessScheduleLoading, setCardlessScheduleLoading] = useState(false);
+
+    useEffect(() => {
+        if (selectedType !== 'CARDLESS_ENTRY' || !cardlessEntryForm.date) {
+            setCardlessSchedule(null);
+            return;
+        }
+        const fetchSchedule = async () => {
+            setCardlessScheduleLoading(true);
+            try {
+                const res = await api.get(`/cardless-entry-requests/schedule-info/?date=${cardlessEntryForm.date}`);
+                setCardlessSchedule(res.data);
+                // Auto-fill times if it's a work day
+                if (res.data.is_work_day && res.data.start_time && res.data.end_time) {
+                    setCardlessEntryForm(prev => ({
+                        ...prev,
+                        check_in_time: prev.check_in_time || res.data.start_time,
+                        check_out_time: prev.check_out_time || res.data.end_time
+                    }));
+                }
+            } catch {
+                setCardlessSchedule(null);
+            } finally {
+                setCardlessScheduleLoading(false);
+            }
+        };
+        fetchSchedule();
+    }, [cardlessEntryForm.date, selectedType]);
+
     useEffect(() => {
         if (isOpen) {
             setStep(1);
@@ -809,8 +840,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                     {/* Transportation */}
                     <div className={`p-3.5 rounded-xl border transition-all ${externalDutyForm.needs_transportation
-                            ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
-                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                         }`}>
                         <div className="flex items-center gap-3">
                             <input
@@ -839,8 +870,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                     {/* Accommodation */}
                     <div className={`p-3.5 rounded-xl border transition-all ${externalDutyForm.needs_accommodation
-                            ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
-                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                         }`}>
                         <div className="flex items-center gap-3">
                             <input
@@ -874,6 +905,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         );
     };
 
+    const isCardlessWorkDay = cardlessSchedule?.is_work_day !== false;
+    const scheduleStart = cardlessSchedule?.start_time || null;
+    const scheduleEnd = cardlessSchedule?.end_time || null;
+
     const renderCardlessEntryForm = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
             <div>
@@ -882,10 +917,37 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     required
                     type="date"
                     value={cardlessEntryForm.date}
-                    onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, date: e.target.value })}
+                    onChange={e => {
+                        setCardlessEntryForm({ ...cardlessEntryForm, date: e.target.value, check_in_time: '', check_out_time: '' });
+                    }}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
                 />
             </div>
+
+            {/* Schedule info banner */}
+            {cardlessScheduleLoading && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500 animate-pulse">
+                    Mesai bilgisi yükleniyor...
+                </div>
+            )}
+
+            {!cardlessScheduleLoading && cardlessSchedule && !isCardlessWorkDay && (
+                <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                    <AlertCircle size={18} className="text-red-500 shrink-0" />
+                    <span className="text-sm font-medium text-red-700">
+                        {cardlessSchedule.reason || 'Seçilen tarih mesai günü değildir. Lütfen başka bir tarih seçin.'}
+                    </span>
+                </div>
+            )}
+
+            {!cardlessScheduleLoading && isCardlessWorkDay && scheduleStart && scheduleEnd && (
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2">
+                    <Clock size={16} className="text-purple-500 shrink-0" />
+                    <span className="text-sm font-medium text-purple-700">
+                        Mesai saatleri: <strong>{scheduleStart}</strong> – <strong>{scheduleEnd}</strong> · Saatler bu aralık dışına çıkamaz
+                    </span>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 gap-5">
                 <div>
@@ -894,17 +956,24 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         required
                         type="time"
                         value={cardlessEntryForm.check_in_time}
+                        min={scheduleStart || undefined}
+                        max={scheduleEnd || undefined}
+                        disabled={!isCardlessWorkDay}
                         onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_in_time: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Çıkış Saati</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Çıkış Saati <span className="text-red-500">*</span></label>
                     <input
+                        required
                         type="time"
                         value={cardlessEntryForm.check_out_time}
+                        min={scheduleStart || undefined}
+                        max={scheduleEnd || undefined}
+                        disabled={!isCardlessWorkDay}
                         onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_out_time: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </div>
             </div>
@@ -915,17 +984,19 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     required
                     rows="3"
                     value={cardlessEntryForm.reason}
+                    disabled={!isCardlessWorkDay}
                     onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, reason: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Kartsız giriş gerekçesini belirtiniz..."
                 ></textarea>
             </div>
 
-            <div className="flex items-center gap-2 p-3 bg-purple-50\50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
+            <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
                 <input
                     type="checkbox"
                     id="send_to_sub_cardless"
                     checked={cardlessEntryForm.send_to_substitute}
+                    disabled={!isCardlessWorkDay}
                     onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, send_to_substitute: e.target.checked })}
                     className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
                 />
@@ -1005,7 +1076,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <button
                             form="requestForm"
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay)}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-amber-500 hover:bg-amber-600' :
