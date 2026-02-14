@@ -58,10 +58,12 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
     return (
         <div
             onClick={() => onViewDetails && onViewDetails(request, type)}
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 relative overflow-hidden flex flex-col h-full cursor-pointer"
+            className={`group bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 relative overflow-hidden flex flex-col h-full cursor-pointer
+                ${request.status === 'PENDING' ? 'border-l-4 border-l-amber-400' :
+                    request.status === 'APPROVED' ? 'border-l-4 border-l-emerald-400' :
+                        request.status === 'REJECTED' ? 'border-l-4 border-l-red-400' : 'border-l-4 border-l-slate-200'}
+            `}
         >
-            {/* Top Status Line */}
-            <div className={`absolute top-0 left-0 w-full h-1 ${getStatusColor(request.status)}`} />
 
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
