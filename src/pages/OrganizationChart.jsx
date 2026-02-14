@@ -280,12 +280,20 @@ const EmployeeNode = ({ emp, onClick, showTags }) => {
                 if (onClick) onClick(emp);
             }}
         >
-            {/* Avatar Left */}
-            <div className={`
-                w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm
-                ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : `${theme.badge} text-white`}
-            `}>
-                {emp.name.charAt(0)}
+            {/* Avatar Left with Status Dot */}
+            <div className="relative shrink-0">
+                <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm
+                    ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : `${theme.badge} text-white`}
+                `}>
+                    {emp.name.charAt(0)}
+                </div>
+                {/* Online/Offline Status Dot */}
+                <div
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${emp.is_online ? 'bg-emerald-500' : 'bg-slate-300'
+                        }`}
+                    title={emp.is_online ? 'Şirkette' : 'Dışarıda'}
+                />
             </div>
 
             {/* Info Right */}
