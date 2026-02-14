@@ -21,7 +21,8 @@ import {
     Database,
     Monitor,
     Utensils,
-    UserCog
+    UserCog,
+    Package
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -125,6 +126,7 @@ const MainLayout = () => {
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },
+        { path: '/admin/program-management', label: 'Program Yönetimi', icon: Package, permission: 'MANAGE_EXTERNAL_PROGRAMS' },
     ];
 
     const filteredNavItems = navItems.filter(item => {

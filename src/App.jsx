@@ -24,6 +24,7 @@ import ServiceControl from './pages/ServiceControl';
 import MealOrders from './pages/admin/MealOrders';
 import SubstituteManagement from './pages/SubstituteManagement';
 import DataManagement from './pages/admin/DataManagement';
+import ProgramManagement from './pages/admin/ProgramManagement';
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -108,6 +109,9 @@ function App() {
             <Route path="system-data-management" element={<ProtectedRoute requiredPermission="PAGE_DATA_MANAGEMENT"><DataManagement /></ProtectedRoute>} />
 
             <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="PAGE_DEBUG"><AttendanceDebugger /></ProtectedRoute>} />
+
+            {/* External Program Management */}
+            <Route path="admin/program-management" element={<ProtectedRoute requiredPermission="MANAGE_EXTERNAL_PROGRAMS"><ProgramManagement /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>
