@@ -865,9 +865,8 @@ const CreateProgramModalV2 = ({ onClose, onCreated }) => {
     const [description, setDescription] = useState('');
     const [currentVersion, setCurrentVersion] = useState('1.0.0');
     const [minVersion, setMinVersion] = useState('1.0.0');
-    const [updateUrl, setUpdateUrl] = useState('');
     const [requireHwid, setRequireHwid] = useState(true);
-    const [maxDevices, setMaxDevices] = useState(2);
+    const [maxDevices, setMaxDevices] = useState(0);
     const [loading, setLoading] = useState(false);
     const [createdProgram, setCreatedProgram] = useState(null);
 
@@ -880,7 +879,6 @@ const CreateProgramModalV2 = ({ onClose, onCreated }) => {
                 description,
                 current_version: currentVersion,
                 min_version: minVersion,
-                update_url: updateUrl,
                 require_hwid: requireHwid,
                 max_devices_per_user: maxDevices
             });
@@ -1016,17 +1014,7 @@ const CreateProgramModalV2 = ({ onClose, onCreated }) => {
                             </div>
                         </div>
 
-                        {/* Update URL */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Güncelleme Linki</label>
-                            <input
-                                value={updateUrl}
-                                onChange={(e) => setUpdateUrl(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                placeholder="https://example.com/download"
-                            />
-                            <p className="text-xs text-slate-400 mt-1">Eski sürüm kullanıcısına gösterilir</p>
-                        </div>
+
 
                         {/* HWID Toggle */}
                         <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -1045,13 +1033,29 @@ const CreateProgramModalV2 = ({ onClose, onCreated }) => {
                         {/* Max Devices */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Başına Maks. Cihaz</label>
-                            <input
-                                type="number"
-                                value={maxDevices}
-                                onChange={(e) => setMaxDevices(parseInt(e.target.value) || 1)}
-                                min={1} max={10}
-                                className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    value={maxDevices === 0 ? '' : maxDevices}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        setMaxDevices(isNaN(val) ? 0 : val);
+                                    }}
+                                    disabled={maxDevices === 0}
+                                    min={1} max={999}
+                                    placeholder="Sınırsız"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                                />
+                                <label className="flex items-center gap-2 cursor-pointer select-none whitespace-nowrap">
+                                    <input
+                                        type="checkbox"
+                                        checked={maxDevices === 0}
+                                        onChange={(e) => setMaxDevices(e.target.checked ? 0 : 2)}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-slate-600">Limit Yok</span>
+                                </label>
+                            </div>
                         </div>
 
                         {/* Info Box */}
