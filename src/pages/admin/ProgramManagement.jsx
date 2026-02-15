@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../services/api';
 import {
     Package, Plus, Settings, Shield, Trash2, RefreshCw,
@@ -954,7 +955,7 @@ const CreateProgramModalV2 = ({ onClose, onCreated }) => {
         );
     }
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto">
             {/* Backdrop */}
             <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
@@ -1075,7 +1076,7 @@ const CreateProgramModalV2 = ({ onClose, onCreated }) => {
                 </div>
             </div>
         </div>
-    );
+        , document.body);
 };
 
 // Force update v3
