@@ -126,7 +126,7 @@ const MainLayout = () => {
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },
-        { path: '/admin/program-management', label: 'Program Yönetimi', icon: Package, permission: 'MANAGE_EXTERNAL_PROGRAMS' },
+        { path: '/program-management', label: 'Program Yönetimi', icon: Package, permission: 'PAGE_PROGRAM_MANAGEMENT' },
     ];
 
     const filteredNavItems = navItems.filter(item => {

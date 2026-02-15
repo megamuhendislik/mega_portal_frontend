@@ -110,7 +110,7 @@ function App() {
             <Route path="debug/attendance" element={<ProtectedRoute requiredPermission="PAGE_DEBUG"><AttendanceDebugger /></ProtectedRoute>} />
 
             {/* External Program Management */}
-            <Route path="admin/program-management" element={<ProtectedRoute requiredPermission="MANAGE_EXTERNAL_PROGRAMS"><ProgramManagement /></ProtectedRoute>} />
+            <Route path="program-management" element={<ProtectedRoute requiredPermission="PAGE_PROGRAM_MANAGEMENT"><ProgramManagement /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>
