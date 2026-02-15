@@ -356,7 +356,7 @@ const ProgramManagement = () => {
 
             {/* Create Modal */}
             {showCreateModal && (
-                <CreateProgramModal
+                <CreateProgramModalV2
                     onClose={() => setShowCreateModal(false)}
                     onCreated={() => { setShowCreateModal(false); fetchPrograms(); fetchDashboard(); }}
                 />
@@ -859,7 +859,7 @@ const SettingRow = ({ label, description, value, onSave, type = 'text', placehol
 };
 
 
-const CreateProgramModal = ({ onClose, onCreated }) => {
+const CreateProgramModalV2 = ({ onClose, onCreated }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [currentVersion, setCurrentVersion] = useState('1.0.0');
