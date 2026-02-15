@@ -894,57 +894,60 @@ const CreateProgramModal = ({ onClose, onCreated }) => {
     // Success screen — show generated key
     if (createdProgram) {
         return (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                    <div className="p-6 text-center">
-                        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Check size={28} className="text-green-600" />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-1">Program Oluşturuldu!</h3>
-                        <p className="text-sm text-slate-500 mb-5">{createdProgram.name} başarıyla eklendi</p>
+            <div className="fixed inset-0 z-50 overflow-y-auto">
+                <div className="fixed inset-0 bg-black/50" onClick={onCreated} />
+                <div className="flex min-h-full items-center justify-center p-4">
+                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
+                        <div className="p-6 text-center">
+                            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Check size={28} className="text-green-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-1">Program Oluşturuldu!</h3>
+                            <p className="text-sm text-slate-500 mb-5">{createdProgram.name} başarıyla eklendi</p>
 
-                        {/* Program Key */}
-                        <div className="bg-slate-50 p-4 rounded-lg text-left mb-4">
-                            <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
-                                <Key size={12} /> Program Anahtarı (Secret Key)
-                            </label>
-                            <div className="flex items-center gap-2 bg-white p-2 rounded border border-slate-200">
-                                <code className="text-sm font-mono text-slate-800 flex-1 break-all">
-                                    {createdProgram.program_key}
-                                </code>
-                                <button
-                                    onClick={() => navigator.clipboard.writeText(createdProgram.program_key)}
-                                    className="p-1.5 hover:bg-slate-100 rounded flex-shrink-0"
-                                    title="Kopyala"
-                                >
-                                    <Copy size={16} className="text-blue-600" />
-                                </button>
+                            {/* Program Key */}
+                            <div className="bg-slate-50 p-4 rounded-lg text-left mb-4">
+                                <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1">
+                                    <Key size={12} /> Program Anahtarı (Secret Key)
+                                </label>
+                                <div className="flex items-center gap-2 bg-white p-2 rounded border border-slate-200">
+                                    <code className="text-sm font-mono text-slate-800 flex-1 break-all">
+                                        {createdProgram.program_key}
+                                    </code>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(createdProgram.program_key)}
+                                        className="p-1.5 hover:bg-slate-100 rounded flex-shrink-0"
+                                        title="Kopyala"
+                                    >
+                                        <Copy size={16} className="text-blue-600" />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                    <AlertTriangle size={12} />
+                                    Bu anahtarı güvenli bir yerde saklayın. Harici yazılıma gömülecek.
+                                </p>
                             </div>
-                            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                                <AlertTriangle size={12} />
-                                Bu anahtarı güvenli bir yerde saklayın. Harici yazılıma gömülecek.
-                            </p>
-                        </div>
 
-                        {/* Version Info */}
-                        <div className="grid grid-cols-2 gap-3 mb-5 text-left">
-                            <div className="bg-slate-50 p-3 rounded-lg">
-                                <p className="text-xs text-slate-500">Güncel Sürüm</p>
-                                <p className="text-sm font-mono font-medium text-slate-700">v{createdProgram.current_version}</p>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-lg">
-                                <p className="text-xs text-slate-500">Min. Sürüm</p>
-                                <p className="text-sm font-mono font-medium text-slate-700">v{createdProgram.min_version}</p>
+                            {/* Version Info */}
+                            <div className="grid grid-cols-2 gap-3 mb-5 text-left">
+                                <div className="bg-slate-50 p-3 rounded-lg">
+                                    <p className="text-xs text-slate-500">Güncel Sürüm</p>
+                                    <p className="text-sm font-mono font-medium text-slate-700">v{createdProgram.current_version}</p>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded-lg">
+                                    <p className="text-xs text-slate-500">Min. Sürüm</p>
+                                    <p className="text-sm font-mono font-medium text-slate-700">v{createdProgram.min_version}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="p-5 border-t border-slate-100 flex justify-end">
-                        <button
-                            onClick={() => { onCreated(); }}
-                            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            Tamam
-                        </button>
+                        <div className="p-5 border-t border-slate-100 flex justify-end">
+                            <button
+                                onClick={onCreated}
+                                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Tamam
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -952,114 +955,123 @@ const CreateProgramModal = ({ onClose, onCreated }) => {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white z-10">
-                    <h3 className="text-lg font-bold text-slate-800">Yeni Program Ekle</h3>
-                    <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
-                </div>
-                <div className="p-5 space-y-4">
-                    {/* Program Name */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Program Adı *</label>
-                        <input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Örn: Muhasebe Botu"
-                        />
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+            {/* Backdrop */}
+            <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
+
+            {/* Modal Wrapper */}
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-5 border-b border-slate-100 rounded-t-xl bg-white">
+                        <h3 className="text-lg font-bold text-slate-800">Yeni Program Ekle</h3>
+                        <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
                     </div>
 
-                    {/* Description */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
-                            rows={2}
-                            placeholder="Ne iş yapar?"
-                        />
-                    </div>
-
-                    {/* Version Fields */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="p-5 space-y-4">
+                        {/* Program Name */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Güncel Sürüm</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Program Adı *</label>
                             <input
-                                value={currentVersion}
-                                onChange={(e) => setCurrentVersion(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                                placeholder="1.0.0"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Örn: Muhasebe Botu"
                             />
                         </div>
+
+                        {/* Description */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Minimum Sürüm</label>
-                            <input
-                                value={minVersion}
-                                onChange={(e) => setMinVersion(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                                placeholder="1.0.0"
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                                rows={2}
+                                placeholder="Ne iş yapar?"
                             />
-                            <p className="text-xs text-slate-400 mt-1">Bu sürümün altı reddedilir</p>
                         </div>
-                    </div>
 
-                    {/* Update URL */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Güncelleme Linki</label>
-                        <input
-                            value={updateUrl}
-                            onChange={(e) => setUpdateUrl(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                            placeholder="https://example.com/download"
-                        />
-                        <p className="text-xs text-slate-400 mt-1">Eski sürüm kullanıcısına gösterilir</p>
-                    </div>
+                        {/* Version Fields */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Güncel Sürüm</label>
+                                <input
+                                    value={currentVersion}
+                                    onChange={(e) => setCurrentVersion(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                    placeholder="1.0.0"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Minimum Sürüm</label>
+                                <input
+                                    value={minVersion}
+                                    onChange={(e) => setMinVersion(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                    placeholder="1.0.0"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">Bu sürümün altı reddedilir</p>
+                            </div>
+                        </div>
 
-                    {/* HWID Toggle */}
-                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        {/* Update URL */}
                         <div>
-                            <label className="text-sm font-medium text-slate-700">Donanım Kilidi (HWID)</label>
-                            <p className="text-xs text-slate-500">Sadece kayıtlı cihazlarda çalışsın</p>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Güncelleme Linki</label>
+                            <input
+                                value={updateUrl}
+                                onChange={(e) => setUpdateUrl(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder="https://example.com/download"
+                            />
+                            <p className="text-xs text-slate-400 mt-1">Eski sürüm kullanıcısına gösterilir</p>
                         </div>
+
+                        {/* HWID Toggle */}
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">Donanım Kilidi (HWID)</label>
+                                <p className="text-xs text-slate-500">Sadece kayıtlı cihazlarda çalışsın</p>
+                            </div>
+                            <button
+                                onClick={() => setRequireHwid(!requireHwid)}
+                                className={`w-12 h-6 rounded-full transition-colors relative ${requireHwid ? 'bg-blue-600' : 'bg-slate-300'}`}
+                            >
+                                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${requireHwid ? 'left-6' : 'left-0.5'}`} />
+                            </button>
+                        </div>
+
+                        {/* Max Devices */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Başına Maks. Cihaz</label>
+                            <input
+                                type="number"
+                                value={maxDevices}
+                                onChange={(e) => setMaxDevices(parseInt(e.target.value) || 1)}
+                                min={1} max={10}
+                                className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* Info Box */}
+                        <div className="bg-blue-50 p-3 rounded-lg flex gap-2">
+                            <Key size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-blue-700">
+                                Program Anahtarı (Secret Key) otomatik oluşturulacak ve bir sonraki ekranda gösterilecektir.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-5 border-t border-slate-100 flex gap-3 justify-end sticky bottom-0 bg-white rounded-b-xl">
+                        <button onClick={onClose} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
                         <button
-                            onClick={() => setRequireHwid(!requireHwid)}
-                            className={`w-12 h-6 rounded-full transition-colors relative ${requireHwid ? 'bg-blue-600' : 'bg-slate-300'}`}
+                            onClick={handleCreate}
+                            disabled={!name.trim() || loading}
+                            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                         >
-                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${requireHwid ? 'left-6' : 'left-0.5'}`} />
+                            {loading ? 'Oluşturuluyor...' : 'Oluştur'}
                         </button>
                     </div>
-
-                    {/* Max Devices */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Başına Maks. Cihaz</label>
-                        <input
-                            type="number"
-                            value={maxDevices}
-                            onChange={(e) => setMaxDevices(parseInt(e.target.value) || 1)}
-                            min={1} max={10}
-                            className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    {/* Info Box */}
-                    <div className="bg-blue-50 p-3 rounded-lg flex gap-2">
-                        <Key size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-blue-700">
-                            Program Anahtarı (Secret Key) otomatik oluşturulacak ve bir sonraki ekranda gösterilecektir.
-                        </p>
-                    </div>
-                </div>
-                <div className="p-5 border-t border-slate-100 flex gap-3 justify-end sticky bottom-0 bg-white">
-                    <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">İptal</button>
-                    <button
-                        onClick={handleCreate}
-                        disabled={!name.trim() || loading}
-                        className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                    >
-                        {loading ? 'Oluşturuluyor...' : 'Oluştur'}
-                    </button>
                 </div>
             </div>
         </div>
