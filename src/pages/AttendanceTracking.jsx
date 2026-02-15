@@ -133,10 +133,20 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         try {
             const res = await api.get('/departments/hierarchy/');
             setHierarchyData(Array.isArray(res.data) ? res.data : []);
-            // Auto expand all roots initially
+            // Auto expand ALL departments recursively
             if (Array.isArray(res.data)) {
                 const initialExpanded = {};
-                res.data.forEach(d => initialExpanded[d.id] = true);
+                const expandAll = (nodes) => {
+                    nodes.forEach(d => {
+                        if (d.employees !== undefined) {
+                            initialExpanded[d.id] = true;
+                        }
+                        if (d.children && d.children.length > 0) {
+                            expandAll(d.children);
+                        }
+                    });
+                };
+                expandAll(res.data);
                 setExpandedDepts(prev => ({ ...prev, ...initialExpanded }));
             }
         } catch (error) {
@@ -182,30 +192,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
         const attachStats = (nodes) => {
             return nodes.map(node => {
-                // If it's an employee node (has no 'employees' array, but might have 'children' as subs)
-                // Actually structure from backend: Dept -> employees [], children [Depts]
-                // Employee Node from backend: { id, name, title, children: [Subs] }
-
-                // Let's normalize. 
-                // Department Node: { id, name, employees: [], children: [] }
-                // Employee Node: { id, name, children: [] }
-
-                // We need to attach 'stats' to employee nodes
-                // And filter them based on criteria
-
                 let newNode = { ...node };
 
-                // Check if it's an employee (usually doesn't have 'employees' list, but has 'manager_id' or similar if from build_employee_tree)
-                // The API returns Depts at root.
-
-                if (node.employees) {
+                if (node.employees !== undefined) {
                     // It's a Department
                     newNode.type = 'DEPT';
-                    newNode.employees = attachStats(node.employees);
-                    newNode.children = attachStats(node.children); // Sub-depts
-
-                    // Filter: If active filters, remove empty depts?
-                    // Optional: keep strict structure
+                    newNode.employees = attachStats(node.employees || []);
+                    newNode.children = attachStats(node.children || []);
                 } else {
                     // It's an Employee
                     newNode.type = 'EMP';
@@ -216,7 +209,27 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             });
         };
 
-        return attachStats(hierarchyData);
+        const merged = attachStats(hierarchyData);
+
+        // Group orphan employees (root-level EMPs) into a virtual dept
+        const depts = merged.filter(n => n.type === 'DEPT');
+        const orphans = merged.filter(n => n.type === 'EMP');
+
+        if (orphans.length > 0) {
+            depts.push({
+                id: '__orphans__',
+                name: 'Diğer Personeller',
+                type: 'DEPT',
+                employees: orphans,
+                children: []
+            });
+            // Auto-expand orphan group
+            if (!expandedDepts['__orphans__']) {
+                setExpandedDepts(prev => ({ ...prev, '__orphans__': true }));
+            }
+        }
+
+        return depts;
     };
 
     const toggleDept = (id) => {
