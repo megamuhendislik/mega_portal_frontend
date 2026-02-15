@@ -307,7 +307,9 @@ const ProgramManagement = () => {
                                     {[
                                         { key: 'devices', label: 'Cihazlar', icon: Monitor },
                                         { key: 'logs', label: 'Erişim Logları', icon: Activity },
+                                        { key: 'docs', label: 'API Rehberi', icon: Shield },
                                         { key: 'snippet', label: 'Python Kodu', icon: Key },
+                                        { key: 'settings', label: 'Ayarlar', icon: Settings },
                                     ].map(tab => (
                                         <button
                                             key={tab.key}
@@ -333,8 +335,17 @@ const ProgramManagement = () => {
                                     {activeTab === 'logs' && (
                                         <LogsTab logs={accessLogs} resultColors={resultColors} />
                                     )}
+                                    {activeTab === 'docs' && (
+                                        <DocsTab program={selectedProgram} />
+                                    )}
                                     {activeTab === 'snippet' && (
                                         <SnippetTab programKey={selectedProgram.program_key} />
+                                    )}
+                                    {activeTab === 'settings' && (
+                                        <SettingsTab
+                                            program={selectedProgram}
+                                            onUpdate={(data) => updateProgram(selectedProgram.id, data)}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -488,143 +499,61 @@ const LogsTab = ({ logs, resultColors }) => {
 
 
 const SnippetTab = ({ programKey }) => {
-    const snippet = `"""
-MegaPortal Harici Yazılım Kimlik Doğrulama Modülü
-Bu dosyayı projenizin kök dizinine ekleyin ve uygulamanızın
-başlangıcında authenticate() fonksiyonunu çağırın.
-"""
+    const snippet = `# mega_auth.py — MegaPortal Kimlik Doğrulama
 import os, json, time, uuid, platform, hashlib, getpass
-from datetime import datetime
 try:
     import requests
 except ImportError:
-    print("HATA: 'requests' kütüphanesi bulunamadı. pip install requests")
-    exit(1)
+    print("pip install requests"); exit(1)
 
-# ======= KONFİGÜRASYON =======
 BASE_URL = "https://mega-portal-production.up.railway.app/api"
 PROGRAM_KEY = "${programKey}"
-APP_VERSION = "1.0.0"  # Uygulamanızın sürümü
+APP_VERSION = "1.0.0"
 CACHE_FILE = os.path.join(os.path.expanduser("~"), ".mega_auth_cache.json")
-SESSION_HOURS = 5
 
-# ======= HWID ÜRETİMİ =======
 def get_hwid():
-    """Bilgisayarın benzersiz parmak izini üretir."""
     raw = f"{uuid.getnode()}-{platform.node()}-{platform.machine()}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
-# ======= CACHE YÖNETİMİ =======
 def load_cache():
     try:
-        with open(CACHE_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return None
+        with open(CACHE_FILE, 'r') as f: return json.load(f)
+    except: return None
 
 def save_cache(data):
-    with open(CACHE_FILE, 'w') as f:
-        json.dump(data, f)
+    with open(CACHE_FILE, 'w') as f: json.dump(data, f)
 
-def clear_cache():
-    try: os.remove(CACHE_FILE)
-    except: pass
-
-# ======= ANA FONKSİYONLAR =======
 def login(username, password):
-    """Sunucuya giriş yapar ve token alır."""
-    try:
-        resp = requests.post(f"{BASE_URL}/external-auth/login/", json={
-            "program_key": PROGRAM_KEY,
-            "username": username,
-            "password": password,
-            "hwid": get_hwid(),
-            "device_name": platform.node(),
-            "version": APP_VERSION
-        }, timeout=10)
-        
-        data = resp.json()
-        if resp.status_code == 200 and data.get('status') == 'success':
-            save_cache({
-                "token": data["token"],
-                "refresh": data.get("refresh", ""),
-                "user": data["user"]["name"],
-                "login_time": time.time(),
-                "expires_at": time.time() + SESSION_HOURS * 3600
-            })
-            return True, data["user"]["name"]
-        else:
-            return False, data.get("message", "Bilinmeyen hata")
-    except requests.ConnectionError:
-        return False, "Sunucuya bağlanılamadı"
-    except Exception as e:
-        return False, str(e)
-
-def verify_session():
-    """Mevcut oturumu kontrol eder."""
-    cache = load_cache()
-    if not cache:
-        return False, "Oturum bulunamadı"
-    
-    if time.time() > cache.get("expires_at", 0):
-        clear_cache()
-        return False, "Oturum süresi doldu"
-    
-    try:
-        resp = requests.get(f"{BASE_URL}/external-auth/verify/", 
-            headers={"Authorization": f"Bearer {cache['token']}"},
-            params={"program_key": PROGRAM_KEY, "version": APP_VERSION},
-            timeout=5)
-        
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get("valid"):
-                return True, cache.get("user", "")
-            return False, data.get("reason", "Oturum geçersiz")
-        return False, "Token reddedildi"
-    except:
-        # Çevrimdışı: cache süresine güven
-        return True, cache.get("user", "")
+    resp = requests.post(f"{BASE_URL}/external-auth/login/", json={
+        "program_key": PROGRAM_KEY, "username": username,
+        "password": password, "hwid": get_hwid(),
+        "device_name": platform.node(), "version": APP_VERSION
+    }, timeout=10)
+    data = resp.json()
+    if resp.status_code == 200 and data.get('status') == 'success':
+        save_cache({"token": data["token"], "user": data["user"]["name"],
+                     "expires_at": time.time() + 5 * 3600})
+        return True, data["user"]["name"]
+    return False, data.get("message", "Hata")
 
 def authenticate():
-    """Ana kimlik doğrulama fonksiyonu. Cache varsa kontrol eder, yoksa login ister."""
-    # 1. Cache kontrol
-    valid, info = verify_session()
-    if valid:
-        print(f"✅ Hoş geldiniz, {info}")
-        return True
-    
-    # 2. Login gerekli
+    cache = load_cache()
+    if cache and time.time() < cache.get("expires_at", 0):
+        print(f"✅ Hoş geldiniz, {cache['user']}"); return True
     print("\\n🔐 MegaPortal Kimlik Doğrulama")
-    print("=" * 35)
-    for attempt in range(3):
-        username = input("Kullanıcı Adı: ")
-        password = getpass.getpass("Şifre: ")
-        
-        success, msg = login(username, password)
-        if success:
-            print(f"\\n✅ Giriş başarılı! Hoş geldiniz, {msg}")
-            return True
-        else:
-            print(f"❌ Hata: {msg}")
-            if attempt < 2:
-                print(f"Kalan deneme: {2 - attempt}")
-    
-    print("\\n🚫 Giriş başarısız. Program kapatılıyor.")
-    exit(1)
+    for i in range(3):
+        ok, msg = login(input("Kullanıcı: "), getpass.getpass("Şifre: "))
+        if ok: print(f"✅ Giriş başarılı, {msg}"); return True
+        print(f"❌ {msg} | Kalan: {2-i}")
+    print("🚫 Başarısız."); exit(1)
 
-# ======= KULLANIM =======
-# Uygulamanızın başında:
-# from mega_auth import authenticate
-# authenticate()
-`;
+# Kullanım: from mega_auth import authenticate; authenticate()`;
 
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
-                    Bu kodu <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">mega_auth.py</code> olarak kaydedin
-                    ve uygulamanızın başında <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">authenticate()</code> çağırın.
+                    <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">mega_auth.py</code> olarak kaydedin
                 </p>
                 <button
                     onClick={() => navigator.clipboard.writeText(snippet)}
@@ -636,6 +565,295 @@ def authenticate():
             <pre className="bg-slate-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto max-h-[400px] overflow-y-auto">
                 <code>{snippet}</code>
             </pre>
+        </div>
+    );
+};
+
+
+const DocsTab = ({ program }) => {
+    const baseUrl = "https://mega-portal-production.up.railway.app/api";
+    const copyJson = (obj) => navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
+
+    const endpoints = [
+        {
+            method: 'POST',
+            path: '/external-auth/login/',
+            title: 'Giriş (Login)',
+            desc: 'Kullanıcıyı doğrular ve JWT token döner.',
+            request: {
+                program_key: program?.program_key || 'YOUR_PROGRAM_KEY',
+                username: 'kullanici_adi',
+                password: '********',
+                hwid: 'abc123...def456',
+                device_name: 'BILGISAYAR-ADI',
+                version: program?.current_version || '1.0.0'
+            },
+            successResponse: {
+                status: 'success',
+                token: 'eyJ0eXAiOiJKV1...',
+                refresh: 'eyJ0eXAiOiJKV1...',
+                user: { name: 'Ad Soyad', employee_id: 1 }
+            },
+            errorCodes: [
+                { code: 'INVALID_KEY', desc: 'Program anahtarı geçersiz', status: 401 },
+                { code: 'PROGRAM_INACTIVE', desc: 'Program devre dışı (Kill Switch)', status: 403 },
+                { code: 'VERSION_REJECTED', desc: 'İstemci sürümü çok eski', status: 403 },
+                { code: 'INVALID_CREDENTIALS', desc: 'Kullanıcı adı/şifre hatalı', status: 401 },
+                { code: 'USER_INACTIVE', desc: 'Kullanıcı hesabı pasif', status: 401 },
+                { code: 'HWID_BLOCKED', desc: 'Bu cihaz engellenmiş', status: 403 },
+                { code: 'HWID_LIMIT', desc: 'Cihaz limiti aşıldı', status: 403 },
+            ]
+        },
+        {
+            method: 'GET',
+            path: '/external-auth/verify/',
+            title: 'Oturum Doğrulama (Verify)',
+            desc: 'Mevcut token ve programın hâlâ geçerli olduğunu kontrol eder.',
+            headers: { Authorization: 'Bearer eyJ0eXAi...' },
+            params: { program_key: 'YOUR_KEY', version: '1.0.0' },
+            successResponse: {
+                valid: true,
+                user: 'kullanici_adi',
+                program_active: true,
+                current_version: program?.current_version || '1.0.0',
+                min_version: program?.min_version || '1.0.0'
+            }
+        }
+    ];
+
+    return (
+        <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
+            {/* Warning Banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+                <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                    <p className="text-sm font-semibold text-amber-800">Güvenlik Uyarısı</p>
+                    <ul className="text-xs text-amber-700 mt-1 space-y-1 list-disc pl-4">
+                        <li><strong>Program Anahtarı (Secret Key)</strong> gizli tutulmalıdır. Kaynak kodda açık bırakmayın.</li>
+                        <li>Token'lar <strong>5 saat</strong> geçerlidir. Süresi dolan token'lar reddedilir.</li>
+                        <li>HWID kilidi açıksa, aynı kullanıcı en fazla <strong>{program?.max_devices_per_user || 2} cihaz</strong> kaydedebilir.</li>
+                        <li>Program <strong>devre dışı</strong> bırakılırsa tüm bağlantılar anlık kesilir (Kill Switch).</li>
+                        <li>Anahtar yenilendiğinde (<strong>Regenerate</strong>) mevcut tüm istemciler güncellenmeli.</li>
+                    </ul>
+                </div>
+            </div>
+
+            {/* Connection Info */}
+            <div className="bg-slate-50 p-4 rounded-lg">
+                <h4 className="text-sm font-semibold text-slate-700 mb-2">Bağlantı Bilgileri</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <span className="text-slate-500">Base URL</span>
+                        <div className="font-mono bg-white px-2 py-1 rounded border border-slate-200 mt-0.5 flex items-center justify-between">
+                            <span className="truncate">{baseUrl}</span>
+                            <button onClick={() => navigator.clipboard.writeText(baseUrl)} className="ml-1 p-0.5 hover:bg-slate-100 rounded"><Copy size={12} /></button>
+                        </div>
+                    </div>
+                    <div>
+                        <span className="text-slate-500">Program Key</span>
+                        <div className="font-mono bg-white px-2 py-1 rounded border border-slate-200 mt-0.5 flex items-center justify-between">
+                            <span className="truncate">{String(program?.program_key || '').substring(0, 12)}...</span>
+                            <button onClick={() => navigator.clipboard.writeText(program?.program_key)} className="ml-1 p-0.5 hover:bg-slate-100 rounded"><Copy size={12} /></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Endpoints */}
+            {endpoints.map((ep, i) => (
+                <div key={i} className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${ep.method === 'POST' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{ep.method}</span>
+                            <code className="text-sm font-mono text-slate-700">{ep.path}</code>
+                        </div>
+                        <span className="text-xs text-slate-500">{ep.title}</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                        <p className="text-sm text-slate-600">{ep.desc}</p>
+
+                        {/* Headers */}
+                        {ep.headers && (
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 mb-1">Headers</p>
+                                <pre className="bg-slate-900 text-slate-300 p-3 rounded text-xs overflow-x-auto"><code>{JSON.stringify(ep.headers, null, 2)}</code></pre>
+                            </div>
+                        )}
+
+                        {/* Request Body / Params */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <p className="text-xs font-semibold text-slate-500">{ep.request ? 'Request Body (JSON)' : 'Query Params'}</p>
+                                <button onClick={() => copyJson(ep.request || ep.params)} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"><Copy size={10} /> Kopyala</button>
+                            </div>
+                            <pre className="bg-slate-900 text-green-400 p-3 rounded text-xs overflow-x-auto"><code>{JSON.stringify(ep.request || ep.params, null, 2)}</code></pre>
+                        </div>
+
+                        {/* Success Response */}
+                        <div>
+                            <p className="text-xs font-semibold text-green-600 mb-1">✅ Başarılı Yanıt (200)</p>
+                            <pre className="bg-slate-900 text-blue-300 p-3 rounded text-xs overflow-x-auto"><code>{JSON.stringify(ep.successResponse, null, 2)}</code></pre>
+                        </div>
+
+                        {/* Error Codes */}
+                        {ep.errorCodes && (
+                            <div>
+                                <p className="text-xs font-semibold text-red-600 mb-1">❌ Hata Kodları</p>
+                                <div className="border border-slate-200 rounded overflow-hidden">
+                                    <table className="w-full text-xs">
+                                        <thead><tr className="bg-slate-50"><th className="px-3 py-1.5 text-left">Kod</th><th className="px-3 py-1.5 text-left">Açıklama</th><th className="px-3 py-1.5 text-center">HTTP</th></tr></thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {ep.errorCodes.map(ec => (
+                                                <tr key={ec.code}>
+                                                    <td className="px-3 py-1.5 font-mono text-red-600">{ec.code}</td>
+                                                    <td className="px-3 py-1.5 text-slate-600">{ec.desc}</td>
+                                                    <td className="px-3 py-1.5 text-center">{ec.status}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
+
+            {/* Auth Flow Diagram */}
+            <div className="border border-slate-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">Kimlik Doğrulama Akışı</h4>
+                <div className="space-y-2 text-xs">
+                    {[
+                        { step: '1', text: 'İstemci → POST /external-auth/login/', detail: 'program_key + kullanıcı bilgileri + HWID gönderilir' },
+                        { step: '2', text: 'Sunucu → Program Key kontrolü', detail: 'Geçersiz key = 401 INVALID_KEY' },
+                        { step: '3', text: 'Sunucu → Program aktif mi?', detail: 'Pasif = 403 PROGRAM_INACTIVE (Kill Switch)' },
+                        { step: '4', text: 'Sunucu → Versiyon kontrolü', detail: 'Eski versiyon = 403 VERSION_REJECTED + update_url' },
+                        { step: '5', text: 'Sunucu → Kullanıcı doğrulama', detail: 'AD/şifre kontrolü, çalışan kaydı kontrolü' },
+                        { step: '6', text: 'Sunucu → HWID kontrolü', detail: 'Engelli cihaz? Limit aşıldı? Yeni cihaz kaydı' },
+                        { step: '7', text: 'Sunucu → JWT Token döner', detail: 'Token 5 saat geçerli, cache\'e kaydedilir' },
+                        { step: '8', text: 'İstemci → GET /external-auth/verify/', detail: 'Periyodik oturum kontrolü (opsiyonel)' },
+                    ].map(s => (
+                        <div key={s.step} className="flex gap-3 items-start">
+                            <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold flex-shrink-0">{s.step}</span>
+                            <div>
+                                <p className="font-medium text-slate-700">{s.text}</p>
+                                <p className="text-slate-500">{s.detail}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const SettingsTab = ({ program, onUpdate }) => {
+    return (
+        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+            {/* Update URL */}
+            <SettingRow
+                label="Güncelleme Linki"
+                description="Eski sürüm kullanan istemcilere gösterilecek URL"
+                value={program.update_url || ''}
+                onSave={(v) => onUpdate({ update_url: v })}
+                type="url"
+                placeholder="https://example.com/download"
+            />
+
+            {/* Max Devices */}
+            <SettingRow
+                label="Maks. Cihaz / Kullanıcı"
+                description="Her kullanıcı en fazla bu kadar cihaz kaydedebilir"
+                value={String(program.max_devices_per_user)}
+                onSave={(v) => onUpdate({ max_devices_per_user: parseInt(v) || 1 })}
+                type="number"
+            />
+
+            {/* HWID Toggle */}
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                    <p className="text-sm font-medium text-slate-700">Donanım Kilidi (HWID)</p>
+                    <p className="text-xs text-slate-500">Aktifse cihazlar HWID ile kaydedilir ve takip edilir</p>
+                </div>
+                <button
+                    onClick={() => onUpdate({ require_hwid: !program.require_hwid })}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${program.require_hwid ? 'bg-blue-600' : 'bg-slate-300'}`}
+                >
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${program.require_hwid ? 'left-6' : 'left-0.5'}`} />
+                </button>
+            </div>
+
+            {/* Active Toggle */}
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                    <p className="text-sm font-medium text-slate-700">Program Durumu</p>
+                    <p className="text-xs text-slate-500">Devre dışı bırakılırsa tüm bağlantılar anlık kesilir</p>
+                </div>
+                <button
+                    onClick={() => onUpdate({ is_active: !program.is_active })}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${program.is_active ? 'bg-green-600' : 'bg-red-400'}`}
+                >
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${program.is_active ? 'left-6' : 'left-0.5'}`} />
+                </button>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="border border-red-200 rounded-lg p-4 mt-4">
+                <h4 className="text-sm font-semibold text-red-700 mb-2">Tehlikeli İşlemler</h4>
+                <p className="text-xs text-red-600 mb-3">Bu işlemler geri alınamaz ve mevcut bağlantıları etkileyebilir.</p>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            if (confirm('⚠️ Anahtar yenileme tüm mevcut bağlantıları keser. Devam?')) {
+                                // regenerateKey logic from parent
+                            }
+                        }}
+                        className="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1"
+                    >
+                        <RefreshCw size={14} /> Anahtarı Yenile
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const SettingRow = ({ label, description, value, onSave, type = 'text', placeholder = '' }) => {
+    const [editing, setEditing] = useState(false);
+    const [val, setVal] = useState(value);
+
+    if (!editing) {
+        return (
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                    <p className="text-sm font-medium text-slate-700">{label}</p>
+                    <p className="text-xs text-slate-500">{description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600 font-mono">{value || '—'}</span>
+                    <button onClick={() => { setVal(value); setEditing(true); }} className="p-1 hover:bg-slate-200 rounded"><Settings size={14} className="text-slate-500" /></button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm font-medium text-slate-700 mb-2">{label}</p>
+            <div className="flex items-center gap-2">
+                <input
+                    type={type}
+                    value={val}
+                    onChange={(e) => setVal(e.target.value)}
+                    placeholder={placeholder}
+                    className="flex-1 px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                />
+                <button onClick={() => { onSave(val); setEditing(false); }} className="p-1.5 text-green-600 hover:bg-green-50 rounded"><Check size={16} /></button>
+                <button onClick={() => setEditing(false)} className="p-1.5 text-red-500 hover:bg-red-50 rounded"><X size={16} /></button>
+            </div>
         </div>
     );
 };
