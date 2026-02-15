@@ -34,7 +34,7 @@ const HeroDailySummary = ({ summary, loading }) => {
 
     return (
 
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
                     Bugünün Durumu
@@ -198,8 +198,8 @@ const HeroDailySummary = ({ summary, loading }) => {
 
             </div>
 
-            {/* Scroll Down Button */}
-            <div className="flex justify-center -mt-2">
+            {/* Scroll Down Button - Floating Absolute */}
+            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center">
                 <button
                     onClick={() => {
                         const element = document.getElementById('attendance-content-start');
@@ -207,12 +207,11 @@ const HeroDailySummary = ({ summary, loading }) => {
                             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
                     }}
-                    className="flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-600 transition-colors group animate-bounce cursor-pointer p-2"
+                    className="group flex flex-col items-center gap-1 cursor-pointer transition-all hover:-translate-y-1"
                     title="Aşağı Kaydır"
                 >
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Detaylar</span>
-                    <div className="p-2 rounded-full bg-white border border-slate-100 shadow-sm group-hover:shadow-md group-hover:border-indigo-100 transition-all">
-                        <ChevronsDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
+                    <div className="p-3 rounded-full bg-white/80 backdrop-blur-md border border-white/50 shadow-lg shadow-indigo-500/10 text-slate-400 group-hover:text-indigo-600 group-hover:shadow-indigo-500/20 group-hover:border-indigo-100 transition-all duration-300">
+                        <ChevronsDown size={20} className="animate-bounce" />
                     </div>
                 </button>
             </div>
