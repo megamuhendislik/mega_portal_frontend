@@ -85,6 +85,7 @@ const MyRequestsSection = ({
 }) => {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [showPotential, setShowPotential] = useState(true);
 
     const allMyRequests = useMemo(() => {
         const items = [];
@@ -110,9 +111,10 @@ const MyRequestsSection = ({
         return allMyRequests.filter(r => {
             if (typeFilter !== 'ALL' && r._type !== typeFilter) return false;
             if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+            if (!showPotential && r.status === 'POTENTIAL') return false;
             return true;
         });
-    }, [allMyRequests, typeFilter, statusFilter]);
+    }, [allMyRequests, typeFilter, statusFilter, showPotential]);
 
     const counts = useMemo(() => ({
         all: allMyRequests.length,
@@ -159,6 +161,18 @@ const MyRequestsSection = ({
                     <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
                     <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onaylı" count={counts.approved} color="emerald" />
                     <FilterChip active={statusFilter === 'REJECTED'} onClick={() => setStatusFilter('REJECTED')} label="Red" count={counts.rejected} color="red" />
+
+                    <div className="h-8 w-px bg-slate-200 mx-1 self-center hidden sm:block"></div>
+
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 hover:text-slate-700 transition-colors select-none">
+                        <input
+                            type="checkbox"
+                            checked={showPotential}
+                            onChange={(e) => setShowPotential(e.target.checked)}
+                            className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                        />
+                        Potansiyel Talepler
+                    </label>
                 </div>
             </div>
 

@@ -134,7 +134,14 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                             </tr>
                         ) : (
                             sortedRequests.map((req) => (
-                                <tr key={req.id} className="hover:bg-slate-50/80 transition-colors group">
+                                <tr
+                                    key={req.id}
+                                    onClick={() => onViewDetails && onViewDetails(req, req.type)}
+                                    className={`transition-colors group cursor-pointer border-b border-transparent ${req.status === 'POTENTIAL'
+                                            ? 'bg-slate-50/50 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:bg-slate-50'
+                                            : 'hover:bg-slate-50/80'
+                                        }`}
+                                >
                                     {/* Employee */}
                                     {showEmployeeColumn && (
                                         <td className="p-4">
@@ -206,7 +213,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                     <td className="p-4 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => onViewDetails(req, req.type)}
+                                                onClick={(e) => { e.stopPropagation(); onViewDetails(req, req.type); }}
                                                 className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
                                                 title="Detaylar"
                                             >
@@ -216,7 +223,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             {/* Owner Actions */}
                                             {onEdit && (req.status === 'PENDING' || req.status === 'POTENTIAL') && (
                                                 <button
-                                                    onClick={() => onEdit(req)}
+                                                    onClick={(e) => { e.stopPropagation(); onEdit(req); }}
                                                     className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
                                                     title="Düzenle"
                                                 >
@@ -225,7 +232,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             )}
                                             {onDelete && (req.status === 'PENDING' || req.status === 'POTENTIAL') && (
                                                 <button
-                                                    onClick={() => onDelete(req)}
+                                                    onClick={(e) => { e.stopPropagation(); onDelete(req); }}
                                                     className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-red-600 hover:border-red-200 transition-colors shadow-sm"
                                                     title="Sil / İptal"
                                                 >
@@ -237,14 +244,14 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             {(req.status === 'PENDING' || req.status === 'POTENTIAL') && onApprove && (
                                                 <>
                                                     <button
-                                                        onClick={() => onApprove(req.id, 'Hızlı Onay')}
+                                                        onClick={(e) => { e.stopPropagation(); onApprove(req.id, 'Hızlı Onay'); }}
                                                         className="w-8 h-8 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
                                                         title="Onayla"
                                                     >
                                                         <Check size={16} />
                                                     </button>
                                                     <button
-                                                        onClick={() => openRejectModal(req)}
+                                                        onClick={(e) => { e.stopPropagation(); openRejectModal(req); }}
                                                         className="w-8 h-8 flex items-center justify-center bg-red-50 border border-red-200 rounded-lg text-red-600 hover:bg-red-100 transition-colors shadow-sm"
                                                         title="Reddet"
                                                     >
