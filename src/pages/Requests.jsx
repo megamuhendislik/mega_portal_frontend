@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
+import RequestListTable from '../components/RequestListTable';
 import CreateRequestModal from '../components/CreateRequestModal';
 import RequestDetailModal from '../components/RequestDetailModal';
 
@@ -203,176 +204,153 @@ const TeamRequestsSection = ({
     incomingRequests, teamHistoryRequests, subordinates, loading,
     getStatusBadge, handleApprove, handleReject, handleViewDetails, fetchTeamHistory
 }) => {
-    const [subTab, setSubTab] = useState('direct');
-    const [expandedGroups, setExpandedGroups] = useState({});
+    // Basic Filters
+    const [searchText, setSearchText] = useState('');
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, PENDING, POTENTIAL, APPROVED, REJECTED
+    const [employeeFilter, setEmployeeFilter] = useState('ALL');
 
-    // Group indirect requests
-    const directRequests = useMemo(() => incomingRequests.filter(r => r.level === 'direct'), [incomingRequests]);
-    const indirectRequests = useMemo(() => incomingRequests.filter(r => r.level === 'indirect'), [incomingRequests]);
-
-    const groupedIndirect = useMemo(() => {
-        const groups = {};
-        indirectRequests.forEach(r => {
-            const approver = r.approver_target;
-            const key = approver ? approver.id : 'unknown';
-            const label = approver ? approver.name : 'Bilinmiyor';
-            if (!groups[key]) groups[key] = { label, requests: [] };
-            groups[key].requests.push(r);
-        });
-        return groups;
-    }, [indirectRequests]);
-
+    // Fetch history on mount to allow full list view
     useEffect(() => {
-        if (subTab === 'history') fetchTeamHistory();
-    }, [subTab]);
+        fetchTeamHistory();
+    }, []);
 
-    const toggleGroup = (key) => {
-        setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+    const allRequests = useMemo(() => {
+        // Normalize Incoming Requests (Pending / Potential)
+        const incoming = incomingRequests.map(r => ({
+            ...r,
+            employee_name: r.employee_detail?.full_name || r.employee?.name || r.employee?.first_name + ' ' + r.employee?.last_name,
+            employee_department: r.employee_detail?.department_name || r.employee?.department?.name || '',
+            employee_avatar: r.employee_detail?.avatar || r.employee?.avatar,
+            start_date: r.start_date || r.date || r.created_at,
+            // Ensure type is consistent
+            type: r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN'),
+            // Normalize status for table compatibility if needed
+        }));
+
+        // Normalize History Requests (Approved / Rejected)
+        const history = teamHistoryRequests.map(r => ({
+            ...r,
+            employee_name: r.employee_detail?.full_name || r.employee?.first_name + ' ' + r.employee?.last_name,
+            employee_department: r.employee_detail?.department_name || '',
+            employee_avatar: r.employee_detail?.avatar,
+            start_date: r.start_date || r.date || r.created_at,
+            type: r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN'),
+        }));
+
+        // Combine and dedup by ID just in case
+        const combined = [...incoming];
+        const incomingIds = new Set(incoming.map(i => i.id));
+        history.forEach(h => {
+            if (!incomingIds.has(h.id)) combined.push(h);
+        });
+
+        return combined.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+    }, [incomingRequests, teamHistoryRequests]);
+
+    const filteredRequests = useMemo(() => {
+        return allRequests.filter(req => {
+            // Search
+            if (searchText) {
+                const searchLower = searchText.toLowerCase();
+                const nameMatch = req.employee_name?.toLowerCase().includes(searchLower);
+                if (!nameMatch) return false;
+            }
+
+            // Employee Filter
+            if (employeeFilter !== 'ALL' && req.employee?.id !== parseInt(employeeFilter)) return false;
+
+            // Type Filter
+            if (typeFilter !== 'ALL' && req.type !== typeFilter) return false;
+
+            // Status Filter
+            // Status Filter
+            if (statusFilter === 'ALL') {
+                if (req.status === 'POTENTIAL') return false; // Hide potential by default
+            } else if (statusFilter === 'POTENTIAL') {
+                if (req.status !== 'POTENTIAL') return false;
+            } else if (statusFilter !== 'ALL' && req.status !== statusFilter) {
+                return false;
+            }
+
+            return true;
+        });
+    }, [allRequests, searchText, employeeFilter, typeFilter, statusFilter]);
+
+    const counts = useMemo(() => ({
+        all: allRequests.length,
+        pending: allRequests.filter(r => r.status === 'PENDING').length,
+        potential: allRequests.filter(r => r.status === 'POTENTIAL').length,
+        approved: allRequests.filter(r => r.status === 'APPROVED').length,
+        rejected: allRequests.filter(r => r.status === 'REJECTED').length,
+    }), [allRequests]);
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
-    const renderEmptyState = (title, desc, icon) => (
-        <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/50">
-            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                {icon}
-            </div>
-            <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-            <p className="text-slate-500 mt-2 text-sm max-w-xs">{desc}</p>
-        </div>
-    );
-
     return (
-        <div className="space-y-8">
-            {/* Sub Navigation */}
-            <div className="flex justify-center">
-                <div className="bg-slate-100/50 p-1 rounded-xl inline-flex">
-                    {[
-                        { id: 'direct', label: 'Bana Gelenler', count: directRequests.length },
-                        { id: 'indirect', label: 'Alt Kademe', count: indirectRequests.length },
-                        { id: 'history', label: 'Geçmiş', count: 0 }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setSubTab(tab.id)}
-                            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2
-                                  ${subTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}
-                              `}
-                        >
-                            {tab.label}
-                            {tab.count > 0 && tab.id !== 'history' && (
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] ${subTab === tab.id ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+        <div className="space-y-6">
+            {/* Filter Bar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
+
+                {/* Left: Search & Employee Select */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="İsim ile ara..."
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                    </div>
+
+                    <select
+                        value={employeeFilter}
+                        onChange={(e) => setEmployeeFilter(e.target.value)}
+                        className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                        <option value="ALL">Tüm Ekip</option>
+                        {subordinates.map(sub => (
+                            <option key={sub.id} value={sub.id}>{sub.first_name} {sub.last_name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Right: Type & Status Filters */}
+                <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                        {['ALL', 'LEAVE', 'OVERTIME', 'MEAL', 'CARDLESS_ENTRY'].map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setTypeFilter(t)}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${typeFilter === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                            >
+                                {t === 'ALL' ? 'Tümü' : t === 'LEAVE' ? 'İzin' : t === 'OVERTIME' ? 'Mesai' : t === 'MEAL' ? 'Yemek' : 'Kartsız'}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block"></div>
+
+                    <div className="flex gap-2">
+                        <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Hepsi" color="slate" />
+                        <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
+                        <FilterChip active={statusFilter === 'POTENTIAL'} onClick={() => setStatusFilter('POTENTIAL')} label="Potansiyel" count={counts.potential} color="purple" icon={<AlertCircle size={14} />} />
+                        <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onaylı" count={counts.approved} color="emerald" />
+                        <FilterChip active={statusFilter === 'REJECTED'} onClick={() => setStatusFilter('REJECTED')} label="Red" count={counts.rejected} color="red" />
+                    </div>
                 </div>
             </div>
 
-            {/* Direct Requests */}
-            {subTab === 'direct' && (
-                directRequests.length === 0 ? renderEmptyState('Bekleyen Talep Yok', 'Şu an onayınızı bekleyen doğrudan bir talep bulunmuyor.', <CheckCircle2 size={32} className="text-emerald-500" />) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4">
-                        {directRequests.map(req => (
-                            <RequestCard
-                                key={req.uniqueId || req.id}
-                                request={{
-                                    ...req,
-                                    leave_type_name: req.request_type_detail?.name || req.details?.type_name,
-                                    employee_name: req.employee_detail?.full_name || req.employee?.name
-                                }}
-                                type={req.type}
-                                isIncoming={true}
-                                statusBadge={getStatusBadge}
-                                onApprove={(id, notes) => handleApprove(req, notes)}
-                                onReject={(id, reason) => handleReject(req, reason)}
-                                onViewDetails={handleViewDetails}
-                            />
-                        ))}
-                    </div>
-                )
-            )}
-
-            {/* Indirect Requests */}
-            {subTab === 'indirect' && (
-                Object.keys(groupedIndirect).length === 0 ? renderEmptyState('Alt Kademe Temiz', 'Alt ekiplerinizde bekleyen talep bulunmuyor.', <GitBranch size={32} className="text-blue-500" />) : (
-                    <div className="space-y-4 animate-in slide-in-from-bottom-4">
-                        {Object.entries(groupedIndirect).map(([key, group]) => {
-                            const isExpanded = expandedGroups[key] !== false;
-                            return (
-                                <div key={key} className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                    <button
-                                        onClick={() => toggleGroup(key)}
-                                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200">
-                                                <User size={18} />
-                                            </div>
-                                            <div className="text-left">
-                                                <h4 className="font-bold text-slate-800">{group.label}</h4>
-                                                <p className="text-xs text-slate-500 font-medium">{group.requests.length} Bekleyen Talep</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex -space-x-2">
-                                                {group.requests.slice(0, 3).map((r, i) => (
-                                                    <div key={i} className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-600">
-                                                        {r.employee?.name?.charAt(0)}
-                                                    </div>
-                                                ))}
-                                                {group.requests.length > 3 && (
-                                                    <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                                        +{group.requests.length - 3}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {isExpanded ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronRight size={20} className="text-slate-400" />}
-                                        </div>
-                                    </button>
-                                    {isExpanded && (
-                                        <div className="px-6 pb-6 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/30 border-t border-slate-50">
-                                            {group.requests.map(req => (
-                                                <RequestCard
-                                                    key={req.id}
-                                                    request={{ ...req, employee_name: req.employee?.name }}
-                                                    type={req.type}
-                                                    isIncoming={true}
-                                                    statusBadge={getStatusBadge}
-                                                    onViewDetails={handleViewDetails}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )
-            )}
-
-            {/* History */}
-            {subTab === 'history' && (
-                teamHistoryRequests.length === 0 ? renderEmptyState('Geçmiş Kayıt Yok', 'Henüz geçmişe dönük bir talep kaydı bulunmamaktadır.', <FileText size={32} className="text-slate-400" />) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4">
-                        {teamHistoryRequests.map(req => (
-                            <RequestCard
-                                key={req.id}
-                                request={{
-                                    ...req,
-                                    leave_type_name: req.request_type_detail?.name,
-                                    employee_name: req.employee_detail?.full_name
-                                }}
-                                type={req.type} // Fix styling for history items
-                                isIncoming={true}
-                                statusBadge={getStatusBadge}
-                                onViewDetails={handleViewDetails}
-                            />
-                        ))}
-                    </div>
-                )
-            )}
+            {/* List Table */}
+            <RequestListTable
+                requests={filteredRequests}
+                onViewDetails={handleViewDetails}
+                onApprove={handleApprove}
+                onReject={handleReject}
+            />
         </div>
     );
 };
