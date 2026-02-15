@@ -375,6 +375,9 @@ const RequestAnalyticsSection = ({ subordinates, loading }) => {
                 const params = selectedEmployee ? { employee_id: selectedEmployee } : {};
                 const res = await api.get('/request-analytics/', { params });
                 setData(res.data);
+            } catch (err) {
+                console.error("Analytics error:", err);
+                setData(null);
             } finally {
                 setFetching(false);
             }
@@ -382,7 +385,12 @@ const RequestAnalyticsSection = ({ subordinates, loading }) => {
         fetchAnalytics();
     }, [selectedEmployee]);
 
-    if (loading || fetching || !data) return <div className="space-y-6 animate-pulse"><div className="h-64 bg-slate-100 rounded-3xl" /></div>;
+    if (loading || fetching) return <div className="space-y-6 animate-pulse"><div className="h-64 bg-slate-100 rounded-3xl" /></div>;
+
+    if (!data) return <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
+        <PieChart size={48} className="mb-4 opacity-20" />
+        <p>Analiz verisi oluşturulamadı veya henüz veri yok.</p>
+    </div>;
 
     return (
         <div className="space-y-6 animate-in fade-in">
@@ -490,9 +498,13 @@ const Requests = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedRequestType, setSelectedRequestType] = useState(null);
     const [subordinates, setSubordinates] = useState([]);
+    const [subordinateIds, setSubordinateIds] = useState(new Set());
+    const [directSubordinateIds, setDirectSubordinateIds] = useState(new Set());
+    const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
+
     const [createModalInitialData, setCreateModalInitialData] = useState(null);
 
-    const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME');
+    const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || subordinates.length > 0;
 
     useSmartPolling(() => {
         if (!loading && !showCreateModal && !showEditOvertimeModal) fetchData();
@@ -500,17 +512,48 @@ const Requests = () => {
 
     useEffect(() => {
         fetchData();
-        if (isManager) fetchSubordinates();
+        fetchMe();
     }, []);
+
+    useEffect(() => {
+        if (isManager) fetchSubordinates();
+    }, [isManager]); // Fetch when permission detected
+
+    // Calculate Direct Subordinates
+    useEffect(() => {
+        if (subordinates.length > 0 && currentUserEmployeeId) {
+            const directIds = new Set(
+                subordinates.filter(sub => {
+                    // Check reports_to (direct ID on model)
+                    if (sub.reports_to === currentUserEmployeeId) return true;
+                    // Check primary_managers list (from serializer)
+                    if (sub.primary_managers && sub.primary_managers.some(m => m.id === currentUserEmployeeId)) return true;
+                    return false;
+                }).map(s => s.id)
+            );
+            setDirectSubordinateIds(directIds);
+        }
+    }, [subordinates, currentUserEmployeeId]);
+
+
+    const fetchMe = async () => {
+        try {
+            const res = await api.get('/employees/me/');
+            setCurrentUserEmployeeId(res.data.id);
+        } catch (e) { console.error("Error fetching me:", e); }
+    };
 
     const fetchSubordinates = async () => {
         try {
             const res = await api.get('/employees/subordinates/');
             setSubordinates(res.data);
+            setSubordinateIds(new Set(res.data.map(e => e.id)));
         } catch (e) { console.error(e); }
     };
 
     const fetchData = async () => {
+        // setLoading(true); // Don't full reset loading on poll, only on mount? 
+        // Logic handled by caller or rely on smart polling not causing flicker.
         try {
             const calls = [
                 api.get('/leave/requests/'),
@@ -519,15 +562,31 @@ const Requests = () => {
                 api.get('/meal-requests/'),
                 api.get('/cardless-entry-requests/'),
             ];
-            if (isManager) calls.push(api.get('/team-requests/'));
 
-            const results = await Promise.all(calls);
-            setRequests(results[0].data.results || results[0].data);
-            setRequestTypes(results[1].data.results || results[1].data);
-            setOvertimeRequests(results[2].data.results || results[2].data);
-            setMealRequests(results[3].data.results || results[3].data);
-            setCardlessEntryRequests(results[4].data.results || results[4].data);
-            if (results[5]) setIncomingRequests(results[5].data || []);
+            // Try fetching team requests (soft fail)
+            const teamCalls = [
+                api.get('/team-requests/').catch(() => ({ data: [] })),
+                api.get('/leave/requests/team_history/').catch(() => ({ data: { results: [] } }))
+            ];
+
+            const [
+                myRequestsRes, leaveTypesRes, overtimeRes, mealRes, cardlessRes
+            ] = await Promise.all(calls);
+
+            // Separate await for team to not block my requests? No, Promise.all is fine.
+            // Actually, let's just add them to Promise.all but handle individually?
+            // Simplified:
+
+            const [incomingRes, historyRes] = await Promise.all(teamCalls);
+
+            setRequests(myRequestsRes.data.results || myRequestsRes.data);
+            setRequestTypes(leaveTypesRes.data.results || leaveTypesRes.data);
+            setOvertimeRequests(overtimeRes.data.results || overtimeRes.data);
+            setMealRequests(mealRes.data.results || mealRes.data);
+            setCardlessEntryRequests(cardlessRes.data.results || cardlessRes.data);
+
+            setIncomingRequests(incomingRes.data || []);
+            setTeamHistoryRequests(historyRes.data.results || historyRes.data || []);
 
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -597,6 +656,26 @@ const Requests = () => {
         }
     };
 
+    // --- Filtering Logic for New Tabs ---
+    const getDirectRequests = () => {
+        // Incoming: check 'level' field
+        const directIncoming = incomingRequests.filter(r => r.level === 'direct');
+        // History: check 'employee.id' against directSubordinateIds
+        const directHistory = teamHistoryRequests.filter(r => r.employee && (r.employee.id === undefined ? directSubordinateIds.has(r.employee) : directSubordinateIds.has(r.employee.id)));
+        return { incoming: directIncoming, history: directHistory };
+    };
+
+    const getIndirectRequests = () => {
+        // Incoming: check 'level' field
+        const indirectIncoming = incomingRequests.filter(r => r.level === 'indirect');
+        // History: check 'employee.id' NOT in directSubordinateIds
+        const indirectHistory = teamHistoryRequests.filter(r => r.employee && (r.employee.id === undefined ? !directSubordinateIds.has(r.employee) : !directSubordinateIds.has(r.employee.id)));
+        return { incoming: indirectIncoming, history: indirectHistory };
+    };
+
+    const directData = getDirectRequests();
+    const indirectData = getIndirectRequests();
+
     return (
         <div className="space-y-8 pb-12 animate-fade-in">
             {/* Header */}
@@ -617,9 +696,29 @@ const Requests = () => {
             {/* Navigation Tabs */}
             <div className="border-b border-slate-200 flex gap-1 overflow-x-auto no-scrollbar">
                 <TabButton active={activeTab === 'my_requests'} onClick={() => setActiveTab('my_requests')} icon={<Layers size={18} />}>Taleplerim</TabButton>
+
                 {isManager && (
-                    <TabButton active={activeTab === 'team_requests'} onClick={() => setActiveTab('team_requests')} icon={<Users size={18} />} badge={incomingRequests.filter(r => r.level === 'direct').length}>Ekip Talepleri</TabButton>
+                    <>
+                        <TabButton
+                            active={activeTab === 'direct_requests'}
+                            onClick={() => setActiveTab('direct_requests')}
+                            icon={<User size={18} />}
+                            badge={directData.incoming.length}
+                        >
+                            Doğrudan Talepler
+                        </TabButton>
+
+                        <TabButton
+                            active={activeTab === 'team_requests'}
+                            onClick={() => setActiveTab('team_requests')}
+                            icon={<Users size={18} />}
+                            badge={indirectData.incoming.length}
+                        >
+                            Ekip Talepleri
+                        </TabButton>
+                    </>
                 )}
+
                 <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<PieChart size={18} />}>Analiz</TabButton>
             </div>
 
@@ -641,10 +740,23 @@ const Requests = () => {
                         setShowCreateModal={setShowCreateModal}
                     />
                 )}
+                {activeTab === 'direct_requests' && (
+                    <TeamRequestsSection
+                        incomingRequests={directData.incoming}
+                        teamHistoryRequests={directData.history}
+                        subordinates={subordinates}
+                        loading={loading}
+                        getStatusBadge={getStatusBadge}
+                        handleApprove={handleApprove}
+                        handleReject={handleReject}
+                        handleViewDetails={handleViewDetails}
+                        fetchTeamHistory={fetchTeamHistory}
+                    />
+                )}
                 {activeTab === 'team_requests' && (
                     <TeamRequestsSection
-                        incomingRequests={incomingRequests}
-                        teamHistoryRequests={teamHistoryRequests}
+                        incomingRequests={indirectData.incoming}
+                        teamHistoryRequests={indirectData.history}
                         subordinates={subordinates}
                         loading={loading}
                         getStatusBadge={getStatusBadge}
