@@ -162,7 +162,7 @@ const MyRequestsSection = ({
                 </div>
             </div>
 
-            {/* Request Grid */}
+            {/* Request Grid replaced by List Table */}
             {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                     <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
@@ -178,21 +178,14 @@ const MyRequestsSection = ({
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {filtered.map(req => (
-                        <RequestCard
-                            onViewDetails={handleViewDetails}
-                            key={`${req._type}-${req.id}`}
-                            request={req}
-                            type={req._type}
-                            statusBadge={getStatusBadge}
-                            onEdit={req._type === 'OVERTIME' && req.status === 'PENDING' ? handleEditOvertimeClick : undefined}
-                            onDelete={['POTENTIAL', 'PENDING'].includes(req.status)
-                                ? (r) => handleDeleteRequest(r, req._type)
-                                : undefined
-                            }
-                        />
-                    ))}
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <RequestListTable
+                        requests={filtered}
+                        onViewDetails={handleViewDetails}
+                        onEdit={handleEditOvertimeClick}
+                        onDelete={handleDeleteRequest}
+                        showEmployeeColumn={false}
+                    />
                 </div>
             )}
         </div>

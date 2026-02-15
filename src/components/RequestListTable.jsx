@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
 import {
     ArrowUpDown, Calendar, Clock, CheckCircle2, XCircle, AlertCircle,
     FileText, Utensils, CreditCard, ChevronRight, User, MoreHorizontal,
-    Check, X, Eye
+    Check, X, Eye, Edit2, Trash2
 } from 'lucide-react';
 
-const RequestListTable = ({ requests, onViewDetails, onApprove, onReject }) => {
+const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -106,9 +105,11 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject }) => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wider">
-                            <th className="p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('employee')}>
-                                <div className="flex items-center gap-1">Çalışan <ArrowUpDown size={12} /></div>
-                            </th>
+                            {showEmployeeColumn && (
+                                <th className="p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('employee')}>
+                                    <div className="flex items-center gap-1">Çalışan <ArrowUpDown size={12} /></div>
+                                </th>
+                            )}
                             <th className="p-4 font-bold">Talep Türü</th>
                             <th className="p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('date')}>
                                 <div className="flex items-center gap-1">Tarih <ArrowUpDown size={12} /></div>
@@ -134,21 +135,23 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject }) => {
                             sortedRequests.map((req) => (
                                 <tr key={req.id} className="hover:bg-slate-50/80 transition-colors group">
                                     {/* Employee */}
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200">
-                                                {req.employee_avatar ? (
-                                                    <img src={req.employee_avatar} alt="" className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    <User size={16} />
-                                                )}
+                                    {showEmployeeColumn && (
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200">
+                                                    {req.employee_avatar ? (
+                                                        <img src={req.employee_avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                                    ) : (
+                                                        <User size={16} />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-800 text-sm">{req.employee_name || 'Bilinmiyor'}</div>
+                                                    <div className="text-[10px] text-slate-400 font-medium">{req.employee_department || '-'}</div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="font-bold text-slate-800 text-sm">{req.employee_name || 'Bilinmiyor'}</div>
-                                                <div className="text-[10px] text-slate-400 font-medium">{req.employee_department || '-'}</div>
-                                            </div>
-                                        </div>
-                                    </td>
+                                        </td>
+                                    )}
 
                                     {/* Type */}
                                     <td className="p-4">
@@ -209,6 +212,27 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject }) => {
                                                 <Eye size={16} />
                                             </button>
 
+                                            {/* Owner Actions */}
+                                            {onEdit && (req.status === 'PENDING' || req.status === 'POTENTIAL') && (
+                                                <button
+                                                    onClick={() => onEdit(req)}
+                                                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
+                                                    title="Düzenle"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                            )}
+                                            {onDelete && (req.status === 'PENDING' || req.status === 'POTENTIAL') && (
+                                                <button
+                                                    onClick={() => onDelete(req)}
+                                                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-red-600 hover:border-red-200 transition-colors shadow-sm"
+                                                    title="Sil / İptal"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+
+                                            {/* Manager Actions */}
                                             {(req.status === 'PENDING' || req.status === 'POTENTIAL') && onApprove && (
                                                 <>
                                                     <button
