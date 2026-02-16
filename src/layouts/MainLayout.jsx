@@ -332,7 +332,7 @@ const MainLayout = () => {
                                     {user?.first_name ? `${user.first_name} ${user.last_name}` : (user?.username || 'Kullanıcı')}
                                 </div>
                                 <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                                    {user?.job_position?.name || 'Personel'}
+                                    {user?.primary_role?.name || user?.job_position?.name || 'Personel'}
                                 </div>
                             </div>
                             <div className="relative">
