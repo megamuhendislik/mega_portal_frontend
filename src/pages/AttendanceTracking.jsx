@@ -131,18 +131,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const fetchHierarchy = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/departments/hierarchy/');
+            const res = await api.get('/dashboard/team_hierarchy/');
             setHierarchyData(Array.isArray(res.data) ? res.data : []);
-            // Auto expand ALL departments recursively
+            // Auto expand all nodes that have children
             if (Array.isArray(res.data)) {
                 const initialExpanded = {};
                 const expandAll = (nodes) => {
-                    nodes.forEach(d => {
-                        if (d.employees !== undefined) {
-                            initialExpanded[d.id] = true;
-                        }
-                        if (d.children && d.children.length > 0) {
-                            expandAll(d.children);
+                    nodes.forEach(n => {
+                        if (n.children && n.children.length > 0) {
+                            initialExpanded[n.id] = true;
+                            expandAll(n.children);
                         }
                     });
                 };
@@ -182,7 +180,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
     // --- HIERARCHY HELPERS ---
 
-    // Merge Stats into Hierarchy Tree
+    // Merge Stats into Hierarchy Tree (manager-based)
     const getMergedHierarchy = () => {
         if (!hierarchyData || hierarchyData.length === 0) return [];
 
@@ -193,271 +191,195 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         const attachStats = (nodes) => {
             return nodes.map(node => {
                 let newNode = { ...node };
-
-                if (node.employees !== undefined) {
-                    // It's a Department
-                    newNode.type = 'DEPT';
-                    newNode.employees = attachStats(node.employees || []);
-                    newNode.children = attachStats(node.children || []);
-                } else {
-                    // It's an Employee
-                    newNode.type = 'EMP';
-                    newNode.stats = statsMap[node.id] || null;
-                    newNode.children = attachStats(node.children || []);
-                }
+                newNode.type = 'EMP';
+                newNode.stats = statsMap[node.id] || null;
+                newNode.children = attachStats(node.children || []);
                 return newNode;
             });
         };
 
-        const merged = attachStats(hierarchyData);
-
-        // Group orphan employees (root-level EMPs) into a virtual dept
-        const depts = merged.filter(n => n.type === 'DEPT');
-        const orphans = merged.filter(n => n.type === 'EMP');
-
-        if (orphans.length > 0) {
-            depts.push({
-                id: '__orphans__',
-                name: 'Diğer Personeller',
-                type: 'DEPT',
-                employees: orphans,
-                children: []
-            });
-            // Auto-expand orphan group
-            if (!expandedDepts['__orphans__']) {
-                setExpandedDepts(prev => ({ ...prev, '__orphans__': true }));
-            }
-        }
-
-        return depts;
+        return attachStats(hierarchyData);
     };
 
     const toggleDept = (id) => {
         setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    // Recursive function to aggregate stats for a node (dept) and its children
+    // Recursive function to aggregate stats for a node and its children (subordinates)
     const calculateNodeStats = (node) => {
-        let stats = {
-            count: 0,
-            onlineCount: 0,
-            total_worked: 0,
-            total_overtime: 0,
-            total_missing: 0,
-
-            // Daily Stats Aggregation
-            today_normal: 0,
-            today_overtime: 0,
-            today_break: 0,
-
-            // Monthly Net Balance
+        let agg = {
+            count: 0, onlineCount: 0,
+            total_worked: 0, total_overtime: 0, total_missing: 0,
+            today_normal: 0, today_overtime: 0, today_break: 0,
             monthly_net_balance: 0
         };
 
-        // 1. Stats from direct employees
-        if (node.employees && node.employees.length > 0) {
-            node.employees.forEach(empNode => {
-                const s = empNode.stats || {};
-                // Only count if employee stats exist (real person)
-                if (s.employee_id) {
-                    stats.count += 1;
-                    if (s.is_online) stats.onlineCount += 1;
-
-                    stats.total_worked += (s.total_worked || 0);
-                    stats.total_overtime += (s.total_overtime || 0);
-                    stats.total_missing += (s.total_missing || 0);
-
-                    stats.today_normal += (s.today_normal || 0);
-                    stats.today_overtime += (s.today_overtime || 0);
-                    stats.today_break += (s.today_break || 0);
-                    stats.monthly_net_balance += (s.monthly_net_balance || 0);
-                }
-            });
+        // Count this node's own stats
+        const s = node.stats || {};
+        if (s.employee_id) {
+            agg.count += 1;
+            if (s.is_online) agg.onlineCount += 1;
+            agg.total_worked += (s.total_worked || 0);
+            agg.total_overtime += (s.total_overtime || 0);
+            agg.total_missing += (s.total_missing || 0);
+            agg.today_normal += (s.today_normal || 0);
+            agg.today_overtime += (s.today_overtime || 0);
+            agg.today_break += (s.today_break || 0);
+            agg.monthly_net_balance += (s.monthly_net_balance || 0);
         }
 
-        // 2. Stats from sub-departments (children)
+        // Aggregate children (subordinates)
         if (node.children && node.children.length > 0) {
             node.children.forEach(child => {
                 const childStats = calculateNodeStats(child);
-                stats.count += childStats.count;
-                stats.onlineCount += childStats.onlineCount;
-
-                stats.total_worked += childStats.total_worked;
-                stats.total_overtime += childStats.total_overtime;
-                stats.total_missing += childStats.total_missing;
-
-                stats.today_normal += childStats.today_normal;
-                stats.today_overtime += childStats.today_overtime;
-                stats.today_break += childStats.today_break;
-                stats.monthly_net_balance += childStats.monthly_net_balance;
+                agg.count += childStats.count;
+                agg.onlineCount += childStats.onlineCount;
+                agg.total_worked += childStats.total_worked;
+                agg.total_overtime += childStats.total_overtime;
+                agg.total_missing += childStats.total_missing;
+                agg.today_normal += childStats.today_normal;
+                agg.today_overtime += childStats.today_overtime;
+                agg.today_break += childStats.today_break;
+                agg.monthly_net_balance += childStats.monthly_net_balance;
             });
         }
 
-        return stats;
+        return agg;
     };
 
     const renderHierarchyRows = (nodes, depth = 0) => {
         if (!nodes) return null;
 
         return nodes.map(node => {
-            // Filter Check for Employees
-            if (node.type === 'EMP') {
-                const s = node.stats || {};
+            const s = node.stats || {};
+            const hasChildren = node.children && node.children.length > 0;
+            const isExpanded = expandedDepts[node.id];
 
-                // Apply Search & Status Filter
-                const matchesSearch = searchTerm === '' ||
-                    (node.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (node.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+            // Apply Search & Status Filter
+            const matchesSearch = searchTerm === '' ||
+                (node.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (node.title || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-                let matchesStatus = true;
-                if (filterStatus === 'ONLINE') matchesStatus = s.is_online;
-                else if (filterStatus === 'OVERTIME') matchesStatus = s.total_overtime > 0;
-                else if (filterStatus === 'MISSING') matchesStatus = s.total_missing > 0;
+            let matchesStatus = true;
+            if (filterStatus === 'ONLINE') matchesStatus = s.is_online;
+            else if (filterStatus === 'OVERTIME') matchesStatus = s.total_overtime > 0;
+            else if (filterStatus === 'MISSING') matchesStatus = s.total_missing > 0;
 
-                // If not match, strictly hide? Or show if children match?
-                // Simple strict filtering for now.
-                if (!matchesSearch || !matchesStatus) {
-                    // If it has children that match, maybe show? 
-                    // For now, return null to hide.
-                    // BUT, if we hide a manager, do we hide subs? Yes usually.
-                    // Unless we want to show path.
-                    return null;
-                }
+            if (!matchesSearch || !matchesStatus) return null;
+            if (!s.employee_id && stats.length > 0) return null;
 
-                // Check Department Filter
-                if (selectedDept && s.department_id !== parseInt(selectedDept)) {
-                    // Relaxed check: if selectedDept is selected, we might only show employees of that dept.
-                    // The stats API filter handles this usually, but hierarchy might load all.
-                    // If stats are empty (filtered out by API), s is empty.
-                    if (!s.employee_id) return null;
-                }
-
-                if (!s.employee_id && stats.length > 0) return null; // No stats found (filtered out server side)
+            // Manager row (has subordinates) - show as expandable with aggregate stats
+            if (hasChildren) {
+                const nodeStats = calculateNodeStats(node);
 
                 return (
-                    <React.Fragment key={'emp-' + node.id}>
-                        <tr className="hover:bg-slate-50/80 transition-all group border-b border-slate-50">
-                            <td className="p-4 pl-6">
+                    <React.Fragment key={'mgr-' + node.id}>
+                        <tr className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-100/50 transition-all">
+                            <td className="p-3 pl-6">
                                 <div className="flex items-center gap-3" style={{ paddingLeft: `${depth * 20}px` }}>
-                                    {/* Avatar / Icon */}
+                                    <div className="cursor-pointer p-1 rounded-md transition-colors bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500" onClick={() => toggleDept(node.id)}>
+                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
+                                    </div>
                                     <div className="relative shrink-0">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border border-slate-100 shadow-sm ${node.manager_id ? 'bg-white text-slate-600' : 'bg-slate-100 text-slate-700'}`}>
+                                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
                                             {(node.name || '?').charAt(0)}
                                         </div>
                                         {s.is_online && (
                                             <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
                                         )}
                                     </div>
-
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-slate-700 text-sm whitespace-nowrap">{node.name}</span>
-                                            {node.is_secondary && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">Vekil</span>}
+                                            <span className="font-bold text-slate-700 text-sm">{node.name}</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold">{nodeStats.count} Kişi</span>
                                         </div>
-                                        <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-                                            {node.title && <span>{node.title}</span>}
-                                        </div>
+                                        <span className="text-[11px] text-slate-400 font-medium">{node.title}</span>
                                     </div>
                                 </div>
                             </td>
-
-                            {/* Status */}
-                            <td className="p-4">
+                            <td className="p-3">
                                 {s.is_online ?
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span> :
-                                    s.total_missing > 0 ? <span className="text-[10px] font-bold text-slate-400">Dışarıda</span> :
-                                        <span className="text-[10px] text-slate-400">Normal</span>
+                                    <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
                                 }
                             </td>
-
-                            {/* Daily Stats */}
-                            <td className="p-4">
-                                <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-slate-700">{formatMinutes(s.today_normal)}</span>
-                                </div>
+                            <td className="p-3">
+                                <span className="text-xs font-bold text-slate-700">{formatMinutes(s.today_normal)}</span>
                             </td>
-                            <td className="p-4 text-center">
+                            <td className="p-3 text-center">
                                 {s.today_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.today_overtime)}</span> : <span className="text-slate-300">-</span>}
                             </td>
-                            <td className="p-4 text-center">
+                            <td className="p-3 text-center">
                                 {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
                             </td>
-
-                            {/* Monthly Balance */}
-                            <td className="p-4 text-right">
-                                {s.monthly_net_balance !== 0 ? (
-                                    <span className={`text-xs font-mono font-bold ${s.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                        {s.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(s.monthly_net_balance)}
+                            <td className="p-3 text-right">
+                                {nodeStats.monthly_net_balance !== 0 ? (
+                                    <span className={`text-xs font-mono font-bold ${nodeStats.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {nodeStats.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(nodeStats.monthly_net_balance)}
                                     </span>
                                 ) : <span className="text-slate-300">-</span>}
                             </td>
-
-                            <td className="p-4 text-center">
-                                {/* Optional Action */}
+                            <td className="p-3 text-center">
                                 <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
                                     <Activity size={14} />
                                 </button>
                             </td>
                         </tr>
-                        {/* Recursive Children (Subordinates) */}
-                        {renderHierarchyRows(node.children, depth + 1)}
-                    </React.Fragment>
-                );
-            } else if (node.type === 'DEPT') {
-                // Check if dept has relevant children after filtering?
-                // For efficiency, just render.
-                const isExpanded = expandedDepts[node.id];
-                const nodeStats = calculateNodeStats(node);
-
-                return (
-                    <React.Fragment key={'dept-' + node.id}>
-                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                            <td className="p-3">
-                                <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => toggleDept(node.id)} style={{ paddingLeft: `${depth * 20}px` }}>
-                                    <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-slate-200 text-slate-600' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
-                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
-                                    </div>
-                                    <span className="font-bold text-sm text-slate-700">{node.name}</span>
-                                    <span className="text-xs text-slate-400 font-normal">({nodeStats.count} Kişi)</span>
-                                </div>
-                            </td>
-                            <td className="p-3">
-                                {nodeStats.onlineCount > 0 && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                        {nodeStats.onlineCount} Ofiste
-                                    </span>
-                                )}
-                            </td>
-                            {/* Daily Aggregates for Dept */}
-                            <td className="p-3">
-                                {nodeStats.today_normal > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.today_normal)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {nodeStats.today_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.today_overtime)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {nodeStats.today_break > 0 && <span className="text-xs font-mono font-bold text-slate-500">{formatMinutes(nodeStats.today_break)}</span>}
-                            </td>
-
-                            {/* Monthly Balance Aggregate */}
-                            <td className="p-3 text-right">
-                                {nodeStats.monthly_net_balance !== 0 && (
-                                    <span className={`text-xs font-mono font-bold ${nodeStats.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                        {nodeStats.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(nodeStats.monthly_net_balance)}
-                                    </span>
-                                )}
-                            </td>
-                        </tr>
-                        {isExpanded && (
-                            <>
-                                {renderHierarchyRows(node.employees, depth + 1)}
-                                {renderHierarchyRows(node.children, depth + 1)}
-                            </>
-                        )}
+                        {isExpanded && renderHierarchyRows(node.children, depth + 1)}
                     </React.Fragment>
                 );
             }
-            return null;
+
+            // Leaf employee row (no subordinates)
+            return (
+                <React.Fragment key={'emp-' + node.id}>
+                    <tr className="hover:bg-slate-50/80 transition-all group border-b border-slate-50">
+                        <td className="p-4 pl-6">
+                            <div className="flex items-center gap-3" style={{ paddingLeft: `${depth * 20}px` }}>
+                                <div className="relative shrink-0">
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-white text-slate-600 border border-slate-100 shadow-sm">
+                                        {(node.name || '?').charAt(0)}
+                                    </div>
+                                    {s.is_online && (
+                                        <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
+                                    )}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-semibold text-slate-700 text-sm whitespace-nowrap">{node.name}</span>
+                                    <span className="text-[11px] text-slate-400 font-medium">{node.title}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td className="p-4">
+                            {s.is_online ?
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span> :
+                                <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
+                            }
+                        </td>
+                        <td className="p-4">
+                            <span className="text-xs font-bold text-slate-700">{formatMinutes(s.today_normal)}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                            {s.today_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.today_overtime)}</span> : <span className="text-slate-300">-</span>}
+                        </td>
+                        <td className="p-4 text-center">
+                            {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
+                        </td>
+                        <td className="p-4 text-right">
+                            {s.monthly_net_balance !== 0 ? (
+                                <span className={`text-xs font-mono font-bold ${s.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                    {s.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(s.monthly_net_balance)}
+                                </span>
+                            ) : <span className="text-slate-300">-</span>}
+                        </td>
+                        <td className="p-4 text-center">
+                            <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
+                                <Activity size={14} />
+                            </button>
+                        </td>
+                    </tr>
+                </React.Fragment>
+            );
         });
     };
 
