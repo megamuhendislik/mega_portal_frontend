@@ -582,7 +582,7 @@ const CalendarPage = () => {
                         </p>
 
                         {/* Admin Fiscal Toggle */}
-                        {hasPermission('ATTENDANCE_MANAGE_FISCAL') && (
+                        {hasPermission('SYSTEM_FULL_ACCESS') && (
                             <button
                                 onClick={() => setMode(mode === 'FISCAL' ? 'CALENDAR' : 'FISCAL')}
                                 className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${mode === 'FISCAL' ? 'bg-slate-800 text-white shadow-lg shadow-slate-300' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'}`}

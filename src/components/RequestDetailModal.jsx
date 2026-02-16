@@ -72,7 +72,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
   if (!isOpen || !request) return null;
 
-  const canOverride = hasPermission('REQUEST_OVERRIDE_DECISION') &&
+  const canOverride = hasPermission('SYSTEM_FULL_ACCESS') &&
     !timeLockInfo?.is_locked &&
     request.status !== 'PENDING';
 

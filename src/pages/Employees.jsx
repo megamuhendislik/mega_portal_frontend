@@ -1567,7 +1567,7 @@ const Employees = () => {
                                                                         <Edit2 size={18} />
                                                                     </button>
 
-                                                                    {hasPermission('EMPLOYEE_DELETE') && !emp.isMatrix && (
+                                                                    {hasPermission('PAGE_EMPLOYEES') && !emp.isMatrix && (
                                                                         <button
                                                                             onClick={() => handleDelete(emp.id)}
                                                                             className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
@@ -1710,8 +1710,8 @@ const Employees = () => {
                                     <StepPersonal
                                         formData={formData}
                                         handleChange={handleInputChange}
-                                        canEditSensitive={hasPermission('EMPLOYEE_EDIT_SENSITIVE')}
-                                        canChangePassword={hasPermission('EMPLOYEE_CHANGE_PASSWORD')}
+                                        canEditSensitive={hasPermission('PAGE_EMPLOYEES')}
+                                        canChangePassword={hasPermission('PAGE_EMPLOYEES')}
                                     />
                                 </section>
 
@@ -1736,7 +1736,7 @@ const Employees = () => {
                                 </section>
 
                                 {/* Section 5: Permissions */}
-                                {hasPermission('EMPLOYEE_MANAGE_ROLES') && (
+                                {hasPermission('SYSTEM_FULL_ACCESS') && (
                                     <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
                                         <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />
                                     </section>
@@ -1750,8 +1750,8 @@ const Employees = () => {
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
                                 {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
-                                {currentStep === 6 && hasPermission('EMPLOYEE_MANAGE_ROLES') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
-                                {currentStep === 6 && !hasPermission('EMPLOYEE_MANAGE_ROLES') && (
+                                {currentStep === 6 && hasPermission('SYSTEM_FULL_ACCESS') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
+                                {currentStep === 6 && !hasPermission('SYSTEM_FULL_ACCESS') && (
                                     <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-fade-in">
                                         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400"><Key size={32} /></div>
                                         <h3 className="text-xl font-bold text-slate-700">Yetkilendirme Erişimi Kısıtlı</h3>

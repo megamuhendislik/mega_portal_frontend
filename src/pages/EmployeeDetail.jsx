@@ -14,10 +14,10 @@ const EmployeeDetail = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
 
-    const canEdit = hasPermission('EMPLOYEE_UPDATE'); // Check permission
-    const canEditSensitive = hasPermission('EMPLOYEE_EDIT_SENSITIVE');
-    const canChangePassword = hasPermission('EMPLOYEE_CHANGE_PASSWORD');
-    const canManageRoles = hasPermission('EMPLOYEE_MANAGE_ROLES'); // Use ACCESS_ASSIGN_PERMISSIONS if mapped, but preferably explicit
+    const canEdit = hasPermission('PAGE_EMPLOYEES');
+    const canEditSensitive = hasPermission('PAGE_EMPLOYEES');
+    const canChangePassword = hasPermission('PAGE_EMPLOYEES');
+    const canManageRoles = hasPermission('SYSTEM_FULL_ACCESS');
 
     // Data Sources
     const [departments, setDepartments] = useState([]);
