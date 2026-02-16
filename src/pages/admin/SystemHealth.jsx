@@ -691,6 +691,11 @@ function PermissionMatrixView() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [activeSection, setActiveSection] = useState('users'); // users, roles, perms
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterDept, setFilterDept] = useState('ALL');
+    const [filterRole, setFilterRole] = useState('ALL');
+    const [showOnlyIssues, setShowOnlyIssues] = useState(false);
+    const [expandedUser, setExpandedUser] = useState(null);
 
     useEffect(() => {
         fetchMatrix();
@@ -711,6 +716,91 @@ function PermissionMatrixView() {
     if (loading && !data) return <div className="p-12 text-center text-gray-500 animate-pulse">Matris verisi yükleniyor...</div>;
     if (!data) return null;
 
+    // Derive unique departments and roles for filters
+    const departments = [...new Set(data.users.map(u => u.department))].filter(Boolean).sort();
+    const allRoleKeys = [...new Set(data.users.flatMap(u => u.role_keys || []))].sort();
+
+    // Frontend permission codes that are actually checked in routes/sidebar
+    const frontendPagePerms = [
+        'PAGE_EMPLOYEES', 'PAGE_ORG_CHART', 'PAGE_WORK_SCHEDULES', 'PAGE_REPORTS',
+        'PAGE_SYSTEM_HEALTH', 'PAGE_MEAL_ORDERS', 'PAGE_DATA_MANAGEMENT', 'PAGE_DEBUG', 'PAGE_PROGRAM_MANAGEMENT'
+    ];
+    const frontendFeaturePerms = [
+        'EMPLOYEE_UPDATE', 'EMPLOYEE_EDIT_SENSITIVE', 'EMPLOYEE_CHANGE_PASSWORD', 'EMPLOYEE_MANAGE_ROLES', 'EMPLOYEE_DELETE',
+        'REQUEST_OVERRIDE_DECISION', 'ATTENDANCE_MANAGE_FISCAL', 'ACTION_ORG_CHART_EDIT',
+        'SYSTEM_ADMIN_ACCESS', 'SYSTEM_FULL_ACCESS',
+        'VIEW_MEAL_ORDERS', 'MANAGE_MEAL_ORDERS',
+        'APPROVAL_LEAVE', 'APPROVAL_OVERTIME'
+    ];
+    const allCriticalPerms = [...frontendPagePerms, ...frontendFeaturePerms];
+
+    // Detect issues per user
+    const getUserIssues = (user) => {
+        const issues = [];
+        if (user.is_superuser) return issues; // superuser has everything
+
+        // Check: user has no roles at all
+        if (!user.roles || user.roles.length === 0) {
+            issues.push({ type: 'warning', msg: 'Hiç rolü yok' });
+        }
+
+        // Check: user has no page permissions (can't see anything in sidebar)
+        const userPagePerms = frontendPagePerms.filter(p => user.permissions?.includes(p));
+        if (userPagePerms.length === 0 && !user.permissions?.includes('SYSTEM_FULL_ACCESS')) {
+            issues.push({ type: 'error', msg: 'Hiçbir sayfa yetkisi yok (menü tamamen boş)' });
+        }
+
+        // Check: excluded permissions exist
+        if (user.excluded_permissions && user.excluded_permissions.length > 0) {
+            issues.push({ type: 'info', msg: `${user.excluded_permissions.length} hariç tutulan yetki` });
+        }
+
+        // Check: direct permissions exist (unusual)
+        if (user.direct_permissions && user.direct_permissions.length > 0) {
+            issues.push({ type: 'info', msg: `${user.direct_permissions.length} direkt atanmış yetki` });
+        }
+
+        return issues;
+    };
+
+    // Filter users
+    const filteredUsers = data.users.filter(u => {
+        if (searchTerm && !u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) && !u.username.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        if (filterDept !== 'ALL' && u.department !== filterDept) return false;
+        if (filterRole !== 'ALL' && !(u.role_keys || []).includes(filterRole)) return false;
+        if (showOnlyIssues) {
+            const issues = getUserIssues(u);
+            if (issues.length === 0) return false;
+        }
+        return true;
+    });
+
+    // Category color mapping
+    const catColor = (cat) => {
+        const colors = {
+            'PAGE': 'bg-blue-500', 'MENU': 'bg-blue-400', 'ACTION': 'bg-orange-400',
+            'REQUEST': 'bg-amber-500', 'APPROVAL': 'bg-purple-500', 'SYSTEM': 'bg-slate-700',
+            'FEATURE': 'bg-teal-500', 'ADMIN': 'bg-red-500', 'ACCOUNTING': 'bg-emerald-500',
+            'HR_ORG': 'bg-pink-500', 'OTHER': 'bg-gray-400'
+        };
+        return colors[cat] || 'bg-gray-300';
+    };
+
+    const catBadgeColor = (cat) => {
+        const colors = {
+            'PAGE': 'bg-blue-50 text-blue-700 border-blue-200',
+            'MENU': 'bg-blue-50 text-blue-600 border-blue-100',
+            'ACTION': 'bg-orange-50 text-orange-700 border-orange-200',
+            'REQUEST': 'bg-amber-50 text-amber-700 border-amber-200',
+            'APPROVAL': 'bg-purple-50 text-purple-700 border-purple-200',
+            'SYSTEM': 'bg-slate-100 text-slate-700 border-slate-300',
+            'FEATURE': 'bg-teal-50 text-teal-700 border-teal-200',
+            'ADMIN': 'bg-red-50 text-red-700 border-red-200',
+            'ACCOUNTING': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        };
+        return colors[cat] || 'bg-gray-100 text-gray-600 border-gray-200';
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
             {/* View Selector */}
@@ -719,7 +809,7 @@ function PermissionMatrixView() {
                     onClick={() => setActiveSection('users')}
                     className={`flex-1 p-3 rounded-lg border-2 font-bold text-sm transition-all ${activeSection === 'users' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-transparent hover:bg-gray-50 text-gray-500'}`}
                 >
-                    Kullanıcı Yetki Listesi
+                    Kullanıcı Bazlı Yetki Matrisi
                 </button>
                 <button
                     onClick={() => setActiveSection('roles')}
@@ -735,110 +825,251 @@ function PermissionMatrixView() {
                 </button>
             </div>
 
-            {/* SECTIONS */}
+            {/* USERS SECTION */}
             {activeSection === 'users' && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-4 bg-yellow-50 border-b border-yellow-100 text-xs text-yellow-800 flex items-center gap-2">
-                        <ExclamationTriangleIcon className="w-4 h-4" />
-                        <span>Not: Bu tablo çok geniştir. Yatay kaydırma yapabilirsiniz. Yetkiler kategorilere göre renklendirilmiştir.</span>
+                <div className="space-y-4">
+                    {/* Filters */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-3 items-center">
+                        <input
+                            type="text"
+                            placeholder="Personel ara..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="px-3 py-2 border border-gray-200 rounded-lg text-sm flex-1 min-w-[200px] focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                        />
+                        <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                            <option value="ALL">Tüm Departmanlar</option>
+                            {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                            <option value="ALL">Tüm Roller</option>
+                            {allRoleKeys.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                            <input type="checkbox" checked={showOnlyIssues} onChange={e => setShowOnlyIssues(e.target.checked)} className="rounded border-gray-300" />
+                            Sadece Sorunlu
+                        </label>
+                        <span className="text-xs text-gray-400 ml-auto">{filteredUsers.length} / {data.users.length} kişi</span>
                     </div>
-                    <div className="overflow-x-auto max-h-[800px] overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
-                                <tr>
-                                    <th className="px-4 py-3 bg-slate-100 z-30 sticky left-0 border-b border-r border-slate-200 min-w-[200px]">Personel</th>
-                                    <th className="px-4 py-3 bg-slate-100 z-30 sticky left-[200px] border-b border-r border-slate-200 min-w-[200px]">Roller</th>
-                                    {data.permissions.map(p => (
-                                        <th key={p.code} className="px-1 py-3 border-b border-slate-200 text-center min-w-[40px] max-w-[40px] h-[180px] align-bottom relative group">
-                                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-max -rotate-90 origin-bottom-left text-[10px] font-mono font-medium text-slate-500 hover:text-indigo-600 transition-colors cursor-help">
-                                                {p.code.split('.').pop()}
+
+                    {/* User Cards */}
+                    <div className="space-y-3">
+                        {filteredUsers.map(u => {
+                            const issues = getUserIssues(u);
+                            const isExpanded = expandedUser === u.id;
+                            const userPagePerms = frontendPagePerms.filter(p => u.is_superuser || u.permissions?.includes(p));
+                            const userFeaturePerms = frontendFeaturePerms.filter(p => u.is_superuser || u.permissions?.includes(p));
+                            const totalPerms = u.is_superuser ? data.permissions.length : (u.permissions?.length || 0);
+
+                            return (
+                                <div key={u.id} className={`bg-white rounded-xl shadow-sm border overflow-hidden transition-all ${issues.some(i => i.type === 'error') ? 'border-red-200' : issues.some(i => i.type === 'warning') ? 'border-amber-200' : 'border-gray-100'}`}>
+                                    {/* Header Row */}
+                                    <div
+                                        className="p-4 flex items-center gap-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                                        onClick={() => setExpandedUser(isExpanded ? null : u.id)}
+                                    >
+                                        {/* Avatar */}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${u.is_superuser ? 'bg-gradient-to-br from-red-500 to-pink-600' : 'bg-gradient-to-br from-indigo-500 to-blue-600'}`}>
+                                            {u.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                        </div>
+
+                                        {/* Name & Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-slate-800">{u.full_name}</span>
+                                                {u.is_superuser && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">SUPERUSER</span>}
                                             </div>
-                                            {/* Tooltip on hover */}
-                                            <div className="hidden group-hover:block absolute bottom-0 left-full ml-1 w-48 bg-slate-800 text-white p-2 rounded z-50 text-left normal-case shadow-xl">
-                                                <div className="font-bold text-xs mb-0.5">{p.name}</div>
-                                                <div className="text-[10px] opacity-75 font-mono">{p.code}</div>
-                                                <div className="text-[10px] mt-1 border-t border-slate-600 pt-1">{p.description}</div>
+                                            <div className="text-xs text-slate-400 flex items-center gap-3">
+                                                <span>@{u.username}</span>
+                                                <span className="text-slate-300">|</span>
+                                                <span>{u.department}</span>
+                                                <span className="text-slate-300">|</span>
+                                                <span>{u.job_position}</span>
                                             </div>
-                                            {/* Category Color Strip */}
-                                            <div className={`absolute bottom-0 left-0 w-full h-1 ${p.category === 'MENU' ? 'bg-blue-400' :
-                                                p.category === 'REQUEST' ? 'bg-amber-400' : 'bg-gray-300'
-                                                }`}></div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {data.users.map(u => (
-                                    <tr key={u.id} className="hover:bg-blue-50/30 transition-colors">
-                                        <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-slate-100 group-hover:bg-blue-50/30">
-                                            <div className="font-bold text-slate-800 truncate max-w-[180px]" title={u.full_name}>{u.full_name}</div>
-                                            <div className="text-[10px] text-slate-400 font-mono text-xs">@{u.username}</div>
-                                        </td>
-                                        <td className="px-4 py-2 bg-white sticky left-[200px] z-10 border-r border-slate-100 group-hover:bg-blue-50/30">
-                                            <div className="flex flex-wrap gap-1 w-[180px]">
-                                                {u.roles.map(r => (
-                                                    <span key={r} className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[10px] font-bold truncate max-w-full block" title={r}>
-                                                        {r}
-                                                    </span>
-                                                ))}
-                                                {u.roles.length === 0 && <span className="text-slate-300 text-[10px] italic">-</span>}
+                                        </div>
+
+                                        {/* Roles */}
+                                        <div className="flex flex-wrap gap-1 max-w-[300px]">
+                                            {u.roles.map(r => (
+                                                <span key={r} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[10px] font-bold">{r}</span>
+                                            ))}
+                                            {u.roles.length === 0 && <span className="text-xs text-slate-300 italic">Rol yok</span>}
+                                        </div>
+
+                                        {/* Perm Count */}
+                                        <div className="text-center flex-shrink-0 w-16">
+                                            <div className="text-2xl font-black text-slate-700">{u.is_superuser ? '∞' : totalPerms}</div>
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase">Yetki</div>
+                                        </div>
+
+                                        {/* Issues */}
+                                        <div className="flex-shrink-0 w-8">
+                                            {issues.length > 0 ? (
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${issues.some(i => i.type === 'error') ? 'bg-red-100' : issues.some(i => i.type === 'warning') ? 'bg-amber-100' : 'bg-blue-100'}`}>
+                                                    <ExclamationTriangleIcon className={`w-4 h-4 ${issues.some(i => i.type === 'error') ? 'text-red-600' : issues.some(i => i.type === 'warning') ? 'text-amber-600' : 'text-blue-600'}`} />
+                                                </div>
+                                            ) : (
+                                                <CheckCircleIcon className="w-6 h-6 text-green-400" />
+                                            )}
+                                        </div>
+
+                                        {/* Expand Arrow */}
+                                        <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Expanded Detail */}
+                                    {isExpanded && (
+                                        <div className="border-t border-gray-100 bg-gray-50/50 p-4 space-y-4">
+                                            {/* Issues List */}
+                                            {issues.length > 0 && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {issues.map((issue, i) => (
+                                                        <span key={i} className={`px-2 py-1 rounded text-xs font-bold border ${issue.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : issue.type === 'warning' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                                            {issue.msg}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Page Permissions Grid */}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sayfa Erişimleri</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {frontendPagePerms.map(p => {
+                                                        const has = u.is_superuser || u.permissions?.includes(p);
+                                                        return (
+                                                            <span key={p} className={`px-2 py-1 rounded text-[11px] font-mono border ${has ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-400 border-gray-200 line-through'}`}>
+                                                                {p.replace('PAGE_', '')}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        </td>
-                                        {data.permissions.map(p => {
-                                            const hasPerm = u.is_superuser || (u.permissions && u.permissions.includes(p.code));
-                                            return (
-                                                <td key={p.code} className={`px-1 py-1 border-r border-slate-50 text-center ${hasPerm ? 'bg-green-50/30' : ''}`}>
-                                                    {hasPerm ? (
-                                                        <div className="flex justify-center">
-                                                            <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="w-1 h-1 bg-slate-200 rounded-full mx-auto"></div>
+
+                                            {/* Feature Permissions */}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Özellik / Aksiyon Yetkileri</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {frontendFeaturePerms.map(p => {
+                                                        const has = u.is_superuser || u.permissions?.includes(p);
+                                                        return (
+                                                            <span key={p} className={`px-2 py-1 rounded text-[11px] font-mono border ${has ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-400 border-gray-200 line-through'}`}>
+                                                                {p}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Direct Permissions */}
+                                            {u.direct_permissions && u.direct_permissions.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">Direkt Atanmış Yetkiler (Role dışı)</h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {u.direct_permissions.map(p => (
+                                                            <span key={p} className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[11px] font-mono">{p}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Excluded Permissions */}
+                                            {u.excluded_permissions && u.excluded_permissions.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-red-600 uppercase tracking-wider mb-2">Hariç Tutulan Yetkiler (Kara Liste)</h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {u.excluded_permissions.map(p => (
+                                                            <span key={p} className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-[11px] font-mono line-through">{p}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Full Permission List */}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                                    Tüm Efektif Yetkiler ({u.is_superuser ? 'SINIRSIZ' : u.permissions?.length || 0})
+                                                </h4>
+                                                <div className="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
+                                                    {u.is_superuser ? (
+                                                        <span className="text-xs text-red-600 font-bold">Superuser — tüm yetkiler bypass edilir</span>
+                                                    ) : (u.permissions || []).sort().map(p => (
+                                                        <span key={p} className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-mono border border-gray-200">{p}</span>
+                                                    ))}
+                                                    {!u.is_superuser && (!u.permissions || u.permissions.length === 0) && (
+                                                        <span className="text-xs text-red-500 font-bold">HİÇ YETKİ YOK!</span>
                                                     )}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
 
+            {/* ROLES SECTION */}
             {activeSection === 'roles' && (
                 <div className="grid grid-cols-1 gap-6">
-                    {data.roles.map(role => (
-                        <div key={role.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="p-4 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-bold text-purple-900 text-lg">{role.name}</h3>
-                                    <div className="text-xs text-purple-600 font-mono">{role.code} (Level: {role.level})</div>
-                                </div>
-                                <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-purple-700 shadow-sm border border-purple-100">
-                                    {role.permissions.length} Yetki
-                                </span>
-                            </div>
-                            <div className="p-4">
-                                <div className="flex flex-wrap gap-2">
-                                    {role.permissions.map(p => (
-                                        <span key={p} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs border border-gray-200 font-mono">
-                                            {p}
+                    {data.roles.map(role => {
+                        const usersWithRole = data.users.filter(u => (u.role_keys || []).includes(role.code));
+                        return (
+                            <div key={role.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="p-4 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
+                                    <div>
+                                        <h3 className="font-bold text-purple-900 text-lg">{role.name}</h3>
+                                        <div className="text-xs text-purple-600 font-mono flex items-center gap-2">
+                                            {role.code}
+                                            {role.inherits_from && role.inherits_from.length > 0 && (
+                                                <span className="text-purple-400">← miras: {role.inherits_from.join(', ')}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-purple-700 shadow-sm border border-purple-100">
+                                            {role.permissions.length} Yetki
                                         </span>
-                                    ))}
-                                    {role.permissions.length === 0 && <span className="text-gray-400 italic text-sm">Bu role tanımlı yetki yok.</span>}
+                                        <span className="bg-purple-100 px-3 py-1 rounded-full text-xs font-bold text-purple-800">
+                                            {usersWithRole.length} Kullanıcı
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                        {role.permissions.sort().map(p => (
+                                            <span key={p} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs border border-gray-200 font-mono">{p}</span>
+                                        ))}
+                                        {role.permissions.length === 0 && <span className="text-gray-400 italic text-sm">Bu role tanımlı yetki yok.</span>}
+                                    </div>
+                                    {usersWithRole.length > 0 && (
+                                        <div className="border-t border-gray-100 pt-3">
+                                            <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2">Bu role sahip kullanıcılar</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {usersWithRole.map(u => (
+                                                    <span key={u.id} className="px-2 py-1 bg-slate-50 text-slate-700 rounded text-xs border border-slate-200">
+                                                        {u.full_name} <span className="text-slate-400">({u.department})</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
+            {/* PERMISSIONS POOL SECTION */}
             {activeSection === 'perms' && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-4 border-b border-gray-100 bg-emerald-50 flex justify-between items-center">
-                        <h3 className="font-bold text-emerald-900">Tüm Yetki Tanımları (Permission Definitions)</h3>
-                        <span className="text-xs text-emerald-700">{data.permissions.length} Adet</span>
+                        <h3 className="font-bold text-emerald-900">Tüm Yetki Tanımları (Veritabanı)</h3>
+                        <span className="text-xs text-emerald-700 font-bold">{data.permissions.length} Adet</span>
                     </div>
                     <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                         <table className="w-full text-left text-sm">
@@ -848,31 +1079,36 @@ function PermissionMatrixView() {
                                     <th className="px-4 py-3 bg-gray-50">Kod (Code)</th>
                                     <th className="px-4 py-3 bg-gray-50">İsim</th>
                                     <th className="px-4 py-3 bg-gray-50">Açıklama</th>
+                                    <th className="px-4 py-3 bg-gray-50 text-center">Kullanan</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {data.permissions.map(p => (
-                                    <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-2">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border
-                                                ${p.category === 'MENU' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                    p.category === 'REQUEST' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                        'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                                                {p.category}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2 font-mono text-indigo-600 text-xs">{p.code}</td>
-                                        <td className="px-4 py-2 font-medium text-gray-700">{p.name}</td>
-                                        <td className="px-4 py-2 text-gray-500 text-xs">{p.description}</td>
-                                    </tr>
-                                ))}
+                                {data.permissions.map(p => {
+                                    const usersWithPerm = data.users.filter(u => u.is_superuser || (u.permissions && u.permissions.includes(p.code)));
+                                    return (
+                                        <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-4 py-2">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${catBadgeColor(p.category)}`}>
+                                                    {p.category}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-2 font-mono text-indigo-600 text-xs">{p.code}</td>
+                                            <td className="px-4 py-2 font-medium text-gray-700">{p.name}</td>
+                                            <td className="px-4 py-2 text-gray-500 text-xs">{p.description}</td>
+                                            <td className="px-4 py-2 text-center">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${usersWithPerm.length === 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-100 text-gray-600'}`}>
+                                                    {usersWithPerm.length}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            )
-            }
-        </div >
+            )}
+        </div>
     );
 }
 

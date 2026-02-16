@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Coffee, Briefcase, Timer, CheckCircle2, ChevronsDown } from 'lucide-react';
+import { Clock, Coffee, Briefcase, Timer, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 
 const HeroDailySummary = ({ summary, loading }) => {
@@ -198,24 +198,6 @@ const HeroDailySummary = ({ summary, loading }) => {
 
             </div>
 
-            {/* Scroll Down Button */}
-            <div className="flex justify-center -mt-2">
-                <button
-                    onClick={() => {
-                        const element = document.getElementById('attendance-content-start');
-                        if (element) {
-                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    }}
-                    className="flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-600 transition-colors group animate-bounce cursor-pointer p-2"
-                    title="Aşağı Kaydır"
-                >
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Detaylar</span>
-                    <div className="p-2 rounded-full bg-white border border-slate-100 shadow-sm group-hover:shadow-md group-hover:border-indigo-100 transition-all">
-                        <ChevronsDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
-                    </div>
-                </button>
-            </div>
         </div>
     );
 };

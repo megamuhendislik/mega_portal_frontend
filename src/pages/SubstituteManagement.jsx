@@ -29,7 +29,8 @@ const SubstituteManagement = () => {
   const fetchDelegations = async () => {
     try {
       const response = await api.get('/substitute-authority/');
-      setDelegations(response.data);
+      const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+      setDelegations(data);
     } catch (err) {
       setError('Vekalet kayıtları yüklenemedi');
       console.error(err);
@@ -41,7 +42,8 @@ const SubstituteManagement = () => {
   const fetchEmployees = async () => {
     try {
       const response = await api.get('/employees/');
-      setEmployees(response.data);
+      const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+      setEmployees(data);
     } catch (err) {
       console.error('Çalışanlar yüklenemedi:', err);
     }
