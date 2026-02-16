@@ -191,9 +191,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         const attachStats = (nodes) => {
             return nodes.map(node => {
                 let newNode = { ...node };
-                newNode.type = 'EMP';
-                newNode.stats = statsMap[node.id] || null;
-                newNode.children = attachStats(node.children || []);
+                if (node.type === 'GROUP') {
+                    // Role group node from backend
+                    newNode.children = attachStats(node.children || []);
+                } else {
+                    newNode.type = 'EMP';
+                    newNode.stats = statsMap[node.id] || null;
+                    newNode.children = attachStats(node.children || []);
+                }
                 return newNode;
             });
         };
@@ -251,6 +256,54 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         if (!nodes) return null;
 
         return nodes.map(node => {
+            // GROUP node (role group header)
+            if (node.type === 'GROUP') {
+                const isExpanded = expandedDepts[node.id];
+                const nodeStats = calculateNodeStats(node);
+                const memberCount = node.children ? node.children.length : 0;
+
+                return (
+                    <React.Fragment key={node.id}>
+                        <tr className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
+                            <td className="p-3 pl-6">
+                                <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => toggleDept(node.id)} style={{ paddingLeft: `${depth * 20}px` }}>
+                                    <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500'}`}>
+                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
+                                    </div>
+                                    <span className="font-bold text-sm text-slate-700">{node.name}</span>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{memberCount} Kişi</span>
+                                </div>
+                            </td>
+                            <td className="p-3">
+                                {nodeStats.onlineCount > 0 && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                        {nodeStats.onlineCount} Ofiste
+                                    </span>
+                                )}
+                            </td>
+                            <td className="p-3">
+                                {nodeStats.today_normal > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.today_normal)}</span>}
+                            </td>
+                            <td className="p-3 text-center">
+                                {nodeStats.today_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.today_overtime)}</span>}
+                            </td>
+                            <td className="p-3 text-center">
+                                {nodeStats.today_break > 0 && <span className="text-xs font-mono font-bold text-slate-500">{formatMinutes(nodeStats.today_break)}</span>}
+                            </td>
+                            <td className="p-3 text-right">
+                                {nodeStats.monthly_net_balance !== 0 && (
+                                    <span className={`text-xs font-mono font-bold ${nodeStats.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {nodeStats.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(nodeStats.monthly_net_balance)}
+                                    </span>
+                                )}
+                            </td>
+                            <td className="p-3"></td>
+                        </tr>
+                        {isExpanded && renderHierarchyRows(node.children, depth + 1)}
+                    </React.Fragment>
+                );
+            }
+
             const s = node.stats || {};
             const hasChildren = node.children && node.children.length > 0;
             const isExpanded = expandedDepts[node.id];
