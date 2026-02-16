@@ -1444,7 +1444,7 @@ const Employees = () => {
                                 </button>
                             )}
 
-                            {hasPermission('PAGE_EMPLOYEES_VIEW') && (
+                            {hasPermission('EMPLOYEE_UPDATE') && (
                                 <button
                                     onClick={handleAddNew}
                                     className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"

@@ -205,8 +205,8 @@ const SubstituteManagement = () => {
                   value={formData.principal}
                   onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
                   required
-                  disabled={!hasPermission('SYSTEM_ADMIN_ACCESS')}
-                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission('SYSTEM_ADMIN_ACCESS') ? 'bg-slate-100' : ''}`}
+                  disabled={!hasPermission('SYSTEM_FULL_ACCESS')}
+                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission('SYSTEM_FULL_ACCESS') ? 'bg-slate-100' : ''}`}
                 >
                   <option value="">Seçiniz...</option>
                   {employees.map(emp => (
