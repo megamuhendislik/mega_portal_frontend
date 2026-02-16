@@ -1428,7 +1428,7 @@ const Employees = () => {
                             <p className="text-slate-500 mt-1">Süper Admin / İK Yönetimi</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            {hasPermission('EMPLOYEE_UPDATE') && (
+                            {hasPermission('PAGE_EMPLOYEES') && (
                                 <button
                                     onClick={() => setShowSettings(!showSettings)}
                                     className={`
@@ -1444,7 +1444,7 @@ const Employees = () => {
                                 </button>
                             )}
 
-                            {hasPermission('EMPLOYEE_UPDATE') && (
+                            {hasPermission('PAGE_EMPLOYEES') && (
                                 <button
                                     onClick={handleAddNew}
                                     className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
