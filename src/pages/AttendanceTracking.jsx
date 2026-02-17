@@ -399,6 +399,12 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 const isExpanded = expandedDepts[node.id];
                 const nodeStats = calculateNodeStats(node);
                 const memberCount = node.children ? node.children.length : 0;
+                const cnt = nodeStats.count || 1;
+                const avg = {
+                    total_worked: Math.round(nodeStats.total_worked / cnt),
+                    total_overtime: Math.round(nodeStats.total_overtime / cnt),
+                    total_missing: Math.round(nodeStats.total_missing / cnt),
+                };
 
                 return (
                     <React.Fragment key={node.id}>
@@ -419,23 +425,19 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     </span>
                                 )}
                             </td>
+                            <td colSpan={3} className="p-3 text-center"></td>
                             <td className="p-3 text-center">
-                                {nodeStats.today_normal > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.today_normal)}</span>}
+                                {avg.total_worked > 0 && <span className="text-xs font-mono font-semibold text-slate-500">ort. {formatMinutes(avg.total_worked)}</span>}
                             </td>
                             <td className="p-3 text-center">
-                                {nodeStats.today_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.today_overtime)}</span>}
+                                {avg.total_overtime > 0 && <span className="text-xs font-mono font-semibold text-amber-500">ort. +{formatMinutes(avg.total_overtime)}</span>}
                             </td>
                             <td className="p-3 text-center">
-                                {nodeStats.today_break > 0 && <span className="text-xs font-mono font-bold text-slate-500">{formatMinutes(nodeStats.today_break)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {nodeStats.total_worked > 0 && <span className="text-xs font-mono font-semibold text-slate-600">{formatMinutes(nodeStats.total_worked)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {nodeStats.total_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.total_overtime)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {renderDeviation(nodeStats)}
+                                {avg.total_missing > 0 ? (
+                                    <span className="text-xs font-semibold text-red-400">ort. {formatMinutes(avg.total_missing)} Eksik</span>
+                                ) : avg.total_overtime > 0 ? (
+                                    <span className="text-xs font-semibold text-emerald-400">ort. {formatMinutes(avg.total_overtime)} Fazla</span>
+                                ) : <span className="text-slate-300">—</span>}
                             </td>
                             <td className="p-3"></td>
                         </tr>
