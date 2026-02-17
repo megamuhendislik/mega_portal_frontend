@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileDown, Calendar, ChevronDown } from 'lucide-react';
+import { FileDown, Calendar, ChevronDown, FileText, Users } from 'lucide-react';
 import api from '../services/api';
 
 const Reports = () => {
@@ -7,17 +7,19 @@ const Reports = () => {
     const [selectedCalendarId, setSelectedCalendarId] = useState('');
     const [periods, setPeriods] = useState([]);
     const [selectedPeriod, setSelectedPeriod] = useState(null);
+    const [employees, setEmployees] = useState([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loadingPdf, setLoadingPdf] = useState(false);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
 
-    // Fetch available fiscal calendars
+    // Fetch available fiscal calendars and employees
     useEffect(() => {
         const fetchCalendars = async () => {
             try {
                 const res = await api.get('/attendance/fiscal-calendars/');
                 const cals = res.data.results || res.data;
                 setCalendars(cals);
-                // Auto-select default calendar
                 const defaultCal = cals.find(c => c.is_default) || cals[0];
                 if (defaultCal) {
                     setSelectedCalendarId(defaultCal.id);
@@ -27,7 +29,17 @@ const Reports = () => {
             }
             setLoadingCalendars(false);
         };
+        const fetchEmployees = async () => {
+            try {
+                const res = await api.get('/employees/', { params: { page_size: 500 } });
+                const emps = res.data.results || res.data;
+                setEmployees(emps);
+            } catch (err) {
+                console.error('Employee fetch error:', err);
+            }
+        };
         fetchCalendars();
+        fetchEmployees();
     }, []);
 
     // Fetch periods when calendar changes
@@ -54,27 +66,34 @@ const Reports = () => {
         fetchPeriods();
     }, [selectedCalendarId]);
 
+    const buildParams = () => {
+        const params = {
+            year: selectedPeriod.year,
+            month: selectedPeriod.month,
+        };
+        if (selectedCalendarId) {
+            params.calendar_id = selectedCalendarId;
+        }
+        if (selectedEmployeeId) {
+            params.employee_id = selectedEmployeeId;
+        }
+        return params;
+    };
+
     const handleDownload = async () => {
         if (!selectedPeriod) return;
         setLoading(true);
         try {
-            const params = {
-                year: selectedPeriod.year,
-                month: selectedPeriod.month,
-            };
-            if (selectedCalendarId) {
-                params.calendar_id = selectedCalendarId;
-            }
-
             const response = await api.get('/monthly-reports/export_excel/', {
-                params,
+                params: buildParams(),
                 responseType: 'blob',
             });
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `Mutabakat_${selectedPeriod.year}_${selectedPeriod.month}.xlsx`);
+            const suffix = selectedEmployeeId ? `_emp${selectedEmployeeId}` : '';
+            link.setAttribute('download', `Mesai_Raporu_${selectedPeriod.year}_${selectedPeriod.month}${suffix}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -83,6 +102,31 @@ const Reports = () => {
             alert('Rapor indirilemedi.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!selectedPeriod) return;
+        setLoadingPdf(true);
+        try {
+            const response = await api.get('/monthly-reports/export_pdf/', {
+                params: buildParams(),
+                responseType: 'blob',
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const suffix = selectedEmployeeId ? `_emp${selectedEmployeeId}` : '';
+            link.setAttribute('download', `Mesai_Raporu_${selectedPeriod.year}_${selectedPeriod.month}${suffix}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('PDF download failed:', error);
+            alert('PDF rapor indirilemedi.');
+        } finally {
+            setLoadingPdf(false);
         }
     };
 
@@ -157,6 +201,23 @@ const Reports = () => {
                             </select>
                         </div>
 
+                        {/* Employee Selector */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Personel</label>
+                            <select
+                                value={selectedEmployeeId}
+                                onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                                <option value="">Tüm Çalışanlar</option>
+                                {employees.map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                        {emp.first_name} {emp.last_name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         {/* Period Info Box */}
                         {selectedPeriod && (
                             <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-2">
@@ -167,18 +228,32 @@ const Reports = () => {
                             </div>
                         )}
 
-                        <button
-                            onClick={handleDownload}
-                            disabled={loading || !selectedPeriod}
-                            className="w-full py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                            {loading ? 'Hazırlanıyor...' : (
-                                <>
-                                    <FileDown size={18} />
-                                    Excel İndir
-                                </>
-                            )}
-                        </button>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={handleDownload}
+                                disabled={loading || !selectedPeriod}
+                                className="py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {loading ? 'Hazırlanıyor...' : (
+                                    <>
+                                        <FileDown size={18} />
+                                        Excel İndir
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={handleDownloadPdf}
+                                disabled={loadingPdf || !selectedPeriod}
+                                className="py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {loadingPdf ? 'Hazırlanıyor...' : (
+                                    <>
+                                        <FileText size={18} />
+                                        PDF İndir
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
