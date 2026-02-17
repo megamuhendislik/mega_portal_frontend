@@ -32,7 +32,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [loading, setLoading] = useState(false);
     const [departments, setDepartments] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, PARAM_ONLINE, PARAM_LATE, PARAM_OVERTIME, PARAM_MISSING
+    const [filterStatus, setFilterStatus] = useState('ALL');
+    const [sortMode, setSortMode] = useState('NAME');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
 
@@ -163,7 +164,30 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return `${hours}s ${mins}dk`;
     };
 
+    const renderDeviation = (statsObj) => {
+        const missing = statsObj.total_missing || 0;
+        const overtime = statsObj.total_overtime || 0;
+
+        if (missing > 0) {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold">
+                    <ArrowDownRight size={12} /> Eksik
+                </span>
+            );
+        }
+        if (overtime > 0) {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">
+                    <ArrowUpRight size={12} /> Fazla
+                </span>
+            );
+        }
+        return <span className="text-slate-300">—</span>;
+    };
+
     // Filter Logic (Common for List)
+    const avgOT = stats.length > 0 ? stats.reduce((a, c) => a + (c.total_overtime || 0), 0) / stats.length : 0;
+
     const filteredStats = stats.filter(item => {
         const matchesSearch = (item.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.department || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,11 +197,21 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
         if (filterStatus === 'ALL') return true;
         if (filterStatus === 'ONLINE') return item.is_online;
-        if (filterStatus === 'LATE') return item.total_late > 0; // Assuming total_late is available or derived
+        if (filterStatus === 'LATE') return item.total_late > 0;
         if (filterStatus === 'OVERTIME') return item.total_overtime > 0;
         if (filterStatus === 'MISSING') return item.total_missing > 0;
+        if (filterStatus === 'ABOVE_AVG_OT') return (item.total_overtime || 0) > avgOT && avgOT > 0;
+        if (filterStatus === 'BELOW_TARGET') return (item.total_missing || 0) > 0;
 
         return true;
+    });
+
+    // Sort Logic
+    const sortedStats = [...filteredStats].sort((a, b) => {
+        if (sortMode === 'OT_DESC') return (b.total_overtime || 0) - (a.total_overtime || 0);
+        if (sortMode === 'MISSING_DESC') return (b.total_missing || 0) - (a.total_missing || 0);
+        if (sortMode === 'NORMAL_DESC') return (b.total_worked || 0) - (a.total_worked || 0);
+        return (a.employee_name || '').localeCompare(b.employee_name || '', 'tr');
     });
 
     // --- HIERARCHY HELPERS ---
@@ -226,7 +260,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             count: 0, onlineCount: 0,
             total_worked: 0, total_overtime: 0, total_missing: 0,
             today_normal: 0, today_overtime: 0, today_break: 0,
-            monthly_net_balance: 0
+            monthly_deviation: 0
         };
 
         // Count this node's own stats
@@ -240,7 +274,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             agg.today_normal += (s.today_normal || 0);
             agg.today_overtime += (s.today_overtime || 0);
             agg.today_break += (s.today_break || 0);
-            agg.monthly_net_balance += (s.monthly_net_balance || 0);
+            agg.monthly_deviation += (s.monthly_deviation || 0);
         }
 
         // Aggregate children (subordinates)
@@ -255,7 +289,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 agg.today_normal += childStats.today_normal;
                 agg.today_overtime += childStats.today_overtime;
                 agg.today_break += childStats.today_break;
-                agg.monthly_net_balance += childStats.monthly_net_balance;
+                agg.monthly_deviation += childStats.monthly_deviation;
             });
         }
 
@@ -301,11 +335,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 {nodeStats.today_break > 0 && <span className="text-xs font-mono font-bold text-slate-500">{formatMinutes(nodeStats.today_break)}</span>}
                             </td>
                             <td className="p-3 text-right">
-                                {nodeStats.monthly_net_balance !== 0 && (
-                                    <span className={`text-xs font-mono font-bold ${nodeStats.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                        {nodeStats.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(nodeStats.monthly_net_balance)}
-                                    </span>
-                                )}
+                                {renderDeviation(nodeStats)}
                             </td>
                             <td className="p-3"></td>
                         </tr>
@@ -376,11 +406,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
                             </td>
                             <td className="p-3 text-right">
-                                {nodeStats.monthly_net_balance !== 0 ? (
-                                    <span className={`text-xs font-mono font-bold ${nodeStats.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                        {nodeStats.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(nodeStats.monthly_net_balance)}
-                                    </span>
-                                ) : <span className="text-slate-300">-</span>}
+                                {renderDeviation(nodeStats)}
                             </td>
                             <td className="p-3 text-center">
                                 <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
@@ -429,11 +455,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="p-4 text-right">
-                            {s.monthly_net_balance !== 0 ? (
-                                <span className={`text-xs font-mono font-bold ${s.monthly_net_balance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                    {s.monthly_net_balance > 0 ? '+' : ''}{formatMinutes(s.monthly_net_balance)}
-                                </span>
-                            ) : <span className="text-slate-300">-</span>}
+                            {renderDeviation(s)}
                         </td>
                         <td className="p-4 text-center">
                             <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
@@ -460,7 +482,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <th className="p-4 w-32">Bugün Çalışma</th>
                                 <th className="p-4 text-center w-24">F. Mesai</th>
                                 <th className="p-4 text-center w-24">Mola</th>
-                                <th className="p-4 text-right w-24">Aylık Bakiye</th>
+                                <th className="p-4 text-right w-24">Aylık Durum</th>
                                 <th className="p-4"></th>
                             </tr>
                         </thead>
@@ -568,10 +590,24 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
                         >
                             <option value="ALL">Tüm Durumlar</option>
-                            <option value="ONLINE">Ofiste 🟢</option>
-                            <option value="OVERTIME">Fazla Mesai 🟠</option>
-                            <option value="MISSING">Eksik 🔴</option>
-                            <option value="LATE">Geç Kalanlar ⏱️</option>
+                            <option value="ONLINE">Ofiste</option>
+                            <option value="OVERTIME">Fazla Mesai</option>
+                            <option value="MISSING">Eksik</option>
+                            <option value="LATE">Geç Kalanlar</option>
+                            <option value="ABOVE_AVG_OT">Ort. Üstü Mesai</option>
+                            <option value="BELOW_TARGET">Beklenti Altı</option>
+                        </select>
+
+                        {/* Sort */}
+                        <select
+                            value={sortMode}
+                            onChange={(e) => setSortMode(e.target.value)}
+                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
+                        >
+                            <option value="NAME">Sırala: İsim (A-Z)</option>
+                            <option value="OT_DESC">Sırala: En Çok Ek Mesai</option>
+                            <option value="MISSING_DESC">Sırala: En Çok Eksik</option>
+                            <option value="NORMAL_DESC">Sırala: En Çok Çalışma</option>
                         </select>
                         <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
@@ -692,6 +728,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     <div className="flex items-end gap-2">
                                         <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalOvertime)}</h3>
                                     </div>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        Ort: {formatMinutes(Math.round(summary.totalOvertime / (summary.activeCount || 1)))} / kişi
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -704,6 +743,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <div>
                                     <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Kayıp Zaman</p>
                                     <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalMissing)}</h3>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        Ort: {formatMinutes(Math.round(summary.totalMissing / (summary.activeCount || 1)))} / kişi
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -731,7 +773,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             <th className="p-6 text-right">Normal</th>
                                             <th className="p-6 text-right">Fazla</th>
                                             <th className="p-6 text-right">Eksik</th>
-                                            <th className="p-6 text-center">Bakiye</th>
+                                            <th className="p-6 text-center">Durum</th>
                                         </>
                                     )}
                                     <th className="p-6"></th>
@@ -740,10 +782,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <tbody className="divide-y divide-slate-50">
                                 {loading ? (
                                     <tr><td colSpan="8" className="p-12 text-center text-slate-400 animate-pulse">Analiz ediliyor...</td></tr>
-                                ) : filteredStats.length === 0 ? (
+                                ) : sortedStats.length === 0 ? (
                                     <tr><td colSpan="8" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
                                 ) : (
-                                    filteredStats.map(item => {
+                                    sortedStats.map(item => {
                                         // Calc percentage for progress bar
                                         const total = item.total_worked + item.total_missing;
                                         const percent = total > 0 ? Math.min(100, (item.total_worked / total) * 100) : 0;
@@ -869,12 +911,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                             )}
                                                         </td>
                                                         <td className="p-6 text-center">
-                                                            <div className="inline-flex flex-col items-end">
-                                                                <div className="text-xs font-bold text-slate-400 mb-0.5">YILLIK İZİN</div>
-                                                                <div className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                                                    {item.annual_leave_balance !== undefined ? `${item.effective_leave_balance} Gün` : '-'}
-                                                                </div>
-                                                            </div>
+                                                            {renderDeviation(item)}
                                                         </td>
                                                     </>
                                                 )
