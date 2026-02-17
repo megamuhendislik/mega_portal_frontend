@@ -75,16 +75,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             if (selectedDept) params.department_id = selectedDept;
             params.include_inactive = 'true'; // Backend supports this now
 
-            console.log('DIAG: Fetching stats with params:', JSON.stringify(params));
             const res = await api.get('/dashboard/stats/', { params });
             const data = Array.isArray(res.data) ? res.data : [];
             setStats(data);
-
-            // Log first 5 employees for diagnosis
-            console.log(`DIAG: Got ${data.length} employees for year=${params.year} month=${params.month}`);
-            data.slice(0, 5).forEach(d => {
-                console.log(`DIAG [${d.employee_name}]: worked=${d.total_worked}dk, overtime=${d.total_overtime}dk, missing=${d.total_missing}dk, deviation=${d.monthly_deviation}dk, required=${d.monthly_required}dk`);
-            });
 
             // Calculate Executive Summaries
             const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
