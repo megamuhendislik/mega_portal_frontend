@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom';
 import {
     Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils,
     CheckCircle2, XCircle, AlertCircle, Users, CreditCard, ChevronRight, ChevronDown, User,
-    BarChart3, PieChart, TrendingUp, FileText, Briefcase, ArrowRight, Layers, GitBranch, MoreHorizontal
+    BarChart3, PieChart, TrendingUp, FileText, Briefcase, ArrowRight, Layers, GitBranch, MoreHorizontal,
+    ArrowRightLeft, Shield
 } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
@@ -475,6 +476,182 @@ const RequestAnalyticsSection = ({ subordinates, loading }) => {
     );
 };
 
+// =========== SECTION: Substitute Requests ===========
+const SubstituteRequestsSection = ({
+    substituteData, loading, handleSubstituteApprove, handleSubstituteReject, handleViewDetails
+}) => {
+    const [typeFilter, setTypeFilter] = useState('ALL');
+
+    const allRequests = useMemo(() => {
+        if (!substituteData) return [];
+        const items = [];
+        (substituteData.leave_requests || []).forEach(r => items.push({
+            ...r,
+            _type: 'LEAVE',
+            type: 'LEAVE',
+            _sortDate: r.start_date || r.created_at,
+            _isSubstitute: true,
+        }));
+        (substituteData.overtime_requests || []).forEach(r => items.push({
+            ...r,
+            _type: 'OVERTIME',
+            type: 'OVERTIME',
+            _sortDate: r.date || r.created_at,
+            _isSubstitute: true,
+        }));
+        items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
+        return items;
+    }, [substituteData]);
+
+    const filtered = useMemo(() => {
+        if (typeFilter === 'ALL') return allRequests;
+        return allRequests.filter(r => r._type === typeFilter);
+    }, [allRequests, typeFilter]);
+
+    const authorities = substituteData?.authorities || [];
+
+    if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
+
+    return (
+        <div className="space-y-6">
+            {/* Active Authorities Info */}
+            {authorities.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+                    <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                        <Shield size={18} className="text-blue-600" />
+                        Aktif Vekalet Yetkileri
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                        {authorities.map(auth => (
+                            <div key={auth.id} className="bg-white rounded-xl px-4 py-2 border border-blue-100 shadow-sm flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                                    {(auth.principal_name || '?')[0]}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-800">{auth.principal_name}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        {new Date(auth.valid_from).toLocaleDateString('tr-TR')} — {new Date(auth.valid_to).toLocaleDateString('tr-TR')}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Filter */}
+            <div className="flex gap-2 items-center">
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                    {['ALL', 'LEAVE', 'OVERTIME'].map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setTypeFilter(t)}
+                            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
+                                typeFilter === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            {t === 'ALL' ? 'Tümü' : t === 'LEAVE' ? 'İzin' : 'Mesai'}
+                        </button>
+                    ))}
+                </div>
+                <span className="text-sm text-slate-500 ml-2">
+                    {allRequests.length} bekleyen talep
+                </span>
+            </div>
+
+            {/* Request List */}
+            {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+                        <ArrowRightLeft size={32} className="text-slate-300" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-700">Bekleyen Vekalet Talebi Yok</h3>
+                    <p className="text-sm text-slate-500 mt-1 max-w-sm">
+                        Vekil olarak onaylayabileceğiniz bekleyen talep bulunmamaktadır.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {filtered.map(req => {
+                        const principal = authorities.find(a => a.principal === req.principal_id);
+                        return (
+                            <div
+                                key={`${req.type}-${req.id}`}
+                                className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md transition-all"
+                            >
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex items-start gap-4 flex-1">
+                                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                                            req.type === 'LEAVE' ? 'bg-blue-500' : 'bg-amber-500'
+                                        }`}>
+                                            {req.type === 'LEAVE' ? <Calendar size={20} /> : <Clock size={20} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h4 className="font-bold text-slate-800">{req.employee_name}</h4>
+                                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full flex items-center gap-1">
+                                                    <ArrowRightLeft size={10} />
+                                                    Vekalet
+                                                </span>
+                                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                                    req.type === 'LEAVE' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                                                }`}>
+                                                    {req.type === 'LEAVE' ? 'İzin' : 'Fazla Mesai'}
+                                                </span>
+                                            </div>
+                                            <div className="text-sm text-slate-500 mt-1">
+                                                {req.type === 'LEAVE' ? (
+                                                    <>
+                                                        {req.request_type} — {new Date(req.start_date).toLocaleDateString('tr-TR')} → {new Date(req.end_date).toLocaleDateString('tr-TR')}
+                                                        {req.total_days && <span className="ml-2 font-bold text-slate-700">({req.total_days} gün)</span>}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {new Date(req.date).toLocaleDateString('tr-TR')}
+                                                        {req.duration_minutes > 0 && <span className="ml-2 font-bold text-slate-700">({req.duration_minutes} dk)</span>}
+                                                    </>
+                                                )}
+                                            </div>
+                                            {req.reason && (
+                                                <p className="text-xs text-slate-400 mt-1 truncate max-w-md">{req.reason}</p>
+                                            )}
+                                            {principal && (
+                                                <p className="text-xs text-purple-600 mt-1 font-medium">
+                                                    {principal.principal_name} adına vekil olarak
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            onClick={() => handleSubstituteApprove(req)}
+                                            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-1.5"
+                                        >
+                                            <CheckCircle2 size={16} />
+                                            Onayla
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const reason = prompt('Red gerekçesi giriniz:');
+                                                if (reason) handleSubstituteReject(req, reason);
+                                            }}
+                                            className="px-5 py-2.5 bg-white text-red-600 border border-red-200 rounded-xl font-bold text-sm hover:bg-red-50 transition-all active:scale-95 flex items-center gap-1.5"
+                                        >
+                                            <XCircle size={16} />
+                                            Reddet
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // =========== MAIN PAGE ===========
 const Requests = () => {
     const { hasPermission } = useAuth();
@@ -489,6 +666,10 @@ const Requests = () => {
     const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
+
+    // Substitute Data
+    const [substituteData, setSubstituteData] = useState(null);
+    const [substituteLoading, setSubstituteLoading] = useState(false);
 
     // UI States
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -513,6 +694,7 @@ const Requests = () => {
     useEffect(() => {
         fetchData();
         fetchMe();
+        fetchSubstituteRequests();
     }, []);
 
     useEffect(() => {
@@ -599,6 +781,19 @@ const Requests = () => {
         } catch (e) { console.error(e); }
     };
 
+    const fetchSubstituteRequests = async () => {
+        setSubstituteLoading(true);
+        try {
+            const res = await api.get('/substitute-authority/pending_requests/');
+            setSubstituteData(res.data);
+        } catch (e) {
+            // Not a substitute — ignore silently
+            setSubstituteData(null);
+        } finally {
+            setSubstituteLoading(false);
+        }
+    };
+
     // --- Handlers (Simplified for brevity, logic same as before) ---
     const handleCreateSuccess = () => fetchData();
     const handleViewDetails = (r, t) => { setSelectedRequest(r); setSelectedRequestType(t); setShowDetailModal(true); };
@@ -638,6 +833,45 @@ const Requests = () => {
         } catch (e) { alert('İşlem başarısız'); }
     };
 
+    const handleSubstituteApprove = async (req) => {
+        try {
+            let url = '';
+            if (req.type === 'LEAVE') url = `/leave/requests/${req.id}/approve_reject/`;
+            else if (req.type === 'OVERTIME') url = `/overtime-requests/${req.id}/approve_reject/`;
+            if (!url) return;
+
+            await api.post(url, {
+                action: 'approve',
+                notes: 'Vekil olarak onaylandı',
+                acting_as_substitute_for: req.principal_id
+            });
+            fetchData();
+            fetchSubstituteRequests();
+        } catch (e) {
+            alert(e.response?.data?.error || 'İşlem başarısız');
+        }
+    };
+
+    const handleSubstituteReject = async (req, reason) => {
+        if (!reason) return;
+        try {
+            let url = '';
+            if (req.type === 'LEAVE') url = `/leave/requests/${req.id}/approve_reject/`;
+            else if (req.type === 'OVERTIME') url = `/overtime-requests/${req.id}/approve_reject/`;
+            if (!url) return;
+
+            await api.post(url, {
+                action: 'reject',
+                reason,
+                acting_as_substitute_for: req.principal_id
+            });
+            fetchData();
+            fetchSubstituteRequests();
+        } catch (e) {
+            alert(e.response?.data?.error || 'İşlem başarısız');
+        }
+    };
+
     const handleEditOvertimeSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -675,6 +909,8 @@ const Requests = () => {
 
     const directData = getDirectRequests();
     const indirectData = getIndirectRequests();
+    const substituteRequestCount = (substituteData?.leave_requests?.length || 0) + (substituteData?.overtime_requests?.length || 0);
+    const hasSubstitute = substituteData && (substituteData.authorities?.length > 0 || substituteRequestCount > 0);
 
     return (
         <div className="space-y-8 pb-12 animate-fade-in">
@@ -717,6 +953,17 @@ const Requests = () => {
                             Ekip Talepleri
                         </TabButton>
                     </>
+                )}
+
+                {hasSubstitute && (
+                    <TabButton
+                        active={activeTab === 'substitute_requests'}
+                        onClick={() => setActiveTab('substitute_requests')}
+                        icon={<ArrowRightLeft size={18} />}
+                        badge={substituteRequestCount}
+                    >
+                        Vekalet Talepleri
+                    </TabButton>
                 )}
 
                 <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<PieChart size={18} />}>Analiz</TabButton>
@@ -764,6 +1011,15 @@ const Requests = () => {
                         handleReject={handleReject}
                         handleViewDetails={handleViewDetails}
                         fetchTeamHistory={fetchTeamHistory}
+                    />
+                )}
+                {activeTab === 'substitute_requests' && (
+                    <SubstituteRequestsSection
+                        substituteData={substituteData}
+                        loading={substituteLoading}
+                        handleSubstituteApprove={handleSubstituteApprove}
+                        handleSubstituteReject={handleSubstituteReject}
+                        handleViewDetails={handleViewDetails}
                     />
                 )}
                 {activeTab === 'analytics' && (
