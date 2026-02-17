@@ -34,6 +34,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [sortMode, setSortMode] = useState('NAME');
+    const [hierarchySort, setHierarchySort] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
 
@@ -206,8 +207,28 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return true;
     });
 
+    // Flatten hierarchy tree into ordered employee IDs
+    const getHierarchyOrder = () => {
+        const order = [];
+        const flatten = (nodes) => {
+            if (!nodes) return;
+            nodes.forEach(node => {
+                if (node.type !== 'GROUP' && node.id) order.push(node.id);
+                if (node.children) flatten(node.children);
+            });
+        };
+        flatten(hierarchyData);
+        return order;
+    };
+
     // Sort Logic
     const sortedStats = [...filteredStats].sort((a, b) => {
+        if (hierarchySort && hierarchyData.length > 0) {
+            const order = getHierarchyOrder();
+            const idxA = order.indexOf(a.employee_id);
+            const idxB = order.indexOf(b.employee_id);
+            return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+        }
         if (sortMode === 'OT_DESC') return (b.total_overtime || 0) - (a.total_overtime || 0);
         if (sortMode === 'MISSING_DESC') return (b.total_missing || 0) - (a.total_missing || 0);
         if (sortMode === 'NORMAL_DESC') return (b.total_worked || 0) - (a.total_worked || 0);
@@ -756,169 +777,142 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             {/* Main Content Area */}
             {viewMode === 'LIST' ? (
                 <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                    {/* Checkbox Bar */}
+                    <div className="flex items-center gap-4 px-6 py-3 border-b border-slate-100 bg-slate-50/50">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={hierarchySort}
+                                onChange={(e) => setHierarchySort(e.target.checked)}
+                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-slate-600">Hiyerarşiye göre sırala</span>
+                        </label>
+                        {!hierarchySort && (
+                            <select
+                                value={sortMode}
+                                onChange={(e) => setSortMode(e.target.value)}
+                                className="bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 py-1.5 pl-2 pr-6 cursor-pointer hover:border-indigo-300 transition-colors"
+                            >
+                                <option value="NAME">İsim (A-Z)</option>
+                                <option value="OT_DESC">En Çok Ek Mesai</option>
+                                <option value="MISSING_DESC">En Çok Eksik</option>
+                                <option value="NORMAL_DESC">En Çok Çalışma</option>
+                            </select>
+                        )}
+                        <span className="text-xs text-slate-400 ml-auto">{sortedStats.length} kişi</span>
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    <th className="p-6">Personel Detay</th>
-                                    <th className="p-6">Durum</th>
-                                    {scope === 'DAILY' ? (
-                                        <>
-                                            <th className="p-6 w-[40%]">Günlük Detay</th>
-                                            <th className="p-6 w-[35%]">Aylık Durum</th>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <th className="p-6 w-1/4">Performans Hedefi</th>
-                                            <th className="p-6 text-right">Normal</th>
-                                            <th className="p-6 text-right">Fazla</th>
-                                            <th className="p-6 text-right">Eksik</th>
-                                            <th className="p-6 text-center">Durum</th>
-                                        </>
-                                    )}
-                                    <th className="p-6"></th>
+                                {/* Section headers */}
+                                <tr className="bg-slate-50/60 border-b border-slate-100">
+                                    <th colSpan="2" className="p-2 pl-6"></th>
+                                    <th colSpan="3" className="p-2 text-center">
+                                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Bugün</span>
+                                    </th>
+                                    <th colSpan="3" className="p-2 text-center">
+                                        <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest bg-violet-50 px-3 py-1 rounded-full border border-violet-100">Aylık Birikimli</span>
+                                    </th>
+                                    <th className="p-2"></th>
+                                </tr>
+                                {/* Column headers */}
+                                <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <th className="py-3 pl-6 pr-3">Personel</th>
+                                    <th className="py-3 px-3 w-20">Durum</th>
+                                    <th className="py-3 px-3 text-center w-24">Normal</th>
+                                    <th className="py-3 px-3 text-center w-24">F. Mesai</th>
+                                    <th className="py-3 px-3 text-center w-20">Mola</th>
+                                    <th className="py-3 px-3 text-center w-24">Çalışma</th>
+                                    <th className="py-3 px-3 text-center w-24">F. Mesai</th>
+                                    <th className="py-3 px-3 text-center w-32">Net Durum</th>
+                                    <th className="py-3 px-3 w-10"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {loading ? (
-                                    <tr><td colSpan="8" className="p-12 text-center text-slate-400 animate-pulse">Analiz ediliyor...</td></tr>
+                                    <tr><td colSpan="9" className="p-12 text-center text-slate-400 animate-pulse">Analiz ediliyor...</td></tr>
                                 ) : sortedStats.length === 0 ? (
-                                    <tr><td colSpan="8" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
+                                    <tr><td colSpan="9" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
                                 ) : (
                                     sortedStats.map(item => {
-                                        // Calc percentage for progress bar
-                                        const total = item.total_worked + item.total_missing;
-                                        const percent = total > 0 ? Math.min(100, (item.total_worked / total) * 100) : 0;
-
+                                        const deviation = item.monthly_deviation || 0;
                                         return (
                                             <tr key={item.employee_id} className="hover:bg-slate-50/80 transition-all group">
-                                                <td className="p-6 cursor-pointer" onClick={() => {
-                                                    if (embedded && onMemberClick) {
-                                                        onMemberClick(item.employee_id);
-                                                    } else {
-                                                        setSelectedEmployee(item);
-                                                    }
-                                                }}>
-                                                    <div className="flex items-center gap-4 group-hover:translate-x-1 transition-transform">
-                                                        <div className="relative">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold border-2 border-white shadow-sm">
+                                                {/* Personel */}
+                                                <td className="py-3 pl-6 pr-3">
+                                                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => {
+                                                        if (embedded && onMemberClick) onMemberClick(item.employee_id);
+                                                        else handleEmployeeClick(item.employee_id);
+                                                    }}>
+                                                        <div className="relative shrink-0">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 text-xs font-bold border border-white shadow-sm">
                                                                 {(item.employee_name || '?').charAt(0)}
                                                             </div>
                                                             {item.is_online && (
-                                                                <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white bg-emerald-500"></span>
+                                                                <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
                                                             )}
                                                         </div>
-                                                        <div>
-                                                            <div className="font-bold text-slate-800">{item.employee_name}</div>
-                                                            <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{item.department}</div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-slate-700 text-sm truncate hover:text-indigo-600 transition-colors">{item.employee_name}</div>
+                                                            <div className="text-[10px] text-slate-400 font-medium truncate">{item.department}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="p-6">
-                                                    {/* Status Priority: Online > Critical > High Performance > Normal */}
+                                                {/* Durum */}
+                                                <td className="py-3 px-3">
                                                     {item.is_online ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Ofiste
-                                                        </span>
-                                                    ) : item.total_missing > 300 ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200">
-                                                            Dışarıda
-                                                        </span>
-                                                    ) : item.total_overtime > 600 ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Yoğun
-                                                        </span>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Normal
-                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
                                                     )}
                                                 </td>
-                                                {scope === 'DAILY' ? (
-                                                    <>
-                                                        <td className="p-6">
-                                                            <div className="grid grid-cols-2 gap-3">
-                                                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex flex-col items-center justify-center">
-                                                                    <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Normal</div>
-                                                                    <div className="font-mono font-bold text-slate-700">{formatMinutes(item.today_normal)}</div>
-                                                                </div>
-                                                                <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-100 flex flex-col items-center justify-center">
-                                                                    <div className="text-[10px] uppercase font-bold text-amber-500 mb-0.5">Fazla</div>
-                                                                    <div className="font-mono font-bold text-amber-700">+{formatMinutes(item.today_overtime)}</div>
-                                                                </div>
-                                                                <div className="bg-red-50 p-2.5 rounded-lg border border-red-100 flex flex-col items-center justify-center">
-                                                                    <div className="text-[10px] uppercase font-bold text-red-500 mb-0.5">Eksik</div>
-                                                                    <div className="font-mono font-bold text-red-700">-{formatMinutes(item.today_missing)}</div>
-                                                                </div>
-                                                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex flex-col items-center justify-center">
-                                                                    <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Mola</div>
-                                                                    <div className="font-mono font-bold text-slate-700">{formatMinutes(item.today_break)}</div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-6">
-                                                            {/* MONTHLY STACKED BAR */}
-                                                            <div className="flex justify-between text-xs mb-1 font-semibold text-slate-600">
-                                                                <span>Aylık İlerleme</span>
-                                                                <span>% {Math.round(percent)}</span>
-                                                            </div>
-                                                            <div className="w-full h-3 bg-slate-100 rounded-full flex overflow-hidden">
-                                                                {/* Normal */}
-                                                                <div className="bg-blue-500 h-full" style={{ width: `${(item.total_worked / (item.total_worked + item.total_missing + 1)) * 100}%` }} title="Normal Çalışma"></div>
-                                                                {/* Overtime (Visualized as extra segment if needed, or included in total?) Overtime is technically 'worked', so maybe just overlay or separate segment. Simple approach: Worked vs Missing */}
-                                                                {/* Missing */}
-                                                                <div className="bg-slate-200 h-full flex-1"></div>
-                                                            </div>
-                                                            {/* Labels for Bar */}
-                                                            <div className="flex gap-2 text-[10px] mt-1 text-slate-400">
-                                                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Çalışılan</span>
-                                                                {item.total_overtime > 0 && <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500"></div>+{formatMinutes(item.total_overtime)} FM</span>}
-                                                                {item.total_missing > 0 && <span className="flex items-center gap-1 text-red-400"><div className="w-2 h-2 rounded-full bg-red-400"></div>-{formatMinutes(item.total_missing)} Eksik</span>}
-                                                            </div>
-                                                        </td>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <td className="p-6">
-                                                            <div className="flex justify-between text-xs mb-1 font-semibold text-slate-600">
-                                                                <span>İlerleme</span>
-                                                                <span>{Math.round(percent)}%</span>
-                                                            </div>
-                                                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                                                <div
-                                                                    className={`h-full rounded-full transition-all duration-1000 ${percent < 80 ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'}`}
-                                                                    style={{ width: `${percent}%` }}
-                                                                ></div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-6 text-right font-mono text-sm font-semibold text-slate-600">
-                                                            {formatMinutes(item.total_worked)}
-                                                        </td>
-                                                        <td className="p-6 text-right">
-                                                            {item.total_overtime > 0 && (
-                                                                <span className="font-mono text-sm font-bold text-amber-600 flex items-center justify-end gap-1">
-                                                                    <ArrowUpRight size={14} className="stroke-[3]" />
-                                                                    {formatMinutes(item.total_overtime)}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-6 text-right">
-                                                            {item.total_missing > 0 && (
-                                                                <span className="font-mono text-sm font-bold text-red-500 flex items-center justify-end gap-1">
-                                                                    <ArrowDownRight size={14} className="stroke-[3]" />
-                                                                    {formatMinutes(item.total_missing)}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-6 text-center">
-                                                            {renderDeviation(item)}
-                                                        </td>
-                                                    </>
-                                                )
-                                                }
-                                                <td className="p-6 text-right">
-                                                    <button className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all group-hover:text-slate-500">
-                                                        <MoreHorizontal size={20} />
+                                                {/* BUGÜN: Normal */}
+                                                <td className="py-3 px-3 text-center">
+                                                    <span className="text-xs font-bold text-slate-700 font-mono">{formatMinutes(item.today_normal)}</span>
+                                                </td>
+                                                {/* BUGÜN: F.Mesai */}
+                                                <td className="py-3 px-3 text-center">
+                                                    {item.today_overtime > 0 ? (
+                                                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(item.today_overtime)}</span>
+                                                    ) : <span className="text-slate-300">-</span>}
+                                                </td>
+                                                {/* BUGÜN: Mola */}
+                                                <td className="py-3 px-3 text-center">
+                                                    {item.today_break > 0 ? (
+                                                        <span className="text-xs font-medium text-slate-500 font-mono">{formatMinutes(item.today_break)}</span>
+                                                    ) : <span className="text-slate-300">-</span>}
+                                                </td>
+                                                {/* AYLIK: Çalışma */}
+                                                <td className="py-3 px-3 text-center">
+                                                    <span className="text-xs font-semibold text-slate-600 font-mono">{formatMinutes(item.total_worked)}</span>
+                                                </td>
+                                                {/* AYLIK: F.Mesai */}
+                                                <td className="py-3 px-3 text-center">
+                                                    {item.total_overtime > 0 ? (
+                                                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(item.total_overtime)}</span>
+                                                    ) : <span className="text-slate-300">-</span>}
+                                                </td>
+                                                {/* AYLIK: Net Durum */}
+                                                <td className="py-3 px-3 text-center">
+                                                    {(item.total_missing || 0) > 0 ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
+                                                            <ArrowDownRight size={11} />
+                                                            {formatMinutes(item.total_missing)} Eksik
+                                                        </span>
+                                                    ) : (item.total_overtime || 0) > 0 ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                                                            <ArrowUpRight size={11} />
+                                                            {formatMinutes(item.total_overtime)} Fazla
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-300 text-xs">—</span>
+                                                    )}
+                                                </td>
+                                                {/* Actions */}
+                                                <td className="py-3 px-3 text-center">
+                                                    <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(item)}>
+                                                        <Activity size={14} />
                                                     </button>
                                                 </td>
                                             </tr>
