@@ -70,7 +70,8 @@ const INITIAL_FORM_STATE = {
     completed_annual_leave_this_year: 0,
     annual_leave_advance_limit: 0,
     annual_leave_accrual_rate: 14,
-    leave_entitlements: [] // [NEW] Granular History
+    auto_calculated_rate: null,
+    leave_entitlements: []
 };
 
 // ...
@@ -619,7 +620,7 @@ const StepLeave = ({ formData, handleChange }) => {
 
         const newRow = {
             year: nextYear,
-            days_entitled: 14,
+            days_entitled: formData.auto_calculated_rate || formData.annual_leave_accrual_rate || 14,
             days_used: 0,
             is_transferred: false
         };
@@ -669,8 +670,9 @@ const StepLeave = ({ formData, handleChange }) => {
                         <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_advance_limit} <span className="text-sm font-normal text-slate-400">Gün</span></div>
                     </div>
                     <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
-                        <div className="text-xs text-emerald-600 font-bold uppercase">Yıllık Hakediş</div>
-                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_accrual_rate} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                        <div className="text-xs text-emerald-600 font-bold uppercase">Kanuni Hakediş</div>
+                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.auto_calculated_rate || formData.annual_leave_accrual_rate} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                        {formData.auto_calculated_rate && <div className="text-[10px] text-emerald-500 mt-0.5">4857 Madde 53'e göre otomatik</div>}
                     </div>
                 </div>
 
@@ -1226,7 +1228,8 @@ const Employees = () => {
                 completed_annual_leave_this_year: data.completed_annual_leave_this_year || 0,
                 annual_leave_advance_limit: data.annual_leave_advance_limit || 0,
                 annual_leave_accrual_rate: data.annual_leave_accrual_rate || 14,
-                leave_entitlements: data.leave_entitlements || [], // [NEW] Populate from backend
+                auto_calculated_rate: data.auto_calculated_rate || null,
+                leave_entitlements: data.leave_entitlements || [],
 
                 // Calendar & Assignments
                 work_schedule: data.work_schedule?.id || '',
