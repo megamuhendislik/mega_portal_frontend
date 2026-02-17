@@ -79,6 +79,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             const data = Array.isArray(res.data) ? res.data : [];
             setStats(data);
 
+            // DEBUG: Log raw API response for first 3 employees
+            console.log('=== DASHBOARD STATS DEBUG ===');
+            console.log('Params:', params);
+            console.log('Total employees:', data.length);
+            data.slice(0, 3).forEach(d => {
+                console.log(`[${d.employee_name}] total_worked=${d.total_worked}dk, total_overtime=${d.total_overtime}dk, total_missing=${d.total_missing}dk, monthly_deviation=${d.monthly_deviation}dk, monthly_required=${d.monthly_required}dk`);
+            });
+
             // Calculate Executive Summaries
             const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
             const required = data.reduce((acc, curr) => acc + (curr.monthly_required || 0), 0);
