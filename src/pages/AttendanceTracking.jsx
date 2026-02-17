@@ -15,13 +15,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const navigate = useNavigate();
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
 
-    // State
+    // State — propMonth is 0-based (from Attendance.jsx), convert to 1-based for API
     const [year, setYear] = useState(propYear || moment().year());
-    const [month, setMonth] = useState(propMonth || moment().month() + 1);
+    const [month, setMonth] = useState(propMonth != null ? propMonth + 1 : moment().month() + 1);
 
     useEffect(() => {
         if (propYear) setYear(propYear);
-        if (propMonth) setMonth(propMonth);
+        if (propMonth != null) setMonth(propMonth + 1);
     }, [propYear, propMonth]);
 
     const [selectedDept, setSelectedDept] = useState('');
