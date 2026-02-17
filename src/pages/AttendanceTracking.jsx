@@ -348,19 +348,19 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </td>
                 {/* AYLIK: Çalışma */}
                 <td className="py-3 px-3 text-center">
-                    <span className="text-xs font-semibold text-slate-600 font-mono">{formatMinutes(s.total_worked || (isManager && nodeStats ? nodeStats.total_worked : 0))}</span>
+                    <span className="text-xs font-semibold text-slate-600 font-mono">{formatMinutes(s.total_worked || 0)}</span>
                 </td>
                 {/* AYLIK: F.Mesai */}
                 <td className="py-3 px-3 text-center">
-                    {((s.total_overtime || (isManager && nodeStats ? nodeStats.total_overtime : 0)) || 0) > 0 ? (
-                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(s.total_overtime || (isManager && nodeStats ? nodeStats.total_overtime : 0))}</span>
+                    {(s.total_overtime || 0) > 0 ? (
+                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(s.total_overtime)}</span>
                     ) : <span className="text-slate-300">-</span>}
                 </td>
                 {/* AYLIK: Net Durum */}
                 <td className="py-3 px-3 text-center">
                     {(() => {
-                        const missing = s.total_missing || (isManager && nodeStats ? nodeStats.total_missing : 0) || 0;
-                        const overtime = s.total_overtime || (isManager && nodeStats ? nodeStats.total_overtime : 0) || 0;
+                        const missing = s.total_missing || 0;
+                        const overtime = s.total_overtime || 0;
                         if (missing > 0) {
                             return (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
