@@ -12,14 +12,9 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
     const employeeId = user?.employee?.id || user?.id;
 
     useEffect(() => {
-        console.log("TeamSelector Mount. User:", user);
-        console.log("Derived Employee ID:", employeeId);
-
         if (employeeId) {
-            console.log("Fetching team for emp:", employeeId);
             fetchTeam();
         } else {
-            console.log("No Employee ID found in AuthContext user object!");
             setLoading(false);
         }
     }, [user, employeeId]);
@@ -34,10 +29,7 @@ const TeamSelector = ({ selectedId, onSelect, className = "" }) => {
                 job_position: { name: 'Ben' }
             };
 
-            console.log("Calling get_team API...");
-            // Fetch primitives
             const response = await api.get(`/employees/${employeeId}/team/`);
-            console.log("Team API Data:", response.data);
 
             // Combine: Self + Team
             const teamData = [self, ...(Array.isArray(response.data) ? response.data : [])];

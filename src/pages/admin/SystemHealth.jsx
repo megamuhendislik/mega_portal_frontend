@@ -1303,13 +1303,8 @@ function DashboardTab({ stats, refresh, loading }) {
                                     const deletedUsers = res.data.deleted_users || [];
 
                                     if (deletedUsers.length > 0) {
-                                        console.group("🗑️ Test Data Cleanup Report");
-                                        console.log(`Total Deleted: ${deletedUsers.length}`);
-                                        console.table(deletedUsers);
-                                        console.groupEnd();
-                                        alert(`${res.data.status}\n\nDetaylar için lütfen tarayıcı konsoluna (F12) bakın.`);
+                                        alert(`${res.data.status}\n\nSilinen: ${deletedUsers.length} kullanıcı`);
                                     } else {
-                                        console.warn("No users matched the cleanup filter.");
                                         alert(res.data.status);
                                     }
 
@@ -1911,7 +1906,8 @@ function MaintenanceTab() {
             };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const response = await fetch('https://web-production-6fe6a.up.railway.app/api/system/health-check/fix_retroactive_breaks/', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+            const response = await fetch(`${apiUrl}/system/health-check/fix_retroactive_breaks/`, {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify({})

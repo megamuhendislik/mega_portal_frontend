@@ -111,6 +111,15 @@ function App() {
 
             {/* External Program Management */}
             <Route path="program-management" element={<ProtectedRoute requiredPermission="PAGE_PROGRAM_MANAGEMENT"><ProgramManagement /></ProtectedRoute>} />
+
+            {/* 404 - Sayfa Bulunamadı */}
+            <Route path="*" element={
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
+                <h2 className="text-4xl font-bold text-slate-300 mb-4">404</h2>
+                <p className="text-lg font-medium text-slate-600 mb-2">Sayfa Bulunamadı</p>
+                <p className="text-sm">Aradığınız sayfa mevcut değil veya kaldırılmış olabilir.</p>
+              </div>
+            } />
           </Route>
         </Routes>
       </AuthProvider>
@@ -119,4 +128,3 @@ function App() {
 }
 
 export default App;
-// Trigger Rebuild 2026-01-07

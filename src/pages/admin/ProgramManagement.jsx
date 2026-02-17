@@ -517,7 +517,7 @@ try:
 except ImportError:
     print("pip install requests"); exit(1)
 
-BASE_URL = "https://mega-portal-production.up.railway.app/api"
+BASE_URL = "\${BASE_URL}"
 PROGRAM_KEY = "${programKey}"
 APP_VERSION = "1.0.0"
 CACHE_FILE = os.path.join(os.path.expanduser("~"), ".mega_auth_cache.json")
@@ -582,7 +582,7 @@ def authenticate():
 
 
 const DocsTab = ({ program }) => {
-    const baseUrl = "https://mega-portal-production.up.railway.app/api";
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
     const copyJson = (obj) => navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
 
     const endpoints = [
