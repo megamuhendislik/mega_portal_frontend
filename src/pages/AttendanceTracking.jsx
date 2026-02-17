@@ -528,14 +528,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
                         <select
                             value={year}
-                            onChange={(e) => setYear(e.target.value)}
+                            onChange={(e) => setYear(parseInt(e.target.value))}
                             className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
                         >
                             {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
                         <select
                             value={month}
-                            onChange={(e) => setMonth(e.target.value)}
+                            onChange={(e) => setMonth(parseInt(e.target.value))}
                             className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
                         >
                             {moment.months().map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
