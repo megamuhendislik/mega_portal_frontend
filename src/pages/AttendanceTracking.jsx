@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Calendar, Filter, Download, ChevronRight, Clock, AlertCircle,
-    CheckCircle, Coffee, Users, TrendingUp, Activity, Briefcase,
-    MoreHorizontal, Search, ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
-    Network, Filter as FilterIcon, ChevronDown, ChevronRight as ChevronRightIcon
+    Clock, AlertCircle, Users, Activity,
+    Search, ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
+    ChevronDown, ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -14,8 +13,6 @@ import useInterval from '../hooks/useInterval';
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
     const navigate = useNavigate();
-    const [viewMode, setViewMode] = useState('HIERARCHY'); // LIST, GRID, HIERARCHY
-    const [matrixData, setMatrixData] = useState(null);
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
 
     // State
@@ -34,7 +31,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [sortMode, setSortMode] = useState('NAME');
-    const [hierarchySort, setHierarchySort] = useState(false);
+    const [hierarchySort, setHierarchySort] = useState(true);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
 
@@ -53,21 +50,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     }, []);
 
     useEffect(() => {
-        if (viewMode === 'GRID') {
-            fetchTeamMatrix();
-        } else if (viewMode === 'HIERARCHY') {
-            fetchHierarchy(); // Hierarchy needs stats too, but we fetch hierarchy structure first/parallel
-            fetchStats();
-        } else {
-            fetchStats();
-        }
-    }, [viewMode, year, month, selectedDept]);
+        fetchHierarchy();
+        fetchStats();
+    }, [year, month, selectedDept]);
 
     // Auto-Refresh
     useInterval(() => {
-        if (!loading) {
-            viewMode === 'GRID' ? fetchTeamMatrix() : fetchStats();
-        }
+        if (!loading) fetchStats();
     }, 30000);
 
     const fetchDepartments = async () => {
@@ -117,20 +106,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         }
     };
 
-    const fetchTeamMatrix = async () => {
-        setLoading(true);
-        try {
-            const params = { year, month };
-            if (selectedDept) params.department_id = selectedDept;
-            const res = await api.get('/stats/team_matrix/', { params });
-            // Matrix data must have .data property which is array
-            setMatrixData(res.data && Array.isArray(res.data.data) ? res.data : null);
-        } catch (error) {
-            console.error('Error fetching matrix:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const fetchHierarchy = async () => {
         setLoading(true);
@@ -317,6 +292,104 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return agg;
     };
 
+    // Render a single employee row (used by both hierarchy and flat list)
+    const renderEmployeeRow = (s, name, title, id, depth = 0, opts = {}) => {
+        const { isManager, nodeStats, isExpanded, onToggle } = opts;
+        return (
+            <tr key={(isManager ? 'mgr-' : 'emp-') + id} className={`hover:bg-slate-50/80 transition-all group border-b border-slate-50 ${isManager ? 'bg-slate-50/50' : ''}`}>
+                {/* Personel */}
+                <td className="py-3 pl-6 pr-3">
+                    <div className="flex items-center gap-3" style={hierarchySort ? { paddingLeft: `${depth * 20}px` } : undefined}>
+                        {hierarchySort && isManager && onToggle && (
+                            <div className="cursor-pointer p-1 rounded-md transition-colors bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500" onClick={onToggle}>
+                                {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
+                            </div>
+                        )}
+                        <div className="relative shrink-0">
+                            <div className={`rounded-full flex items-center justify-center text-xs font-bold border shadow-sm ${isManager ? 'w-9 h-9 bg-indigo-50 text-indigo-600 border-indigo-100' : 'w-8 h-8 bg-white text-slate-600 border-slate-100'}`}>
+                                {(name || '?').charAt(0)}
+                            </div>
+                            {s.is_online && (
+                                <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
+                            )}
+                        </div>
+                        <div className="min-w-0 flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-700 text-sm truncate cursor-pointer hover:text-indigo-600 hover:underline transition-colors" onClick={() => handleEmployeeClick(id)}>{name}</span>
+                                {isManager && nodeStats && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold shrink-0">{nodeStats.count} Kişi</span>}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-medium truncate">{title}</span>
+                        </div>
+                    </div>
+                </td>
+                {/* Durum */}
+                <td className="py-3 px-3">
+                    {s.is_online ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span>
+                    ) : (
+                        <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
+                    )}
+                </td>
+                {/* BUGÜN: Normal */}
+                <td className="py-3 px-3 text-center">
+                    <span className="text-xs font-bold text-slate-700 font-mono">{formatMinutes(s.today_normal)}</span>
+                </td>
+                {/* BUGÜN: F.Mesai */}
+                <td className="py-3 px-3 text-center">
+                    {(s.today_overtime || 0) > 0 ? (
+                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(s.today_overtime)}</span>
+                    ) : <span className="text-slate-300">-</span>}
+                </td>
+                {/* BUGÜN: Mola */}
+                <td className="py-3 px-3 text-center">
+                    {(s.today_break || 0) > 0 ? (
+                        <span className="text-xs font-medium text-slate-500 font-mono">{formatMinutes(s.today_break)}</span>
+                    ) : <span className="text-slate-300">-</span>}
+                </td>
+                {/* AYLIK: Çalışma */}
+                <td className="py-3 px-3 text-center">
+                    <span className="text-xs font-semibold text-slate-600 font-mono">{formatMinutes(s.total_worked || (isManager && nodeStats ? nodeStats.total_worked : 0))}</span>
+                </td>
+                {/* AYLIK: F.Mesai */}
+                <td className="py-3 px-3 text-center">
+                    {((s.total_overtime || (isManager && nodeStats ? nodeStats.total_overtime : 0)) || 0) > 0 ? (
+                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(s.total_overtime || (isManager && nodeStats ? nodeStats.total_overtime : 0))}</span>
+                    ) : <span className="text-slate-300">-</span>}
+                </td>
+                {/* AYLIK: Net Durum */}
+                <td className="py-3 px-3 text-center">
+                    {(() => {
+                        const missing = s.total_missing || (isManager && nodeStats ? nodeStats.total_missing : 0) || 0;
+                        const overtime = s.total_overtime || (isManager && nodeStats ? nodeStats.total_overtime : 0) || 0;
+                        if (missing > 0) {
+                            return (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
+                                    <ArrowDownRight size={11} />
+                                    {formatMinutes(missing)} Eksik
+                                </span>
+                            );
+                        }
+                        if (overtime > 0) {
+                            return (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                                    <ArrowUpRight size={11} />
+                                    {formatMinutes(overtime)} Fazla
+                                </span>
+                            );
+                        }
+                        return <span className="text-slate-300 text-xs">—</span>;
+                    })()}
+                </td>
+                {/* Actions */}
+                <td className="py-3 px-3 text-center">
+                    <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
+                        <Activity size={14} />
+                    </button>
+                </td>
+            </tr>
+        );
+    };
+
     const renderHierarchyRows = (nodes, depth = 0) => {
         if (!nodes) return null;
 
@@ -346,7 +419,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     </span>
                                 )}
                             </td>
-                            <td className="p-3">
+                            <td className="p-3 text-center">
                                 {nodeStats.today_normal > 0 && <span className="text-xs font-mono font-bold text-slate-600">{formatMinutes(nodeStats.today_normal)}</span>}
                             </td>
                             <td className="p-3 text-center">
@@ -355,7 +428,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <td className="p-3 text-center">
                                 {nodeStats.today_break > 0 && <span className="text-xs font-mono font-bold text-slate-500">{formatMinutes(nodeStats.today_break)}</span>}
                             </td>
-                            <td className="p-3 text-right">
+                            <td className="p-3 text-center">
+                                {nodeStats.total_worked > 0 && <span className="text-xs font-mono font-semibold text-slate-600">{formatMinutes(nodeStats.total_worked)}</span>}
+                            </td>
+                            <td className="p-3 text-center">
+                                {nodeStats.total_overtime > 0 && <span className="text-xs font-mono font-bold text-amber-600">+{formatMinutes(nodeStats.total_overtime)}</span>}
+                            </td>
+                            <td className="p-3 text-center">
                                 {renderDeviation(nodeStats)}
                             </td>
                             <td className="p-3"></td>
@@ -376,205 +455,26 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             let matchesStatus = true;
             if (filterStatus === 'ONLINE') matchesStatus = s.is_online;
-            else if (filterStatus === 'OVERTIME') matchesStatus = s.total_overtime > 0;
-            else if (filterStatus === 'MISSING') matchesStatus = s.total_missing > 0;
+            else if (filterStatus === 'OVERTIME') matchesStatus = (s.total_overtime || 0) > 0;
+            else if (filterStatus === 'MISSING') matchesStatus = (s.total_missing || 0) > 0;
 
             if (!matchesSearch || !matchesStatus) return null;
             if (!s.employee_id && stats.length > 0) return null;
 
-            // Manager row (has subordinates) - show as expandable with aggregate stats
-            if (hasChildren) {
-                const nodeStats = calculateNodeStats(node);
+            const nodeStats = hasChildren ? calculateNodeStats(node) : null;
 
-                return (
-                    <React.Fragment key={'mgr-' + node.id}>
-                        <tr className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-100/50 transition-all">
-                            <td className="p-3 pl-6">
-                                <div className="flex items-center gap-3" style={{ paddingLeft: `${depth * 20}px` }}>
-                                    <div className="cursor-pointer p-1 rounded-md transition-colors bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500" onClick={() => toggleDept(node.id)}>
-                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
-                                    </div>
-                                    <div className="relative shrink-0">
-                                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
-                                            {(node.name || '?').charAt(0)}
-                                        </div>
-                                        {s.is_online && (
-                                            <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-700 text-sm cursor-pointer hover:text-indigo-600 hover:underline transition-colors" onClick={(e) => { e.stopPropagation(); handleEmployeeClick(node.id); }}>{node.name}</span>
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold">{nodeStats.count} Kişi</span>
-                                        </div>
-                                        <span className="text-[11px] text-slate-400 font-medium">{node.title}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="p-3">
-                                {s.is_online ?
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span> :
-                                    <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
-                                }
-                            </td>
-                            <td className="p-3">
-                                <span className="text-xs font-bold text-slate-700">{formatMinutes(s.today_normal)}</span>
-                            </td>
-                            <td className="p-3 text-center">
-                                {s.today_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.today_overtime)}</span> : <span className="text-slate-300">-</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
-                            </td>
-                            <td className="p-3 text-right">
-                                {renderDeviation(nodeStats)}
-                            </td>
-                            <td className="p-3 text-center">
-                                <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
-                                    <Activity size={14} />
-                                </button>
-                            </td>
-                        </tr>
-                        {isExpanded && renderHierarchyRows(node.children, depth + 1)}
-                    </React.Fragment>
-                );
-            }
-
-            // Leaf employee row (no subordinates)
             return (
-                <React.Fragment key={'emp-' + node.id}>
-                    <tr className="hover:bg-slate-50/80 transition-all group border-b border-slate-50">
-                        <td className="p-4 pl-6">
-                            <div className="flex items-center gap-3" style={{ paddingLeft: `${depth * 20}px` }}>
-                                <div className="relative shrink-0">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-white text-slate-600 border border-slate-100 shadow-sm">
-                                        {(node.name || '?').charAt(0)}
-                                    </div>
-                                    {s.is_online && (
-                                        <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
-                                    )}
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="font-semibold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-indigo-600 hover:underline transition-colors" onClick={() => handleEmployeeClick(node.id)}>{node.name}</span>
-                                    <span className="text-[11px] text-slate-400 font-medium">{node.title}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td className="p-4">
-                            {s.is_online ?
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span> :
-                                <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
-                            }
-                        </td>
-                        <td className="p-4">
-                            <span className="text-xs font-bold text-slate-700">{formatMinutes(s.today_normal)}</span>
-                        </td>
-                        <td className="p-4 text-center">
-                            {s.today_overtime > 0 ? <span className="text-amber-600 font-bold text-xs">+{formatMinutes(s.today_overtime)}</span> : <span className="text-slate-300">-</span>}
-                        </td>
-                        <td className="p-4 text-center">
-                            {s.today_break > 0 ? <span className="text-slate-500 font-medium text-xs">{formatMinutes(s.today_break)}</span> : <span className="text-slate-300">-</span>}
-                        </td>
-                        <td className="p-4 text-right">
-                            {renderDeviation(s)}
-                        </td>
-                        <td className="p-4 text-center">
-                            <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
-                                <Activity size={14} />
-                            </button>
-                        </td>
-                    </tr>
+                <React.Fragment key={(hasChildren ? 'mgr-' : 'emp-') + node.id}>
+                    {renderEmployeeRow(s, node.name, node.title, node.id, depth, {
+                        isManager: hasChildren,
+                        nodeStats,
+                        isExpanded,
+                        onToggle: hasChildren ? () => toggleDept(node.id) : null
+                    })}
+                    {hasChildren && isExpanded && renderHierarchyRows(node.children, depth + 1)}
                 </React.Fragment>
             );
         });
-    };
-
-    const renderHierarchyView = () => {
-        const mergedData = getMergedHierarchy();
-
-        return (
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                <th className="p-4 pl-6">Organizasyon / Personel</th>
-                                <th className="p-4 w-24">Durum</th>
-                                <th className="p-4 w-32">Bugün Çalışma</th>
-                                <th className="p-4 text-center w-24">F. Mesai</th>
-                                <th className="p-4 text-center w-24">Mola</th>
-                                <th className="p-4 text-right w-24">Aylık Durum</th>
-                                <th className="p-4"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {loading ? (
-                                <tr><td colSpan="6" className="p-12 text-center text-slate-400 animate-pulse">Organizasyon şeması yükleniyor...</td></tr>
-                            ) : mergedData.length === 0 ? (
-                                <tr><td colSpan="6" className="p-12 text-center text-slate-400">Veri bulunamadı.</td></tr>
-                            ) : (
-                                renderHierarchyRows(mergedData)
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    };
-
-    const renderGridView = () => {
-        if (!matrixData) return null;
-        const daysHeader = Array.from({ length: matrixData.days_in_month }, (_, i) => i + 1);
-
-        return (
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 overflow-hidden animate-fade-in">
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="p-4 text-left border-b min-w-[200px] sticky left-0 z-10 bg-slate-50/95 backdrop-blur">Personel</th>
-                                {daysHeader.map(d => (
-                                    <th key={d} className="p-2 text-center border-b min-w-[40px] text-xs font-semibold text-slate-500">
-                                        {d}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {matrixData.data.map(row => (
-                                <tr key={row.employee.id} className="hover:bg-blue-50/30 transition-colors border-b border-slate-100 last:border-0">
-                                    <td className="p-4 bg-white/95 sticky left-0 z-10 border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                        <div className="font-bold text-slate-800">{row.employee.name}</div>
-                                        <div className="text-xs text-slate-500">{row.employee.department}</div>
-                                    </td>
-                                    {row.days.map((day, idx) => (
-                                        <td key={idx} className="p-1 text-center relative group">
-                                            <div
-                                                className="w-8 h-8 mx-auto rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-sm transition-transform hover:scale-110 hover:shadow-md cursor-help"
-                                                style={{ backgroundColor: day.color }}
-                                            >
-                                                {day.status === 'NORMAL' ? '✓' :
-                                                    day.status === 'MISSING' ? '!' :
-                                                        day.status === 'OVERTIME' ? '+' :
-                                                            day.status === 'OFF' ? '-' :
-                                                                day.status === 'HOLIDAY' ? 'H' :
-                                                                    day.status === 'LEAVE' ? 'İ' : '•'}
-                                            </div>
-                                            {/* Tooltip */}
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 w-48 bg-slate-900/90 text-white text-xs p-3 rounded-lg shadow-xl backdrop-blur-sm pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="font-bold mb-1 border-b border-white/20 pb-1">{moment(day.date).format('LL')}</div>
-                                                <div className="leading-relaxed">{day.description}</div>
-                                                <div className="mt-1 text-xs opacity-70">Giriş/Çıkış: {day.check_in || '-'} / {day.check_out || '-'}</div>
-                                            </div>
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -614,21 +514,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <option value="ONLINE">Ofiste</option>
                             <option value="OVERTIME">Fazla Mesai</option>
                             <option value="MISSING">Eksik</option>
-                            <option value="LATE">Geç Kalanlar</option>
                             <option value="ABOVE_AVG_OT">Ort. Üstü Mesai</option>
                             <option value="BELOW_TARGET">Beklenti Altı</option>
-                        </select>
-
-                        {/* Sort */}
-                        <select
-                            value={sortMode}
-                            onChange={(e) => setSortMode(e.target.value)}
-                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors"
-                        >
-                            <option value="NAME">Sırala: İsim (A-Z)</option>
-                            <option value="OT_DESC">Sırala: En Çok Ek Mesai</option>
-                            <option value="MISSING_DESC">Sırala: En Çok Eksik</option>
-                            <option value="NORMAL_DESC">Sırala: En Çok Çalışma</option>
                         </select>
                         <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
@@ -654,11 +541,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <option value="">Tüm Departmanlar</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
-                        <div className="flex bg-slate-100 p-1 rounded-xl">
-                            <button onClick={() => setViewMode('HIERARCHY')} className={`p-2 rounded-lg transition-all ${viewMode === 'HIERARCHY' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Hiyerarşik Liste"><Network size={18} /></button>
-                            <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Düz Liste"><Activity size={18} /></button>
-                            <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Matris Görünüm"><Calendar size={18} /></button>
-                        </div>
                     </div>
                 </div>
             )}
@@ -685,12 +567,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <option value="">Tüm Ekip</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
-                    </div>
-                    {/* View Switcher */}
-                    <div className="flex bg-slate-100 p-1 rounded-xl">
-                        <button onClick={() => setViewMode('HIERARCHY')} className={`p-2 rounded-lg transition-all ${viewMode === 'HIERARCHY' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Network size={18} /></button>
-                        <button onClick={() => setViewMode('LIST')} className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Activity size={18} /></button>
-                        <button onClick={() => setViewMode('GRID')} className={`p-2 rounded-lg transition-all ${viewMode === 'GRID' ? 'bg-white shadow text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Calendar size={18} /></button>
                     </div>
                 </div>
             )}
@@ -774,160 +650,90 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
-            {/* Main Content Area */}
-            {viewMode === 'LIST' ? (
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-                    {/* Checkbox Bar */}
-                    <div className="flex items-center gap-4 px-6 py-3 border-b border-slate-100 bg-slate-50/50">
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={hierarchySort}
-                                onChange={(e) => setHierarchySort(e.target.checked)}
-                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-slate-600">Hiyerarşiye göre sırala</span>
-                        </label>
-                        {!hierarchySort && (
-                            <select
-                                value={sortMode}
-                                onChange={(e) => setSortMode(e.target.value)}
-                                className="bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 py-1.5 pl-2 pr-6 cursor-pointer hover:border-indigo-300 transition-colors"
-                            >
-                                <option value="NAME">İsim (A-Z)</option>
-                                <option value="OT_DESC">En Çok Ek Mesai</option>
-                                <option value="MISSING_DESC">En Çok Eksik</option>
-                                <option value="NORMAL_DESC">En Çok Çalışma</option>
-                            </select>
-                        )}
-                        <span className="text-xs text-slate-400 ml-auto">{sortedStats.length} kişi</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                {/* Section headers */}
-                                <tr className="bg-slate-50/60 border-b border-slate-100">
-                                    <th colSpan="2" className="p-2 pl-6"></th>
-                                    <th colSpan="3" className="p-2 text-center">
-                                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Bugün</span>
-                                    </th>
-                                    <th colSpan="3" className="p-2 text-center">
-                                        <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest bg-violet-50 px-3 py-1 rounded-full border border-violet-100">Aylık Birikimli</span>
-                                    </th>
-                                    <th className="p-2"></th>
-                                </tr>
-                                {/* Column headers */}
-                                <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                    <th className="py-3 pl-6 pr-3">Personel</th>
-                                    <th className="py-3 px-3 w-20">Durum</th>
-                                    <th className="py-3 px-3 text-center w-24">Normal</th>
-                                    <th className="py-3 px-3 text-center w-24">F. Mesai</th>
-                                    <th className="py-3 px-3 text-center w-20">Mola</th>
-                                    <th className="py-3 px-3 text-center w-24">Çalışma</th>
-                                    <th className="py-3 px-3 text-center w-24">F. Mesai</th>
-                                    <th className="py-3 px-3 text-center w-32">Net Durum</th>
-                                    <th className="py-3 px-3 w-10"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {loading ? (
-                                    <tr><td colSpan="9" className="p-12 text-center text-slate-400 animate-pulse">Analiz ediliyor...</td></tr>
-                                ) : sortedStats.length === 0 ? (
+            {/* Main Table */}
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                {/* Toolbar */}
+                <div className="flex items-center gap-4 px-6 py-3 border-b border-slate-100 bg-slate-50/50">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={hierarchySort}
+                            onChange={(e) => setHierarchySort(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <span className="text-sm font-semibold text-slate-600">Hiyerarşi</span>
+                    </label>
+                    {!hierarchySort && (
+                        <select
+                            value={sortMode}
+                            onChange={(e) => setSortMode(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 py-1.5 pl-2 pr-6 cursor-pointer hover:border-indigo-300 transition-colors"
+                        >
+                            <option value="NAME">İsim (A-Z)</option>
+                            <option value="OT_DESC">En Çok Ek Mesai</option>
+                            <option value="MISSING_DESC">En Çok Eksik</option>
+                            <option value="NORMAL_DESC">En Çok Çalışma</option>
+                        </select>
+                    )}
+                    <span className="text-xs text-slate-400 ml-auto">{stats.length} kişi</span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            {/* Section headers */}
+                            <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <th colSpan="2" className="p-2 pl-6"></th>
+                                <th colSpan="3" className="p-2 text-center">
+                                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Bugün</span>
+                                </th>
+                                <th colSpan="3" className="p-2 text-center">
+                                    <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest bg-violet-50 px-3 py-1 rounded-full border border-violet-100">Aylık Birikimli</span>
+                                </th>
+                                <th className="p-2"></th>
+                            </tr>
+                            {/* Column headers */}
+                            <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <th className="py-3 pl-6 pr-3">Personel</th>
+                                <th className="py-3 px-3 w-20">Durum</th>
+                                <th className="py-3 px-3 text-center w-24">Normal</th>
+                                <th className="py-3 px-3 text-center w-24">F. Mesai</th>
+                                <th className="py-3 px-3 text-center w-20">Mola</th>
+                                <th className="py-3 px-3 text-center w-24">Çalışma</th>
+                                <th className="py-3 px-3 text-center w-24">F. Mesai</th>
+                                <th className="py-3 px-3 text-center w-32">Net Durum</th>
+                                <th className="py-3 px-3 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {loading ? (
+                                <tr><td colSpan="9" className="p-12 text-center text-slate-400 animate-pulse">Yükleniyor...</td></tr>
+                            ) : hierarchySort ? (
+                                /* HIERARCHY MODE */
+                                (() => {
+                                    const mergedData = getMergedHierarchy();
+                                    return mergedData.length === 0
+                                        ? <tr><td colSpan="9" className="p-12 text-center text-slate-400">Veri bulunamadı.</td></tr>
+                                        : renderHierarchyRows(mergedData);
+                                })()
+                            ) : (
+                                /* FLAT LIST MODE */
+                                sortedStats.length === 0 ? (
                                     <tr><td colSpan="9" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
                                 ) : (
-                                    sortedStats.map(item => {
-                                        const deviation = item.monthly_deviation || 0;
-                                        return (
-                                            <tr key={item.employee_id} className="hover:bg-slate-50/80 transition-all group">
-                                                {/* Personel */}
-                                                <td className="py-3 pl-6 pr-3">
-                                                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => {
-                                                        if (embedded && onMemberClick) onMemberClick(item.employee_id);
-                                                        else handleEmployeeClick(item.employee_id);
-                                                    }}>
-                                                        <div className="relative shrink-0">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 text-xs font-bold border border-white shadow-sm">
-                                                                {(item.employee_name || '?').charAt(0)}
-                                                            </div>
-                                                            {item.is_online && (
-                                                                <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
-                                                            )}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div className="font-bold text-slate-700 text-sm truncate hover:text-indigo-600 transition-colors">{item.employee_name}</div>
-                                                            <div className="text-[10px] text-slate-400 font-medium truncate">{item.department}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                {/* Durum */}
-                                                <td className="py-3 px-3">
-                                                    {item.is_online ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
-                                                    )}
-                                                </td>
-                                                {/* BUGÜN: Normal */}
-                                                <td className="py-3 px-3 text-center">
-                                                    <span className="text-xs font-bold text-slate-700 font-mono">{formatMinutes(item.today_normal)}</span>
-                                                </td>
-                                                {/* BUGÜN: F.Mesai */}
-                                                <td className="py-3 px-3 text-center">
-                                                    {item.today_overtime > 0 ? (
-                                                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(item.today_overtime)}</span>
-                                                    ) : <span className="text-slate-300">-</span>}
-                                                </td>
-                                                {/* BUGÜN: Mola */}
-                                                <td className="py-3 px-3 text-center">
-                                                    {item.today_break > 0 ? (
-                                                        <span className="text-xs font-medium text-slate-500 font-mono">{formatMinutes(item.today_break)}</span>
-                                                    ) : <span className="text-slate-300">-</span>}
-                                                </td>
-                                                {/* AYLIK: Çalışma */}
-                                                <td className="py-3 px-3 text-center">
-                                                    <span className="text-xs font-semibold text-slate-600 font-mono">{formatMinutes(item.total_worked)}</span>
-                                                </td>
-                                                {/* AYLIK: F.Mesai */}
-                                                <td className="py-3 px-3 text-center">
-                                                    {item.total_overtime > 0 ? (
-                                                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(item.total_overtime)}</span>
-                                                    ) : <span className="text-slate-300">-</span>}
-                                                </td>
-                                                {/* AYLIK: Net Durum */}
-                                                <td className="py-3 px-3 text-center">
-                                                    {(item.total_missing || 0) > 0 ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
-                                                            <ArrowDownRight size={11} />
-                                                            {formatMinutes(item.total_missing)} Eksik
-                                                        </span>
-                                                    ) : (item.total_overtime || 0) > 0 ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
-                                                            <ArrowUpRight size={11} />
-                                                            {formatMinutes(item.total_overtime)} Fazla
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-300 text-xs">—</span>
-                                                    )}
-                                                </td>
-                                                {/* Actions */}
-                                                <td className="py-3 px-3 text-center">
-                                                    <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(item)}>
-                                                        <Activity size={14} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    sortedStats.map(item => renderEmployeeRow(
+                                        item,
+                                        item.employee_name,
+                                        item.department,
+                                        item.employee_id,
+                                        0,
+                                        {}
+                                    ))
+                                )
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            ) : viewMode === 'GRID' ? (
-                renderGridView()
-            ) : (
-                renderHierarchyView()
-            )}
+            </div>
 
             {/* DETAIL MODAL */}
             {
