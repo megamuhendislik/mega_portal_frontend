@@ -6,12 +6,14 @@ import {
     Network, Filter as FilterIcon, ChevronDown, ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import moment from 'moment';
 import useInterval from '../hooks/useInterval';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState('HIERARCHY'); // LIST, GRID, HIERARCHY
     const [matrixData, setMatrixData] = useState(null);
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
@@ -210,6 +212,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const handleEmployeeClick = (employeeId) => {
+        if (embedded && onMemberClick) {
+            onMemberClick(employeeId);
+        } else {
+            navigate(`/attendance?employee_id=${employeeId}`);
+        }
+    };
+
     // Recursive function to aggregate stats for a node and its children (subordinates)
     const calculateNodeStats = (node) => {
         let agg = {
@@ -343,7 +353,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     </div>
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-700 text-sm">{node.name}</span>
+                                            <span className="font-bold text-slate-700 text-sm cursor-pointer hover:text-indigo-600 hover:underline transition-colors" onClick={(e) => { e.stopPropagation(); handleEmployeeClick(node.id); }}>{node.name}</span>
                                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold">{nodeStats.count} Kişi</span>
                                         </div>
                                         <span className="text-[11px] text-slate-400 font-medium">{node.title}</span>
@@ -398,7 +408,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     )}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-semibold text-slate-700 text-sm whitespace-nowrap">{node.name}</span>
+                                    <span className="font-semibold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-indigo-600 hover:underline transition-colors" onClick={() => handleEmployeeClick(node.id)}>{node.name}</span>
                                     <span className="text-[11px] text-slate-400 font-medium">{node.title}</span>
                                 </div>
                             </div>

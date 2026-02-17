@@ -17,9 +17,11 @@ import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import Skeleton from '../components/Skeleton';
 import AttendanceTracking from './AttendanceTracking';
 import { format } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
 
 const Attendance = () => {
     const { user, hasPermission } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // UI State
     const [activeTab, setActiveTab] = useState('my_attendance'); // 'my_attendance', 'team_attendance', 'team_detail'
@@ -62,6 +64,16 @@ const Attendance = () => {
     useEffect(() => {
         updateDateRange(viewYear, viewMonth, viewScope);
         checkTeamVisibility();
+
+        // URL'den employee_id varsa doğrudan o kişinin mesai detayına geç
+        const urlEmployeeId = searchParams.get('employee_id');
+        if (urlEmployeeId) {
+            setSelectedEmployeeId(parseInt(urlEmployeeId));
+            setActiveTab('team_detail');
+            // URL'i temizle (tekrar ziyarette kalmasın)
+            searchParams.delete('employee_id');
+            setSearchParams(searchParams, { replace: true });
+        }
     }, [user]);
 
     // Recalculate dates when year/month/scope changes
