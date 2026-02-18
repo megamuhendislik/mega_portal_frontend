@@ -818,27 +818,34 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
 }
 
 function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
-    const [amount, setAmount] = useState(data?.netBalance || 0);
-    const [mode, setMode] = useState('FULL'); // FULL, PARTIAL
+    const [mode, setMode] = useState('settle'); // 'settle' | 'real_reset'
     const [loading, setLoading] = useState(false);
+    const [confirmText, setConfirmText] = useState('');
 
     useEffect(() => {
-        if (isOpen && data) {
-            setAmount(data.netBalance);
-            setMode('FULL');
+        if (isOpen) {
+            setMode('settle');
+            setLoading(false);
+            setConfirmText('');
         }
-    }, [isOpen, data]);
+    }, [isOpen]);
 
-    const handleSave = async () => {
+    const handleAction = async () => {
+        if (mode === 'real_reset' && confirmText !== 'ONAYLA') {
+            alert('Onaylamak için "ONAYLA" yazın.');
+            return;
+        }
         setLoading(true);
         try {
-            await api.post('/system-data/settle_balance/', {
+            const endpoint = mode === 'settle'
+                ? '/system-data/settle_balance/'
+                : '/system-data/real_reset/';
+            const res = await api.post(endpoint, {
                 employee_id: data.employee.id,
                 year: data.year,
                 month: data.month,
-                compensated_seconds: amount
             });
-            alert('Mahsuplaşma işlemi kaydedildi.');
+            alert(res.data.message || 'İşlem başarılı.');
             onSaveSuccess();
             onClose();
         } catch (e) {
@@ -851,80 +858,97 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     if (!isOpen || !data) return null;
 
     const isSurplus = data.netBalance > 0;
-    const absBal = Math.abs(data.netBalance);
-    const hours = Math.round(absBal / 3600);
+    const isDeficit = data.netBalance < 0;
+    const absHours = (Math.abs(data.netBalance) / 3600).toFixed(1);
+    const absMinutes = Math.round(Math.abs(data.netBalance) / 60);
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-                    <h3 className="text-lg font-bold text-slate-800">Bakiye Mahsuplaşma</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">×</button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-4 border-b flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900">Bakiye İşlemleri</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">{data.employee.first_name} {data.employee.last_name} — {data.year}/{data.month}. Ay</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
                 </div>
 
-                <div className="p-6 space-y-4">
-                    <div className={`p-4 rounded-xl border ${isSurplus ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
-                        <div className="text-sm font-bold opacity-70">Mevcut Bakiye ({data.month}. Ay)</div>
-                        <div className="text-3xl font-bold">
-                            {isSurplus ? '+' : '-'}{hours} Saat
+                {/* Balance Display */}
+                <div className="px-6 pt-5">
+                    <div className={`p-4 rounded-xl border ${isSurplus ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : isDeficit ? 'bg-red-50 border-red-200 text-red-800' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+                        <div className="text-xs font-semibold uppercase tracking-wider opacity-60">Net Bakiye</div>
+                        <div className="text-2xl font-bold mt-1">
+                            {isSurplus ? '+' : isDeficit ? '-' : ''}{absHours} saat
+                            <span className="text-sm font-normal ml-2 opacity-60">({absMinutes} dk)</span>
                         </div>
-                        <div className="text-xs mt-1 opacity-80">({data.netBalance} saniye)</div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
-                            <input
-                                type="radio"
-                                name="mode"
-                                checked={mode === 'FULL'}
-                                onChange={() => { setMode('FULL'); setAmount(data.netBalance); }}
-                                className="w-5 h-5 text-blue-600"
-                            />
-                            <div>
-                                <div className="font-bold text-slate-700">Tamamını Sıfırla</div>
-                                <div className="text-xs text-slate-500">Bütün bakiyeyi mahsuplaş ({data.netBalance} sn)</div>
-                            </div>
-                        </label>
-
-                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
-                            <input
-                                type="radio"
-                                name="mode"
-                                checked={mode === 'PARTIAL'}
-                                onChange={() => setMode('PARTIAL')}
-                                className="w-5 h-5 text-blue-600"
-                            />
-                            <div>
-                                <div className="font-bold text-slate-700">Kısmi / Manuel Giriş</div>
-                                <div className="text-xs text-slate-500">Belirli bir miktarı düş</div>
-                            </div>
-                        </label>
-
-                        {mode === 'PARTIAL' && (
-                            <div className="pl-8">
-                                <label className="block text-xs font-bold text-slate-500 mb-1">Miktar (Saniye)</label>
-                                <input
-                                    type="number"
-                                    value={amount}
-                                    onChange={e => setAmount(Number(e.target.value))}
-                                    className="w-full border p-2 rounded-lg font-mono"
-                                />
-                                <div className="text-xs text-slate-400 mt-1">
-                                    Pozitif (+) değer bakiyeden düşer, Negatif (-) değer bakiyeye ekler.
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg">İptal</button>
-                    <button
-                        onClick={handleSave}
-                        disabled={loading}
-                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                {/* Options */}
+                <div className="px-6 py-5 space-y-3">
+                    {/* Option 1: Mutabakat */}
+                    <label
+                        className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${mode === 'settle' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+                        onClick={() => setMode('settle')}
                     >
-                        {loading ? 'İşleniyor...' : 'Onayla'}
+                        <div className="flex items-start gap-3">
+                            <input type="radio" name="smode" checked={mode === 'settle'} readOnly className="mt-1 w-4 h-4 text-blue-600" />
+                            <div>
+                                <div className="font-bold text-slate-900">Mutabakat (Sıfırla)</div>
+                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    Bakiyeyi sıfırlar ve bir sonraki aya devretmesini engeller.
+                                    {isSurplus && ' Artı bakiye için ödeme yapıldığını,'}
+                                    {isDeficit && ' Eksi bakiye için maaştan düşüldüğünü,'}
+                                    {' '}muhasebe elle takip eder. Mesai kayıtları değişmez.
+                                </p>
+                            </div>
+                        </div>
+                    </label>
+
+                    {/* Option 2: Gerçek Sıfırla */}
+                    <label
+                        className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${mode === 'real_reset' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300'}`}
+                        onClick={() => setMode('real_reset')}
+                    >
+                        <div className="flex items-start gap-3">
+                            <input type="radio" name="smode" checked={mode === 'real_reset'} readOnly className="mt-1 w-4 h-4 text-red-600" />
+                            <div>
+                                <div className="font-bold text-slate-900">Gerçek Sıfırla</div>
+                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    Eksik saatleri mesai kaydı olarak doldurur. Çalışan o saatleri çalışmış gibi
+                                    görünür ve normal mesai tam olur. <strong className="text-red-600">Bu işlem geri alınamaz.</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </label>
+
+                    {/* Confirm input for real reset */}
+                    {mode === 'real_reset' && (
+                        <div className="ml-7 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-xs text-red-700 mb-2 font-semibold">Onaylamak için "ONAYLA" yazın:</p>
+                            <input
+                                type="text"
+                                value={confirmText}
+                                onChange={e => setConfirmText(e.target.value.toUpperCase())}
+                                placeholder="ONAYLA"
+                                className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Actions */}
+                <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2.5 text-sm text-slate-600 font-semibold hover:bg-slate-200 rounded-lg">
+                        İptal
+                    </button>
+                    <button
+                        onClick={handleAction}
+                        disabled={loading || (mode === 'real_reset' && confirmText !== 'ONAYLA')}
+                        className={`px-6 py-2.5 text-sm text-white font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'real_reset' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    >
+                        {loading ? 'İşleniyor...' : mode === 'real_reset' ? 'Gerçek Sıfırla' : 'Mutabakat Yap'}
                     </button>
                 </div>
             </div>
