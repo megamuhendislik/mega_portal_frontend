@@ -97,7 +97,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             ? (periodSummary.cumulative.previous_year_balance_seconds || 0)
                             : acc[idx - 1].cumulativeBalanceRaw;
 
-                        const currentCumulative = prevBalance + (month.balance || 0);
+                        const currentCumulative = prevBalance + ((month.balance || 0) - (month.compensated || 0));
 
                         acc.push({
                             ...month,
