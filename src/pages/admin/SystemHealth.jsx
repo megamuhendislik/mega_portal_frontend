@@ -1115,6 +1115,24 @@ function DashboardTab({ stats, refresh, loading }) {
     const [recalcConsoleOpen, setRecalcConsoleOpen] = useState(false);
     const [recalcLogs, setRecalcLogs] = useState([]);
     const [recalcLoading, setRecalcLoading] = useState(false);
+    const [runtimeConfig, setRuntimeConfig] = useState({});
+    const [configLoading, setConfigLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/system/health-check/get_runtime_config/')
+            .then(res => setRuntimeConfig(res.data))
+            .catch(() => {})
+            .finally(() => setConfigLoading(false));
+    }, []);
+
+    const toggleConfig = async (key, value) => {
+        try {
+            await api.post('/system/health-check/toggle_runtime_config/', { key, value });
+            setRuntimeConfig(prev => ({ ...prev, [key]: value }));
+        } catch (e) {
+            console.error('Config toggle error:', e);
+        }
+    };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
@@ -1124,6 +1142,33 @@ function DashboardTab({ stats, refresh, loading }) {
                 <KPICard title="Aktif Çalışan" value={stats?.active_employees} icon={CheckCircleIcon} color="green" loading={loading} />
                 <KPICard title="Bugünkü Kayıt" value={stats?.attendance_today} icon={ClockIcon} color="indigo" loading={loading} />
                 <KPICard title="Bekleyen İzin" value={stats?.pending_leave_requests} icon={ExclamationTriangleIcon} color="orange" loading={loading} />
+            </div>
+
+            {/* Runtime Config */}
+            <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <CpuChipIcon className="w-4 h-4 text-gray-400" />
+                    Sistem Ayarlari
+                </h3>
+                <div className="flex flex-wrap gap-6">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={runtimeConfig.service_logs_enabled || false}
+                                disabled={configLoading}
+                                onChange={e => toggleConfig('service_logs_enabled', e.target.checked)}
+                            />
+                            <div className="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-indigo-600 transition-colors"></div>
+                            <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+                        </div>
+                        <div>
+                            <span className="text-sm font-medium text-gray-700">Servis Loglari</span>
+                            <p className="text-xs text-gray-400">Acildiginda puantaj motorunun detayli loglarini DB'ye yazar. Servis Kontrol sayfasinda gorunur.</p>
+                        </div>
+                    </label>
+                </div>
             </div>
 
             {/* Actions Panel */}
