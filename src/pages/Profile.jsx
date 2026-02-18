@@ -5,7 +5,7 @@ import api from '../services/api';
 import {
     User, Phone, MapPin, Shield, Users, Briefcase,
     Calendar, Save, Lock, Building, AlertTriangle,
-    FileText, CheckCircle
+    CheckCircle
 } from 'lucide-react';
 
 const Profile = () => {
@@ -19,7 +19,6 @@ const Profile = () => {
         email: '',
         phone_secondary: '',
         address: '',
-        insurance_number: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
         substitutes: [],
@@ -46,7 +45,6 @@ const Profile = () => {
                 email: user.email || '',
                 phone_secondary: user.phone_secondary || '',
                 address: user.address || '',
-                insurance_number: user.insurance_number || '',
                 emergency_contact_name: user.emergency_contact_name || '',
                 emergency_contact_phone: user.emergency_contact_phone || '',
                 substitutes: subs
@@ -96,7 +94,6 @@ const Profile = () => {
                     payload.email = formData.email;
                     payload.phone_secondary = formData.phone_secondary;
                     payload.address = formData.address;
-                    payload.insurance_number = formData.insurance_number;
                     payload.emergency_contact_name = formData.emergency_contact_name;
                     payload.emergency_contact_phone = formData.emergency_contact_phone;
                 } else if (activeTab === 'substitutes') {
@@ -319,21 +316,6 @@ const Profile = () => {
                                                     value={formData.phone_secondary}
                                                     onChange={e => setFormData({ ...formData, phone_secondary: e.target.value })}
                                                     placeholder="05..."
-                                                    className="pl-10 w-full bg-white border border-slate-200 rounded-xl py-3.5 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <label className="block text-sm font-bold text-slate-900">SGK Sicil No</label>
-                                            <div className="relative group">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                    <FileText size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                                </div>
-                                                <input
-                                                    value={formData.insurance_number}
-                                                    onChange={e => setFormData({ ...formData, insurance_number: e.target.value })}
-                                                    placeholder="Sigorta sicil numaranız"
                                                     className="pl-10 w-full bg-white border border-slate-200 rounded-xl py-3.5 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                                 />
                                             </div>
