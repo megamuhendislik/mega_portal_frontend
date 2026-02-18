@@ -832,11 +832,10 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     const handleSave = async () => {
         setLoading(true);
         try {
-            await api.post('/attendance/settle-balance/', {
+            await api.post('/system-data/settle_balance/', {
                 employee_id: data.employee.id,
                 year: data.year,
                 month: data.month,
-                balance_seconds: data.netBalance,
                 compensated_seconds: amount
             });
             alert('Mahsuplaşma işlemi kaydedildi.');
