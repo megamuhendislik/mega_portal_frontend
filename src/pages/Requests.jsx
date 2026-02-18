@@ -86,24 +86,26 @@ const MyRequestsSection = ({
 }) => {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
-    const [showPotential, setShowPotential] = useState(true);
+    const [showPotential, setShowPotential] = useState(false);
 
     const allMyRequests = useMemo(() => {
         const items = [];
         requests.forEach(r => items.push({
             ...r,
             _type: 'LEAVE',
+            type: 'LEAVE',
             _sortDate: r.start_date || r.created_at,
             leave_type_name: requestTypes.find(t => t.id === r.request_type)?.name,
         }));
         overtimeRequests.forEach(r => items.push({
             ...r,
             _type: 'OVERTIME',
+            type: 'OVERTIME',
             _sortDate: r.date || r.created_at,
             onResubmit: () => handleResubmitOvertime(r),
         }));
-        mealRequests.forEach(r => items.push({ ...r, _type: 'MEAL', _sortDate: r.date || r.created_at }));
-        cardlessEntryRequests.forEach(r => items.push({ ...r, _type: 'CARDLESS_ENTRY', _sortDate: r.date || r.created_at }));
+        mealRequests.forEach(r => items.push({ ...r, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
+        cardlessEntryRequests.forEach(r => items.push({ ...r, _type: 'CARDLESS_ENTRY', type: 'CARDLESS_ENTRY', _sortDate: r.date || r.created_at }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
     }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes]);

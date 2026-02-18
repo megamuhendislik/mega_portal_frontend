@@ -24,6 +24,18 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
         return timeString.substring(0, 5);
     };
 
+    const calculateDuration = (startTime, endTime) => {
+        if (!startTime || !endTime) return '';
+        const [sh, sm] = startTime.split(':').map(Number);
+        const [eh, em] = endTime.split(':').map(Number);
+        let totalMinutes = (eh * 60 + em) - (sh * 60 + sm);
+        if (totalMinutes < 0) totalMinutes += 24 * 60;
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        if (mins === 0) return `${hours} Saat`;
+        return `${hours}s ${mins}dk`;
+    };
+
     const getTypeIcon = (type) => {
         switch (type) {
             case 'LEAVE': return <FileText size={16} className="text-blue-600" />;
@@ -115,7 +127,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                             <th className="p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('date')}>
                                 <div className="flex items-center gap-1">Tarih <ArrowUpDown size={12} /></div>
                             </th>
-                            <th className="p-4 font-bold">Açıklama / Süre</th>
+                            <th className="p-4 font-bold">Detay / Süre</th>
                             <th className="p-4 font-bold">Durum</th>
                             <th className="p-4 font-bold text-right">İşlemler</th>
                         </tr>
@@ -176,31 +188,89 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                         </div>
                                     </td>
 
-                                    {/* Date */}
+                                    {/* Date & Time */}
                                     <td className="p-4 text-sm text-slate-600">
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col gap-0.5">
                                             <span className="font-bold text-slate-800">
                                                 {formatDate(req.start_date || req.date)}
                                             </span>
                                             {(req.end_date && req.end_date !== req.start_date) && (
-                                                <span className="text-xs text-slate-400">
+                                                <span className="text-xs text-slate-400 font-medium">
                                                     ➜ {formatDate(req.end_date)}
                                                 </span>
+                                            )}
+                                            {req.type === 'OVERTIME' && (req.start_time || req.end_time) && (
+                                                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit mt-0.5">
+                                                    <Clock size={10} />
+                                                    {formatTime(req.start_time)} - {formatTime(req.end_time)}
+                                                </span>
+                                            )}
+                                            {req.type === 'CARDLESS_ENTRY' && (
+                                                <div className="flex flex-col gap-0.5 mt-0.5">
+                                                    {req.check_in_time && (
+                                                        <span className="text-xs font-medium text-emerald-700">
+                                                            Giriş: {formatTime(req.check_in_time)}
+                                                        </span>
+                                                    )}
+                                                    {req.check_out_time && (
+                                                        <span className="text-xs font-medium text-red-600">
+                                                            Çıkış: {formatTime(req.check_out_time)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </td>
 
-                                    {/* Duration / Details */}
+                                    {/* Detail / Duration */}
                                     <td className="p-4">
-                                        <div className="max-w-[200px]">
-                                            <p className="text-sm text-slate-700 truncate" title={req.reason || req.description}>
-                                                {req.reason || req.description || '-'}
-                                            </p>
-                                            <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                                                {req.type === 'LEAVE' && `${req.total_days} Gün`}
-                                                {req.type === 'OVERTIME' && `${formatTime(req.start_time)} - ${formatTime(req.end_time)}`}
-                                                {req.type === 'CARDLESS_ENTRY' && `${formatTime(req.check_in_time)} - ${formatTime(req.check_out_time)}`}
-                                            </p>
+                                        <div className="max-w-[280px] space-y-1">
+                                            {/* Type-specific badges */}
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {req.type === 'LEAVE' && (
+                                                    <>
+                                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded">
+                                                            {req.total_days} Gün
+                                                        </span>
+                                                        {req.leave_type_name && (
+                                                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">
+                                                                {req.leave_type_name}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {req.type === 'OVERTIME' && (
+                                                    <>
+                                                        {req.total_hours != null && (
+                                                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-bold rounded">
+                                                                {req.total_hours} Saat
+                                                            </span>
+                                                        )}
+                                                        {!req.total_hours && req.start_time && req.end_time && (
+                                                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-bold rounded">
+                                                                {calculateDuration(req.start_time, req.end_time)}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time && (
+                                                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs font-bold rounded">
+                                                        {calculateDuration(req.check_in_time, req.check_out_time)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {/* Reason */}
+                                            {(req.reason || req.description) && (
+                                                <p className="text-sm text-slate-600 line-clamp-2 leading-snug" title={req.reason || req.description}>
+                                                    {req.reason || req.description}
+                                                </p>
+                                            )}
+                                            {/* Approved by */}
+                                            {req.approved_by_name && req.status === 'APPROVED' && (
+                                                <p className="text-[11px] text-slate-400 font-medium">
+                                                    Onaylayan: {req.approved_by_name}
+                                                </p>
+                                            )}
                                         </div>
                                     </td>
 
