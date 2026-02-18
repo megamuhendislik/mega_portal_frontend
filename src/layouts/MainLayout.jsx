@@ -109,6 +109,7 @@ const MainLayout = () => {
 
     const navItems = [
         { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: null },
+        { path: '/profile', label: 'Profilim', icon: UserCog, permission: null },
         { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'PAGE_EMPLOYEES' },
         { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'PAGE_ORG_CHART' },
 
