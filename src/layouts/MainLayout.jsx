@@ -61,10 +61,12 @@ const MainLayout = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Check status on mount
+    // Check status on mount (sadece superuser)
     useEffect(() => {
-        checkShiftStatus();
-    }, []);
+        if (user?.user?.is_superuser) {
+            checkShiftStatus();
+        }
+    }, [user]);
 
     // Close sidebar on route change if mobile
     useEffect(() => {
@@ -306,21 +308,23 @@ const MainLayout = () => {
                             />
                         </div>
 
-                        {/* Shift Button */}
-                        <button
-                            onClick={handleShiftToggle}
-                            disabled={shiftLoading}
-                            className={clsx(
-                                "flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 shadow-sm border transform hover:scale-105 active:scale-95",
-                                isShiftActive
-                                    ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 hover:border-rose-200 hover:shadow-rose-100"
-                                    : "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 hover:shadow-emerald-100",
-                                shiftLoading && "opacity-70 cursor-wait"
-                            )}
-                        >
-                            <Clock size={18} className={clsx(shiftLoading && "animate-spin")} />
-                            {shiftLoading ? 'İşleniyor...' : (isShiftActive ? 'Mesaiyi Bitir' : 'Mesai Başlat')}
-                        </button>
+                        {/* Shift Button — sadece superuser */}
+                        {user?.user?.is_superuser && (
+                            <button
+                                onClick={handleShiftToggle}
+                                disabled={shiftLoading}
+                                className={clsx(
+                                    "flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 shadow-sm border transform hover:scale-105 active:scale-95",
+                                    isShiftActive
+                                        ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 hover:border-rose-200 hover:shadow-rose-100"
+                                        : "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 hover:shadow-emerald-100",
+                                    shiftLoading && "opacity-70 cursor-wait"
+                                )}
+                            >
+                                <Clock size={18} className={clsx(shiftLoading && "animate-spin")} />
+                                {shiftLoading ? 'İşleniyor...' : (isShiftActive ? 'Mesaiyi Bitir' : 'Mesai Başlat')}
+                            </button>
+                        )}
 
                         <NotificationBell />
 
