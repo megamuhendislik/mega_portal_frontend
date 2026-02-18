@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
-    User, Phone, MapPin, Shield, Users, Briefcase,
+    User, Phone, MapPin, Shield, Briefcase,
     Calendar, Save, Lock, Building, AlertTriangle,
     CheckCircle
 } from 'lucide-react';
@@ -13,7 +13,6 @@ const Profile = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
-    const [allEmployees, setAllEmployees] = useState([]);
 
     const [formData, setFormData] = useState({
         email: '',
@@ -21,8 +20,6 @@ const Profile = () => {
         address: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
-        substitutes: [],
-        // Security
         old_password: '',
         new_password: '',
         confirm_password: ''
@@ -39,7 +36,6 @@ const Profile = () => {
 
     useEffect(() => {
         if (user) {
-            const subs = user.substitutes?.map(s => (typeof s === 'object' ? s.id : s)) || [];
             setFormData(prev => ({
                 ...prev,
                 email: user.email || '',
@@ -47,18 +43,10 @@ const Profile = () => {
                 address: user.address || '',
                 emergency_contact_name: user.emergency_contact_name || '',
                 emergency_contact_phone: user.emergency_contact_phone || '',
-                substitutes: subs
             }));
         }
     }, [user]);
 
-    useEffect(() => {
-        if (activeTab === 'substitutes' && allEmployees.length === 0) {
-            api.get('/employees/')
-                .then(res => setAllEmployees(res.data.filter(e => e.id !== user.id)))
-                .catch(err => console.error(err));
-        }
-    }, [activeTab]);
 
     const handleSave = async () => {
         setLoading(true);
@@ -88,7 +76,7 @@ const Profile = () => {
                 setFormData(prev => ({ ...prev, old_password: '', new_password: '', confirm_password: '' }));
                 setTimeout(() => window.location.reload(), 1500);
             } else {
-                // Contact or Substitutes save
+                // Contact save
                 const payload = {};
                 if (activeTab === 'contact') {
                     payload.email = formData.email;
@@ -96,8 +84,6 @@ const Profile = () => {
                     payload.address = formData.address;
                     payload.emergency_contact_name = formData.emergency_contact_name;
                     payload.emergency_contact_phone = formData.emergency_contact_phone;
-                } else if (activeTab === 'substitutes') {
-                    payload.substitutes = formData.substitutes;
                 }
                 await api.patch('/employees/me/', payload);
                 setSuccessMessage('Bilgileriniz başarıyla güncellendi.');
@@ -123,8 +109,7 @@ const Profile = () => {
     const tabs = [
         { id: 'general', label: 'Genel Bilgiler', icon: User },
         { id: 'contact', label: 'Kişisel Bilgiler', icon: MapPin },
-        { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
-        { id: 'security', label: 'Güvenlik', icon: Lock, badge: mustChangePassword }
+        ...(mustChangePassword ? [{ id: 'security', label: 'Güvenlik', icon: Lock, badge: true }] : []),
     ];
 
     return (
@@ -208,7 +193,6 @@ const Profile = () => {
                         <p className="text-slate-500 mt-2 text-lg">
                             {activeTab === 'general' && 'Kurumsal bilgilerinizi buradan görüntüleyebilirsiniz.'}
                             {activeTab === 'contact' && 'Kişisel iletişim bilgilerinizi düzenleyebilirsiniz.'}
-                            {activeTab === 'substitutes' && 'Vekalet tanımlarınızı yönetebilirsiniz.'}
                             {activeTab === 'security' && 'Hesap güvenlik ayarlarınızı yönetebilirsiniz.'}
                         </p>
                     </div>
@@ -361,77 +345,7 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {/* ========== SUBSTITUTES TAB ========== */}
-                            {activeTab === 'substitutes' && (
-                                <div className="space-y-8">
-                                    <div className="bg-gradient-to-br from-indigo-50 via-white to-white border border-indigo-100 rounded-2xl p-8 shadow-sm relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-100/50 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
-
-                                        <div className="flex gap-6 items-start relative z-10">
-                                            <div className="w-14 h-14 bg-white rounded-2xl shadow-lg shadow-indigo-200/50 flex items-center justify-center shrink-0 border border-indigo-50">
-                                                <Users size={28} className="text-indigo-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-xl font-bold text-slate-900">Vekalet Sistemi</h3>
-                                                <p className="text-slate-600 mt-2 max-w-2xl leading-relaxed">
-                                                    Seçtiğiniz kişiler, siz izinli olduğunuzda veya müsait olmadığınızda onay süreçlerinde
-                                                    sizin yetkilerinizi kullanabilir.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-8 pt-6 border-t border-indigo-50/50">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <h4 className="text-sm font-bold text-slate-900">Tanımlı Vekiller</h4>
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="İsim ile ara..."
-                                                        className="px-3 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
-                                                        onChange={(e) => {
-                                                            const term = e.target.value.toLowerCase();
-                                                            const options = document.getElementById('substitutes-select').options;
-                                                            for (let i = 0; i < options.length; i++) {
-                                                                const text = options[i].text.toLowerCase();
-                                                                options[i].style.display = text.includes(term) ? 'block' : 'none';
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-1">
-                                                <select
-                                                    id="substitutes-select"
-                                                    multiple
-                                                    value={formData.substitutes}
-                                                    onChange={e => {
-                                                        const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                                        setFormData({ ...formData, substitutes: selected });
-                                                    }}
-                                                    className="w-full p-4 bg-transparent border-none outline-none h-64 custom-scrollbar text-slate-700 font-medium text-sm focus:ring-0"
-                                                >
-                                                    {allEmployees.map(emp => (
-                                                        <option key={emp.id} value={emp.id} className="py-3 px-4 rounded-lg my-1 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors">
-                                                            {emp.first_name} {emp.last_name}  —  {emp.job_position?.name || 'Pozisyonsuz'}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="flex justify-between items-start mt-3 gap-4">
-                                                <p className="text-xs text-slate-500 leading-relaxed">
-                                                    <span className="font-bold text-slate-700">Not:</span> Sadece sistemde kayıtlı ve aktif çalışanları vekil tayin edebilirsiniz.
-                                                </p>
-                                                <div className="flex items-center gap-2 text-xs font-medium text-slate-400 shrink-0">
-                                                    <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-sans">CTRL</span>
-                                                    tuşuna basılı tutarak çoklu seçim yapabilirsiniz.
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ========== SECURITY TAB (always available) ========== */}
+                            {/* ========== SECURITY TAB ========== */}
                             {activeTab === 'security' && (
                                 <div className="space-y-6">
                                     {mustChangePassword && (
@@ -504,7 +418,7 @@ const Profile = () => {
                     </div>
                 </div>
 
-                {/* Save Button — visible on contact, substitutes, security tabs */}
+                {/* Save Button — visible on contact, security tabs */}
                 {activeTab !== 'general' && (
                     <div className="max-w-5xl mx-auto px-12 pb-12 flex justify-end">
                         <button
