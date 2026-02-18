@@ -420,7 +420,7 @@ const EmployeeDetail = () => {
                                                 placeholder="Yeni şifre giriniz (Boş bırakılırsa değişmez)"
                                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white"
                                             />
-                                            <p className="text-xs text-slate-500 mt-1">Dikkat: Şifre alanını doldurup kaydederseniz kullanıcının şifresi değişecektir.</p>
+                                            <p className="text-xs text-slate-500 mt-1">Dikkat: Şifre alanını doldurup kaydederseniz kullanıcının şifresi değişecek ve profilinde şifre değiştirme uyarısı gösterilecektir.</p>
                                         </div>
                                     </div>
                                 )}

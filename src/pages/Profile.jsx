@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
     User, Phone, MapPin, Shield, Users, Briefcase,
-    Calendar, Save, Lock, LayoutDashboard, Building,
-    Clock, Bell
+    Calendar, Save, Lock, Building, AlertTriangle,
+    FileText, CheckCircle
 } from 'lucide-react';
 
 const Profile = () => {
@@ -16,47 +16,46 @@ const Profile = () => {
     const [allEmployees, setAllEmployees] = useState([]);
 
     const [formData, setFormData] = useState({
-        phone: '',
         phone_secondary: '',
         address: '',
+        insurance_number: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
-        lunch_start: '',
-        lunch_end: '',
         substitutes: [],
-        // Security Form (Local State)
+        // Security
         old_password: '',
         new_password: '',
         confirm_password: ''
     });
 
-    // Check edit permission
-    const isEditable = user?.employee?.is_profile_editable || false;
-    // Proxy (Substitutes) is ALWAYS editable.
+    const mustChangePassword = user?.must_change_password || false;
+
+    // Auto-switch to security tab if password change is required
+    useEffect(() => {
+        if (mustChangePassword && activeTab === 'general') {
+            setActiveTab('security');
+        }
+    }, [mustChangePassword]);
 
     useEffect(() => {
-        if (user && user.employee) {
-            const subs = user.employee.substitutes?.map(s => (typeof s === 'object' ? s.id : s)) || [];
-            setFormData({
-                phone: user.phone || '',
-                phone_secondary: user.employee.phone_secondary || '',
-                address: user.employee.address || '',
-                emergency_contact_name: user.employee.emergency_contact_name || '',
-                emergency_contact_phone: user.employee.emergency_contact_phone || '',
-                lunch_start: user.employee.lunch_start || '',
-                lunch_end: user.employee.lunch_end || '',
-                tc_number: user.employee.tc_number || '',
-                birth_date: user.employee.birth_date || '',
+        if (user) {
+            const subs = user.substitutes?.map(s => (typeof s === 'object' ? s.id : s)) || [];
+            setFormData(prev => ({
+                ...prev,
+                phone_secondary: user.phone_secondary || '',
+                address: user.address || '',
+                insurance_number: user.insurance_number || '',
+                emergency_contact_name: user.emergency_contact_name || '',
+                emergency_contact_phone: user.emergency_contact_phone || '',
                 substitutes: subs
-            });
+            }));
         }
     }, [user]);
 
-    // Fetch employees for substitute selection only when that tab is active
     useEffect(() => {
         if (activeTab === 'substitutes' && allEmployees.length === 0) {
             api.get('/employees/')
-                .then(res => setAllEmployees(res.data.filter(e => e.id !== user.employee.id)))
+                .then(res => setAllEmployees(res.data.filter(e => e.id !== user.id)))
                 .catch(err => console.error(err));
         }
     }, [activeTab]);
@@ -65,16 +64,17 @@ const Profile = () => {
         setLoading(true);
         setSuccessMessage('');
         try {
-            // General Update
-            if (activeTab !== 'security') {
-                await api.patch('/employees/me/', formData);
-                setSuccessMessage('Bilgileriniz başarıyla güncellendi.');
-                setTimeout(() => {
-                    setSuccessMessage('');
-                    window.location.reload();
-                }, 1000);
-            } else {
-                // Password Change
+            if (activeTab === 'security') {
+                if (!formData.old_password || !formData.new_password) {
+                    alert('Eski ve yeni şifre gereklidir.');
+                    setLoading(false);
+                    return;
+                }
+                if (formData.new_password.length < 6) {
+                    alert('Yeni şifre en az 6 karakter olmalıdır.');
+                    setLoading(false);
+                    return;
+                }
                 if (formData.new_password !== formData.confirm_password) {
                     alert('Yeni şifreler eşleşmiyor!');
                     setLoading(false);
@@ -84,18 +84,34 @@ const Profile = () => {
                     old_password: formData.old_password,
                     new_password: formData.new_password
                 });
-                setSuccessMessage('Şifreniz başarıyla değiştirildi. Güvenlik nedeniyle profil düzenleme izniniz kapatılmıştır.');
-                setFormData({ ...formData, old_password: '', new_password: '', confirm_password: '' });
-                // Force reload or re-auth might be needed if user object needs refresh, but for now reload is safe
-                setTimeout(() => window.location.reload(), 2000);
                 setSuccessMessage('Şifreniz başarıyla değiştirildi.');
-                setFormData({ ...formData, old_password: '', new_password: '', confirm_password: '' });
-                setTimeout(() => setSuccessMessage(''), 2000);
+                setFormData(prev => ({ ...prev, old_password: '', new_password: '', confirm_password: '' }));
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                // Contact or Substitutes save
+                const payload = {};
+                if (activeTab === 'contact') {
+                    payload.phone_secondary = formData.phone_secondary;
+                    payload.address = formData.address;
+                    payload.insurance_number = formData.insurance_number;
+                    payload.emergency_contact_name = formData.emergency_contact_name;
+                    payload.emergency_contact_phone = formData.emergency_contact_phone;
+                } else if (activeTab === 'substitutes') {
+                    payload.substitutes = formData.substitutes;
+                }
+                await api.patch('/employees/me/', payload);
+                setSuccessMessage('Bilgileriniz başarıyla güncellendi.');
+                setTimeout(() => {
+                    setSuccessMessage('');
+                    window.location.reload();
+                }, 1500);
             }
-
         } catch (error) {
             console.error('Update failed:', error);
-            const msg = error.response?.data?.error || 'Güncelleme sırasında bir hata oluştu.';
+            const msg = error.response?.data?.error
+                || error.response?.data?.detail
+                || (typeof error.response?.data === 'object' ? JSON.stringify(error.response.data) : null)
+                || 'Güncelleme sırasında bir hata oluştu.';
             alert(msg);
         } finally {
             setLoading(false);
@@ -106,14 +122,14 @@ const Profile = () => {
 
     const tabs = [
         { id: 'general', label: 'Genel Bilgiler', icon: User },
-        { id: 'contact', label: 'İletişim & Adres', icon: MapPin },
+        { id: 'contact', label: 'Kişisel Bilgiler', icon: MapPin },
         { id: 'substitutes', label: 'Vekalet Yönetimi', icon: Users },
-        { id: 'security', label: 'Güvenlik', icon: Lock }
+        { id: 'security', label: 'Güvenlik', icon: Lock, badge: mustChangePassword }
     ];
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-slate-50 overflow-hidden font-inter">
-            {/* Sidebar with Premium Glass/Card look */}
+            {/* Sidebar */}
             <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-10">
                 <div className="p-8 pb-6">
                     <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Hesap Ayarları</h2>
@@ -133,9 +149,12 @@ const Profile = () => {
                                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                             >
-                                <div className={`relative z-10 flex items-center gap-4`}>
+                                <div className="relative z-10 flex items-center gap-4 flex-1">
                                     <Icon size={20} className={`transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                                     <span className="tracking-wide">{tab.label}</span>
+                                    {tab.badge && (
+                                        <span className="ml-auto w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    )}
                                 </div>
                                 {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full"></div>}
                             </button>
@@ -159,63 +178,48 @@ const Profile = () => {
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
                 <div className="max-w-5xl mx-auto p-12">
+                    {/* Password change banner — always visible at top when flag is set */}
+                    {mustChangePassword && activeTab !== 'security' && (
+                        <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-5 shadow-sm">
+                            <div className="p-3 bg-amber-100 rounded-full shrink-0">
+                                <AlertTriangle size={24} className="text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-bold text-amber-900 text-lg">Şifrenizi Değiştirmeniz Gerekiyor</h4>
+                                <p className="text-amber-800/80 mt-1 leading-relaxed">
+                                    Hesap güvenliğiniz için şifrenizi değiştirmeniz gerekmektedir.
+                                    Lütfen <b>Güvenlik</b> sekmesine giderek yeni bir şifre belirleyiniz.
+                                </p>
+                                <button
+                                    onClick={() => setActiveTab('security')}
+                                    className="mt-3 px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700 transition-colors"
+                                >
+                                    Şifre Değiştir
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Header */}
-                    <div className="mb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="mb-10">
                         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
                             {tabs.find(t => t.id === activeTab)?.label}
                         </h1>
                         <p className="text-slate-500 mt-2 text-lg">
-                            Bu bölümdeki bilgileri aşağıdan görüntüleyebilir veya düzenleyebilirsiniz.
+                            {activeTab === 'general' && 'Kurumsal bilgilerinizi buradan görüntüleyebilirsiniz.'}
+                            {activeTab === 'contact' && 'Kişisel iletişim bilgilerinizi düzenleyebilirsiniz.'}
+                            {activeTab === 'substitutes' && 'Vekalet tanımlarınızı yönetebilirsiniz.'}
+                            {activeTab === 'security' && 'Hesap güvenlik ayarlarınızı yönetebilirsiniz.'}
                         </p>
                     </div>
 
-                    {/* Permissions & Alerts */}
-                    <div className="space-y-6 mb-8 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75">
-                        {!isEditable && activeTab !== 'substitutes' && activeTab !== 'general' && (
-                            <div className="bg-white border-l-4 border-blue-500 shadow-sm rounded-r-xl p-6 flex items-start gap-5">
-                                <div className="p-3 bg-blue-50 rounded-full shrink-0">
-                                    <Shield size={24} className="text-blue-600" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-slate-900 text-lg">Profiliniz Koruma Altında</h4>
-                                    <p className="text-slate-600 mt-1 leading-relaxed">
-                                        Kişisel veri güvenliği politikamız gereği, bilgileriniz salt okunur moddadır.
-                                        Değişiklik yapmanız gerekiyorsa lütfen Yöneticinizden veya İK departmanından
-                                        <b className="text-blue-700"> geçici düzenleme izni</b> talep ediniz.
-                                    </p>
-                                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-400 font-medium">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                                        Vekalet yönetimi bu kısıtlamadan muaftır.
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {isEditable && activeTab !== 'substitutes' && activeTab !== 'general' && (
-                            <div className="bg-gradient-to-r from-emerald-50 to-white border border-emerald-100 shadow-sm rounded-xl p-6 flex items-start gap-5 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100 rounded-full blur-3xl opacity-50 -mr-16 -mt-16"></div>
-                                <div className="p-3 bg-emerald-100 rounded-full shrink-0 z-10">
-                                    <Settings size={24} className="text-emerald-700" />
-                                </div>
-                                <div className="z-10">
-                                    <h4 className="font-bold text-emerald-900 text-lg">Düzenleme Modu Aktif</h4>
-                                    <p className="text-emerald-800/80 mt-1 leading-relaxed">
-                                        Şu anda profiliniz üzerinde değişiklik yapabilirsiniz. İşlemlerinizi tamamladıktan sonra
-                                        veya sayfadan ayrıldığınızda koruma modu otomatik olarak tekrar devreye girecektir.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                    <div className="grid grid-cols-12 gap-8">
                         <div className="col-span-12">
-                            {/* GENERAL TAB */}
+                            {/* ========== GENERAL TAB (read-only) ========== */}
                             {activeTab === 'general' && (
                                 <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
                                     <div className="h-32 bg-gradient-to-r from-slate-800 to-slate-900 relative">
                                         <div className="absolute inset-0 bg-grid-slate-700/[0.1] bg-[size:20px_20px]"></div>
-                                        {/* Avatar Overflowing */}
                                         <div className="absolute -bottom-16 left-8">
                                             <div className="w-32 h-32 rounded-2xl bg-white p-2 shadow-lg">
                                                 <div className="w-full h-full rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-5xl font-bold">
@@ -244,70 +248,19 @@ const Profile = () => {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 border-t border-slate-100 pt-8">
                                             <div className="space-y-6">
-                                                {/* TC NO - Editable if isEditable */}
-                                                <div className="group">
-                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">TC Kimlik No</label>
-                                                    <div className="relative">
-                                                        {isEditable ? (
-                                                            <input
-                                                                type="text"
-                                                                maxLength={11}
-                                                                value={formData.tc_number || ''}
-                                                                onChange={e => setFormData({ ...formData, tc_number: e.target.value })}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                                                            />
-                                                        ) : (
-                                                            <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><Shield size={16} /></div>
-                                                                {user.employee?.tc_number ? '***********' : '-'}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Birth Date - Editable if isEditable */}
-                                                <div className="group">
-                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">Doğum Tarihi</label>
-                                                    <div className="relative">
-                                                        {isEditable ? (
-                                                            <input
-                                                                type="date"
-                                                                value={formData.birth_date || ''}
-                                                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                                                            />
-                                                        ) : (
-                                                            <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><Calendar size={16} /></div>
-                                                                {user.employee?.birth_date || '-'}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="group">
-                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">E-posta Adresi</label>
-                                                    <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">@</div>
-                                                        {user.email}
-                                                    </div>
-                                                </div>
-                                                <div className="group">
-                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">İşe Başlama Tarihi</label>
-                                                    <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                                                            <Calendar size={16} />
-                                                        </div>
-                                                        {user.hired_date || '-'}
-                                                    </div>
-                                                </div>
+                                                <InfoRow icon={<Shield size={16} />} label="TC Kimlik No" value={user.tc_number ? '***' + user.tc_number.slice(-4) : '-'} />
+                                                <InfoRow icon={<Calendar size={16} />} label="Doğum Tarihi" value={user.birth_date || '-'} />
+                                                <InfoRow icon="@" label="E-posta Adresi" value={user.email} />
+                                                <InfoRow icon={<Calendar size={16} />} label="İşe Başlama Tarihi" value={user.hired_date || '-'} />
+                                                <InfoRow icon={<Phone size={16} />} label="Kurumsal Telefon" value={user.phone || '-'} />
                                             </div>
                                             <div className="space-y-1">
                                                 <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-800 text-sm leading-relaxed flex gap-3">
                                                     <Shield size={20} className="shrink-0 mt-0.5 text-amber-600" />
                                                     <div>
                                                         <span className="font-bold block mb-1">Bilgilendirme</span>
-                                                        Bu ekrandaki kurumsal bilgiler Sistem Yöneticisi tarafından yönetilmektedir. Hatalı bir bilgi olduğunu düşünüyorsanız lütfen sistem yöneticisi ile iletişime geçiniz.
+                                                        Bu ekrandaki kurumsal bilgiler Sistem Yöneticisi tarafından yönetilmektedir.
+                                                        Hatalı bir bilgi olduğunu düşünüyorsanız lütfen sistem yöneticisi ile iletişime geçiniz.
                                                     </div>
                                                 </div>
                                             </div>
@@ -316,7 +269,7 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {/* CONTACT TAB - Re-styled */}
+                            {/* ========== CONTACT TAB (always editable) ========== */}
                             {activeTab === 'contact' && (
                                 <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -324,10 +277,10 @@ const Profile = () => {
                                             <label className="block text-sm font-bold text-slate-900">Kurumsal Telefon</label>
                                             <div className="relative group">
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                    <Phone size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                                    <Phone size={18} className="text-slate-400" />
                                                 </div>
                                                 <input
-                                                    value={formData.phone}
+                                                    value={user.phone || ''}
                                                     readOnly
                                                     className="pl-10 w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 text-slate-500 font-medium cursor-not-allowed"
                                                 />
@@ -346,9 +299,23 @@ const Profile = () => {
                                                 <input
                                                     value={formData.phone_secondary}
                                                     onChange={e => setFormData({ ...formData, phone_secondary: e.target.value })}
-                                                    disabled={!isEditable}
                                                     placeholder="05..."
-                                                    className={`pl-10 w-full bg-white border border-slate-200 rounded-xl py-3.5 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none ${!isEditable ? 'bg-slate-50 text-slate-400' : ''}`}
+                                                    className="pl-10 w-full bg-white border border-slate-200 rounded-xl py-3.5 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <label className="block text-sm font-bold text-slate-900">SGK Sicil No</label>
+                                            <div className="relative group">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <FileText size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                                </div>
+                                                <input
+                                                    value={formData.insurance_number}
+                                                    onChange={e => setFormData({ ...formData, insurance_number: e.target.value })}
+                                                    placeholder="Sigorta sicil numaranız"
+                                                    className="pl-10 w-full bg-white border border-slate-200 rounded-xl py-3.5 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                                 />
                                             </div>
                                         </div>
@@ -358,8 +325,8 @@ const Profile = () => {
                                             <textarea
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                                disabled={!isEditable}
-                                                className={`w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none resize-none h-32 ${!isEditable ? 'bg-slate-50 text-slate-400' : ''}`}
+                                                placeholder="Adresinizi giriniz"
+                                                className="w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none resize-none h-32"
                                             />
                                         </div>
                                     </div>
@@ -375,17 +342,17 @@ const Profile = () => {
                                                 <input
                                                     value={formData.emergency_contact_name}
                                                     onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                                                    disabled={!isEditable}
-                                                    className={`w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none ${!isEditable ? 'bg-slate-50 text-slate-400' : ''}`}
+                                                    placeholder="Acil durum kişisi adı"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                                 />
                                             </div>
                                             <div className="space-y-3">
-                                                <label className="block text-sm font-bold text-slate-900">Yakınlık / Telefon</label>
+                                                <label className="block text-sm font-bold text-slate-900">Telefon</label>
                                                 <input
                                                     value={formData.emergency_contact_phone}
                                                     onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                                                    disabled={!isEditable}
-                                                    className={`w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none ${!isEditable ? 'bg-slate-50 text-slate-400' : ''}`}
+                                                    placeholder="Acil durum telefonu"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                                 />
                                             </div>
                                         </div>
@@ -393,7 +360,7 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {/* SUBSTITUTES TAB - PREMIUM FEATURE CARD */}
+                            {/* ========== SUBSTITUTES TAB ========== */}
                             {activeTab === 'substitutes' && (
                                 <div className="space-y-8">
                                     <div className="bg-gradient-to-br from-indigo-50 via-white to-white border border-indigo-100 rounded-2xl p-8 shadow-sm relative overflow-hidden group">
@@ -407,7 +374,7 @@ const Profile = () => {
                                                 <h3 className="text-xl font-bold text-slate-900">Vekalet Sistemi</h3>
                                                 <p className="text-slate-600 mt-2 max-w-2xl leading-relaxed">
                                                     Seçtiğiniz kişiler, siz izinli olduğunuzda veya müsait olmadığınızda onay süreçlerinde
-                                                    sizin yetkilerinizi kullanabilir. Bu işlem, iş sürekliliğini sağlamak adına önemlidir.
+                                                    sizin yetkilerinizi kullanabilir.
                                                 </p>
                                             </div>
                                         </div>
@@ -443,7 +410,7 @@ const Profile = () => {
                                                     className="w-full p-4 bg-transparent border-none outline-none h-64 custom-scrollbar text-slate-700 font-medium text-sm focus:ring-0"
                                                 >
                                                     {allEmployees.map(emp => (
-                                                        <option key={emp.id} value={emp.id} className="py-3 px-4 rounded-lg my-1 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors flex items-center justify-between">
+                                                        <option key={emp.id} value={emp.id} className="py-3 px-4 rounded-lg my-1 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors">
                                                             {emp.first_name} {emp.last_name}  —  {emp.job_position?.name || 'Pozisyonsuz'}
                                                         </option>
                                                     ))}
@@ -452,7 +419,6 @@ const Profile = () => {
                                             <div className="flex justify-between items-start mt-3 gap-4">
                                                 <p className="text-xs text-slate-500 leading-relaxed">
                                                     <span className="font-bold text-slate-700">Not:</span> Sadece sistemde kayıtlı ve aktif çalışanları vekil tayin edebilirsiniz.
-                                                    Listede olmayan bir kişiye vekalet vermek için öncelikle Yönetim panelinden çalışan kaydı oluşturulmalıdır.
                                                 </p>
                                                 <div className="flex items-center gap-2 text-xs font-medium text-slate-400 shrink-0">
                                                     <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-sans">CTRL</span>
@@ -464,67 +430,81 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {/* SECURITY - Re-styled */}
+                            {/* ========== SECURITY TAB (always available) ========== */}
                             {activeTab === 'security' && (
-                                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
-                                    <div className="flex gap-6 items-start mb-10">
-                                        <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shrink-0">
-                                            <Lock size={24} className="text-red-500" />
+                                <div className="space-y-6">
+                                    {mustChangePassword && (
+                                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-5">
+                                            <div className="p-3 bg-amber-100 rounded-full shrink-0">
+                                                <AlertTriangle size={24} className="text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-amber-900 text-lg">Şifre Değişikliği Gerekli</h4>
+                                                <p className="text-amber-800/80 mt-1 leading-relaxed">
+                                                    Sistem yöneticiniz şifrenizi güncelledi. Hesap güvenliğiniz için lütfen aşağıdan
+                                                    yeni bir şifre belirleyiniz.
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-slate-900">Güvenlik Ayarları</h3>
-                                            <p className="text-slate-500 mt-1 max-w-xl">
-                                                Hesabınızın güvenliği için güçlü bir şifre kullanmanızı öneririz.
-                                                Şifrenizi değiştirdikten sonra tüm oturumlarınız kapatılabilir.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    )}
 
-                                    <div className="max-w-lg space-y-6">
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-bold text-slate-700">Mevcut Şifre</label>
-                                            <input
-                                                type="password"
-                                                value={formData.old_password}
-                                                onChange={e => setFormData({ ...formData, old_password: e.target.value })}
-                                                disabled={!isEditable}
-                                                className={`w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all outline-none ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'bg-white'}`}
-                                                placeholder="••••••••"
-                                            />
+                                    <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                                        <div className="flex gap-6 items-start mb-10">
+                                            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shrink-0">
+                                                <Lock size={24} className="text-red-500" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-slate-900">Şifre Değiştir</h3>
+                                                <p className="text-slate-500 mt-1 max-w-xl">
+                                                    Hesabınızın güvenliği için güçlü bir şifre kullanmanızı öneririz.
+                                                </p>
+                                            </div>
                                         </div>
 
-                                        <div className="h-px bg-slate-100 my-2"></div>
+                                        <div className="max-w-lg space-y-6">
+                                            <div className="space-y-3">
+                                                <label className="text-sm font-bold text-slate-700">Mevcut Şifre</label>
+                                                <input
+                                                    type="password"
+                                                    value={formData.old_password}
+                                                    onChange={e => setFormData({ ...formData, old_password: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all outline-none"
+                                                    placeholder="Mevcut şifreniz"
+                                                />
+                                            </div>
 
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-bold text-slate-700">Yeni Şifre</label>
-                                            <input
-                                                type="password"
-                                                value={formData.new_password}
-                                                onChange={e => setFormData({ ...formData, new_password: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all outline-none"
-                                                placeholder="••••••••"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-bold text-slate-700">Yeni Şifre (Tekrar)</label>
-                                            <input
-                                                type="password"
-                                                value={formData.confirm_password}
-                                                onChange={e => setFormData({ ...formData, confirm_password: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all outline-none"
-                                                placeholder="••••••••"
-                                            />
+                                            <div className="h-px bg-slate-100 my-2"></div>
+
+                                            <div className="space-y-3">
+                                                <label className="text-sm font-bold text-slate-700">Yeni Şifre</label>
+                                                <input
+                                                    type="password"
+                                                    value={formData.new_password}
+                                                    onChange={e => setFormData({ ...formData, new_password: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all outline-none"
+                                                    placeholder="En az 6 karakter"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="text-sm font-bold text-slate-700">Yeni Şifre (Tekrar)</label>
+                                                <input
+                                                    type="password"
+                                                    value={formData.confirm_password}
+                                                    onChange={e => setFormData({ ...formData, confirm_password: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 font-medium focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all outline-none"
+                                                    placeholder="Yeni şifrenizi tekrar giriniz"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             )}
-
                         </div>
                     </div>
                 </div>
 
-                {/* Floating Action Bar (Bottom Right) inside content area if needed, or stick to layout */}
-                {(isEditable || activeTab === 'substitutes') && activeTab !== 'general' && (
+                {/* Save Button — visible on contact, substitutes, security tabs */}
+                {activeTab !== 'general' && (
                     <div className="max-w-5xl mx-auto px-12 pb-12 flex justify-end">
                         <button
                             onClick={handleSave}
@@ -539,19 +519,19 @@ const Profile = () => {
                             ) : (
                                 <span className="flex items-center gap-3">
                                     <Save size={20} className="group-hover:scale-110 transition-transform" />
-                                    Değişiklikleri Kaydet
+                                    {activeTab === 'security' ? 'Şifreyi Değiştir' : 'Değişiklikleri Kaydet'}
                                 </span>
                             )}
                         </button>
                     </div>
                 )}
 
-                {/* Success Message Toast */}
+                {/* Success Toast */}
                 {successMessage && (
                     <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-6 duration-300 z-50">
                         <div className="bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-emerald-500/30 flex items-center gap-4">
                             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                                <Shield size={18} />
+                                <CheckCircle size={18} />
                             </div>
                             <div>
                                 <h4 className="font-bold">Başarılı</h4>
@@ -564,5 +544,18 @@ const Profile = () => {
         </div>
     );
 };
+
+// Simple read-only info row component
+const InfoRow = ({ icon, label, value }) => (
+    <div className="group">
+        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block group-hover:text-blue-600 transition-colors">{label}</label>
+        <div className="text-lg font-medium text-slate-900 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                {typeof icon === 'string' ? icon : icon}
+            </div>
+            {value}
+        </div>
+    </div>
+);
 
 export default Profile;
