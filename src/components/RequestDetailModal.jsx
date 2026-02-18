@@ -23,16 +23,28 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const fetchTimeLockInfo = async () => {
     if (!request) return;
 
-    // Calculate time lock info client-side
-    const eventDate = new Date(request.start_date || request.date);
-    const lockDate = new Date(eventDate);
-    lockDate.setDate(lockDate.getDate() + 60);
     const today = new Date();
+    // Use lock_date from backend (fiscal period based) if available
+    const lockDateStr = request.lock_date || request.immutable_date;
+    let lockDate;
+    let isLocked = request.is_immutable || false;
+
+    if (lockDateStr) {
+      lockDate = new Date(lockDateStr + 'T23:59:59');
+      if (today > lockDate) isLocked = true;
+    } else {
+      // Fallback: event_date + 60 days (eski mantik, backend lock_date yoksa)
+      const eventDate = new Date(request.start_date || request.date);
+      lockDate = new Date(eventDate);
+      lockDate.setDate(lockDate.getDate() + 60);
+      if (today >= lockDate) isLocked = true;
+    }
+
     const daysUntilLock = Math.ceil((lockDate - today) / (1000 * 60 * 60 * 24));
 
     setTimeLockInfo({
-      is_locked: request.is_immutable || today >= lockDate,
-      event_date: eventDate.toLocaleDateString('tr-TR'),
+      is_locked: isLocked,
+      event_date: new Date(request.start_date || request.date).toLocaleDateString('tr-TR'),
       lock_date: lockDate.toLocaleDateString('tr-TR'),
       days_until_lock: daysUntilLock > 0 ? daysUntilLock : 0
     });
@@ -136,7 +148,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <Lock size={20} />
               <div>
                 <div className="font-semibold">Bu talep kilitli</div>
-                <div className="text-sm">Gerçekleşme tarihinden 60 gün geçtiği için değiştirilemez</div>
+                <div className="text-sm">Mali dönem kapandığı için değiştirilemez (Kilit: {timeLockInfo.lock_date})</div>
               </div>
             </div>
           )}
@@ -146,7 +158,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
               <AlertCircle size={20} />
               <div className="text-sm">
-                <span className="font-semibold">{timeLockInfo.days_until_lock} gün</span> sonra bu talep otomatik olarak kilitlenecek
+                <span className="font-semibold">{timeLockInfo.days_until_lock} gün</span> sonra mali dönem kapanacak ve bu talep kilitlenecek ({timeLockInfo.lock_date})
               </div>
             </div>
           )}
