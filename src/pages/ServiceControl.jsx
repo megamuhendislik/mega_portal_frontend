@@ -1,71 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Play, CheckCircle, XCircle, AlertCircle, Monitor, AlertTriangle, RefreshCw, CheckCircle2, ArrowRight, Shield, Activity } from 'lucide-react';
+import { Play, CheckCircle, XCircle, AlertCircle, Monitor, Activity } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
+import api from '../services/api';
 
 const ServiceControl = () => {
     const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState(null); // 'idle', 'success', 'error'
+    const [status, setStatus] = useState(null);
     const [message, setMessage] = useState('');
     const [logs, setLogs] = useState([]);
 
     useEffect(() => {
-        // Poll logs every 3 seconds
         const fetchLogs = async () => {
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/attendance/service-logs/`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setLogs(data);
-                }
+                const response = await api.get('/attendance/service-logs/');
+                setLogs(response.data?.results || response.data || []);
             } catch (error) {
                 console.error("Log fetch error:", error);
             }
         };
 
         const interval = setInterval(fetchLogs, 3000);
-        fetchLogs(); // Initial call
+        fetchLogs();
         return () => clearInterval(interval);
     }, []);
 
     const handleRecalculate = async () => {
         setLoading(true);
-        setStatus('idle');
+        setStatus(null);
         setMessage('');
 
-        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-
         try {
-            // Assuming endpoint is at /attendance/recalculate-all/ (Post)
-            // We need to implement this in backend views.py first as per plan.
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/attendance/recalculate-all/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // Ensure auth
-                },
-                body: JSON.stringify({ date: selectedDate })
-            });
-
-            if (!response.ok) {
-                throw new Error('Calculation start failed');
-            }
-
-            const data = await response.json();
+            const response = await api.post('/attendance/recalculate-all/', { date: selectedDate });
             setStatus('success');
-            setMessage(data.message || `Servis hesabı ${format(new Date(selectedDate), 'd MMMM yyyy', { locale: tr })} için başarıyla tamamlandı.`);
+            setMessage(response.data.message || `${format(new Date(selectedDate), 'd MMMM yyyy', { locale: tr })} icin hesaplama tamamlandi.`);
         } catch (error) {
             console.error(error);
             setStatus('error');
-            setMessage('İşlem başlatılamadı veya sunucu hatası oluştu.');
+            setMessage(error.response?.data?.error || 'Islem baslatilamadi veya sunucu hatasi olustu.');
         } finally {
             setLoading(false);
         }
@@ -78,8 +53,8 @@ const ServiceControl = () => {
                     <Monitor className="text-white w-8 h-8" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Servis Yönetimi</h1>
-                    <p className="text-slate-500 font-medium">Toplu puantaj ve servis hesaplama işlemleri</p>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Servis Yonetimi</h1>
+                    <p className="text-slate-500 font-medium">Toplu puantaj ve servis hesaplama islemleri</p>
                 </div>
             </div>
 
@@ -90,12 +65,12 @@ const ServiceControl = () => {
                         <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                             <Play size={20} />
                         </div>
-                        <h2 className="text-lg font-bold text-slate-800">Günlük Hesaplama Tetikle</h2>
+                        <h2 className="text-lg font-bold text-slate-800">Gunluk Hesaplama Tetikle</h2>
                     </div>
 
                     <p className="text-sm text-slate-500 mb-6">
-                        Seçilen gün için <b>tüm çalışanların</b> giriş-çıkış, mola ve fazla mesai hesaplarını yeniden çalıştırır.
-                        Manuel düzeltmeler yapıldıktan sonra senkronizasyon için kullanın.
+                        Secilen gun icin <b>tum calisanlarin</b> giris-cikis, mola ve fazla mesai hesaplarini yeniden calistirir.
+                        Manuel duzeltmeler yapildiktan sonra senkronizasyon icin kullanin.
                     </p>
 
                     <div className="space-y-4">
@@ -112,8 +87,8 @@ const ServiceControl = () => {
                         <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg flex gap-3">
                             <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={18} />
                             <p className="text-xs text-amber-700 leading-relaxed">
-                                Bu işlem çalışan sayısına bağlı olarak birkaç saniye sürebilir.
-                                İşlem sırasında sistem yavaşlayabilir.
+                                Bu islem calisan sayisina bagli olarak birkac saniye surebilir.
+                                Islem sirasinda sistem yavasliayabilir.
                             </p>
                         </div>
 
@@ -127,25 +102,25 @@ const ServiceControl = () => {
                             {loading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Hesaplanıyor...
+                                    Hesaplaniyor...
                                 </>
                             ) : (
                                 <>
                                     <Play size={18} fill="currentColor" />
-                                    Servisi Çalıştır
+                                    Servisi Calistir
                                 </>
                             )}
                         </button>
 
                         {status === 'success' && (
-                            <div className="mt-4 p-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                            <div className="mt-4 p-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg flex items-center gap-2 text-sm font-medium">
                                 <CheckCircle size={18} />
                                 {message}
                             </div>
                         )}
 
                         {status === 'error' && (
-                            <div className="mt-4 p-3 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                            <div className="mt-4 p-3 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg flex items-center gap-2 text-sm font-medium">
                                 <XCircle size={18} />
                                 {message}
                             </div>
@@ -153,36 +128,36 @@ const ServiceControl = () => {
                     </div>
                 </div>
 
-                {/* Card 2: Status / Gate Logs Shortcut */}
+                {/* Card 2: Status */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                            <Calendar size={20} />
+                            <Monitor size={20} />
                         </div>
                         <h2 className="text-lg font-bold text-slate-800">Sistem Durumu</h2>
                     </div>
 
                     <div className="flex-1 flex flex-col justify-center items-center text-center p-6 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-300">
-                            <Monitor size={32} />
+                        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4 text-green-500">
+                            <CheckCircle size={32} />
                         </div>
                         <h3 className="text-slate-900 font-bold mb-1">Servis Aktif</h3>
                         <p className="text-sm text-slate-500 max-w-xs">
-                            Otomatik hesaplamalar her gece 03:00'te çalışmaktadır.
+                            Canli guncelleme her 30 saniyede, gece gorevleri 00:01'de otomatik calisir.
                         </p>
                     </div>
 
                     <div className="mt-6 pt-6 border-t border-slate-100">
-                        <h4 className="font-bold text-slate-900 mb-3 text-sm">Hızlı Bağlantılar</h4>
+                        <h4 className="font-bold text-slate-900 mb-3 text-sm">Hizli Baglantilar</h4>
                         <div className="grid grid-cols-1 gap-2">
-                            <button className="w-full text-left p-3 hover:bg-slate-50 rounded-lg text-sm text-slate-600 font-medium transition-colors border border-transparent hover:border-slate-100 flex justify-between group">
-                                Kapı Loglarını İncele
-                                <span className="text-slate-300 group-hover:text-indigo-500 transition-colors">→</span>
-                            </button>
-                            <button className="w-full text-left p-3 hover:bg-slate-50 rounded-lg text-sm text-slate-600 font-medium transition-colors border border-transparent hover:border-slate-100 flex justify-between group">
-                                Hata Kayıtları
-                                <span className="text-slate-300 group-hover:text-indigo-500 transition-colors">→</span>
-                            </button>
+                            <Link to="/admin/system-health" className="w-full text-left p-3 hover:bg-slate-50 rounded-lg text-sm text-slate-600 font-medium transition-colors border border-transparent hover:border-slate-100 flex justify-between group">
+                                Sistem Kontrol Merkezi
+                                <span className="text-slate-300 group-hover:text-indigo-500 transition-colors">&rarr;</span>
+                            </Link>
+                            <Link to="/admin/live-status" className="w-full text-left p-3 hover:bg-slate-50 rounded-lg text-sm text-slate-600 font-medium transition-colors border border-transparent hover:border-slate-100 flex justify-between group">
+                                Canli Durum Paneli
+                                <span className="text-slate-300 group-hover:text-indigo-500 transition-colors">&rarr;</span>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -193,13 +168,15 @@ const ServiceControl = () => {
                 <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
                     <h3 className="text-slate-100 font-mono text-sm font-semibold flex items-center gap-2">
                         <Activity size={16} className="text-green-400" />
-                        CANLI SERVİS LOGLARI (Son 100 İşlem)
+                        CANLI SERVIS LOGLARI (Son 100 Islem)
                     </h3>
                     <span className="text-xs text-slate-500 font-mono">Otomatik Yenileniyor...</span>
                 </div>
                 <div className="h-64 overflow-y-auto p-4 font-mono text-xs space-y-1 custom-scrollbar">
                     {logs.length === 0 ? (
-                        <div className="text-slate-500 text-center py-10">Henüz log kaydı yok...</div>
+                        <div className="text-slate-500 text-center py-10">
+                            Henuz log kaydi yok. Sistem Sagligi &gt; Sistem Ayarlari'ndan Servis Loglarini aktif edin.
+                        </div>
                     ) : (
                         logs.map((log) => (
                             <div key={log.id} className="flex gap-2 hover:bg-slate-800 p-0.5 rounded">
@@ -217,7 +194,7 @@ const ServiceControl = () => {
                                         : log.message
                                     }
                                 </span>
-                                {log.employee_name !== '-' && (
+                                {log.employee_name && log.employee_name !== '-' && (
                                     <span className="text-indigo-400 ml-auto shrink-0 text-[10px] bg-indigo-900/30 px-1 rounded flex items-center">
                                         {log.employee_name}
                                     </span>
@@ -227,7 +204,7 @@ const ServiceControl = () => {
                     )}
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
