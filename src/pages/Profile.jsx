@@ -16,6 +16,7 @@ const Profile = () => {
     const [allEmployees, setAllEmployees] = useState([]);
 
     const [formData, setFormData] = useState({
+        email: '',
         phone_secondary: '',
         address: '',
         insurance_number: '',
@@ -42,6 +43,7 @@ const Profile = () => {
             const subs = user.substitutes?.map(s => (typeof s === 'object' ? s.id : s)) || [];
             setFormData(prev => ({
                 ...prev,
+                email: user.email || '',
                 phone_secondary: user.phone_secondary || '',
                 address: user.address || '',
                 insurance_number: user.insurance_number || '',
@@ -91,6 +93,7 @@ const Profile = () => {
                 // Contact or Substitutes save
                 const payload = {};
                 if (activeTab === 'contact') {
+                    payload.email = formData.email;
                     payload.phone_secondary = formData.phone_secondary;
                     payload.address = formData.address;
                     payload.insurance_number = formData.insurance_number;
@@ -273,6 +276,22 @@ const Profile = () => {
                             {activeTab === 'contact' && (
                                 <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="md:col-span-2 space-y-3">
+                                            <label className="block text-sm font-bold text-slate-900">E-posta Adresi</label>
+                                            <div className="relative group">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="text-slate-400 group-focus-within:text-blue-500 transition-colors font-bold">@</span>
+                                                </div>
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                    placeholder="ornek@mega.com.tr"
+                                                    className="pl-10 w-full bg-white border border-slate-200 rounded-xl py-3.5 text-slate-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
                                         <div className="space-y-3">
                                             <label className="block text-sm font-bold text-slate-900">Kurumsal Telefon</label>
                                             <div className="relative group">
