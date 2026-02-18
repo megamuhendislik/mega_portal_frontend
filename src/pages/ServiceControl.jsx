@@ -16,7 +16,7 @@ const ServiceControl = () => {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const response = await api.get('/attendance/service-logs/');
+                const response = await api.get('/service-logs/');
                 setLogs(response.data?.results || response.data || []);
             } catch (error) {
                 console.error("Log fetch error:", error);
