@@ -822,6 +822,8 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState('');
 
+    const monthNames = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
     useEffect(() => {
         if (isOpen) {
             setMode('settle');
@@ -861,17 +863,26 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     const isDeficit = data.netBalance < 0;
     const absHours = (Math.abs(data.netBalance) / 3600).toFixed(1);
     const absMinutes = Math.round(Math.abs(data.netBalance) / 60);
+    const empName = `${data.employee.first_name} ${data.employee.last_name}`;
+    const empDept = data.employee.department_name || data.employee.department?.name || '';
+    const periodLabel = `${monthNames[data.month] || data.month} ${data.year}`;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-                {/* Header */}
-                <div className="px-6 py-4 border-b flex justify-between items-center">
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-900">Bakiye İşlemleri</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">{data.employee.first_name} {data.employee.last_name} — {data.year}/{data.month}. Ay</p>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+                {/* Header — Çalışan + Dönem bilgisi */}
+                <div className="px-6 py-5 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <div className="text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Bakiye İşlemi</div>
+                            <h3 className="text-xl font-bold">{empName}</h3>
+                            <div className="flex items-center gap-3 mt-1.5">
+                                {empDept && <span className="text-xs bg-white/10 px-2 py-0.5 rounded">{empDept}</span>}
+                                <span className="text-sm font-semibold text-blue-300">{periodLabel}</span>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="text-white/50 hover:text-white text-2xl font-bold leading-none mt-1">×</button>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
                 </div>
 
                 {/* Balance Display */}
