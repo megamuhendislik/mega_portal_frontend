@@ -230,7 +230,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             onClose();
         } catch (err) {
             console.error('Error creating request:', err);
-            setError(err.response?.data?.detail || err.response?.data?.error || 'Talep oluşturulurken bir hata oluştu.');
+            const data = err.response?.data;
+            const errorMsg = data?.detail || data?.error || data?.balance?.[0] || data?.balance || data?.date?.[0] || data?.date || 'Talep oluşturulurken bir hata oluştu.';
+            setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
         } finally {
             setLoading(false);
         }
@@ -277,13 +279,23 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return diffDays;
     };
 
+    // Component-level balance insufficiency check (for submit button disable)
+    const getInsufficientBalanceState = () => {
+        const balance = getLeaveBalance();
+        const duration = calculateDuration();
+        const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+        const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
+        return isAnnualLeave && balance && duration > 0 && (duration > balance.available);
+    };
+    const isInsufficientBalance = selectedType === 'LEAVE' && getInsufficientBalanceState();
+
     const renderLeaveForm = () => {
         const balance = getLeaveBalance();
         const duration = calculateDuration();
         const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
         const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
 
-        const isInsufficient = isAnnualLeave && balance && (duration > balance.available);
+        const isInsufficient = isInsufficientBalance;
 
         return (
             <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
@@ -335,7 +347,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         {isInsufficient && (
                             <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1">
                                 <AlertCircle size={12} />
-                                Talep edilen süre ({duration} gün) bakiyenizi aşıyor!
+                                Yetersiz bakiye! Talep oluşturamazsınız. ({duration} gün talep, {balance.available} gün mevcut)
                             </div>
                         )}
                     </div>
@@ -1076,14 +1088,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <button
                             form="requestForm"
                             type="submit"
-                            disabled={loading || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay)}
+                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay)}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-amber-500 hover:bg-amber-600' :
                                         selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
                                             selectedType === 'CARDLESS_ENTRY' ? 'bg-purple-600 hover:bg-purple-700' :
                                                 'bg-emerald-600 hover:bg-emerald-700'}
-                                ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
+                                ${(loading || isInsufficientBalance) ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
                             `}
                         >
                             {loading ? 'Gönderiliyor...' : (

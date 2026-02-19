@@ -670,9 +670,13 @@ const StepLeave = ({ formData, handleChange }) => {
                         <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_advance_limit} <span className="text-sm font-normal text-slate-400">Gün</span></div>
                     </div>
                     <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
-                        <div className="text-xs text-emerald-600 font-bold uppercase">Kanuni Hakediş</div>
-                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.auto_calculated_rate || formData.annual_leave_accrual_rate} <span className="text-sm font-normal text-slate-400">Gün</span></div>
-                        {formData.auto_calculated_rate && <div className="text-[10px] text-emerald-500 mt-0.5">4857 Madde 53'e göre otomatik</div>}
+                        <div className="text-xs text-emerald-600 font-bold uppercase">Bu Yıl Hakediş</div>
+                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_accrual_rate || formData.auto_calculated_rate} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                        {formData.auto_calculated_rate && Number(formData.annual_leave_accrual_rate) !== Number(formData.auto_calculated_rate) ? (
+                            <div className="text-[10px] text-amber-600 mt-0.5 font-bold">Override (Kanuni: {formData.auto_calculated_rate} gün)</div>
+                        ) : (
+                            <div className="text-[10px] text-emerald-500 mt-0.5">4857 Madde 53'e göre otomatik</div>
+                        )}
                     </div>
                 </div>
 
@@ -684,13 +688,21 @@ const StepLeave = ({ formData, handleChange }) => {
                         onChange={e => handleChange('hired_date', e.target.value)}
                         className="bg-white border-blue-200"
                     />
-                    <InputField
-                        type="number"
-                        label="Yıllık Hak Ediş (Varsayılan)"
-                        value={formData.annual_leave_accrual_rate}
-                        onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
-                        className="bg-white"
-                    />
+                    <div>
+                        <InputField
+                            type="number"
+                            label="Yıllık Hak Ediş (Bu Yıl)"
+                            value={formData.annual_leave_accrual_rate}
+                            onChange={e => handleChange('annual_leave_accrual_rate', e.target.value)}
+                            className="bg-white"
+                        />
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-slate-400">Kanuni: {formData.auto_calculated_rate || 14} gün</span>
+                            {formData.auto_calculated_rate && Number(formData.annual_leave_accrual_rate) !== Number(formData.auto_calculated_rate) && (
+                                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold" title="Bu değer sadece bu yılın hakedişi için geçerlidir. Sonraki yıl kanuni hesaplamaya döner.">Override aktif</span>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1057,7 +1069,7 @@ const Employees = () => {
         setLoading(true);
         try {
             const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes] = await Promise.all([
-                api.get('/employees/'),
+                api.get('/employees/', { params: { page_size: 9999 } }),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
@@ -1384,8 +1396,8 @@ const Employees = () => {
         const filteredEmployees = employees
             .filter(e => e.employment_status !== 'TERMINATED')
             .filter(e =>
-                (e.first_name + ' ' + e.last_name).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (e.job_position?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+                (e.first_name + ' ' + e.last_name).toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
+                (e.job_position?.name || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR'))
             )
             .filter(e => !departmentFilter || (e.department?.id || e.department) == departmentFilter);
 
@@ -1422,7 +1434,7 @@ const Employees = () => {
         }, {});
 
         // Sort departments alphabetically
-        const sortedDepartments = Object.keys(groupedEmployees).sort();
+        const sortedDepartments = Object.keys(groupedEmployees).sort((a, b) => a.localeCompare(b, 'tr'));
 
         return (
             <div className="min-h-screen bg-slate-50/50 p-6 md:p-8 animate-fade-in">
