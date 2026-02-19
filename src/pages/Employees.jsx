@@ -1059,6 +1059,8 @@ const Employees = () => {
     // Filters & Search
     const [searchTerm, setSearchTerm] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('');
+    const [positionFilter, setPositionFilter] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
     const [showSettings, setShowSettings] = useState(false); // Toggle management mode
 
     useEffect(() => {
@@ -1397,9 +1399,13 @@ const Employees = () => {
             .filter(e => e.employment_status !== 'TERMINATED')
             .filter(e =>
                 (e.first_name + ' ' + e.last_name).toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
-                (e.job_position?.name || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR'))
+                (e.job_position?.name || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
+                (e.email || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
+                (e.employee_code || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR'))
             )
-            .filter(e => !departmentFilter || (e.department?.id || e.department) == departmentFilter);
+            .filter(e => !departmentFilter || (e.department?.id || e.department) == departmentFilter)
+            .filter(e => !positionFilter || (e.job_position?.id || e.job_position) == positionFilter)
+            .filter(e => !roleFilter || (e.role_ids || e.roles || []).some(r => (r.id || r) == roleFilter));
 
         const groupedEmployees = filteredEmployees.reduce((acc, emp) => {
             // 1. Primary Department
@@ -1474,17 +1480,17 @@ const Employees = () => {
                     </div>
 
                     {/* Filter Bar */}
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row gap-4 items-center">
-                        <div className="relative flex-1 w-full">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row gap-4 items-center flex-wrap">
+                        <div className="relative flex-1 min-w-[200px]">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                             <input
-                                placeholder="İsim, unvan ile ara..."
+                                placeholder="İsim, unvan, e-posta, sicil no..."
                                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="relative w-full md:w-72">
+                        <div className="relative w-full md:w-56">
                             <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <select
                                 value={departmentFilter}
@@ -1498,6 +1504,42 @@ const Employees = () => {
                             </select>
                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                         </div>
+                        <div className="relative w-full md:w-52">
+                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <select
+                                value={positionFilter}
+                                onChange={e => setPositionFilter(e.target.value)}
+                                className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
+                            >
+                                <option value="">Tüm Pozisyonlar</option>
+                                {jobPositions.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        </div>
+                        <div className="relative w-full md:w-48">
+                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <select
+                                value={roleFilter}
+                                onChange={e => setRoleFilter(e.target.value)}
+                                className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
+                            >
+                                <option value="">Tüm Roller</option>
+                                {roles.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(r => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        </div>
+                        {(searchTerm || departmentFilter || positionFilter || roleFilter) && (
+                            <button
+                                onClick={() => { setSearchTerm(''); setDepartmentFilter(''); setPositionFilter(''); setRoleFilter(''); }}
+                                className="h-12 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold flex items-center gap-1.5 transition-all text-sm shrink-0"
+                            >
+                                <X size={16} /> Temizle
+                            </button>
+                        )}
                     </div>
 
                     {/* Table View */}
