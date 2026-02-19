@@ -1581,21 +1581,21 @@ function DashboardTab({ stats, refresh, loading }) {
 function StressTestTab() {
 
     const [isRunning, setIsRunning] = useState(false);
+    const [activeTest, setActiveTest] = useState(null);
     const [logs, setLogs] = useState([]);
     const consoleEndRef = useRef(null);
 
-    // Auto-scroll console
     useEffect(() => {
         consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
-    const runTest = async () => {
+    const startTest = async (endpoint, testName) => {
         setIsRunning(true);
-        setLogs(['> Simülasyon başlatılıyor...', '> Test ortamı hazırlanıyor (Async Task)...']);
+        setActiveTest(testName);
+        setLogs([`> ${testName} başlatılıyor...`, '> Async Task kuyruğa alınıyor...']);
 
         try {
-            // 1. Start Task
-            const startRes = await api.post('/system/health-check/run_comprehensive_stress_test/');
+            const startRes = await api.post(`/system/health-check/${endpoint}/`);
             if (startRes.data.error) throw new Error(startRes.data.error);
 
             const taskId = startRes.data.task_id;
@@ -1603,27 +1603,18 @@ function StressTestTab() {
 
             setLogs(prev => [...prev, `> Görev Kuyruğa Alındı: ${taskId}`, '> Bekleniyor...']);
 
-            // 2. Poll Status
             const pollInterval = setInterval(async () => {
                 try {
                     const statusRes = await api.get(`/system/health-check/get_stress_test_status/?task_id=${taskId}`);
                     const { state, logs: remoteLogs, report, error } = statusRes.data;
 
                     if (state === 'PROGRESS' && remoteLogs) {
-                        // Replace generic logs with actual remote logs from server
-                        // For efficiency, maybe just show the last few? 
-                        // But user wants to see "streaming". 
-                        // Using a Set or just overwriting might be tricky if we want history.
-                        // Assuming remoteLogs is the FULL list from backend (as per my backend implementation).
-
                         const formattedLogs = remoteLogs.map(l => {
                             if (typeof l === 'object') {
                                 return `[${l.time}] ${l.message} ${l.details ? '(' + l.details + ')' : ''}`;
                             }
                             return l;
                         });
-
-                        // Overwrite with server source of truth to avoid sync issues
                         setLogs(formattedLogs);
                     }
 
@@ -1631,50 +1622,45 @@ function StressTestTab() {
                         clearInterval(pollInterval);
                         setLogs(prev => [...prev, `> TEST TAMAMLANDI: ${report.summary}`]);
 
-                        // Append results if available in report
                         if (report.results) {
                             const resultLines = report.results.map(r => {
                                 const icon = r.status === 'PASS' ? '✅' : (r.status === 'FAIL' ? '❌' : '⚠️');
-                                return `${icon} [SCENARIO #${r.id}] ${r.desc} ... ${r.status}`;
+                                return `${icon} [#${r.id}] ${r.desc} ... ${r.status}${r.details ? ' (' + r.details + ')' : ''}`;
                             });
                             setLogs(prev => [...prev, '--- SONUÇLAR ---', ...resultLines]);
                         }
 
                         setIsRunning(false);
+                        setActiveTest(null);
                     } else if (state === 'FAILURE') {
                         clearInterval(pollInterval);
                         setLogs(prev => [...prev, `> KRİTİK HATA: ${error}`]);
                         setIsRunning(false);
+                        setActiveTest(null);
                     }
-
                 } catch (e) {
-                    // Polling error (network glitch?), don't stop unless persistent? 
-                    // Stop for safety.
                     console.error("Polling error:", e);
-                    // clearInterval(pollInterval);
-                    // setIsRunning(false);
                 }
             }, 1000);
 
         } catch (error) {
             setLogs(prev => [...prev, `> BAŞLATMA HATASI: ${error.message}`]);
             setIsRunning(false);
+            setActiveTest(null);
         }
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
             {/* Control Panel */}
-            <div className="col-span-1 space-y-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">Puantaj Stres Testi</h3>
-                    <p className="text-gray-500 text-sm mb-6">
-                        Bu modül, 150 farklı varyasyonla puantaj motorunu zorlar.
-                    </p>
+            <div className="col-span-1 space-y-4">
+                {/* Attendance Stress Test */}
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-base font-bold text-gray-800 mb-1">Puantaj Stres Testi</h3>
+                    <p className="text-gray-400 text-xs mb-3">150+ senaryo ile puantaj motorunu test eder</p>
 
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
-                        <h4 className="text-xs font-bold text-blue-800 uppercase mb-2">Test Kapsamı</h4>
-                        <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                        <ul className="text-xs text-blue-700 space-y-0.5 list-disc list-inside">
                             <li>Vardiya Toleransları (Snapping)</li>
                             <li>Otomatik Mola Kesintileri</li>
                             <li>Gece Vardiyası (Midnight Wrap)</li>
@@ -1683,27 +1669,61 @@ function StressTestTab() {
                     </div>
 
                     <button
-                        onClick={runTest}
+                        onClick={() => startTest('run_comprehensive_stress_test', 'Puantaj Stres Testi')}
                         disabled={isRunning}
-                        className={`w-full py-3 px-4 rounded-lg font-bold shadow-sm transition-all flex justify-center items-center gap-2
+                        className={`w-full py-2.5 px-4 rounded-lg font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2
                             ${isRunning
                                 ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                 : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'}
                         `}
                     >
-                        {isRunning ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
-                        {isRunning ? 'TEST ÇALIŞIYOR...' : 'SİMÜLASYONU BAŞLAT'}
+                        {activeTest === 'Puantaj Stres Testi' ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <PlayCircleIcon className="w-4 h-4" />}
+                        {activeTest === 'Puantaj Stres Testi' ? 'ÇALIŞIYOR...' : 'PUANTAJ TESTİ'}
+                    </button>
+                </div>
+
+                {/* Production Readiness Test */}
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200">
+                    <h3 className="text-base font-bold text-gray-800 mb-1">Üretim Hazırlık Testi</h3>
+                    <p className="text-gray-400 text-xs mb-3">Tüm sistemleri kapsamlı test eder (production ready?)</p>
+
+                    <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 mb-4">
+                        <ul className="text-xs text-emerald-700 space-y-0.5 list-disc list-inside">
+                            <li>Kimlik Doğrulama & Şifre Değiştirme</li>
+                            <li>İzin / Mesai / Kartsız Giriş Talepleri</li>
+                            <li>Onay, Red, İptal, Override Akışları</li>
+                            <li>Vekalet Sistemi (Vekil Onay + Yönetici Ezme)</li>
+                            <li>Güvenli Geçiş (Fernet Şifreleme)</li>
+                            <li>Karar Geçmişi & Bildirim Zinciri</li>
+                            <li>Aylık Özet & Hedef Hesaplama</li>
+                            <li>Veri Temizliği & Bütünlük Doğrulama</li>
+                        </ul>
+                    </div>
+
+                    <button
+                        onClick={() => startTest('run_production_readiness_test', 'Üretim Hazırlık Testi')}
+                        disabled={isRunning}
+                        className={`w-full py-2.5 px-4 rounded-lg font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2
+                            ${isRunning
+                                ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-md'}
+                        `}
+                    >
+                        {activeTest === 'Üretim Hazırlık Testi' ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <PlayCircleIcon className="w-4 h-4" />}
+                        {activeTest === 'Üretim Hazırlık Testi' ? 'ÇALIŞIYOR...' : 'ÜRETİM TESTİ'}
                     </button>
                 </div>
             </div>
 
             {/* Console Output */}
             <div className="col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[600px]">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[700px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
-                        <span className="text-xs font-mono text-gray-400">root@mega-engine:~# ./run_stress_test.sh</span>
+                        <span className="text-xs font-mono text-gray-400">
+                            root@mega-engine:~# {activeTest ? `./run_${activeTest === 'Puantaj Stres Testi' ? 'stress' : 'readiness'}_test.sh` : 'awaiting...'}
+                        </span>
                         <div className="flex gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                            <div className={`w-3 h-3 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' : 'bg-red-500/80'}`}></div>
                             <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                             <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                         </div>
@@ -1711,11 +1731,17 @@ function StressTestTab() {
                     <div className="flex-1 p-4 overflow-y-auto font-mono text-xs md:text-sm text-green-400 space-y-1">
                         {logs.length === 0 && (
                             <div className="text-gray-600 select-none">
-                                // Bekleniyor... Testi başlatmak için butona tıklayın.
+                                // Bekleniyor... Test başlatmak için soldaki butonlardan birini tıklayın.
                             </div>
                         )}
                         {logs.map((log, i) => (
-                            <div key={i} className={`${log.includes('❌') ? 'text-red-400' : ''} ${log.includes('⚠️') ? 'text-yellow-400' : ''}`}>
+                            <div key={i} className={`
+                                ${log.includes('❌') || log.includes('FAIL') || log.includes('HATA') ? 'text-red-400' : ''}
+                                ${log.includes('⚠') || log.includes('WARN') ? 'text-yellow-400' : ''}
+                                ${log.includes('PHASE') || log.includes('═══') || log.includes('╔') || log.includes('╚') ? 'text-cyan-400 font-bold' : ''}
+                                ${log.includes('PRODUCTION READY') ? 'text-emerald-400 font-bold text-base' : ''}
+                                ${log.includes('SORUN TESPİT') ? 'text-red-400 font-bold text-base' : ''}
+                            `}>
                                 {log}
                             </div>
                         ))}
