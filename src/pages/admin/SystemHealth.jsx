@@ -1117,13 +1117,63 @@ function DashboardTab({ stats, refresh, loading }) {
     const [recalcLoading, setRecalcLoading] = useState(false);
     const [runtimeConfig, setRuntimeConfig] = useState({});
     const [configLoading, setConfigLoading] = useState(true);
+    const [systemSettings, setSystemSettings] = useState(null);
+    const [startDateInput, setStartDateInput] = useState('');
+    const [startDateSaving, setStartDateSaving] = useState(false);
 
     useEffect(() => {
         api.get('/system/health-check/get_runtime_config/')
             .then(res => setRuntimeConfig(res.data))
             .catch(() => {})
             .finally(() => setConfigLoading(false));
+
+        // Fetch system settings (start date)
+        api.get('/settings/').then(res => {
+            const data = Array.isArray(res.data) ? res.data[0] : (res.data.results?.[0] || res.data);
+            if (data) {
+                setSystemSettings(data);
+                setStartDateInput(data.attendance_start_date || '');
+            }
+        }).catch(() => {});
     }, []);
+
+    const saveStartDate = async () => {
+        if (!startDateInput) return;
+        if (!window.confirm(`Sistem başlangıç tarihi "${startDateInput}" olarak ayarlanacak.\n\nBu tarihten önceki tüm puantaj verileri hesaplamalarda dikkate alınmayacaktır.\n\nOnaylıyor musunuz?`)) return;
+        setStartDateSaving(true);
+        try {
+            const settingsId = systemSettings?.id;
+            if (settingsId) {
+                await api.patch(`/settings/${settingsId}/`, { attendance_start_date: startDateInput });
+            } else {
+                await api.post('/settings/', { attendance_start_date: startDateInput });
+            }
+            setSystemSettings(prev => ({ ...prev, attendance_start_date: startDateInput }));
+            alert('Sistem başlangıç tarihi kaydedildi.');
+        } catch (e) {
+            alert('Hata: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setStartDateSaving(false);
+        }
+    };
+
+    const clearStartDate = async () => {
+        if (!window.confirm('Sistem başlangıç tarihi kaldırılacak. Onaylıyor musunuz?')) return;
+        setStartDateSaving(true);
+        try {
+            const settingsId = systemSettings?.id;
+            if (settingsId) {
+                await api.patch(`/settings/${settingsId}/`, { attendance_start_date: null });
+            }
+            setSystemSettings(prev => ({ ...prev, attendance_start_date: null }));
+            setStartDateInput('');
+            alert('Sistem başlangıç tarihi kaldırıldı.');
+        } catch (e) {
+            alert('Hata: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setStartDateSaving(false);
+        }
+    };
 
     const toggleConfig = async (key, value) => {
         try {
@@ -1150,7 +1200,8 @@ function DashboardTab({ stats, refresh, loading }) {
                     <CpuChipIcon className="w-4 h-4 text-gray-400" />
                     Sistem Ayarlari
                 </h3>
-                <div className="flex flex-wrap gap-6">
+                <div className="space-y-5">
+                    {/* Toggle: Servis Logları */}
                     <label className="flex items-center gap-3 cursor-pointer select-none">
                         <div className="relative">
                             <input
@@ -1168,6 +1219,60 @@ function DashboardTab({ stats, refresh, loading }) {
                             <p className="text-xs text-gray-400">Acildiginda puantaj motorunun detayli loglarini DB'ye yazar. Servis Kontrol sayfasinda gorunur.</p>
                         </div>
                     </label>
+
+                    {/* Sistem Başlangıç Tarihi */}
+                    <div className="pt-4 border-t border-gray-100">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 bg-amber-50 rounded-lg mt-0.5">
+                                <ExclamationTriangleIcon className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-sm font-bold text-gray-800">Sistem Baslangic Tarihi</h4>
+                                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                    Bu tarih sistemin canli olarak kullanilmaya basladigi gunu belirtir.
+                                    Bu tarihten onceki puantaj verileri hesaplamalarda dikkate alinmaz.
+                                </p>
+                                <div className="flex items-center gap-3 mt-3">
+                                    <input
+                                        type="date"
+                                        value={startDateInput}
+                                        onChange={e => setStartDateInput(e.target.value)}
+                                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                    />
+                                    <button
+                                        onClick={saveStartDate}
+                                        disabled={startDateSaving || !startDateInput}
+                                        className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {startDateSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                                    </button>
+                                    {systemSettings?.attendance_start_date && (
+                                        <button
+                                            onClick={clearStartDate}
+                                            disabled={startDateSaving}
+                                            className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                            Kaldir
+                                        </button>
+                                    )}
+                                </div>
+                                {systemSettings?.attendance_start_date && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                        <span className="text-xs font-medium text-green-700">
+                                            Aktif: {new Date(systemSettings.attendance_start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                )}
+                                {!systemSettings?.attendance_start_date && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                                        <span className="text-xs text-gray-400">Henuz ayarlanmadi</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
