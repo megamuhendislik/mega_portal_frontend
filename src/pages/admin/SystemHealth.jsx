@@ -1620,9 +1620,21 @@ function StressTestTab() {
 
                     if (state === 'SUCCESS') {
                         clearInterval(pollInterval);
-                        setLogs(prev => [...prev, `> TEST TAMAMLANDI: ${report.summary}`]);
 
-                        if (report.results) {
+                        // Show all runner logs from final report (covers fast-finish case where PROGRESS was never polled)
+                        if (report?.logs && report.logs.length > 0) {
+                            const formattedLogs = report.logs.map(l => {
+                                if (typeof l === 'object') {
+                                    return `[${l.time}] ${l.message} ${l.details ? '(' + l.details + ')' : ''}`;
+                                }
+                                return l;
+                            });
+                            setLogs(formattedLogs);
+                        }
+
+                        setLogs(prev => [...prev, '', `> TEST TAMAMLANDI: ${report?.summary || 'Sonuç yok'}`]);
+
+                        if (report?.results && report.results.length > 0) {
                             const resultLines = report.results.map(r => {
                                 const icon = r.status === 'PASS' ? '✅' : (r.status === 'FAIL' ? '❌' : '⚠️');
                                 return `${icon} [#${r.id}] ${r.desc} ... ${r.status}${r.details ? ' (' + r.details + ')' : ''}`;
