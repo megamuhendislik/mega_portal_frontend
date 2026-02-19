@@ -13,7 +13,7 @@ const DecisionHistoryTimeline = ({ contentType, objectId }) => {
 
   const fetchHistory = async () => {
     try {
-      const response = await api.get('/api/decision-history/for_request/', {
+      const response = await api.get('/decision-history/for_request/', {
         params: {
           content_type: contentType,
           object_id: objectId
@@ -48,8 +48,7 @@ const DecisionHistoryTimeline = ({ contentType, objectId }) => {
     const labels = {
       'APPROVED': 'Onaylandı',
       'REJECTED': 'Reddedildi',
-      'OVERRIDDEN_APPROVED': 'Üst Yönetici Onayladı (Override)',
-      'OVERRIDDEN_REJECTED': 'Üst Yönetici Reddetti (Override)',
+      'OVERRIDDEN': 'Üst Yönetici Kararı (Override)',
       'REVISED': 'Revize Edildi',
       'CANCELLED': 'İptal Edildi'
     };
