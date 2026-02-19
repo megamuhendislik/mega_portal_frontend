@@ -5,8 +5,28 @@ import api from '../services/api';
 import {
     User, Phone, MapPin, Shield, Briefcase, Mail,
     Calendar, Save, Lock, Building, AlertTriangle,
-    CheckCircle, Hash
+    CheckCircle, Hash, Bell
 } from 'lucide-react';
+
+const DEFAULT_NOTIFICATION_PREFS = {
+    leave_approved: true,
+    leave_rejected: true,
+    overtime_approved: true,
+    overtime_rejected: true,
+    substitute_requests: true,
+    escalation_alerts: true,
+    system_announcements: true,
+};
+
+const NOTIFICATION_LABELS = {
+    leave_approved: { label: 'İzin Onaylandı', desc: 'İzin talebiniz onaylandığında bildirim alın.' },
+    leave_rejected: { label: 'İzin Reddedildi', desc: 'İzin talebiniz reddedildiğinde bildirim alın.' },
+    overtime_approved: { label: 'Mesai Onaylandı', desc: 'Mesai talebiniz onaylandığında bildirim alın.' },
+    overtime_rejected: { label: 'Mesai Reddedildi', desc: 'Mesai talebiniz reddedildiğinde bildirim alın.' },
+    substitute_requests: { label: 'Vekalet Talepleri', desc: 'Vekalet olarak atandığınızda veya talep geldiğinde bildirim alın.' },
+    escalation_alerts: { label: 'Eskalasyon Uyarıları', desc: 'Bir talep size iletildiğinde bildirim alın.' },
+    system_announcements: { label: 'Sistem Duyuruları', desc: 'Genel sistem duyurularını alın.' },
+};
 
 const Profile = () => {
     const { user } = useAuth();
@@ -24,6 +44,8 @@ const Profile = () => {
         new_password: '',
         confirm_password: ''
     });
+
+    const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIFICATION_PREFS);
 
     const mustChangePassword = user?.must_change_password || false;
 
@@ -43,6 +65,9 @@ const Profile = () => {
                 emergency_contact_name: user.emergency_contact_name || '',
                 emergency_contact_phone: user.emergency_contact_phone || '',
             }));
+            if (user.notification_preferences && Object.keys(user.notification_preferences).length > 0) {
+                setNotifPrefs({ ...DEFAULT_NOTIFICATION_PREFS, ...user.notification_preferences });
+            }
         }
     }, [user]);
 
@@ -73,6 +98,12 @@ const Profile = () => {
                 setSuccessMessage('Şifreniz başarıyla değiştirildi.');
                 setFormData(prev => ({ ...prev, old_password: '', new_password: '', confirm_password: '' }));
                 setTimeout(() => window.location.reload(), 1500);
+            } else if (activeTab === 'notifications') {
+                await api.patch('/employees/me/', {
+                    notification_preferences: notifPrefs
+                });
+                setSuccessMessage('Bildirim tercihleriniz güncellendi.');
+                setTimeout(() => setSuccessMessage(''), 3000);
             } else {
                 const payload = {
                     email: formData.email,
@@ -105,6 +136,7 @@ const Profile = () => {
     const tabs = [
         { id: 'general', label: 'Genel Bilgiler', icon: User },
         { id: 'contact', label: 'Kişisel Bilgiler', icon: MapPin },
+        { id: 'notifications', label: 'Bildirim Ayarları', icon: Bell },
         ...(mustChangePassword ? [{ id: 'security', label: 'Güvenlik', icon: Lock, badge: true }] : []),
     ];
 
@@ -182,6 +214,7 @@ const Profile = () => {
                         <p className="text-sm text-slate-500 mt-1">
                             {activeTab === 'general' && 'Kurumsal bilgilerinizi buradan görüntüleyebilirsiniz.'}
                             {activeTab === 'contact' && 'Kişisel iletişim bilgilerinizi düzenleyebilirsiniz.'}
+                            {activeTab === 'notifications' && 'Hangi bildirimleri almak istediğinizi seçin.'}
                             {activeTab === 'security' && 'Hesap güvenlik ayarlarınızı yönetebilirsiniz.'}
                         </p>
                     </div>
@@ -274,13 +307,13 @@ const Profile = () => {
                                                 className="pl-10 w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 text-sm text-slate-400 cursor-not-allowed"
                                             />
                                             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                                <span className="text-[10px] font-bold bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase">İK</span>
+                                                <span className="text-[10px] font-bold bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase">IK</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Şahsi Telefon</label>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Sahsi Telefon</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                                 <Phone size={16} className="text-slate-400" />
@@ -311,7 +344,7 @@ const Profile = () => {
                             <div className="bg-white rounded-xl border border-slate-200 p-6">
                                 <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
                                     <div className="p-1 bg-red-50 rounded text-red-500"><Shield size={14} /></div>
-                                    Acil Durum İletişim
+                                    Acil Durum Iletisim
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
@@ -319,7 +352,7 @@ const Profile = () => {
                                         <input
                                             value={formData.emergency_contact_name}
                                             onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                                            placeholder="Acil durum kişisi adı"
+                                            placeholder="Acil durum kisisi adi"
                                             className="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
                                         />
                                     </div>
@@ -345,12 +378,82 @@ const Profile = () => {
                                     {loading ? (
                                         <>
                                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            İşleniyor...
+                                            Isleniyor...
                                         </>
                                     ) : (
                                         <>
                                             <Save size={16} />
-                                            Değişiklikleri Kaydet
+                                            Degisiklikleri Kaydet
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ========== NOTIFICATIONS TAB ========== */}
+                    {activeTab === 'notifications' && (
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-xl border border-slate-200 p-6">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                                        <Bell size={20} className="text-blue-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-bold text-slate-900">Bildirim Tercihleri</h3>
+                                        <p className="text-xs text-slate-500">Hangi durumlarda bildirim almak istediginizi secin.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    {Object.entries(NOTIFICATION_LABELS).map(([key, { label, desc }]) => (
+                                        <label
+                                            key={key}
+                                            className="flex items-center justify-between p-4 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group"
+                                        >
+                                            <div className="flex-1 min-w-0 mr-4">
+                                                <p className="text-sm font-semibold text-slate-800">{label}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                                            </div>
+                                            <div className="relative shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={notifPrefs[key] ?? true}
+                                                    onChange={e => setNotifPrefs(prev => ({ ...prev, [key]: e.target.checked }))}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                                <Bell size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                                <p className="text-sm text-blue-800 leading-relaxed">
+                                    <span className="font-semibold">Not:</span> Bildirim tercihleriniz anlik olarak kaydedilir.
+                                    Kapattiginiz bildirim turlerini artik almayacaksiniz.
+                                </p>
+                            </div>
+
+                            {/* Save */}
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Isleniyor...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save size={16} />
+                                            Tercihleri Kaydet
                                         </>
                                     )}
                                 </button>
@@ -365,9 +468,9 @@ const Profile = () => {
                                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                                     <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
                                     <div>
-                                        <h4 className="font-semibold text-amber-900 text-sm">Şifre Değişikliği Gerekli</h4>
+                                        <h4 className="font-semibold text-amber-900 text-sm">Sifre Degisikligi Gerekli</h4>
                                         <p className="text-amber-800/80 text-sm mt-0.5">
-                                            Sistem yöneticiniz şifrenizi güncelledi. Lütfen yeni bir şifre belirleyiniz.
+                                            Sistem yoneticiniz sifrenizi guncelledi. Lutfen yeni bir sifre belirleyiniz.
                                         </p>
                                     </div>
                                 </div>
@@ -379,27 +482,27 @@ const Profile = () => {
                                         <Lock size={20} className="text-red-500" />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-bold text-slate-900">Şifre Değiştir</h3>
-                                        <p className="text-xs text-slate-500">Güçlü bir şifre kullanmanızı öneririz.</p>
+                                        <h3 className="text-base font-bold text-slate-900">Sifre Degistir</h3>
+                                        <p className="text-xs text-slate-500">Guclu bir sifre kullanmanizi oneririz.</p>
                                     </div>
                                 </div>
 
                                 <div className="max-w-md space-y-4">
                                     <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Mevcut Şifre</label>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Mevcut Sifre</label>
                                         <input
                                             type="password"
                                             value={formData.old_password}
                                             onChange={e => setFormData({ ...formData, old_password: e.target.value })}
                                             className="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
-                                            placeholder="Mevcut şifreniz"
+                                            placeholder="Mevcut sifreniz"
                                         />
                                     </div>
 
                                     <div className="h-px bg-slate-100" />
 
                                     <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Yeni Şifre</label>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Yeni Sifre</label>
                                         <input
                                             type="password"
                                             value={formData.new_password}
@@ -409,13 +512,13 @@ const Profile = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Yeni Şifre (Tekrar)</label>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Yeni Sifre (Tekrar)</label>
                                         <input
                                             type="password"
                                             value={formData.confirm_password}
                                             onChange={e => setFormData({ ...formData, confirm_password: e.target.value })}
                                             className="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
-                                            placeholder="Yeni şifrenizi tekrar giriniz"
+                                            placeholder="Yeni sifrenizi tekrar giriniz"
                                         />
                                     </div>
                                 </div>
@@ -431,12 +534,12 @@ const Profile = () => {
                                     {loading ? (
                                         <>
                                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            İşleniyor...
+                                            Isleniyor...
                                         </>
                                     ) : (
                                         <>
                                             <Lock size={16} />
-                                            Şifreyi Değiştir
+                                            Sifreyi Degistir
                                         </>
                                     )}
                                 </button>
