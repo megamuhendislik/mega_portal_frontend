@@ -1069,7 +1069,7 @@ const Employees = () => {
         setLoading(true);
         try {
             const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes] = await Promise.all([
-                api.get('/employees/', { params: { page_size: 9999 } }),
+                api.get('/employees/'),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
