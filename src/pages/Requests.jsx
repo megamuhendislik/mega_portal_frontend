@@ -1061,15 +1061,20 @@ const Requests = () => {
     const handleSubstituteApprove = async (req) => {
         try {
             let url = '';
-            if (req.type === 'LEAVE') url = `/leave/requests/${req.id}/approve_reject/`;
-            else if (req.type === 'OVERTIME') url = `/overtime-requests/${req.id}/approve_reject/`;
+            let payload = {};
+            if (req.type === 'LEAVE') {
+                url = `/leave/requests/${req.id}/approve_reject/`;
+                payload = { action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id };
+            } else if (req.type === 'OVERTIME') {
+                url = `/overtime-requests/${req.id}/approve_reject/`;
+                payload = { action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id };
+            } else if (req.type === 'CARDLESS_ENTRY') {
+                url = `/cardless-entry-requests/${req.id}/approve/`;
+                payload = { acting_as_substitute_for: req.principal_id };
+            }
             if (!url) return;
 
-            await api.post(url, {
-                action: 'approve',
-                notes: 'Vekil olarak onaylandı',
-                acting_as_substitute_for: req.principal_id
-            });
+            await api.post(url, payload);
             fetchData();
             fetchSubstituteRequests();
         } catch (e) {
@@ -1081,15 +1086,20 @@ const Requests = () => {
         if (!reason) return;
         try {
             let url = '';
-            if (req.type === 'LEAVE') url = `/leave/requests/${req.id}/approve_reject/`;
-            else if (req.type === 'OVERTIME') url = `/overtime-requests/${req.id}/approve_reject/`;
+            let payload = {};
+            if (req.type === 'LEAVE') {
+                url = `/leave/requests/${req.id}/approve_reject/`;
+                payload = { action: 'reject', reason, acting_as_substitute_for: req.principal_id };
+            } else if (req.type === 'OVERTIME') {
+                url = `/overtime-requests/${req.id}/approve_reject/`;
+                payload = { action: 'reject', reason, acting_as_substitute_for: req.principal_id };
+            } else if (req.type === 'CARDLESS_ENTRY') {
+                url = `/cardless-entry-requests/${req.id}/reject/`;
+                payload = { reason, acting_as_substitute_for: req.principal_id };
+            }
             if (!url) return;
 
-            await api.post(url, {
-                action: 'reject',
-                reason,
-                acting_as_substitute_for: req.principal_id
-            });
+            await api.post(url, payload);
             fetchData();
             fetchSubstituteRequests();
         } catch (e) {
