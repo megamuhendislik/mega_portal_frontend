@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import moment from 'moment';
-import useInterval from '../hooks/useInterval';
+// useInterval removed — no auto-polling, user refreshes manually
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -45,19 +45,76 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         efficiency: 0
     });
 
+    const [initialLoad, setInitialLoad] = useState(true);
+
     useEffect(() => {
         fetchDepartments();
     }, []);
 
     useEffect(() => {
-        fetchHierarchy();
-        fetchStats();
+        fetchAllData();
     }, [year, month, selectedDept]);
 
-    // Auto-Refresh
-    useInterval(() => {
-        if (!loading) fetchStats();
-    }, 30000);
+    // Manual refresh handler (called by refresh button)
+    const handleRefresh = () => {
+        fetchAllData();
+    };
+
+    const fetchAllData = async () => {
+        // Only show loading spinner on first load
+        if (initialLoad) setLoading(true);
+        try {
+            const params = { year, month };
+            if (selectedDept) params.department_id = selectedDept;
+            params.include_inactive = 'true';
+
+            const [statsRes, hierarchyRes] = await Promise.all([
+                api.get('/dashboard/stats/', { params }),
+                api.get('/dashboard/team_hierarchy/')
+            ]);
+
+            // Process stats
+            const data = Array.isArray(statsRes.data) ? statsRes.data : [];
+            setStats(data);
+
+            const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
+            const overtime = data.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
+            const missing = data.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
+            const balance = data.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
+            const online = data.filter(d => d.is_online).length;
+
+            setSummary({
+                totalWorked: worked,
+                totalOvertime: overtime,
+                totalMissing: missing,
+                netBalance: balance,
+                activeCount: data.length,
+                onlineCount: online
+            });
+
+            // Process hierarchy
+            const hData = Array.isArray(hierarchyRes.data) ? hierarchyRes.data : [];
+            setHierarchyData(hData);
+            if (initialLoad && hData.length) {
+                const initialExpanded = {};
+                const expandAll = (nodes) => {
+                    nodes.forEach(n => {
+                        if (n.children?.length > 0) {
+                            initialExpanded[n.id] = true;
+                            expandAll(n.children);
+                        }
+                    });
+                };
+                expandAll(hData);
+                setExpandedDepts(prev => ({ ...prev, ...initialExpanded }));
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setLoading(false);
+            setInitialLoad(false);
+        }
+    };
 
     const fetchDepartments = async () => {
         try {
@@ -65,71 +122,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             setDepartments(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
             console.error('Error fetching departments:', error);
-        }
-    };
-
-    const fetchStats = async () => {
-        setLoading(true);
-        try {
-            const params = { year, month };
-            if (selectedDept) params.department_id = selectedDept;
-            params.include_inactive = 'true'; // Backend supports this now
-
-            const res = await api.get('/dashboard/stats/', { params });
-            const data = Array.isArray(res.data) ? res.data : [];
-            setStats(data);
-
-            // Calculate Executive Summaries
-            const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
-            const required = data.reduce((acc, curr) => acc + (curr.monthly_required || 0), 0);
-            const overtime = data.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
-            const missing = data.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
-            const balance = data.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
-
-            // Online Count (Real-Time)
-            const online = (data || []).filter(d => d.is_online).length;
-            const active = data.length;
-
-            setSummary({
-                totalWorked: worked,
-                totalOvertime: overtime,
-                totalMissing: missing,
-                netBalance: balance,
-                activeCount: active,
-                onlineCount: online // Replaces Efficiency
-            });
-
-        } catch (error) {
-            console.error('Error fetching stats:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-    const fetchHierarchy = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/dashboard/team_hierarchy/');
-            setHierarchyData(Array.isArray(res.data) ? res.data : []);
-            // Auto expand all nodes that have children
-            if (Array.isArray(res.data)) {
-                const initialExpanded = {};
-                const expandAll = (nodes) => {
-                    nodes.forEach(n => {
-                        if (n.children && n.children.length > 0) {
-                            initialExpanded[n.id] = true;
-                            expandAll(n.children);
-                        }
-                    });
-                };
-                expandAll(res.data);
-                setExpandedDepts(prev => ({ ...prev, ...initialExpanded }));
-            }
-        } catch (error) {
-            console.error('Error fetching hierarchy:', error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -540,9 +532,18 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             onChange={(e) => setSelectedDept(e.target.value)}
                             className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors max-w-[200px]"
                         >
-                            <option value="">Tüm Departmanlar</option>
+                            <option value="">Tum Departmanlar</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
+                        <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={loading}
+                            className="p-2 bg-slate-50 hover:bg-indigo-50 rounded-xl text-slate-500 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                            title="Verileri Yenile"
+                        >
+                            <Activity size={16} className={loading ? 'animate-spin' : ''} />
+                        </button>
                     </div>
                 </div>
             )}
@@ -566,9 +567,17 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             onChange={(e) => setSelectedDept(e.target.value)}
                             className="bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 py-2.5 pl-3 pr-8 cursor-pointer hover:border-indigo-300 transition-colors max-w-[200px] shadow-sm"
                         >
-                            <option value="">Tüm Ekip</option>
+                            <option value="">Tum Ekip</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={loading}
+                            className="p-2.5 bg-white border border-slate-200 hover:border-indigo-300 rounded-xl text-slate-500 hover:text-indigo-600 transition-colors disabled:opacity-50 shadow-sm"
+                            title="Verileri Yenile"
+                        >
+                            <Activity size={16} className={loading ? 'animate-spin' : ''} />
+                        </button>
                     </div>
                 </div>
             )}

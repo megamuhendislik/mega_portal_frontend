@@ -117,7 +117,7 @@ const Attendance = () => {
         setEndDate(format(end, 'yyyy-MM-dd'));
     };
 
-    // Separate loading states
+    // Separate loading states — only true on FIRST load (no data yet)
     const [isPeriodLoading, setIsPeriodLoading] = useState(true);
     const [isDailyLoading, setIsDailyLoading] = useState(false);
 
@@ -125,29 +125,29 @@ const Attendance = () => {
     const isLoading = isPeriodLoading && !logs.length;
 
     const fetchPeriodData = async () => {
-        setIsPeriodLoading(true);
+        // Only show loading if we have no data yet (first load)
+        if (!logs.length) setIsPeriodLoading(true);
         try {
-            // 1. Fetch Logs
-            const logsRes = await api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}&limit=1000`);
+            const [logsRes, sumRes] = await Promise.all([
+                api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}&limit=1000`),
+                api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`)
+            ]);
             setLogs(logsRes.data.results || logsRes.data);
-
-            // 2. Fetch Period Summary (for Cards)
-            const sumRes = await api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`);
             setPeriodSummary(sumRes.data);
         } catch (error) {
             console.error(error);
         } finally {
             setIsPeriodLoading(false);
-            setLoading(false); // Ensure global loading is off
+            setLoading(false);
         }
     };
 
     const fetchDailyData = async () => {
         if (activeTab !== 'my_attendance' && activeTab !== 'team_detail') return;
 
-        setIsDailyLoading(true);
+        // Only show loading on first load
+        if (!todaySummary) setIsDailyLoading(true);
         try {
-            // Pass selectedDate if viewing DAILY scope
             const dateParam = viewScope === 'DAILY' && selectedDate ? `&date=${selectedDate}` : '';
             const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}${dateParam}`);
             setTodaySummary(todayRes.data);
@@ -165,18 +165,17 @@ const Attendance = () => {
                 fetchPeriodData();
             }
         }
-    }, [selectedEmployeeId, startDate, endDate, activeTab]);
+    }, [selectedEmployeeId, startDate, endDate]);
 
     // --- EFFECT: Load Daily Summary ---
-    // Only triggered when selectedDate changes (or tab/employee)
     useEffect(() => {
         if (selectedEmployeeId) {
             fetchDailyData();
         }
-    }, [selectedDate, selectedEmployeeId, activeTab, viewScope]);
+    }, [selectedDate, selectedEmployeeId, viewScope]);
 
     const fetchTeamData = async () => {
-        setLoading(true);
+        if (teamMembers.length) { /* silent refresh */ } else setLoading(true);
         try {
             const response = await api.get('/attendance/team_dashboard/');
             if (response.data) {
