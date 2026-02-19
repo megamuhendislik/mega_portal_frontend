@@ -801,7 +801,7 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
         }
     };
 
-    // Helper to check if a permission is granted by a selected Role
+    // Helper to check if a permission is granted by a selected Role (includes inherited permissions)
     const isGrantedByRole = (permId) => {
         if (!formData.roles || formData.roles.length === 0) return false;
 
@@ -810,8 +810,11 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
 
         const selectedRoles = roles.filter(r => selectedIds.includes(Number(r.id)));
 
-        // Check standard permissions field AND legacy_permissions if exists? No, just permissions.
-        return selectedRoles.some(r => r.permissions && r.permissions.some(p => Number(p.id) === Number(permId)));
+        // Use all_permissions (includes inherited) if available, fallback to permissions
+        return selectedRoles.some(r => {
+            const perms = r.all_permissions || r.permissions || [];
+            return perms.some(p => Number(p.id) === Number(permId));
+        });
     };
 
     const togglePermission = (permId) => {
