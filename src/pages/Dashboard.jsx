@@ -170,7 +170,7 @@ const Dashboard = () => {
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] uppercase font-bold text-slate-400">Son Giriş</span>
                             <span className="text-sm font-bold text-slate-700">
-                                {todaySummary?.last_check_in ? format(new Date(todaySummary.last_check_in), 'HH:mm') : 'Giriş Yok'}
+                                {todaySummary?.check_in || 'Giriş Yok'}
                             </span>
                         </div>
                         <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
