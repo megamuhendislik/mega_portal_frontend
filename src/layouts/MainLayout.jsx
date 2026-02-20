@@ -336,9 +336,6 @@ const MainLayout = () => {
                                 <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
                                     {user?.first_name ? `${user.first_name} ${user.last_name}` : (user?.username || 'Kullanıcı')}
                                 </div>
-                                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                                    {user?.primary_role?.name || user?.job_position?.name || 'Personel'}
-                                </div>
                             </div>
                             <div className="relative">
                                 <div className="w-10 h-10 md:w-11 md:h-11 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all duration-300">
