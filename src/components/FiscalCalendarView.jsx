@@ -134,6 +134,17 @@ const FiscalCalendarView = ({
         }
     };
 
+    const handleMonthPaint = (monthIndex) => {
+        // monthIndex is 0-based (0=Jan, 11=Dec)
+        const start = moment([year, monthIndex, 1]).format('YYYY-MM-DD');
+        const end = moment([year, monthIndex, 1]).endOf('month').format('YYYY-MM-DD');
+        if (eraserActive) {
+            onBulkPaint && onBulkPaint(start, end, null);
+        } else if (selectedBrushId) {
+            onBulkPaint && onBulkPaint(start, end, selectedBrushId);
+        }
+    };
+
     const overrideList = Object.values(overrides).sort((a, b) => a.date.localeCompare(b.date));
 
     const renderMonth = (monthData) => {
@@ -143,8 +154,19 @@ const FiscalCalendarView = ({
 
         return (
             <div key={monthData.month} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                <div className="p-2.5 bg-slate-50 border-b border-slate-100">
-                    <h3 className="font-bold text-slate-800 text-sm">{monthData.name} {year}</h3>
+                <div
+                    className={`p-2.5 bg-slate-50 border-b border-slate-100 ${paintMode && (selectedBrushId || eraserActive) ? 'cursor-pointer hover:bg-indigo-50 transition-colors group' : ''}`}
+                    onClick={() => paintMode && (selectedBrushId || eraserActive) && handleMonthPaint(monthData.month - 1)}
+                    title={paintMode && (selectedBrushId || eraserActive) ? `Tüm ${monthData.name} ayını boya` : undefined}
+                >
+                    <h3 className="font-bold text-slate-800 text-sm flex items-center justify-between">
+                        {monthData.name} {year}
+                        {paintMode && (selectedBrushId || eraserActive) && (
+                            <span className="text-[10px] font-normal text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                tıkla → tüm ay
+                            </span>
+                        )}
+                    </h3>
                 </div>
 
                 <div className="p-2 grid grid-cols-7 gap-0.5 flex-1 content-start">
@@ -278,7 +300,7 @@ const FiscalCalendarView = ({
                     />
 
                     {/* Bulk Assignment */}
-                    <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-2 border border-slate-200">
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-2 border border-slate-200 flex-wrap">
                         <span className="text-xs font-bold text-slate-500">Toplu Atama:</span>
                         <input type="date" value={bulkStart} onChange={e => setBulkStart(e.target.value)}
                             className="px-2 py-1 border rounded text-xs focus:ring-1 ring-indigo-500 outline-none" />
@@ -290,6 +312,19 @@ const FiscalCalendarView = ({
                             className="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700 disabled:opacity-40 transition-colors">
                             Uygula
                         </button>
+
+                        <div className="w-px h-5 bg-slate-300 mx-1" />
+                        <span className="text-xs font-bold text-slate-500">Hızlı Ay:</span>
+                        <div className="flex gap-1 flex-wrap">
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <button key={i} onClick={() => handleMonthPaint(i)}
+                                    disabled={!selectedBrushId && !eraserActive}
+                                    className="px-1.5 py-0.5 text-[10px] font-bold rounded border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 disabled:opacity-30 transition-colors"
+                                    title={`${moment().month(i).format('MMMM')} ${year} — tüm ayı boya`}>
+                                    {moment().month(i).format('MMM')}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
