@@ -22,6 +22,7 @@ import AttendanceDebugger from './pages/admin/AttendanceDebugger';
 import ServiceControl from './pages/ServiceControl';
 import MealOrders from './pages/admin/MealOrders';
 import SubstituteManagement from './pages/SubstituteManagement';
+import CompanyDirectory from './pages/CompanyDirectory';
 import DataManagement from './pages/admin/DataManagement';
 import ProgramManagement from './pages/admin/ProgramManagement';
 
@@ -82,6 +83,9 @@ function App() {
 
             {/* Calendar - No permission required (everyone can access) */}
             <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+
+            {/* Company Directory - No permission required (everyone can access) */}
+            <Route path="company-directory" element={<ProtectedRoute><CompanyDirectory /></ProtectedRoute>} />
 
             {/* Work Schedules - Requires PAGE_WORK_SCHEDULES */}
             <Route path="work-schedules" element={<ProtectedRoute requiredPermission="PAGE_WORK_SCHEDULES"><WorkSchedules /></ProtectedRoute>} />

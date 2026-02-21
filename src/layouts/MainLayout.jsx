@@ -22,7 +22,8 @@ import {
     Monitor,
     Utensils,
     UserCog,
-    Package
+    Package,
+    Contact
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -112,6 +113,7 @@ const MainLayout = () => {
     const navItems = [
         { path: '/', label: 'Ana Sayfa', icon: LayoutDashboard, permission: null },
         { path: '/profile', label: 'Profilim', icon: UserCog, permission: null },
+        { path: '/company-directory', label: 'Sirket Rehberi', icon: Contact, permission: null },
         { path: '/employees', label: 'Çalışanlar', icon: Users, permission: 'PAGE_EMPLOYEES' },
         { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'PAGE_ORG_CHART' },
 

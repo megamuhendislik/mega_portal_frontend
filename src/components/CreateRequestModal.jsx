@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check } from 'lucide-react';
+import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -80,6 +80,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         send_to_substitute: false
     });
 
+    // Approver selection
+    const [availableApprovers, setAvailableApprovers] = useState([]);
+    const [selectedApproverId, setSelectedApproverId] = useState(null);
+    const [approversLoading, setApproversLoading] = useState(false);
+
     // Cardless entry: schedule info for the selected date
     const [cardlessSchedule, setCardlessSchedule] = useState(null);
     const [cardlessScheduleLoading, setCardlessScheduleLoading] = useState(false);
@@ -117,6 +122,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setSelectedType(null);
             setError(null);
             setUnclaimedOvertime([]);
+            setAvailableApprovers([]);
+            setSelectedApproverId(null);
             // Reset forms
             setOvertimeForm({
                 attendance: null,
@@ -129,6 +136,35 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             });
         }
     }, [isOpen]);
+
+    // Fetch available approvers when type is selected (not MEAL)
+    useEffect(() => {
+        if (!selectedType || selectedType === 'MEAL') {
+            setAvailableApprovers([]);
+            setSelectedApproverId(null);
+            return;
+        }
+        const fetchApprovers = async () => {
+            setApproversLoading(true);
+            try {
+                const typeMap = { LEAVE: 'LEAVE', OVERTIME: 'OVERTIME', EXTERNAL_DUTY: 'EXTERNAL_DUTY', CARDLESS_ENTRY: 'CARDLESS_ENTRY' };
+                const res = await api.get(`/available-approvers/?type=${typeMap[selectedType] || 'LEAVE'}`);
+                setAvailableApprovers(res.data || []);
+                // Tek yönetici varsa otomatik seç
+                if (res.data && res.data.length === 1) {
+                    setSelectedApproverId(res.data[0].id);
+                } else {
+                    setSelectedApproverId(null);
+                }
+            } catch {
+                setAvailableApprovers([]);
+                setSelectedApproverId(null);
+            } finally {
+                setApproversLoading(false);
+            }
+        };
+        fetchApprovers();
+    }, [selectedType]);
 
     useEffect(() => {
         if (selectedType === 'OVERTIME') {
@@ -179,36 +215,42 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         setError(null);
 
         try {
+            let response;
+
+            const approverPayload = selectedApproverId ? { target_approver_id: selectedApproverId } : {};
+
             if (selectedType === 'LEAVE') {
-                await api.post('/leave/requests/', leaveForm);
+                response = await api.post('/leave/requests/', { ...leaveForm, ...approverPayload });
             } else if (selectedType === 'OVERTIME') {
                 if (overtimeForm.potentialId) {
                     // Mevcut POTENTIAL talebi PENDING'e dönüştür (submit endpoint)
-                    await api.post(`/overtime-requests/${overtimeForm.potentialId}/submit/`, {
+                    response = await api.post(`/overtime-requests/${overtimeForm.potentialId}/submit/`, {
                         start_time: overtimeForm.start_time,
                         end_time: overtimeForm.end_time,
                         reason: overtimeForm.reason,
-                        send_to_substitute: overtimeForm.send_to_substitute
+                        send_to_substitute: overtimeForm.send_to_substitute,
+                        ...approverPayload
                     });
                 } else {
                     // Manuel yeni talep oluştur (PENDING olarak)
-                    await api.post('/overtime-requests/', {
+                    response = await api.post('/overtime-requests/', {
                         date: overtimeForm.date,
                         start_time: overtimeForm.start_time,
                         end_time: overtimeForm.end_time,
                         reason: overtimeForm.reason,
                         is_manual: true,
-                        send_to_substitute: overtimeForm.send_to_substitute
+                        send_to_substitute: overtimeForm.send_to_substitute,
+                        ...approverPayload
                     });
                 }
             } else if (selectedType === 'MEAL') {
-                await api.post('/meal-requests/', mealForm);
+                response = await api.post('/meal-requests/', mealForm);
             } else if (selectedType === 'EXTERNAL_DUTY') {
                 // Find the request type ID for External Duty
                 const typeObj = requestTypes.find(t => t.category === 'EXTERNAL_DUTY');
                 if (!typeObj) throw new Error('Dış Görev talep türü bulunamadı.');
 
-                await api.post('/leave/requests/', {
+                response = await api.post('/leave/requests/', {
                     request_type: typeObj.id,
                     start_date: externalDutyForm.start_date,
                     end_date: externalDutyForm.end_date,
@@ -220,13 +262,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     needs_transportation: externalDutyForm.needs_transportation,
                     transport_description: externalDutyForm.needs_transportation ? externalDutyForm.transport_description : '',
                     needs_accommodation: externalDutyForm.needs_accommodation,
-                    send_to_substitute: externalDutyForm.send_to_substitute
+                    send_to_substitute: externalDutyForm.send_to_substitute,
+                    ...approverPayload
                 });
             } else if (selectedType === 'CARDLESS_ENTRY') {
-                await api.post('/cardless-entry-requests/', cardlessEntryForm);
+                response = await api.post('/cardless-entry-requests/', { ...cardlessEntryForm, ...approverPayload });
             }
 
-            onSuccess();
+            // Hedef onaylayıcı bilgisini al
+            const data = response?.data;
+            const approverName = data?.target_approver_detail?.full_name
+                || data?.target_approver_name
+                || null;
+
+            onSuccess(approverName);
             onClose();
         } catch (err) {
             console.error('Error creating request:', err);
@@ -288,6 +337,53 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return isAnnualLeave && balance && duration > 0 && (duration > balance.available);
     };
     const isInsufficientBalance = selectedType === 'LEAVE' && getInsufficientBalanceState();
+
+    const renderApproverDropdown = () => {
+        if (selectedType === 'MEAL') return null;
+        if (approversLoading) {
+            return (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500 animate-pulse flex items-center gap-2">
+                    <Users size={16} />
+                    Yöneticiler yükleniyor...
+                </div>
+            );
+        }
+        if (availableApprovers.length === 0) return null;
+        if (availableApprovers.length === 1) {
+            return (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2">
+                    <Users size={16} className="text-blue-500 shrink-0" />
+                    <span className="text-sm font-medium text-blue-700">
+                        Onaya gidecek: <strong>{availableApprovers[0].name}</strong>
+                        {availableApprovers[0].via && <span className="text-blue-500 font-normal"> ({availableApprovers[0].via} yerine)</span>}
+                    </span>
+                </div>
+            );
+        }
+        // Multiple approvers - show dropdown
+        return (
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                    <Users size={14} className="text-blue-500" />
+                    Onay Yöneticisi <span className="text-red-500">*</span>
+                </label>
+                <select
+                    required
+                    value={selectedApproverId || ''}
+                    onChange={e => setSelectedApproverId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                >
+                    <option value="">Yönetici seçiniz</option>
+                    {availableApprovers.map(a => (
+                        <option key={a.id} value={a.id}>
+                            {a.name} ({a.relationship === 'PRIMARY' ? 'Birincil Yönetici' : 'Çapraz Yönetici'})
+                            {a.via ? ` — ${a.via} yerine` : ''}
+                        </option>
+                    ))}
+                </select>
+            </div>
+        );
+    };
 
     const renderLeaveForm = () => {
         const balance = getLeaveBalance();
@@ -432,6 +528,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     </div>
                 </div>
 
+
+                {renderApproverDropdown()}
 
                 <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
                     <input
@@ -663,6 +761,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 ></textarea>
             </div>
 
+
+            {renderApproverDropdown()}
 
             <div className="flex items-center gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-100 transition-all hover:bg-amber-50">
                 <input
@@ -900,6 +1000,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     </div>
                 </div>
 
+                {/* Approver Selection */}
+                {renderApproverDropdown()}
+
                 {/* Send to Substitute */}
                 <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
                     <input
@@ -1003,6 +1106,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 ></textarea>
             </div>
 
+            {renderApproverDropdown()}
+
             <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
                 <input
                     type="checkbox"
@@ -1038,7 +1143,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 {step === 1 ? 'Yeni Talep Oluştur' :
                                     selectedType === 'LEAVE' ? 'İzin Talebi' :
                                         selectedType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
-                                            selectedType === 'MEAL' ? 'Yemek Talebi' : 'Şirket Dışı Görev'}
+                                            selectedType === 'MEAL' ? 'Yemek Talebi' :
+                                                selectedType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' : 'Şirket Dışı Görev'}
                             </h2>
                             <p className="text-slate-500 text-xs mt-0.5 font-medium">
                                 {step === 1 ? 'Talep türünü seçiniz' : 'Bilgileri doldurunuz'}
@@ -1088,7 +1194,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <button
                             form="requestForm"
                             type="submit"
-                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay)}
+                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL')}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-amber-500 hover:bg-amber-600' :

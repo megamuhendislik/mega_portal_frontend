@@ -235,6 +235,16 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </div>
             )}
 
+            {/* Hedef Onaylayıcı */}
+            {(request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name) && (
+              <div className="pt-3 border-t border-slate-200">
+                <span className="text-sm font-medium text-slate-600 block mb-1">Onaya Gönderilen</span>
+                <p className="text-sm text-blue-700 font-semibold">
+                  {request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name}
+                </p>
+              </div>
+            )}
+
             {request.approved_by_name && (
               <div className="pt-3 border-t border-slate-200">
                 <span className="text-sm font-medium text-slate-600 block mb-1">Onaylayan</span>

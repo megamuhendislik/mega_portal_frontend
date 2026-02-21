@@ -265,6 +265,12 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     {req.reason || req.description}
                                                 </p>
                                             )}
+                                            {/* Target Approver (PENDING durumda) */}
+                                            {req.status === 'PENDING' && (req.target_approver_name || req.target_approver_detail?.full_name || req.approver_target?.name) && (
+                                                <p className="text-[11px] text-blue-500 font-medium">
+                                                    Onaya giden: {req.target_approver_name || req.target_approver_detail?.full_name || req.approver_target?.name}
+                                                </p>
+                                            )}
                                             {/* Approved by */}
                                             {req.approved_by_name && req.status === 'APPROVED' && (
                                                 <p className="text-[11px] text-slate-400 font-medium">

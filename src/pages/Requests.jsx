@@ -96,6 +96,7 @@ const MyRequestsSection = ({
             type: 'LEAVE',
             _sortDate: r.start_date || r.created_at,
             leave_type_name: requestTypes.find(t => t.id === r.request_type)?.name,
+            target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
         }));
         overtimeRequests.forEach(r => items.push({
             ...r,
@@ -103,9 +104,16 @@ const MyRequestsSection = ({
             type: 'OVERTIME',
             _sortDate: r.date || r.created_at,
             onResubmit: () => handleResubmitOvertime(r),
+            target_approver_name: r.target_approver_name || null,
         }));
         mealRequests.forEach(r => items.push({ ...r, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
-        cardlessEntryRequests.forEach(r => items.push({ ...r, _type: 'CARDLESS_ENTRY', type: 'CARDLESS_ENTRY', _sortDate: r.date || r.created_at }));
+        cardlessEntryRequests.forEach(r => items.push({
+            ...r,
+            _type: 'CARDLESS_ENTRY',
+            type: 'CARDLESS_ENTRY',
+            _sortDate: r.date || r.created_at,
+            target_approver_name: r.target_approver_name || null,
+        }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
     }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes]);
@@ -239,7 +247,8 @@ const TeamRequestsSection = ({
             start_date: r.start_date || r.date || r.created_at,
             // Ensure type is consistent
             type: r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN'),
-            // Normalize status for table compatibility if needed
+            // Normalize target_approver for display
+            target_approver_name: r.approver_target?.name || r.target_approver_name || null,
         }));
 
         // Normalize History Requests (Approved / Rejected)
@@ -909,6 +918,7 @@ const Requests = () => {
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
 
     const [createModalInitialData, setCreateModalInitialData] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
 
     const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || subordinates.length > 0;
 
@@ -1020,7 +1030,13 @@ const Requests = () => {
     };
 
     // --- Handlers (Simplified for brevity, logic same as before) ---
-    const handleCreateSuccess = () => fetchData();
+    const handleCreateSuccess = (approverName) => {
+        fetchData();
+        if (approverName) {
+            setSuccessMessage(`Talebiniz ${approverName} adlı yoneticiye gonderildi.`);
+            setTimeout(() => setSuccessMessage(null), 5000);
+        }
+    };
     const handleViewDetails = (r, t) => { setSelectedRequest(r); setSelectedRequestType(t); setShowDetailModal(true); };
     const handleEditOvertimeClick = (r) => { setEditOvertimeForm({ id: r.id, start_time: r.start_time, end_time: r.end_time, reason: r.reason }); setShowEditOvertimeModal(true); };
     const handleResubmitOvertime = (r) => { setCreateModalInitialData({ type: 'OVERTIME', data: r }); setShowCreateModal(true); };
@@ -1163,6 +1179,17 @@ const Requests = () => {
                     Yeni Talep Oluştur
                 </button>
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 animate-fade-in">
+                    <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+                    <span className="text-sm font-semibold">{successMessage}</span>
+                    <button onClick={() => setSuccessMessage(null)} className="ml-auto text-emerald-500 hover:text-emerald-700">
+                        <XCircle size={16} />
+                    </button>
+                </div>
+            )}
 
             {/* Navigation Tabs */}
             <div className="border-b border-slate-200 flex gap-1 overflow-x-auto no-scrollbar">
