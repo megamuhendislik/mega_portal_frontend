@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import moment from 'moment';
-import { ChevronLeft, ChevronRight, Lock, Unlock, RefreshCw, Save, Calendar as CalendarIcon, Clock, Coffee } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import DailyConfigModal from './DailyConfigModal';
 
 const FiscalCalendarView = ({ calendarId }) => {
     const [year, setYear] = useState(new Date().getFullYear());
-    const [periods, setPeriods] = useState([]);
     const [holidays, setHolidays] = useState(new Set());
     const [overrides, setOverrides] = useState({}); // Map: 'YYYY-MM-DD' -> OverrideObj
     const [loading, setLoading] = useState(false);
-    const [generating, setGenerating] = useState(false);
 
     // Modal State
     const [showConfigModal, setShowConfigModal] = useState(false);
@@ -23,19 +21,15 @@ const FiscalCalendarView = ({ calendarId }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Need range for fiscal year roughly
-            const startStr = `${year - 1}-12-01`;
-            const endStr = `${year + 1}-02-01`;
+            const startStr = `${year}-01-01`;
+            const endStr = `${year}-12-31`;
 
             const calParam = calendarId ? `&calendar=${calendarId}` : '';
 
-            const [pRes, holRes, ovRes] = await Promise.all([
-                api.get(`/attendance/fiscal-periods/?year=${year}`),
+            const [holRes, ovRes] = await Promise.all([
                 api.get(`/calendar-events/?start=${startStr}&end=${endStr}&view_mode=all`),
                 api.get(`/attendance/daily-overrides/?start_date=${startStr}&end_date=${endStr}${calParam}`)
             ]);
-
-            setPeriods(pRes.data);
 
             // Holidays
             const hSet = new Set();
@@ -52,32 +46,26 @@ const FiscalCalendarView = ({ calendarId }) => {
             setOverrides(ovMap);
 
         } catch (error) {
-            console.error("Fiscal data error:", error);
+            console.error("Calendar data error:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleGenerate = async () => {
-        if (!window.confirm(`${year} yılı için mali takvim (26-25 sistemi) oluşturulacak. Onaylıyor musunuz?`)) return;
-
-        setGenerating(true);
-        try {
-            await api.post('/attendance/fiscal-periods/generate_defaults/', { year });
-            await fetchData();
-            alert('Mali takvim başarıyla oluşturuldu.');
-        } catch (error) {
-            alert('Oluşturma hatası: ' + error.message);
-        } finally {
-            setGenerating(false);
-        }
+    // Generate 12 standard months for the year
+    const getMonths = () => {
+        return Array.from({ length: 12 }, (_, i) => ({
+            month: i + 1,
+            name: moment().month(i).format('MMMM'),
+            start: moment([year, i, 1]),
+            end: moment([year, i, 1]).endOf('month')
+        }));
     };
 
     const getDaysArray = (start, end) => {
         const arr = [];
-        const dt = moment(start);
-        const e = moment(end);
-        while (dt <= e) {
+        const dt = start.clone();
+        while (dt <= end) {
             arr.push(dt.clone());
             dt.add(1, 'd');
         }
@@ -90,23 +78,27 @@ const FiscalCalendarView = ({ calendarId }) => {
         setShowConfigModal(true);
     };
 
-    const renderMonth = (period) => {
-        const days = getDaysArray(period.start_date, period.end_date);
+    const renderMonth = (monthData) => {
+        const days = getDaysArray(monthData.start, monthData.end);
+        // Calculate leading empty cells (Monday=0 ... Sunday=6)
+        const firstDayOfWeek = monthData.start.isoWeekday(); // 1=Mon, 7=Sun
+        const emptySlots = firstDayOfWeek - 1;
 
         return (
-            <div key={period.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <div>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dönem {period.month}</span>
-                        <h3 className="font-bold text-slate-800">{moment().month(period.month - 1).format('MMMM')}</h3>
-                    </div>
-                    {period.is_locked ? <Lock size={16} className="text-red-400" /> : <Unlock size={16} className="text-emerald-400" />}
+            <div key={monthData.month} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div className="p-3 bg-slate-50 border-b border-slate-100">
+                    <h3 className="font-bold text-slate-800 text-sm">{monthData.name} {year}</h3>
                 </div>
 
-                <div className="p-4 grid grid-cols-7 gap-1 flex-1 content-start">
+                <div className="p-3 grid grid-cols-7 gap-1 flex-1 content-start">
                     {/* Weekday Headers */}
                     {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'].map(d => (
-                        <div key={d} className="text-center text-[10px] text-slate-400 font-bold mb-2">{d}</div>
+                        <div key={d} className="text-center text-[10px] text-slate-400 font-bold mb-1">{d}</div>
+                    ))}
+
+                    {/* Empty slots before first day */}
+                    {Array.from({ length: emptySlots }, (_, i) => (
+                        <div key={`empty-${i}`} className="h-9" />
                     ))}
 
                     {/* Days */}
@@ -156,95 +148,65 @@ const FiscalCalendarView = ({ calendarId }) => {
                                 className={`
                                     ${bgClass} border ${borderClass}
                                     rounded-lg p-1 text-center text-xs cursor-pointer transition-all
-                                    flex flex-col items-center justify-center h-10 relative
+                                    flex flex-col items-center justify-center h-9 relative
                                     group
                                 `}
                                 title={tooltipText}
                             >
                                 <span>{day.date()}</span>
                                 {override && !override.is_off && (
-                                    <Clock size={8} className="absolute bottom-1 right-1 text-emerald-600" />
+                                    <Clock size={7} className="absolute bottom-0.5 right-0.5 text-emerald-600" />
                                 )}
                                 {(override?.is_off || isPublicHoliday) && (
-                                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full absolute bottom-1"></span>
+                                    <span className="w-1 h-1 bg-red-400 rounded-full absolute bottom-0.5"></span>
                                 )}
                             </div>
                         );
                     })}
                 </div>
-                <div className="p-2 border-t border-slate-50 text-center">
-                    <span className="text-[10px] text-slate-400">
-                        {moment(period.start_date).format('DD MMM')} - {moment(period.end_date).format('DD MMM')}
-                    </span>
-                </div>
             </div>
         );
     };
 
+    const months = getMonths();
+
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        <button onClick={() => setYear(year - 1)} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                            <ChevronLeft size={20} />
-                        </button>
-                        <span className="px-4 font-bold text-xl text-slate-800">{year} Mali Takvimi</span>
-                        <button onClick={() => setYear(year + 1)} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                            <ChevronRight size={20} />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleGenerate}
-                        disabled={generating}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                    >
-                        {generating ? <RefreshCw className="animate-spin" size={18} /> : <CalendarIcon size={18} />}
-                        {generating ? 'Oluşturuluyor...' : 'Varsayılanları Oluştur (26-25)'}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                    <button onClick={() => setYear(year - 1)} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                        <ChevronLeft size={18} />
+                    </button>
+                    <span className="px-3 font-bold text-lg text-slate-800">{year}</span>
+                    <button onClick={() => setYear(year + 1)} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                        <ChevronRight size={18} />
                     </button>
                 </div>
-            </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-4 mb-4 px-2 text-xs text-slate-500">
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-emerald-50 border border-emerald-200 inline-flex items-center justify-center"><Clock size={6} className="text-emerald-600" /></span>
-                    Özel Mesai
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-red-50 border border-red-200"></span>
-                    Tatil / İzin
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-slate-100 border border-slate-200"></span>
-                    Hafta Sonu
+                {/* Legend */}
+                <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-emerald-50 border border-emerald-200 inline-flex items-center justify-center"><Clock size={5} className="text-emerald-600" /></span>
+                        Özel Mesai
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-red-50 border border-red-200"></span>
+                        Tatil
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-slate-100 border border-slate-200"></span>
+                        Hafta Sonu
+                    </div>
                 </div>
             </div>
 
             {/* Grid */}
             {loading ? (
-                <div className="text-center py-20 text-slate-400">Yükleniyor...</div>
-            ) : periods.length === 0 ? (
-                <div className="text-center py-20 flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-                        <CalendarIcon size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-700">Bu yıl için mali kayıt yok.</h3>
-                    <p className="text-slate-500">Varsayılanları oluşturarak başlayabilirsiniz.</p>
-                    <button
-                        onClick={handleGenerate}
-                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg hover:bg-indigo-700"
-                    >
-                        Şimdi Oluştur
-                    </button>
-                </div>
+                <div className="text-center py-12 text-slate-400">Yükleniyor...</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {periods.map(renderMonth)}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {months.map(renderMonth)}
                 </div>
             )}
 
