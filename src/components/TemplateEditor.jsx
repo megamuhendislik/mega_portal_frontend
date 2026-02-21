@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Palette, Trash2, Save } from 'lucide-react';
+import { Copy, Palette, Trash2, Save, Clock } from 'lucide-react';
 
 const DAYS = [
     { key: 'MON', label: 'Pazartesi' },
@@ -15,6 +15,38 @@ const COLORS = [
     '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
     '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
 ];
+
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TimeSelect = ({ value, onChange, disabled, compact }) => {
+    const [h, m] = (value || '00:00').split(':');
+    const hour = h || '00';
+    const minute = MINUTES.includes(m) ? m : MINUTES.reduce((prev, curr) =>
+        Math.abs(parseInt(curr) - parseInt(m || '0')) < Math.abs(parseInt(prev) - parseInt(m || '0')) ? curr : prev
+    );
+
+    const handleHour = (e) => onChange(`${e.target.value}:${minute}`);
+    const handleMinute = (e) => onChange(`${hour}:${e.target.value}`);
+
+    const base = compact
+        ? 'px-1 py-0.5 text-[11px]'
+        : 'px-1.5 py-1 text-xs';
+
+    return (
+        <div className={`inline-flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg ${disabled ? 'opacity-40 pointer-events-none' : 'hover:border-indigo-300'} transition-colors`}>
+            <select value={hour} onChange={handleHour} disabled={disabled}
+                className={`${base} font-mono font-semibold text-slate-700 bg-transparent outline-none cursor-pointer appearance-none text-center`}>
+                {HOURS.map(hh => <option key={hh} value={hh}>{hh}</option>)}
+            </select>
+            <span className="text-slate-400 font-bold text-xs">:</span>
+            <select value={minute} onChange={handleMinute} disabled={disabled}
+                className={`${base} font-mono font-semibold text-slate-700 bg-transparent outline-none cursor-pointer appearance-none text-center`}>
+                {MINUTES.map(mm => <option key={mm} value={mm}>{mm}</option>)}
+            </select>
+        </div>
+    );
+};
 
 const TemplateEditor = ({ template, onChange, onSave, onDelete, saving }) => {
     if (!template) return (
@@ -112,16 +144,14 @@ const TemplateEditor = ({ template, onChange, onSave, onDelete, saving }) => {
                                         </td>
                                         <td className="px-3 py-2">
                                             {!isOff ? (
-                                                <input type="time" value={dayData.start || '09:00'}
-                                                    onChange={e => handleScheduleChange(day.key, 'start', e.target.value)}
-                                                    className="px-2 py-1 border rounded text-xs w-[85px] focus:ring-1 ring-indigo-500 outline-none" />
+                                                <TimeSelect value={dayData.start || '09:00'} compact
+                                                    onChange={v => handleScheduleChange(day.key, 'start', v)} />
                                             ) : <span className="text-slate-400 text-xs">-</span>}
                                         </td>
                                         <td className="px-3 py-2">
                                             {!isOff ? (
-                                                <input type="time" value={dayData.end || '18:00'}
-                                                    onChange={e => handleScheduleChange(day.key, 'end', e.target.value)}
-                                                    className="px-2 py-1 border rounded text-xs w-[85px] focus:ring-1 ring-indigo-500 outline-none" />
+                                                <TimeSelect value={dayData.end || '18:00'} compact
+                                                    onChange={v => handleScheduleChange(day.key, 'end', v)} />
                                             ) : <span className="text-slate-400 text-xs">-</span>}
                                         </td>
                                         <td className="px-3 py-2 text-center">
@@ -146,13 +176,11 @@ const TemplateEditor = ({ template, onChange, onSave, onDelete, saving }) => {
                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Öğle Arası</label>
                     <div className="flex items-center gap-2">
-                        <input type="time" value={template.lunch_start || '12:30'}
-                            onChange={e => handleFieldChange('lunch_start', e.target.value)}
-                            className="px-2 py-1.5 border rounded text-xs flex-1 focus:ring-1 ring-indigo-500 outline-none bg-white" />
-                        <span className="text-slate-400">-</span>
-                        <input type="time" value={template.lunch_end || '13:30'}
-                            onChange={e => handleFieldChange('lunch_end', e.target.value)}
-                            className="px-2 py-1.5 border rounded text-xs flex-1 focus:ring-1 ring-indigo-500 outline-none bg-white" />
+                        <TimeSelect value={template.lunch_start || '12:30'}
+                            onChange={v => handleFieldChange('lunch_start', v)} />
+                        <span className="text-slate-400 text-sm">—</span>
+                        <TimeSelect value={template.lunch_end || '13:30'}
+                            onChange={v => handleFieldChange('lunch_end', v)} />
                     </div>
                 </div>
                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">

@@ -17,10 +17,37 @@ const DEFAULT_DAY_SCHEDULE = {
     is_off: false
 };
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TimeSelect = ({ value, onChange, disabled }) => {
+    const [h, m] = (value || '00:00').split(':');
+    const hour = h || '00';
+    const minute = MINUTES.includes(m) ? m : MINUTES.reduce((prev, curr) =>
+        Math.abs(parseInt(curr) - parseInt(m || '0')) < Math.abs(parseInt(prev) - parseInt(m || '0')) ? curr : prev
+    );
+
+    const handleHour = (e) => onChange(`${e.target.value}:${minute}`);
+    const handleMinute = (e) => onChange(`${hour}:${e.target.value}`);
+
+    return (
+        <div className={`inline-flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg ${disabled ? 'opacity-40 pointer-events-none' : 'hover:border-blue-300'} transition-colors`}>
+            <select value={hour} onChange={handleHour} disabled={disabled}
+                className="px-1.5 py-1 text-xs font-mono font-semibold text-slate-700 bg-transparent outline-none cursor-pointer appearance-none text-center">
+                {HOURS.map(hh => <option key={hh} value={hh}>{hh}</option>)}
+            </select>
+            <span className="text-slate-400 font-bold text-xs">:</span>
+            <select value={minute} onChange={handleMinute} disabled={disabled}
+                className="px-1.5 py-1 text-xs font-mono font-semibold text-slate-700 bg-transparent outline-none cursor-pointer appearance-none text-center">
+                {MINUTES.map(mm => <option key={mm} value={mm}>{mm}</option>)}
+            </select>
+        </div>
+    );
+};
+
 const WeeklyScheduleEditor = ({ value, onChange }) => {
     const [schedule, setSchedule] = useState(value || {});
 
-    // Initialize with defaults if empty
     useEffect(() => {
         if (!value || Object.keys(value).length === 0) {
             const initial = {};
@@ -35,9 +62,7 @@ const WeeklyScheduleEditor = ({ value, onChange }) => {
         } else {
             setSchedule(value);
         }
-    }, []); // Run once on mount if empty, or when value changes externally? 
-    // Better to sync with value prop if it changes significantly, but avoid loops.
-    // For now, let's trust the parent passes the initial state correctly.
+    }, []);
 
     const handleChange = (dayKey, field, val) => {
         const newSchedule = {
@@ -95,44 +120,34 @@ const WeeklyScheduleEditor = ({ value, onChange }) => {
                             </div>
 
                             <div className="col-span-2">
-                                <input
-                                    type="time"
+                                <TimeSelect
                                     value={dayData.start}
                                     disabled={isOff}
-                                    onChange={(e) => handleChange(day.key, 'start', e.target.value)}
-                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-white border-slate-200'}`}
+                                    onChange={(v) => handleChange(day.key, 'start', v)}
                                 />
                             </div>
 
                             <div className="col-span-2">
-                                <input
-                                    type="time"
+                                <TimeSelect
                                     value={dayData.end}
                                     disabled={isOff}
-                                    onChange={(e) => handleChange(day.key, 'end', e.target.value)}
-                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-white border-slate-200'}`}
+                                    onChange={(v) => handleChange(day.key, 'end', v)}
                                 />
                             </div>
 
                             <div className="col-span-2">
-                                <input
-                                    type="time"
-                                    value={dayData.lunch_start || ''}
+                                <TimeSelect
+                                    value={dayData.lunch_start || '12:30'}
                                     disabled={isOff}
-                                    placeholder="12:30"
-                                    onChange={(e) => handleChange(day.key, 'lunch_start', e.target.value)}
-                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 border-slate-200 text-blue-700'}`}
+                                    onChange={(v) => handleChange(day.key, 'lunch_start', v)}
                                 />
                             </div>
 
                             <div className="col-span-2">
-                                <input
-                                    type="time"
-                                    value={dayData.lunch_end || ''}
+                                <TimeSelect
+                                    value={dayData.lunch_end || '13:30'}
                                     disabled={isOff}
-                                    placeholder="13:30"
-                                    onChange={(e) => handleChange(day.key, 'lunch_end', e.target.value)}
-                                    className={`w-full p-1.5 text-xs sm:text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center ${isOff ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 border-slate-200 text-blue-700'}`}
+                                    onChange={(v) => handleChange(day.key, 'lunch_end', v)}
                                 />
                             </div>
 
