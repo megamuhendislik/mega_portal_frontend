@@ -35,40 +35,65 @@ const FiscalCalendarView = ({
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
 
-    // Drag-to-paint state
+    // Drag-to-paint state (days)
     const isDraggingRef = useRef(false);
     const dragDaysRef = useRef(new Set());
     const [dragHighlight, setDragHighlight] = useState(new Set());
     const paintStateRef = useRef({});
 
+    // Drag-to-paint state (months)
+    const isDraggingMonthRef = useRef(false);
+    const dragMonthsRef = useRef(new Set());
+    const [dragMonthHighlight, setDragMonthHighlight] = useState(new Set());
+
     useEffect(() => {
         paintStateRef.current = { selectedBrushId, eraserActive, onPaintDay, onBulkPaint };
     }, [selectedBrushId, eraserActive, onPaintDay, onBulkPaint]);
 
-    // Global mouseup listener for drag-to-paint
+    // Global mouseup listener for drag-to-paint (days + months)
     useEffect(() => {
         if (!paintMode) return;
         const handleMouseUp = () => {
-            if (!isDraggingRef.current) return;
-            const days = [...dragDaysRef.current].sort();
-            const { selectedBrushId: brushId, eraserActive: eraser, onPaintDay: paintFn, onBulkPaint: bulkFn } = paintStateRef.current;
+            // Day drag finish
+            if (isDraggingRef.current) {
+                const days = [...dragDaysRef.current].sort();
+                const { selectedBrushId: brushId, eraserActive: eraser, onPaintDay: paintFn, onBulkPaint: bulkFn } = paintStateRef.current;
 
-            if (days.length === 1) {
-                if (eraser) paintFn?.(days[0], null);
-                else if (brushId) paintFn?.(days[0], brushId);
-            } else if (days.length > 1) {
-                if (eraser) bulkFn?.(days[0], days[days.length - 1], null);
-                else if (brushId) bulkFn?.(days[0], days[days.length - 1], brushId);
+                if (days.length === 1) {
+                    if (eraser) paintFn?.(days[0], null);
+                    else if (brushId) paintFn?.(days[0], brushId);
+                } else if (days.length > 1) {
+                    if (eraser) bulkFn?.(days[0], days[days.length - 1], null);
+                    else if (brushId) bulkFn?.(days[0], days[days.length - 1], brushId);
+                }
+
+                isDraggingRef.current = false;
+                dragDaysRef.current = new Set();
+                setDragHighlight(new Set());
             }
 
-            isDraggingRef.current = false;
-            dragDaysRef.current = new Set();
-            setDragHighlight(new Set());
+            // Month drag finish
+            if (isDraggingMonthRef.current) {
+                const months = [...dragMonthsRef.current].sort((a, b) => a - b);
+                const { selectedBrushId: brushId, eraserActive: eraser, onBulkPaint: bulkFn } = paintStateRef.current;
+
+                if (months.length > 0) {
+                    const startDate = moment([year, months[0], 1]).format('YYYY-MM-DD');
+                    const endDate = moment([year, months[months.length - 1], 1]).endOf('month').format('YYYY-MM-DD');
+                    if (eraser) bulkFn?.(startDate, endDate, null);
+                    else if (brushId) bulkFn?.(startDate, endDate, brushId);
+                }
+
+                isDraggingMonthRef.current = false;
+                dragMonthsRef.current = new Set();
+                setDragMonthHighlight(new Set());
+            }
         };
         window.addEventListener('mouseup', handleMouseUp);
         return () => window.removeEventListener('mouseup', handleMouseUp);
-    }, [paintMode]);
+    }, [paintMode, year]);
 
+    // Day drag handlers
     const handleDayMouseDown = useCallback((dateStr, e) => {
         if (!paintMode || (!selectedBrushId && !eraserActive)) return;
         e.preventDefault();
@@ -81,6 +106,27 @@ const FiscalCalendarView = ({
         if (!isDraggingRef.current) return;
         dragDaysRef.current.add(dateStr);
         setDragHighlight(new Set(dragDaysRef.current));
+    }, []);
+
+    // Month drag handlers
+    const handleMonthMouseDown = useCallback((monthIndex, e) => {
+        if (!paintMode || (!selectedBrushId && !eraserActive)) return;
+        e.preventDefault();
+        isDraggingMonthRef.current = true;
+        dragMonthsRef.current = new Set([monthIndex]);
+        setDragMonthHighlight(new Set([monthIndex]));
+    }, [paintMode, selectedBrushId, eraserActive]);
+
+    const handleMonthMouseEnter = useCallback((monthIndex) => {
+        if (!isDraggingMonthRef.current) return;
+        // Fill all months between first selected and current (contiguous range)
+        const existing = [...dragMonthsRef.current];
+        const min = Math.min(monthIndex, ...existing);
+        const max = Math.max(monthIndex, ...existing);
+        const filled = new Set();
+        for (let i = min; i <= max; i++) filled.add(i);
+        dragMonthsRef.current = filled;
+        setDragMonthHighlight(new Set(filled));
     }, []);
 
     useEffect(() => {
@@ -200,18 +246,31 @@ const FiscalCalendarView = ({
         const firstDayOfWeek = monthData.start.isoWeekday();
         const emptySlots = firstDayOfWeek - 1;
 
+        const monthIdx = monthData.month - 1;
+        const isMonthInDrag = dragMonthHighlight.has(monthIdx);
+        const canPaintMonth = paintMode && (selectedBrushId || eraserActive);
+        const brushColor = eraserActive ? '#64748b' : (templates.find(t => t.id === selectedBrushId)?.color || '#6366f1');
+
         return (
-            <div key={monthData.month} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div key={monthData.month} className={`bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col transition-all ${isMonthInDrag ? 'border-2 shadow-lg scale-[1.02] z-10' : 'border-slate-200'}`}
+                style={isMonthInDrag ? { borderColor: brushColor } : {}}>
                 <div
-                    className={`p-2.5 bg-slate-50 border-b border-slate-100 ${paintMode && (selectedBrushId || eraserActive) ? 'cursor-pointer hover:bg-indigo-50 transition-colors group' : ''}`}
-                    onClick={() => paintMode && (selectedBrushId || eraserActive) && handleMonthPaint(monthData.month - 1)}
-                    title={paintMode && (selectedBrushId || eraserActive) ? `Tüm ${monthData.name} ayını boya` : undefined}
+                    className={`p-2.5 border-b border-slate-100 select-none transition-colors ${canPaintMonth ? 'cursor-pointer hover:bg-indigo-50 group' : 'bg-slate-50'}`}
+                    style={isMonthInDrag ? { backgroundColor: brushColor + '15' } : {}}
+                    onMouseDown={(e) => canPaintMonth && handleMonthMouseDown(monthIdx, e)}
+                    onMouseEnter={() => handleMonthMouseEnter(monthIdx)}
+                    title={canPaintMonth ? `Sürükle → çoklu ay seç` : undefined}
                 >
                     <h3 className="font-bold text-slate-800 text-sm flex items-center justify-between">
                         {monthData.name} {year}
-                        {paintMode && (selectedBrushId || eraserActive) && (
+                        {canPaintMonth && !isMonthInDrag && (
                             <span className="text-[10px] font-normal text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                tıkla → tüm ay
+                                sürükle → çoklu ay
+                            </span>
+                        )}
+                        {isMonthInDrag && (
+                            <span className="text-[10px] font-bold" style={{ color: brushColor }}>
+                                seçili
                             </span>
                         )}
                     </h3>
@@ -370,15 +429,22 @@ const FiscalCalendarView = ({
 
                         <div className="w-px h-5 bg-slate-300 mx-1" />
                         <span className="text-xs font-bold text-slate-500">Hızlı Ay:</span>
-                        <div className="flex gap-1 flex-wrap">
-                            {Array.from({ length: 12 }, (_, i) => (
-                                <button key={i} onClick={() => handleMonthPaint(i)}
-                                    disabled={!selectedBrushId && !eraserActive}
-                                    className="px-1.5 py-0.5 text-[10px] font-bold rounded border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 disabled:opacity-30 transition-colors"
-                                    title={`${moment().month(i).format('MMMM')} ${year} — tüm ayı boya`}>
-                                    {moment().month(i).format('MMM')}
-                                </button>
-                            ))}
+                        <div className="flex gap-1 flex-wrap select-none">
+                            {Array.from({ length: 12 }, (_, i) => {
+                                const isHighlighted = dragMonthHighlight.has(i);
+                                const bColor = eraserActive ? '#64748b' : (templates.find(t => t.id === selectedBrushId)?.color || '#6366f1');
+                                return (
+                                    <button key={i}
+                                        onMouseDown={(e) => handleMonthMouseDown(i, e)}
+                                        onMouseEnter={() => handleMonthMouseEnter(i)}
+                                        disabled={!selectedBrushId && !eraserActive}
+                                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded border transition-all disabled:opacity-30 ${isHighlighted ? 'scale-110 shadow-md text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'}`}
+                                        style={isHighlighted ? { backgroundColor: bColor, borderColor: bColor } : {}}
+                                        title={`${moment().month(i).format('MMMM')} ${year} — sürükle → çoklu ay`}>
+                                        {moment().month(i).format('MMM')}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
