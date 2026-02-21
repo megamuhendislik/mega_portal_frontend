@@ -133,6 +133,20 @@ const FiscalCalendarView = () => {
                             bgClass = "bg-slate-100/50 text-slate-400";
                         }
 
+                        // Tooltip
+                        let tooltipText = dStr;
+                        if (override && !override.is_off) {
+                            tooltipText = `${dStr}\nMesai: ${override.start_time?.slice(0,5) || '?'} - ${override.end_time?.slice(0,5) || '?'}`;
+                            if (override.lunch_start && override.lunch_end) {
+                                tooltipText += `\nÖğle: ${override.lunch_start.slice(0,5)} - ${override.lunch_end.slice(0,5)}`;
+                            }
+                            if (override.description) tooltipText += `\n${override.description}`;
+                        } else if (override?.is_off) {
+                            tooltipText = `${dStr}\nTATİL${override.description ? ': ' + override.description : ''}`;
+                        } else if (isPublicHoliday) {
+                            tooltipText = `${dStr}\nResmi Tatil`;
+                        }
+
                         return (
                             <div
                                 key={dStr}
@@ -141,9 +155,9 @@ const FiscalCalendarView = () => {
                                     ${bgClass} border ${borderClass}
                                     rounded-lg p-1 text-center text-xs cursor-pointer transition-all
                                     flex flex-col items-center justify-center h-10 relative
-                                    relative group
+                                    group
                                 `}
-                                title={dStr}
+                                title={tooltipText}
                             >
                                 <span>{day.date()}</span>
                                 {override && !override.is_off && (
