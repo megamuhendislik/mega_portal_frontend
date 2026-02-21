@@ -4,7 +4,7 @@ import moment from 'moment';
 import { ChevronLeft, ChevronRight, Lock, Unlock, RefreshCw, Save, Calendar as CalendarIcon, Clock, Coffee } from 'lucide-react';
 import DailyConfigModal from './DailyConfigModal';
 
-const FiscalCalendarView = () => {
+const FiscalCalendarView = ({ calendarId }) => {
     const [year, setYear] = useState(new Date().getFullYear());
     const [periods, setPeriods] = useState([]);
     const [holidays, setHolidays] = useState(new Set());
@@ -18,7 +18,7 @@ const FiscalCalendarView = () => {
 
     useEffect(() => {
         fetchData();
-    }, [year]);
+    }, [year, calendarId]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -27,10 +27,12 @@ const FiscalCalendarView = () => {
             const startStr = `${year - 1}-12-01`;
             const endStr = `${year + 1}-02-01`;
 
+            const calParam = calendarId ? `&calendar=${calendarId}` : '';
+
             const [pRes, holRes, ovRes] = await Promise.all([
                 api.get(`/attendance/fiscal-periods/?year=${year}`),
                 api.get(`/calendar-events/?start=${startStr}&end=${endStr}&view_mode=all`),
-                api.get(`/attendance/daily-overrides/?start_date=${startStr}&end_date=${endStr}`)
+                api.get(`/attendance/daily-overrides/?start_date=${startStr}&end_date=${endStr}${calParam}`)
             ]);
 
             setPeriods(pRes.data);
@@ -207,6 +209,22 @@ const FiscalCalendarView = () => {
                 </div>
             </div>
 
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4 px-2 text-xs text-slate-500">
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-emerald-50 border border-emerald-200 inline-flex items-center justify-center"><Clock size={6} className="text-emerald-600" /></span>
+                    Özel Mesai
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-red-50 border border-red-200"></span>
+                    Tatil / İzin
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-slate-100 border border-slate-200"></span>
+                    Hafta Sonu
+                </div>
+            </div>
+
             {/* Grid */}
             {loading ? (
                 <div className="text-center py-20 text-slate-400">Yükleniyor...</div>
@@ -234,6 +252,7 @@ const FiscalCalendarView = () => {
             {showConfigModal && selectedDate && (
                 <DailyConfigModal
                     date={selectedDate}
+                    calendarId={calendarId}
                     initialOverride={overrides[moment(selectedDate).format('YYYY-MM-DD')]}
                     isHoliday={holidays.has(moment(selectedDate).format('YYYY-MM-DD'))}
                     onClose={() => setShowConfigModal(false)}

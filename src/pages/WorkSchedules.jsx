@@ -4,6 +4,7 @@ import moment from 'moment';
 import api from '../services/api';
 import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
 import YearCalendar from '../components/YearCalendar';
+import FiscalCalendarView from '../components/FiscalCalendarView';
 
 const WorkSchedules = () => {
     const [calendars, setCalendars] = useState([]);
@@ -232,6 +233,20 @@ const WorkSchedules = () => {
                                     <CalendarIcon /> Mali Dönemler (Bordro Ayları)
                                 </h3>
                                 <PeriodsSettingsForm data={draftData} refresh={() => fetchCalendarDetails(draftData.id)} />
+                            </div>
+
+                            <hr className="border-slate-100" />
+
+                            {/* Section 2.5: Daily Schedule Overrides */}
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <Clock size={18} className="text-emerald-600" /> Günlük Özel Mesai Ayarları
+                                </h3>
+                                <p className="text-sm text-slate-500 mb-4">
+                                    Belirli günler için özel mesai saatleri, öğle molası veya tatil tanımlayın.
+                                    Bu takvime bağlı tüm personele uygulanır.
+                                </p>
+                                <FiscalCalendarView calendarId={draftData.id} />
                             </div>
 
                             <hr className="border-slate-100" />

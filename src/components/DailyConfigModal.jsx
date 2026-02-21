@@ -3,8 +3,8 @@ import { X, Calendar, Clock, Coffee, Trash2, Save } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
 
-const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData, onClose, onSuccess }) => {
-    const [activeTab, setActiveTab] = useState(initialOverride ? 'CUSTOM' : isHoliday ? 'HOLIDAY' : 'STANDARD');
+const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initialHolidayData, onClose, onSuccess }) => {
+    const [activeTab, setActiveTab] = useState(initialOverride ? (initialOverride.is_off ? 'HOLIDAY' : 'CUSTOM') : isHoliday ? 'HOLIDAY' : 'STANDARD');
     const [loading, setLoading] = useState(false);
 
     // Custom Schedule State
@@ -18,53 +18,38 @@ const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData
     });
 
     // Holiday State (Simplified)
-    const [holidayName, setHolidayName] = useState(initialHolidayData?.title || 'Resmi Tatil');
+    const [holidayName, setHolidayName] = useState(initialOverride?.is_off ? (initialOverride?.description || 'Tatil') : (initialHolidayData?.title || 'Resmi Tatil'));
 
     const handleSave = async () => {
         setLoading(true);
         try {
             const dateStr = moment(date).format('YYYY-MM-DD');
 
-            // 1. DELETE EXISTING OVERRIDES (Reset to Standard)
-            // Ideally we should know IDs, but for simplicity we can query by date effectively or assume backend handles cleanup (not safe).
-            // Better: If switching to STANDARD, delete overrides and holidays.
-
-            // Delete Override if exists
+            // 1. DELETE EXISTING OVERRIDE
             if (initialOverride?.id) {
                 await api.delete(`/attendance/daily-overrides/${initialOverride.id}/`);
             }
 
-            // Delete Holiday if exists (Need ID or logic?)
-            // If we don't have ID, maybe we can't delete easily. 
-            // Assumption: User must manage holidays via Holiday Manager if we don't have ID?
-            // Let's assume for now we might skip Holiday deletion if no ID, but usually we should pass ID.
-
-            // 2. CREATE NEW
+            // 2. CREATE NEW (based on tab)
             if (activeTab === 'CUSTOM') {
                 await api.post('/attendance/daily-overrides/', {
                     date: dateStr,
+                    calendar: calendarId || null,
                     ...formData
                 });
             } else if (activeTab === 'HOLIDAY') {
-                // Determine if we are creating a public holiday or just marking it locally?
-                // Using existing endpoint: /calendar-events/ (ReadOnly usually) or pure PublicHoliday viewset?
-                // Let's assume we can't easily create PublicHoliday from here without a specific endpoint.
-                // Fallback: Use DailyOverride with "is_off=True" and description=HolidayName!
-                // This allows "OFF" days effectively.
-                // BUT user wants "Resmi Tatil" (PublicHoliday).
-
-                // If we can't create PublicHoliday easily, we can create an Unpaid Off Override.
-                // Let's create an "OFF" override with description.
                 await api.post('/attendance/daily-overrides/', {
                     date: dateStr,
+                    calendar: calendarId || null,
                     is_off: true,
                     description: holidayName
                 });
             }
+            // STANDARD tab: just delete (already done above), no new override
 
             onSuccess();
         } catch (error) {
-            alert('Hata: ' + error.message);
+            alert('Hata: ' + (error.response?.data?.detail || error.message));
         } finally {
             setLoading(false);
         }
@@ -141,12 +126,12 @@ const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="flex items-center gap-2 mb-2 p-2 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
                                     <Clock size={14} />
-                                    <span>Özel mesai saatleri tanımlayın.</span>
+                                    <span>Bu güne özel mesai saatleri tanımlayın.</span>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Başlangıç</label>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Başlangıç</label>
                                         <input
                                             type="time"
                                             value={formData.start_time}
@@ -155,7 +140,7 @@ const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Bitiş</label>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Bitiş</label>
                                         <input
                                             type="time"
                                             value={formData.end_time}
@@ -172,7 +157,7 @@ const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Başlangıç</label>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Başlangıç</label>
                                             <input
                                                 type="time"
                                                 value={formData.lunch_start}
@@ -181,7 +166,7 @@ const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Bitiş</label>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Bitiş</label>
                                             <input
                                                 type="time"
                                                 value={formData.lunch_end}
@@ -190,6 +175,17 @@ const DailyConfigModal = ({ date, initialOverride, isHoliday, initialHolidayData
                                             />
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="border-t border-slate-100 pt-4">
+                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Açıklama (isteğe bağlı)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 focus:border-slate-300"
+                                        placeholder="Örn: Yarım gün Cumartesi"
+                                    />
                                 </div>
                             </div>
                         )}
