@@ -517,6 +517,11 @@ const WorkSchedules = () => {
                                             Bu ayarlar şablonların üstüne yazılır.
                                         </p>
                                         <FiscalCalendarView calendarId={draftData.id} />
+
+                                        {/* Resmi Tatiller Listesi */}
+                                        <div className="mt-6">
+                                            <HolidaysList publicHolidayIds={draftData.public_holidays || []} />
+                                        </div>
                                     </div>
                                 )}
 
@@ -926,6 +931,75 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                         ))}
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Holidays List (read-only, for Tatiller tab) ---
+const HolidaysList = ({ publicHolidayIds }) => {
+    const [holidays, setHolidays] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/public-holidays/').then(res => {
+            const data = res.data.results || res.data;
+            setHolidays(data);
+        }).finally(() => setLoading(false));
+    }, []);
+
+    const activeHolidays = holidays
+        .filter(h => publicHolidayIds.includes(h.id))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (loading) return <div className="text-center py-4 text-slate-400 text-sm">Tatiller yükleniyor...</div>;
+    if (activeHolidays.length === 0) return null;
+
+    return (
+        <div>
+            <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
+                <Calendar size={16} className="text-red-500" />
+                Resmi Tatiller
+                <span className="text-xs font-normal text-slate-400">({activeHolidays.length} gün)</span>
+            </h4>
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                            <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Tarih</th>
+                            <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Tatil Adı</th>
+                            <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Tür</th>
+                            <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Saatler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {activeHolidays.map(h => (
+                            <tr key={h.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                <td className="px-4 py-2.5 font-mono text-slate-700">
+                                    {moment(h.date).format('DD MMM YYYY, ddd')}
+                                </td>
+                                <td className="px-4 py-2.5 font-medium text-slate-800">{h.name}</td>
+                                <td className="px-4 py-2.5">
+                                    {h.type === 'HALF_DAY' ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                            Yarım Gün
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
+                                            Tam Gün
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-2.5 text-slate-500">
+                                    {h.type === 'HALF_DAY' && h.start_time && h.end_time
+                                        ? `${h.start_time.slice(0, 5)} - ${h.end_time.slice(0, 5)}`
+                                        : <span className="text-slate-300">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
