@@ -14,7 +14,7 @@ import TemplateEditor from '../components/TemplateEditor';
 const TABS = [
     { key: 'templates', label: 'Şablonlar', icon: Layers },
     { key: 'calendar', label: 'Yıllık Takvim', icon: Paintbrush },
-    { key: 'overrides', label: 'Özel Günler', icon: Clock },
+    { key: 'overrides', label: 'Tatiller', icon: Clock },
     { key: 'periods', label: 'Dönemler & Ayarlar', icon: Calendar },
     { key: 'users', label: 'Personel', icon: Users },
 ];
@@ -509,11 +509,11 @@ const WorkSchedules = () => {
                                     </div>
                                 )}
 
-                                {/* Tab: Özel Günler */}
+                                {/* Tab: Tatiller */}
                                 {activeTab === 'overrides' && (
                                     <div>
                                         <p className="text-sm text-slate-500 mb-4">
-                                            Belirli günler için özel mesai saatleri, öğle molası veya tatil tanımlayın.
+                                            Belirli günler için tatil veya özel mesai saatleri tanımlayın.
                                             Bu ayarlar şablonların üstüne yazılır.
                                         </p>
                                         <FiscalCalendarView calendarId={draftData.id} />
