@@ -1,21 +1,45 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import moment from 'moment';
 import api from '../services/api';
-import { Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import {
+    Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle,
+    RefreshCw, AlertTriangle, X, Loader2, Paintbrush, Layers
+} from 'lucide-react';
 import YearCalendar from '../components/YearCalendar';
 import FiscalCalendarView from '../components/FiscalCalendarView';
+import TemplateEditor from '../components/TemplateEditor';
+
+const TABS = [
+    { key: 'templates', label: 'Şablonlar', icon: Layers },
+    { key: 'calendar', label: 'Yıllık Takvim', icon: Paintbrush },
+    { key: 'overrides', label: 'Özel Günler', icon: Clock },
+    { key: 'periods', label: 'Dönemler & Ayarlar', icon: Calendar },
+    { key: 'users', label: 'Personel', icon: Users },
+];
 
 const WorkSchedules = () => {
     const [calendars, setCalendars] = useState([]);
     const [selectedCalendarId, setSelectedCalendarId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('templates');
 
-    // Consolidated State
+    // Calendar State
     const [draftData, setDraftData] = useState(null);
     const [executionLogs, setExecutionLogs] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [saving, setSaving] = useState(false);
+
+    // Template State
+    const [templates, setTemplates] = useState([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+    const [editingTemplate, setEditingTemplate] = useState(null);
+    const [savingTemplate, setSavingTemplate] = useState(false);
+
+    // Day Assignments State
+    const [dayAssignments, setDayAssignments] = useState({});
+    const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
     useEffect(() => {
         fetchCalendars();
@@ -24,10 +48,21 @@ const WorkSchedules = () => {
     useEffect(() => {
         if (selectedCalendarId) {
             fetchCalendarDetails(selectedCalendarId);
+            fetchTemplates(selectedCalendarId);
         } else {
             setDraftData(null);
+            setTemplates([]);
+            setDayAssignments({});
         }
     }, [selectedCalendarId]);
+
+    useEffect(() => {
+        if (selectedCalendarId) {
+            fetchDayAssignments(selectedCalendarId, calendarYear);
+        }
+    }, [selectedCalendarId, calendarYear]);
+
+    // --- API Functions ---
 
     const fetchCalendars = async () => {
         setLoading(true);
@@ -58,41 +93,218 @@ const WorkSchedules = () => {
         }
     };
 
+    const fetchTemplates = async (calendarId) => {
+        try {
+            const res = await api.get(`/attendance/schedule-templates/?calendar=${calendarId}`);
+            const data = res.data.results || res.data;
+            setTemplates(data);
+            if (data.length > 0 && !selectedTemplateId) {
+                setSelectedTemplateId(data[0].id);
+                setEditingTemplate({ ...data[0] });
+            }
+        } catch (error) {
+            console.error("Error fetching templates:", error);
+        }
+    };
+
+    const fetchDayAssignments = async (calendarId, year) => {
+        try {
+            const res = await api.get(`/attendance/day-assignments/?calendar=${calendarId}&year=${year}`);
+            const data = res.data.results || res.data;
+            const map = {};
+            data.forEach(a => {
+                map[a.date] = {
+                    id: a.id,
+                    template_id: a.template,
+                    template_name: a.template_name,
+                    template_color: a.template_color,
+                };
+            });
+            setDayAssignments(map);
+        } catch (error) {
+            console.error("Error fetching day assignments:", error);
+        }
+    };
+
+    // --- Template CRUD ---
+
+    const handleSelectTemplate = (id) => {
+        setSelectedTemplateId(id);
+        const tmpl = templates.find(t => t.id === id);
+        if (tmpl) setEditingTemplate({ ...tmpl });
+    };
+
+    const handleCreateTemplate = async () => {
+        const name = prompt("Yeni Şablon Adı (Örn: Yaz Mesaisi):");
+        if (!name) return;
+        try {
+            const res = await api.post('/attendance/schedule-templates/', {
+                calendar: selectedCalendarId,
+                name,
+                color: '#10b981',
+                is_default: false,
+                weekly_schedule: {
+                    MON: { start: "08:00", end: "18:00", is_off: false },
+                    TUE: { start: "08:00", end: "18:00", is_off: false },
+                    WED: { start: "08:00", end: "18:00", is_off: false },
+                    THU: { start: "08:00", end: "18:00", is_off: false },
+                    FRI: { start: "08:00", end: "18:00", is_off: false },
+                    SAT: { start: "08:00", end: "18:00", is_off: true },
+                    SUN: { start: "08:00", end: "18:00", is_off: true }
+                },
+                lunch_start: "12:30",
+                lunch_end: "13:30",
+                daily_break_allowance: 30,
+                late_tolerance_minutes: 15,
+                service_tolerance_minutes: 0,
+                minimum_overtime_minutes: 15,
+            });
+            const newTemplates = [...templates, res.data];
+            setTemplates(newTemplates);
+            setSelectedTemplateId(res.data.id);
+            setEditingTemplate({ ...res.data });
+        } catch (error) {
+            alert('Hata: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const handleSaveTemplate = async (template) => {
+        setSavingTemplate(true);
+        try {
+            const res = await api.patch(`/attendance/schedule-templates/${template.id}/`, template);
+            const updated = templates.map(t => t.id === template.id ? res.data : t);
+            setTemplates(updated);
+            setEditingTemplate({ ...res.data });
+        } catch (error) {
+            alert('Kaydetme hatası: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setSavingTemplate(false);
+        }
+    };
+
+    const handleDeleteTemplate = async (id) => {
+        if (!window.confirm('Bu şablonu silmek istediğinize emin misiniz?\nBu şablona atanmış günler varsayılana dönecektir.')) return;
+        try {
+            await api.delete(`/attendance/schedule-templates/${id}/`);
+            const updated = templates.filter(t => t.id !== id);
+            setTemplates(updated);
+            if (selectedTemplateId === id) {
+                const first = updated[0];
+                setSelectedTemplateId(first?.id || null);
+                setEditingTemplate(first ? { ...first } : null);
+            }
+            // Refresh day assignments (deleted template's assignments are cascade deleted)
+            fetchDayAssignments(selectedCalendarId, calendarYear);
+        } catch (error) {
+            alert('Silme hatası: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    // --- Day Assignment (Paint) ---
+
+    const handlePaintDay = async (dateStr, templateId) => {
+        if (!selectedCalendarId) return;
+
+        if (templateId === null) {
+            // Eraser: remove assignment
+            const existing = dayAssignments[dateStr];
+            if (existing?.id) {
+                try {
+                    await api.delete(`/attendance/day-assignments/${existing.id}/`);
+                    const updated = { ...dayAssignments };
+                    delete updated[dateStr];
+                    setDayAssignments(updated);
+                } catch (error) {
+                    console.error("Delete assignment error:", error);
+                }
+            }
+        } else {
+            // Assign template to day
+            try {
+                const existing = dayAssignments[dateStr];
+                let res;
+                if (existing?.id) {
+                    res = await api.patch(`/attendance/day-assignments/${existing.id}/`, {
+                        template: templateId
+                    });
+                } else {
+                    res = await api.post('/attendance/day-assignments/', {
+                        calendar: selectedCalendarId,
+                        date: dateStr,
+                        template: templateId
+                    });
+                }
+                const tmpl = templates.find(t => t.id === templateId);
+                setDayAssignments({
+                    ...dayAssignments,
+                    [dateStr]: {
+                        id: res.data.id,
+                        template_id: templateId,
+                        template_name: tmpl?.name || '',
+                        template_color: tmpl?.color || '#3b82f6',
+                    }
+                });
+            } catch (error) {
+                console.error("Assign error:", error);
+            }
+        }
+    };
+
+    const handleBulkPaint = async (startDate, endDate, templateId) => {
+        if (!selectedCalendarId) return;
+        try {
+            if (templateId === null) {
+                // Bulk remove
+                await api.post('/attendance/day-assignments/bulk_remove/', {
+                    calendar_id: selectedCalendarId,
+                    start_date: startDate,
+                    end_date: endDate,
+                });
+            } else {
+                // Bulk assign
+                await api.post('/attendance/day-assignments/bulk_assign/', {
+                    calendar_id: selectedCalendarId,
+                    template_id: templateId,
+                    start_date: startDate,
+                    end_date: endDate,
+                });
+            }
+            // Refresh assignments
+            fetchDayAssignments(selectedCalendarId, calendarYear);
+        } catch (error) {
+            alert('Toplu atama hatası: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    // --- Global Save ---
+
     const handleGlobalSave = async () => {
         if (!draftData) return;
         setSaving(true);
-        setExecutionLogs([]); // Clear old logs
+        setExecutionLogs([]);
 
         try {
-            // 1. Update Calendar Settings
             await api.patch(`/attendance/fiscal-calendars/${draftData.id}/`, draftData);
-
-            // 2. Update Assignments
             await api.post(`/attendance/fiscal-calendars/${draftData.id}/assign_employees/`, {
                 employee_ids: assignments
             });
 
-            // 3. Auto-Recalculate Targets (Entire Year for Safety)
             const now = new Date();
             const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
             const endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
 
-            // We await this so the modal stays open until done
             const res = await api.post(`/attendance/fiscal-calendars/${draftData.id}/recalculate/`, {
                 start_date: startOfYear,
                 end_date: endOfYear
             });
 
-            // Capture Logs
             if (res.data.logs) {
                 setExecutionLogs(res.data.logs);
             } else {
                 setExecutionLogs(["Log bilgisi alınamadı."]);
             }
 
-            // Refresh to ensure sync
             fetchCalendarDetails(draftData.id);
-
         } catch (error) {
             alert("Hata: " + error.message);
         } finally {
@@ -103,7 +315,6 @@ const WorkSchedules = () => {
     const handleCreate = async () => {
         const name = prompt("Yeni Takvim Adı (Örn: 2027 Genel):");
         if (!name) return;
-
         const yearInput = prompt("Yıl:", new Date().getFullYear() + 1);
         if (!yearInput) return;
         const year = parseInt(yearInput);
@@ -111,17 +322,16 @@ const WorkSchedules = () => {
         try {
             const res = await api.post('/attendance/fiscal-calendars/', {
                 name,
-                year: year,
+                year,
                 weekly_schedule: {
                     MON: { start: "08:00", end: "18:00", is_off: false },
                     TUE: { start: "08:00", end: "18:00", is_off: false },
-                    WED: { start: "08:00", "end": "18:00", is_off: false },
-                    THU: { start: "08:00", "end": "18:00", is_off: false },
-                    FRI: { start: "08:00", "end": "18:00", is_off: false },
-                    SAT: { start: "08:00", "end": "18:00", is_off: true },
-                    SUN: { start: "08:00", "end": "18:00", is_off: true }
+                    WED: { start: "08:00", end: "18:00", is_off: false },
+                    THU: { start: "08:00", end: "18:00", is_off: false },
+                    FRI: { start: "08:00", end: "18:00", is_off: false },
+                    SAT: { start: "08:00", end: "18:00", is_off: true },
+                    SUN: { start: "08:00", end: "18:00", is_off: true }
                 },
-                // Default settings
                 lunch_start: "12:30",
                 lunch_end: "13:30",
                 daily_break_allowance: 30,
@@ -137,6 +347,11 @@ const WorkSchedules = () => {
         }
     };
 
+    // --- Derived ---
+
+    const defaultTemplate = templates.find(t => t.is_default);
+    const defaultTemplateColor = defaultTemplate?.color || '#3b82f6';
+
     if (loading && calendars.length === 0) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
     return (
@@ -144,7 +359,7 @@ const WorkSchedules = () => {
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800">Mali Takvim Yönetimi</h1>
-                    <p className="text-slate-500">Çalışma saatleri, tatiller ve mali dönemleri tek ekrandan yönetin.</p>
+                    <p className="text-slate-500">Çalışma saatleri, şablonlar ve tatilleri tek ekrandan yönetin.</p>
                 </div>
                 <button onClick={handleCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
                     <Plus size={18} /> Yeni Takvim
@@ -152,11 +367,10 @@ const WorkSchedules = () => {
             </div>
 
             <div className="flex gap-6 flex-1 overflow-hidden">
-                {/* Sidebar List */}
+                {/* Sidebar */}
                 <div className="w-72 flex-shrink-0 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
                     <div className="p-4 bg-slate-50 border-b border-slate-100 font-bold text-slate-600 flex items-center gap-2">
-                        <Calendar size={18} />
-                        Takvim Listesi
+                        <Calendar size={18} /> Takvim Listesi
                     </div>
                     <div className="divide-y divide-slate-100 overflow-y-auto flex-1">
                         {calendars.map(c => (
@@ -178,91 +392,174 @@ const WorkSchedules = () => {
                 {/* Main Content */}
                 <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
                     {draftData ? (
-                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-
-                            {/* Header Row with SAVE Button */}
-                            <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
+                        <>
+                            {/* Header */}
+                            <div className="flex justify-between items-center bg-indigo-50 p-4 border-b border-indigo-100">
                                 <div>
                                     <h2 className="text-lg font-bold text-indigo-900">{draftData.name} ({draftData.year})</h2>
-                                    <p className="text-sm text-indigo-700">Tüm değişiklikleri yaptıktan sonra kaydedin.</p>
+                                    <p className="text-sm text-indigo-700">Şablonlar, takvim boyama ve personel atamalarını yönetin.</p>
                                 </div>
-                                <button
-                                    onClick={handleGlobalSave}
-                                    disabled={saving}
-                                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-all disabled:opacity-50"
-                                >
+                                <button onClick={handleGlobalSave} disabled={saving}
+                                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-all disabled:opacity-50">
                                     <Save size={20} />
-                                    {saving ? 'Kaydediliyor...' : 'Tüm Ayarları Kaydet'}
+                                    {saving ? 'Kaydediliyor...' : 'Kaydet & Hesapla'}
                                 </button>
                             </div>
 
-                            {/* Section 1: Top Row - General & Schedule */}
-                            <div className="grid grid-cols-12 gap-6">
-                                {/* General Settings */}
-                                <div className="col-span-12 xl:col-span-4 space-y-6">
-                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full">
-                                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                            <SettingsIcon /> Genel Ayarlar
-                                        </h3>
-                                        <GeneralSettingsForm
-                                            data={draftData}
-                                            onChange={(newData) => setDraftData(newData)}
+                            {/* Tab Navigation */}
+                            <div className="flex border-b border-slate-200 bg-slate-50 px-4">
+                                {TABS.map(tab => {
+                                    const Icon = tab.icon;
+                                    return (
+                                        <button
+                                            key={tab.key}
+                                            onClick={() => setActiveTab(tab.key)}
+                                            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                                                activeTab === tab.key
+                                                    ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-lg'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <Icon size={16} /> {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Tab Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {/* Tab: Şablonlar */}
+                                {activeTab === 'templates' && (
+                                    <div className="flex gap-6 h-full">
+                                        {/* Template List */}
+                                        <div className="w-64 flex-shrink-0 space-y-2">
+                                            <button onClick={handleCreateTemplate}
+                                                className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                                                <Plus size={16} /> Yeni Şablon
+                                            </button>
+
+                                            {templates.map(t => (
+                                                <div
+                                                    key={t.id}
+                                                    onClick={() => handleSelectTemplate(t.id)}
+                                                    className={`p-3 rounded-lg cursor-pointer transition-all border-2 ${
+                                                        selectedTemplateId === t.id
+                                                            ? 'shadow-md scale-[1.02]'
+                                                            : 'border-transparent hover:border-slate-200 bg-slate-50'
+                                                    }`}
+                                                    style={{
+                                                        borderColor: selectedTemplateId === t.id ? t.color : undefined,
+                                                        backgroundColor: selectedTemplateId === t.id ? t.color + '10' : undefined,
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
+                                                        <span className="font-medium text-sm text-slate-800 truncate">{t.name}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1 ml-6">
+                                                        {t.is_default && (
+                                                            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Varsayılan</span>
+                                                        )}
+                                                        <span className="text-[10px] text-slate-400">
+                                                            {Object.values(t.weekly_schedule || {}).filter(d => !d.is_off).length} iş günü
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {templates.length === 0 && (
+                                                <div className="text-center py-8 text-slate-400">
+                                                    <Layers size={32} className="mx-auto mb-2 opacity-30" />
+                                                    <p className="text-xs">Henüz şablon yok</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Template Editor */}
+                                        <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-5 overflow-y-auto">
+                                            <TemplateEditor
+                                                template={editingTemplate}
+                                                onChange={setEditingTemplate}
+                                                onSave={handleSaveTemplate}
+                                                onDelete={handleDeleteTemplate}
+                                                saving={savingTemplate}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tab: Yıllık Takvim (Paint Mode) */}
+                                {activeTab === 'calendar' && (
+                                    <div>
+                                        <p className="text-sm text-slate-500 mb-4">
+                                            Bir şablon fırçası seçin ve takvimde günlere tıklayarak atayın.
+                                            Toplu atama için tarih aralığı kullanın.
+                                        </p>
+                                        <FiscalCalendarView
+                                            calendarId={selectedCalendarId}
+                                            paintMode={true}
+                                            templates={templates}
+                                            dayAssignments={dayAssignments}
+                                            defaultTemplateColor={defaultTemplateColor}
+                                            onPaintDay={handlePaintDay}
+                                            onBulkPaint={handleBulkPaint}
+                                            year={calendarYear}
+                                            onYearChange={setCalendarYear}
                                         />
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Weekly Schedule */}
-                                <div className="col-span-12 xl:col-span-8">
-                                    <div className="bg-white border border-slate-200 p-4 rounded-xl h-full shadow-sm">
+                                {/* Tab: Özel Günler */}
+                                {activeTab === 'overrides' && (
+                                    <div>
+                                        <p className="text-sm text-slate-500 mb-4">
+                                            Belirli günler için özel mesai saatleri, öğle molası veya tatil tanımlayın.
+                                            Bu ayarlar şablonların üstüne yazılır.
+                                        </p>
+                                        <FiscalCalendarView calendarId={draftData.id} />
+                                    </div>
+                                )}
+
+                                {/* Tab: Dönemler & Ayarlar */}
+                                {activeTab === 'periods' && (
+                                    <div className="space-y-8">
+                                        {/* General Settings */}
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                                <SettingsIcon /> Genel Ayarlar
+                                            </h3>
+                                            <GeneralSettingsForm
+                                                data={draftData}
+                                                onChange={(newData) => setDraftData(newData)}
+                                            />
+                                        </div>
+
+                                        <hr className="border-slate-100" />
+
+                                        {/* Fiscal Periods */}
+                                        <div>
+                                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                                <CalendarIcon /> Mali Dönemler (Bordro Ayları)
+                                            </h3>
+                                            <PeriodsSettingsForm data={draftData} refresh={() => fetchCalendarDetails(draftData.id)} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tab: Personel */}
+                                {activeTab === 'users' && (
+                                    <div>
                                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                            <ClockIcon /> Haftalık Çalışma Programı
+                                            <UsersIcon /> Personel Atamaları
                                         </h3>
-                                        <ScheduleSettingsForm
-                                            data={draftData}
-                                            onChange={(newData) => setDraftData(newData)}
+                                        <UsersSettingsForm
+                                            assignedIds={assignments}
+                                            onChange={setAssignments}
                                         />
                                     </div>
-                                </div>
+                                )}
                             </div>
-
-                            <hr className="border-slate-100" />
-
-                            {/* Section 2: Fiscal Periods */}
-                            <div>
-                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <CalendarIcon /> Mali Dönemler (Bordro Ayları)
-                                </h3>
-                                <PeriodsSettingsForm data={draftData} refresh={() => fetchCalendarDetails(draftData.id)} />
-                            </div>
-
-                            <hr className="border-slate-100" />
-
-                            {/* Section 2.5: Daily Schedule Overrides */}
-                            <div>
-                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <Clock size={18} className="text-emerald-600" /> Günlük Özel Mesai Ayarları
-                                </h3>
-                                <p className="text-sm text-slate-500 mb-4">
-                                    Belirli günler için özel mesai saatleri, öğle molası veya tatil tanımlayın.
-                                    Bu takvime bağlı tüm personele uygulanır.
-                                </p>
-                                <FiscalCalendarView calendarId={draftData.id} />
-                            </div>
-
-                            <hr className="border-slate-100" />
-
-                            {/* Section 3: Users */}
-                            <div>
-                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <UsersIcon /> Personel Atamaları
-                                </h3>
-                                <UsersSettingsForm
-                                    assignedIds={assignments}
-                                    onChange={setAssignments}
-                                />
-                            </div>
-
-                        </div>
+                        </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
                             <Calendar size={48} className="mb-4 opacity-50" />
@@ -276,21 +573,18 @@ const WorkSchedules = () => {
             {(saving || executionLogs.length > 0) && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
-
                         {saving ? (
                             <div className="p-8 text-center">
                                 <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
                                 <h3 className="text-xl font-bold text-slate-800 mb-2">Ayarlar Kaydediliyor...</h3>
                                 <p className="text-slate-500 text-sm mb-6">
-                                    Personel hedefleri ve devamlılık kayıtları güncelleniyor. Bu işlem personel sayısına göre birkaç saniye sürebilir.
+                                    Personel hedefleri ve devamlılık kayıtları güncelleniyor.
                                 </p>
                                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
                                     <div className="h-full bg-indigo-500 animate-pulse rounded-full w-2/3"></div>
                                 </div>
-                                <p className="text-xs text-slate-400">Lütfen bekleyin...</p>
                             </div>
                         ) : (
-                            // Log Viewer Mode
                             <>
                                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
                                     <div className="flex items-center gap-2">
@@ -304,7 +598,6 @@ const WorkSchedules = () => {
                                         <X size={20} className="text-slate-500" />
                                     </button>
                                 </div>
-
                                 <div className="flex-1 overflow-y-auto p-4 bg-slate-900 text-slate-300 font-mono text-xs space-y-1">
                                     {executionLogs.map((log, i) => (
                                         <div key={i} className={`p-1 ${log.includes('HATA') ? 'text-red-400 bg-red-900/20' : 'border-l-2 border-slate-700 pl-2'}`}>
@@ -312,12 +605,9 @@ const WorkSchedules = () => {
                                         </div>
                                     ))}
                                 </div>
-
                                 <div className="p-4 border-t border-slate-100 bg-white rounded-b-xl flex justify-end">
-                                    <button
-                                        onClick={() => setExecutionLogs([])}
-                                        className="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors"
-                                    >
+                                    <button onClick={() => setExecutionLogs([])}
+                                        className="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors">
                                         Kapat
                                     </button>
                                 </div>
@@ -348,13 +638,10 @@ const GeneralSettingsForm = ({ data, onChange }) => {
     };
 
     const handleDeleteHoliday = async (h) => {
-        if (!window.confirm(`${h.date} tarihindeki "${h.name}" tatilini silmek istediğinize emin misiniz?\n\nBu işlem kalıcıdır ve veritabanından silinir.`)) return;
-
+        if (!window.confirm(`${h.date} tarihindeki "${h.name}" tatilini silmek istediğinize emin misiniz?`)) return;
         try {
             await api.delete(`/core/public-holidays/${h.id}/`);
-            // Update local list
             setHolidays(holidays.filter(item => item.id !== h.id));
-            // Update parent selection
             const current = data.public_holidays || [];
             handleChange('public_holidays', current.filter(id => id !== h.id));
         } catch (error) {
@@ -374,19 +661,14 @@ const GeneralSettingsForm = ({ data, onChange }) => {
     const handleBulkDelete = async () => {
         if (selectedForDeletion.size === 0) return;
         if (!window.confirm(`${selectedForDeletion.size} adet tatil kalıcı olarak silinecek. Onaylıyor musunuz?`)) return;
-
         try {
-            // Sequential Delete (API limitation usually, unless bulk endpoint exists)
             for (const id of selectedForDeletion) {
                 await api.delete(`/core/public-holidays/${id}/`);
             }
-
-            // Update UI
             setHolidays(holidays.filter(h => !selectedForDeletion.has(h.id)));
             const current = data.public_holidays || [];
             handleChange('public_holidays', current.filter(id => !selectedForDeletion.has(id)));
             setSelectedForDeletion(new Set());
-
         } catch (error) {
             alert("Silme işlemi sırasında hata: " + error.message);
         }
@@ -416,72 +698,34 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                 </div>
             </div>
 
-            {/* Breaks & Lunch Config MOVED TO SCHEDULE */}
-
-            {/* Tolerances Config */}
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 text-center tracking-wider">Tolerans & Limitler</h4>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Tolerans (dk)</label>
-                        <input
-                            className="input-field w-full bg-white text-center"
-                            type="number"
-                            value={data.late_tolerance_minutes || 0}
-                            onChange={e => handleChange('late_tolerance_minutes', parseInt(e.target.value))}
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">Giriş ve çıkışlar için genel tolerans.</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Servis Toleransı (dk)</label>
-                        <input className="input-field w-full bg-white text-center" type="number" value={data.service_tolerance_minutes || 0} onChange={e => handleChange('service_tolerance_minutes', parseInt(e.target.value))} />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1">Min. Mesai (dk)</label>
-                        <input className="input-field w-full bg-white text-center" type="number" value={data.minimum_overtime_minutes || 0} onChange={e => handleChange('minimum_overtime_minutes', parseInt(e.target.value))} />
-                    </div>
-                </div>
-            </div>
-
             <div>
                 <div className="flex justify-between items-center mb-2">
                     <label className="block text-xs font-semibold text-slate-500 uppercase">Resmi Tatiller ({activeHolidays.length})</label>
                     <div className="flex items-center gap-2">
                         {selectedForDeletion.size > 0 && (
-                            <button
-                                onClick={handleBulkDelete}
-                                className="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors flex items-center gap-1 animate-in fade-in"
-                            >
+                            <button onClick={handleBulkDelete}
+                                className="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors flex items-center gap-1 animate-in fade-in">
                                 <Trash2 size={14} /> {selectedForDeletion.size} Sil
                             </button>
                         )}
-                        <button
-                            onClick={() => setShowHolidayBuilder(true)}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:bg-indigo-50 px-2 py-1 rounded transition-colors"
-                        >
+                        <button onClick={() => setShowHolidayBuilder(true)}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:bg-indigo-50 px-2 py-1 rounded transition-colors">
                             <Calendar size={14} /> Görsel Düzenle
                         </button>
                         <Link to="/public-holidays" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 border-l pl-2 border-slate-300">
-                            <Settings size={12} />
-                            Listeyi Aç
+                            <Settings size={12} /> Listeyi Aç
                         </Link>
                     </div>
                 </div>
 
-                {/* Active Holiday List with Bulk Selection */}
                 <div className="bg-white border rounded-lg overflow-hidden flex flex-col h-[400px]">
                     <div className="bg-slate-50 p-2 border-b flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             checked={activeHolidays.length > 0 && selectedForDeletion.size === activeHolidays.length}
                             onChange={(e) => {
                                 if (e.target.checked) setSelectedForDeletion(new Set(activeHolidays.map(h => h.id)));
                                 else setSelectedForDeletion(new Set());
-                            }}
-                        />
+                            }} />
                         <span className="text-xs font-bold text-slate-500">Tümünü Seç</span>
                     </div>
 
@@ -490,14 +734,9 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                             const isSelected = selectedForDeletion.has(h.id);
                             return (
                                 <div key={h.id}
-                                    className={`flex items-center gap-3 p-2 rounded border transition-all ${isSelected ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-indigo-200'}`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => toggleDeleteSelection(h.id)}
-                                        className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
-                                    />
+                                    className={`flex items-center gap-3 p-2 rounded border transition-all ${isSelected ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
+                                    <input type="checkbox" checked={isSelected} onChange={() => toggleDeleteSelection(h.id)}
+                                        className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                             <div className="font-medium text-sm text-slate-700">{h.name}</div>
@@ -505,13 +744,8 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                                         </div>
                                         <div className="text-xs text-slate-500 font-mono">{h.date} {h.type === 'HALF_DAY' && h.start_time ? `(${h.start_time}-${h.end_time})` : ''}</div>
                                     </div>
-
-                                    {/* Quick Single Delete */}
-                                    <button
-                                        onClick={() => handleDeleteHoliday(h)} // Still supports individual click
-                                        className="p-1.5 text-slate-300 hover:text-red-500 rounded-md transition-colors"
-                                        title="Tek Sil"
-                                    >
+                                    <button onClick={() => handleDeleteHoliday(h)}
+                                        className="p-1.5 text-slate-300 hover:text-red-500 rounded-md transition-colors" title="Tek Sil">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
@@ -528,8 +762,6 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                 </div>
             </div>
 
-            {/* Visual Holiday Builder Modal */}
-
             {showHolidayBuilder && (
                 <HolidayBuilderModal
                     onClose={() => setShowHolidayBuilder(false)}
@@ -538,8 +770,6 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                     onUpdateSelection={(newIds) => onChange({ ...data, public_holidays: newIds })}
                     onNewHolidayCreated={(newHoliday) => {
                         setHolidays([...holidays, newHoliday]);
-                        // Auto-select newly created holidays
-                        // Note: HolidayBuilderModal usually handles selection update via onUpdateSelection
                     }}
                     onHolidayDeleted={(deletedId) => {
                         setHolidays(holidays.filter(h => h.id !== deletedId));
@@ -549,151 +779,6 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                     }}
                 />
             )}
-        </div >
-    );
-};
-
-const ScheduleSettingsForm = ({ data, onChange }) => {
-    const schedule = data.weekly_schedule || {};
-
-    const days = [
-        { key: 'MON', label: 'Pazartesi' },
-        { key: 'TUE', label: 'Salı' },
-        { key: 'WED', label: 'Çarşamba' },
-        { key: 'THU', label: 'Perşembe' },
-        { key: 'FRI', label: 'Cuma' },
-        { key: 'SAT', label: 'Cumartesi' },
-        { key: 'SUN', label: 'Pazar' },
-    ];
-
-    const handleChange = (dayKey, field, value) => {
-        const newSchedule = {
-            ...schedule,
-            [dayKey]: {
-                ...schedule[dayKey],
-                [field]: value
-            }
-        };
-        onChange({ ...data, weekly_schedule: newSchedule });
-    };
-
-    return (
-        <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs">Gün</th>
-                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs w-[140px]">Durum</th>
-                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs">Mesai Saatleri</th>
-                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs">Öğle Arası</th>
-                                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-xs w-[100px]">Mola (dk)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {days.map(day => {
-                                const defaults = {
-                                    start: '08:30',
-                                    end: '18:00',
-                                    is_off: day.key === 'SUN' || day.key === 'SAT', // Default Weekend
-                                    lunch_start: '12:30',
-                                    lunch_end: '13:30',
-                                    daily_break_allowance: 30
-                                };
-                                // Merge distinct fields to ensure no undefined values causing --:--
-                                const stored = schedule[day.key] || {};
-                                const dayConfig = {
-                                    start: stored.start || defaults.start,
-                                    end: stored.end || defaults.end,
-                                    is_off: stored.is_off !== undefined ? stored.is_off : defaults.is_off,
-                                    lunch_start: stored.lunch_start || defaults.lunch_start,
-                                    lunch_end: stored.lunch_end || defaults.lunch_end,
-                                    daily_break_allowance: stored.daily_break_allowance !== undefined ? stored.daily_break_allowance : defaults.daily_break_allowance
-                                };
-                                const isOff = dayConfig.is_off;
-
-                                return (
-                                    <tr key={day.key} className={`transition-colors ${isOff ? 'bg-slate-50 hover:bg-slate-100' : 'hover:bg-indigo-50/30'}`}>
-                                        <td className="px-4 py-3 font-bold text-slate-700">{day.label}</td>
-                                        <td className="px-4 py-3">
-                                            <label className="inline-flex items-center gap-2 cursor-pointer select-none relative group">
-                                                <input
-                                                    type="checkbox"
-                                                    className="peer sr-only"
-                                                    checked={isOff}
-                                                    onChange={e => handleChange(day.key, 'is_off', e.target.checked)}
-                                                />
-                                                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ease-in-out flex items-center px-0.5 ${isOff ? 'bg-slate-300' : 'bg-emerald-500'}`}>
-                                                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${isOff ? 'translate-x-5' : 'translate-x-0'}`} />
-                                                </div>
-                                                <span className="text-xs font-semibold text-slate-600 w-16 px-1">{!isOff ? 'Çalışma' : 'Tatil'}</span>
-                                            </label>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {!isOff ? (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="relative">
-                                                        <Clock size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                        <input
-                                                            type="time"
-                                                            value={dayConfig.start}
-                                                            onChange={e => handleChange(day.key, 'start', e.target.value)}
-                                                            className="pl-7 pr-2 py-1.5 border rounded-lg text-xs font-medium focus:ring-2 ring-indigo-500 outline-none w-[90px]"
-                                                        />
-                                                    </div>
-                                                    <span className="text-slate-400 font-bold">-</span>
-                                                    <input
-                                                        type="time"
-                                                        value={dayConfig.end}
-                                                        onChange={e => handleChange(day.key, 'end', e.target.value)}
-                                                        className="px-2 py-1.5 border rounded-lg text-xs font-medium focus:ring-2 ring-indigo-500 outline-none w-[80px] text-center"
-                                                    />
-                                                </div>
-                                            ) : <span className="text-slate-400 text-xs italic pl-2">-- : --</span>}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {!isOff ? (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="relative">
-                                                        <input
-                                                            type="time"
-                                                            value={dayConfig.lunch_start}
-                                                            onChange={e => handleChange(day.key, 'lunch_start', e.target.value)}
-                                                            className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-600 focus:ring-2 ring-indigo-500 outline-none w-[80px]"
-                                                        />
-                                                    </div>
-                                                    <span className="text-slate-300">-</span>
-                                                    <input
-                                                        type="time"
-                                                        value={dayConfig.lunch_end}
-                                                        onChange={e => handleChange(day.key, 'lunch_end', e.target.value)}
-                                                        className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-600 focus:ring-2 ring-indigo-500 outline-none w-[80px]"
-                                                    />
-                                                </div>
-                                            ) : <span className="text-slate-400 text-xs italic pl-2">-- : --</span>}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {!isOff ? (
-                                                <input
-                                                    type="number"
-                                                    value={dayConfig.daily_break_allowance}
-                                                    onChange={e => handleChange(day.key, 'daily_break_allowance', parseInt(e.target.value))}
-                                                    className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-center focus:ring-2 ring-indigo-500 outline-none"
-                                                />
-                                            ) : <span className="text-slate-400 text-xs">-</span>}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-3 rounded border border-amber-100">
-                <AlertTriangle size={14} />
-                <span>Not: Günlük mola süreleri ve öğle arası saatleri, ilgili gün için varsayılan değerleri geçersiz kılar.</span>
-            </div>
         </div>
     );
 };
@@ -748,7 +833,6 @@ const PeriodsSettingsForm = ({ data, refresh }) => {
                                         <span className="font-mono text-slate-700">{p.end_date}</span>
                                     </div>
                                 </div>
-                                {/* Optional: Edit button could go here */}
                             </div>
                         );
                     })}
@@ -786,23 +870,15 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
 
     const assigned = allEmployees.filter(e => assignedIds.includes(e.id));
     const unassigned = allEmployees.filter(e => !assignedIds.includes(e.id));
-
-    // Filter logic
     const filterFn = (e) => (e.first_name + ' ' + e.last_name + ' ' + e.employee_code).toLowerCase().includes(searchTerm.toLowerCase());
 
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <input
-                    placeholder="Personel ara..."
-                    className="input-field max-w-sm"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                />
+                <input placeholder="Personel ara..." className="input-field max-w-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[500px]">
-                {/* Assigned Column */}
                 <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4 flex flex-col">
                     <h3 className="font-bold mb-3 text-indigo-700 flex justify-between items-center">
                         <span>Bu Takvime Dahil ({assigned.length})</span>
@@ -819,10 +895,8 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                                         <div className="text-xs text-slate-500">{e.employee_code}</div>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleAssign(e.id, false)}
-                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm"
-                                >
+                                <button onClick={() => handleAssign(e.id, false)}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm">
                                     Çıkar
                                 </button>
                             </div>
@@ -830,7 +904,6 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                     </div>
                 </div>
 
-                {/* Unassigned Column */}
                 <div className="border border-slate-200 bg-white rounded-xl p-4 flex flex-col">
                     <h3 className="font-bold mb-3 text-slate-600">Diğer Personeller ({unassigned.length})</h3>
                     <div className="flex-1 overflow-y-auto space-y-2 pr-2">
@@ -845,10 +918,8 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                                         <div className="text-xs text-slate-400">{e.employee_code}</div>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleAssign(e.id, true)}
-                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm"
-                                >
+                                <button onClick={() => handleAssign(e.id, true)}
+                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm">
                                     Ekle
                                 </button>
                             </div>
@@ -860,7 +931,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
     );
 };
 
-// Icons (Simple SVG Wrappers)
+// Icons
 const SettingsIcon = () => <Settings size={20} className="text-slate-500" />;
 const Settings = ({ size, className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
@@ -869,17 +940,12 @@ const ClockIcon = () => <Clock size={20} className="text-slate-500" />;
 const CalendarIcon = () => <Calendar size={20} className="text-slate-500" />;
 const UsersIcon = () => <Users size={20} className="text-slate-500" />;
 
-import { createPortal } from 'react-dom';
-
 const HolidayDetailModal = ({ range, onClose, onSave }) => {
     const [name, setName] = useState('Resmi Tatil');
     const [type, setType] = useState('FULL_DAY');
-
-    // Global defaults
     const [defaultStart, setDefaultStart] = useState('09:00');
     const [defaultEnd, setDefaultEnd] = useState('13:00');
 
-    // Generate date list from range
     const dates = useMemo(() => {
         const list = [];
         let current = moment(range.start);
@@ -891,31 +957,24 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
         return list;
     }, [range]);
 
-    // Per-day overrides: { '2026-01-01': { start: '09:00', end: '13:00' } }
     const [dailyOverrides, setDailyOverrides] = useState({});
 
     const handleOverrideChange = (date, field, value) => {
         setDailyOverrides(prev => ({
             ...prev,
-            [date]: {
-                ...prev[date],
-                [field]: value
-            }
+            [date]: { ...prev[date], [field]: value }
         }));
     };
 
     const handleSave = () => {
         const configs = dates.map(date => {
             const override = dailyOverrides[date] || {};
-            const startTime = override.start || defaultStart;
-            const endTime = override.end || defaultEnd;
-
             return {
                 name,
-                date, // Explicitly pass date
+                date,
                 type,
-                start_time: type === 'HALF_DAY' ? startTime : null,
-                end_time: type === 'HALF_DAY' ? endTime : null
+                start_time: type === 'HALF_DAY' ? (override.start || defaultStart) : null,
+                end_time: type === 'HALF_DAY' ? (override.end || defaultEnd) : null
             };
         });
         onSave(configs);
@@ -937,28 +996,19 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Tatil Adı</label>
-                            <input
-                                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none"
-                                placeholder="Örn: Kurban Bayramı"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                            />
+                            <input className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none"
+                                placeholder="Örn: Kurban Bayramı" value={name} onChange={e => setName(e.target.value)} />
                         </div>
-
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Tür</label>
-                            <select
-                                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none bg-white"
-                                value={type}
-                                onChange={e => setType(e.target.value)}
-                            >
+                            <select className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 ring-indigo-500 outline-none bg-white"
+                                value={type} onChange={e => setType(e.target.value)}>
                                 <option value="FULL_DAY">Tam Gün</option>
                                 <option value="HALF_DAY">Yarım Gün / Saatlik</option>
                             </select>
                         </div>
                     </div>
 
-                    {/* Single Day or Global Settings for Sync */}
                     {type === 'HALF_DAY' && !isBulkHalfDay && (
                         <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
                             <div>
@@ -972,7 +1022,6 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
                         </div>
                     )}
 
-                    {/* Bulk Day List */}
                     {isBulkHalfDay && (
                         <div className="border rounded-lg overflow-hidden">
                             <div className="bg-slate-50 p-2 border-b flex justify-between items-center">
@@ -989,27 +1038,16 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
                                     const override = dailyOverrides[date] || {};
                                     const s = override.start || defaultStart;
                                     const e = override.end || defaultEnd;
-
-                                    // Highlight if different from default
                                     const isModified = (override.start && override.start !== defaultStart) || (override.end && override.end !== defaultEnd);
-
                                     return (
                                         <div key={date} className={`flex items-center gap-3 p-2 border-b last:border-0 ${isModified ? 'bg-indigo-50/50' : 'hover:bg-white'}`}>
                                             <div className="w-24 text-sm font-medium text-slate-700">{date}</div>
                                             <div className="flex items-center gap-2 flex-1">
-                                                <input
-                                                    type="time"
-                                                    className={`border rounded px-2 py-1 text-sm w-full ${isModified ? 'border-indigo-300 bg-white' : 'border-slate-200 text-slate-500'}`}
-                                                    value={s}
-                                                    onChange={e => handleOverrideChange(date, 'start', e.target.value)}
-                                                />
+                                                <input type="time" className={`border rounded px-2 py-1 text-sm w-full ${isModified ? 'border-indigo-300 bg-white' : 'border-slate-200 text-slate-500'}`}
+                                                    value={s} onChange={e => handleOverrideChange(date, 'start', e.target.value)} />
                                                 <span className="text-slate-300">-</span>
-                                                <input
-                                                    type="time"
-                                                    className={`border rounded px-2 py-1 text-sm w-full ${isModified ? 'border-indigo-300 bg-white' : 'border-slate-200 text-slate-500'}`}
-                                                    value={e}
-                                                    onChange={e => handleOverrideChange(date, 'end', e.target.value)}
-                                                />
+                                                <input type="time" className={`border rounded px-2 py-1 text-sm w-full ${isModified ? 'border-indigo-300 bg-white' : 'border-slate-200 text-slate-500'}`}
+                                                    value={e} onChange={e => handleOverrideChange(date, 'end', e.target.value)} />
                                             </div>
                                         </div>
                                     );
@@ -1042,110 +1080,60 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         return dates;
     }, [selectedHolidayIds, allHolidays]);
 
-    // Detail Modal State
-    const [pendingRange, setPendingRange] = useState(null); // { start, end }
+    const [pendingRange, setPendingRange] = useState(null);
 
     const handleRangeSelect = (start, end) => {
         setPendingRange({ start, end });
     };
 
     const confirmHolidayCreation = async (holidayConfigs) => {
-        // holidayConfigs is now an array of objects: [{ name, date, type, start_time, end_time }, ...]
         if (!holidayConfigs || holidayConfigs.length === 0) return;
-
-        // Visual Feedback (could add loading state here if needed, but for now blocking interaction via modal)
-
         const createdHolidays = [];
         const createdIds = [];
-
         try {
-            // 1. Create all holidays sequentially
             for (const config of holidayConfigs) {
-                const payload = {
-                    name: config.name,
-                    date: config.date,
-                    type: config.type,
-                    start_time: config.start_time,
-                    end_time: config.end_time,
-                    category: 'OFFICIAL'
-                };
-
-                const res = await api.post('/core/public-holidays/', payload);
+                const res = await api.post('/core/public-holidays/', {
+                    name: config.name, date: config.date, type: config.type,
+                    start_time: config.start_time, end_time: config.end_time, category: 'OFFICIAL'
+                });
                 createdHolidays.push(res.data);
                 createdIds.push(res.data.id);
             }
-
-            // 2. Batch Update UI (Critical: Do this AFTER all async work)
-
-            // Allow parent to update global list (if onNewHolidayCreated supports batch, great, if not loop is safer here as it's synchronous state update)
             createdHolidays.forEach(h => onNewHolidayCreated(h));
-
-            // Update local selection
             onUpdateSelection([...selectedHolidayIds, ...createdIds]);
-
-            // Close detail modal
             setPendingRange(null);
-
         } catch (error) {
             alert("Hata oluştu: " + error.message);
         }
     };
 
     const handleRemoveDate = async (dateStr) => {
-        // Find if there is a holiday on this date
         const holidayToRemove = allHolidays.find(h => h.date === dateStr);
-
         if (holidayToRemove) {
-            if (window.confirm(`${dateStr} tarihindeki "${holidayToRemove.name}" tatilini silmek istediğinize emin misiniz?\n\nDikkat: Bu işlemden sonra puantajların düzelmesi için ana ekrandaki "Tüm Ayarları Kaydet" butonuna basarak hesaplama yapmanız gerekmektedir.`)) {
+            if (window.confirm(`${dateStr} tarihindeki "${holidayToRemove.name}" tatilini silmek istediğinize emin misiniz?`)) {
                 try {
                     await api.delete(`/core/public-holidays/${holidayToRemove.id}/`);
-
-                    // Remove from parent list
-                    const newHolidays = allHolidays.filter(h => h.id !== holidayToRemove.id);
-                    // We need a way to propogate this up. 
-                    // Since we don't have a direct 'onRemoveHoliday' prop, we can re-use onUpdateSelection for local
-                    // BUT for the RED dots to go away, 'allHolidays' prop must change.
-                    // Assuming 'onNewHolidayCreated' might be the wrong name for "refresh list".
-                    // Let's check parent usage. If parent manages state, we need a callback.
-                    // For now, let's assume we can trigger a refresh or we need to add a callback.
-                    // Wait, 'onNewHolidayCreated' adds to list. checking parent...
-                    // The parent WorkSchedules passes 'publicHolidays' and 'setPublicHolidays' via props?
-                    // No, it handles it in 'handlePublicHolidaysChange' or similar?
-                    // Actually, let's just use a new callback prop 'onHolidayDeleted' and add it to usage.
                     if (onHolidayDeleted) onHolidayDeleted(holidayToRemove.id);
-
-                    // Also clear from local selection if it was just selected
                     const newIds = selectedHolidayIds.filter(id => id !== holidayToRemove.id);
                     onUpdateSelection(newIds);
-
                 } catch (error) {
                     alert("Silme işlemi başarısız: " + error.message);
                 }
             }
-        } else {
-            // If not in global list but in local selection (draft), just remove from selection
-            // (Though usually drag select doesn't add to ID list until saved? Wait. 
-            //  The builder works by creating them immediately in confirmHolidayCreation.
-            //  So they should always be in allHolidays once created.)
         }
     };
 
     return createPortal(
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in" style={{ zIndex: 9999 }}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative">
-
                 {pendingRange && (
-                    <HolidayDetailModal
-                        range={pendingRange}
-                        onClose={() => setPendingRange(null)}
-                        onSave={confirmHolidayCreation}
-                    />
+                    <HolidayDetailModal range={pendingRange} onClose={() => setPendingRange(null)} onSave={confirmHolidayCreation} />
                 )}
 
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
                         <h3 className="text-xl font-bold text-slate-800">Görsel Tatil Düzenleyici</h3>
-                        <p className="text-sm text-slate-500">Tarihleri sürükleyerek seçin ve tatil detaylarını girin. Tıklayarak mevcutları kaldırabilirsiniz.</p>
+                        <p className="text-sm text-slate-500">Tarihleri sürükleyerek seçin ve tatil detaylarını girin.</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
                         <X size={24} />
@@ -1156,18 +1144,16 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
                     <YearCalendar
                         year={year}
                         onYearChange={setYear}
-                        holidays={new Set(allHolidays.map(h => h.date))} // Global list (Red)
-                        selectedDates={selectedDates} // Selected for this calendar (Blue)
+                        holidays={new Set(allHolidays.map(h => h.date))}
+                        selectedDates={selectedDates}
                         onRangeSelect={handleRangeSelect}
                         onDateClick={handleRemoveDate}
                     />
                 </div>
 
                 <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all"
-                    >
+                    <button onClick={onClose}
+                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all">
                         Tamamla
                     </button>
                 </div>
@@ -1176,231 +1162,5 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         document.body
     );
 };
-
-const RecalculationPromptModal = ({ calendarId, onClose }) => {
-    const [step, setStep] = useState('PROMPT'); // PROMPT | SELECT_DATE | PROCESSING
-    const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 7) + '-01'); // 1st of current month
-    const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10)); // Today
-
-    // Log State
-    const [logs, setLogs] = useState([]);
-    const [progress, setProgress] = useState(0); // 0-100
-    const [currentEmployee, setCurrentEmployee] = useState('');
-    const [isFinished, setIsFinished] = useState(false);
-    const logsEndRef = useRef(null);
-
-    const addLog = (msg, type = 'info') => {
-        const timestamp = new Date().toLocaleTimeString();
-        setLogs(prev => [...prev, { time: timestamp, msg, type }]);
-    };
-
-    // Auto-scroll logs
-    useEffect(() => {
-        if (logsEndRef.current) {
-            logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-    }, [logs]);
-
-    const handleRecalculate = async () => {
-        setStep('PROCESSING');
-        setIsFinished(false);
-        setLogs([]);
-        setProgress(0);
-
-        try {
-            addLog(`İşlem Başlatılıyor...`, 'system');
-
-            addLog('Personel listesi alınıyor...', 'info');
-            // Fetch ALL active employees (limit=1000 to be safe)
-            // Use 'is_active=true' if backend supports filter, otherwise filter in JS
-            const empRes = await api.get('/core/employees/?limit=1000&is_active=true');
-
-            const fetched = empRes.data.results || empRes.data;
-            let activeEmployees = Array.isArray(fetched) ? fetched : [];
-
-            // If backend ignored is_active param, filter manually just in case
-            if (activeEmployees.length > 0 && activeEmployees[0].is_active !== undefined) {
-                activeEmployees = activeEmployees.filter(e => e.is_active !== false);
-            }
-
-            const total = activeEmployees.length;
-            addLog(`${total} aktif personel bulundu.`, 'success');
-            addLog(`Hesaplama Aralığı: ${startDate} - ${endDate}`, 'system');
-
-            for (let i = 0; i < total; i++) {
-                const emp = activeEmployees[i];
-                setCurrentEmployee(emp.first_name + ' ' + emp.last_name);
-                setProgress(Math.round(((i) / total) * 100));
-
-                addLog(`[${emp.first_name} ${emp.last_name}] Hesaplanıyor...`, 'info');
-
-                try {
-                    // Correct endpoint: AttendanceViewSet is at /attendance/attendance/
-                    await api.post('/attendance/attendance/recalculate/', {
-                        employee_id: emp.id,
-                        start_date: startDate,
-                        end_date: endDate
-                    });
-
-                    // addLog(`[${emp.first_name} ${emp.last_name}] OK.`, 'success');
-
-                } catch (err) {
-                    addLog(`[${emp.first_name} ${emp.last_name}] HATA: ${err.message}`, 'error');
-                }
-            }
-
-            setProgress(100);
-            setIsFinished(true);
-            setCurrentEmployee('Tamamlandı');
-            addLog('Tüm işlemler başarıyla tamamlandı.', 'success');
-
-        } catch (error) {
-            addLog('Genel Hata: ' + error.message, 'error');
-            setIsFinished(true);
-        }
-    };
-
-    if (step === 'PROMPT') {
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in-95">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
-                            <CheckCircle size={28} />
-                        </div>
-                        <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">Ayarlar Kaydedildi</h3>
-                    <p className="text-slate-600 mb-6">
-                        Yapılan değişikliklerin geçmiş kayıtlara yansıması için hesaplama işlemini tetiklemek ister misiniz?
-                    </p>
-
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={() => setStep('SELECT_DATE')}
-                            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                        >
-                            Evet, Şimdi Hesapla
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-lg font-bold hover:bg-slate-50 transition-colors"
-                        >
-                            Hayır, Sadece Kaydet
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (step === 'SELECT_DATE') {
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4">Hesaplama Aralığı Seçin</h3>
-
-                    <div className="space-y-4 mb-6">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Başlangıç Tarihi</label>
-                            <input
-                                type="date"
-                                className="input-field w-full"
-                                value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Bitiş Tarihi</label>
-                            <input
-                                type="date"
-                                className="input-field w-full"
-                                value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setStep('PROMPT')}
-                            className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-lg font-bold hover:bg-slate-200"
-                        >
-                            Geri
-                        </button>
-                        <button
-                            onClick={handleRecalculate}
-                            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700"
-                        >
-                            Hesapla
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // PROCESSING / LOG VIEW
-    return (
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="bg-slate-50 p-4 border-b flex justify-between items-center">
-                    <div>
-                        <h3 className="font-bold text-slate-800">
-                            {isFinished ? 'İşlem Tamamlandı' : 'Hesaplanıyor...'}
-                        </h3>
-                        <p className="text-xs text-slate-500">
-                            {isFinished ? 'Tüm personel verileri güncellendi.' : `${currentEmployee} işleniyor...`}
-                        </p>
-                    </div>
-                    {isFinished && (
-                        <button onClick={onClose}>
-                            <X size={20} className="text-slate-400 hover:text-slate-600" />
-                        </button>
-                    )}
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-slate-100 h-1">
-                    <div
-                        className="bg-indigo-600 h-1 transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
-
-                {/* Terminal Window */}
-                <div className="flex-1 bg-[#1e1e1e] p-4 overflow-y-auto font-mono text-xs sm:text-sm space-y-1">
-                    {logs.map((log, i) => (
-                        <div key={i} className={`flex gap-2 ${log.type === 'error' ? 'text-red-400' :
-                            log.type === 'success' ? 'text-emerald-400' :
-                                log.type === 'system' ? 'text-yellow-400' :
-                                    'text-slate-300'
-                            }`}>
-                            <span className="text-slate-600 select-none">[{log.time}]</span>
-                            <span>{log.msg}</span>
-                        </div>
-                    ))}
-                    <div ref={logsEndRef} />
-                </div>
-
-                {/* Footer Actions */}
-                {isFinished && (
-                    <div className="p-4 border-t bg-white">
-                        <button
-                            onClick={onClose}
-                            className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors"
-                        >
-                            Kapat
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-
 
 export default WorkSchedules;
