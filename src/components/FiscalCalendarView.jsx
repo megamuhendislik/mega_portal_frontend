@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import moment from 'moment';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Pencil, Trash2 } from 'lucide-react';
@@ -34,6 +34,54 @@ const FiscalCalendarView = ({
     // Override mode state
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
+
+    // Drag-to-paint state
+    const isDraggingRef = useRef(false);
+    const dragDaysRef = useRef(new Set());
+    const [dragHighlight, setDragHighlight] = useState(new Set());
+    const paintStateRef = useRef({});
+
+    useEffect(() => {
+        paintStateRef.current = { selectedBrushId, eraserActive, onPaintDay, onBulkPaint };
+    }, [selectedBrushId, eraserActive, onPaintDay, onBulkPaint]);
+
+    // Global mouseup listener for drag-to-paint
+    useEffect(() => {
+        if (!paintMode) return;
+        const handleMouseUp = () => {
+            if (!isDraggingRef.current) return;
+            const days = [...dragDaysRef.current].sort();
+            const { selectedBrushId: brushId, eraserActive: eraser, onPaintDay: paintFn, onBulkPaint: bulkFn } = paintStateRef.current;
+
+            if (days.length === 1) {
+                if (eraser) paintFn?.(days[0], null);
+                else if (brushId) paintFn?.(days[0], brushId);
+            } else if (days.length > 1) {
+                if (eraser) bulkFn?.(days[0], days[days.length - 1], null);
+                else if (brushId) bulkFn?.(days[0], days[days.length - 1], brushId);
+            }
+
+            isDraggingRef.current = false;
+            dragDaysRef.current = new Set();
+            setDragHighlight(new Set());
+        };
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => window.removeEventListener('mouseup', handleMouseUp);
+    }, [paintMode]);
+
+    const handleDayMouseDown = useCallback((dateStr, e) => {
+        if (!paintMode || (!selectedBrushId && !eraserActive)) return;
+        e.preventDefault();
+        isDraggingRef.current = true;
+        dragDaysRef.current = new Set([dateStr]);
+        setDragHighlight(new Set([dateStr]));
+    }, [paintMode, selectedBrushId, eraserActive]);
+
+    const handleDayMouseEnter = useCallback((dateStr) => {
+        if (!isDraggingRef.current) return;
+        dragDaysRef.current.add(dateStr);
+        setDragHighlight(new Set(dragDaysRef.current));
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -187,12 +235,18 @@ const FiscalCalendarView = ({
                             const assignment = dayAssignments[dStr];
                             const templateColor = assignment?.template_color || defaultTemplateColor;
                             const hasAssignment = !!assignment;
+                            const isInDrag = dragHighlight.has(dStr);
 
                             let bgStyle = {};
                             let borderStyle = {};
                             let textClass = 'text-slate-700';
 
-                            if (isPublicHoliday) {
+                            if (isInDrag) {
+                                const brushColor = eraserActive ? '#64748b' : (templates.find(t => t.id === selectedBrushId)?.color || '#6366f1');
+                                bgStyle = { backgroundColor: brushColor + '30' };
+                                borderStyle = { borderColor: brushColor, borderWidth: '2px' };
+                                textClass = 'font-bold';
+                            } else if (isPublicHoliday) {
                                 bgStyle = { backgroundColor: '#fef2f2' };
                                 borderStyle = { borderColor: '#fecaca' };
                                 textClass = 'text-red-600 font-bold';
@@ -216,13 +270,14 @@ const FiscalCalendarView = ({
                             return (
                                 <div
                                     key={dStr}
-                                    onClick={() => handleDayClick(dStr)}
-                                    className={`${textClass} border rounded-md p-0.5 text-center text-[11px] cursor-pointer transition-all flex items-center justify-center h-8 relative hover:shadow-sm hover:scale-105`}
+                                    onMouseDown={(e) => handleDayMouseDown(dStr, e)}
+                                    onMouseEnter={() => handleDayMouseEnter(dStr)}
+                                    className={`${textClass} border rounded-md p-0.5 text-center text-[11px] cursor-pointer transition-all flex items-center justify-center h-8 relative select-none ${isInDrag ? 'shadow-md scale-105 z-10' : 'hover:shadow-sm hover:scale-105'}`}
                                     style={{ ...bgStyle, ...borderStyle }}
                                     title={tooltipText}
                                 >
                                     <span>{day.date()}</span>
-                                    {hasAssignment && (
+                                    {hasAssignment && !isInDrag && (
                                         <span className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: templateColor }} />
                                     )}
                                 </div>
