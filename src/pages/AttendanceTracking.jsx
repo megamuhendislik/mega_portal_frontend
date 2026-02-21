@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
     Clock, AlertCircle, Users, Activity,
-    Search, ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
-    ChevronDown, ChevronRight as ChevronRightIcon
+    Search, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import moment from 'moment';
+import {
+    formatMinutes,
+    EmployeeAttendanceRow,
+    HierarchyGroupRow,
+    EmployeeDetailModal,
+} from './attendance-tracking/AttendanceComponents';
 // useInterval removed — no auto-polling, user refreshes manually
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
@@ -123,13 +128,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         } catch (error) {
             console.error('Error fetching departments:', error);
         }
-    };
-
-    const formatMinutes = (minutes) => {
-        if (!minutes) return '0s 0dk';
-        const hours = Math.floor(Math.abs(minutes) / 60);
-        const mins = Math.abs(minutes) % 60;
-        return `${hours}s ${mins}dk`;
     };
 
     const renderDeviation = (statsObj) => {
@@ -284,104 +282,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return agg;
     };
 
-    // Render a single employee row (used by both hierarchy and flat list)
-    const renderEmployeeRow = (s, name, title, id, depth = 0, opts = {}) => {
-        const { isManager, nodeStats, isExpanded, onToggle } = opts;
-        return (
-            <tr key={(isManager ? 'mgr-' : 'emp-') + id} className={`hover:bg-slate-50/80 transition-all group border-b border-slate-50 ${isManager ? 'bg-slate-50/50' : ''}`}>
-                {/* Personel */}
-                <td className="py-3 pl-6 pr-3">
-                    <div className="flex items-center gap-3" style={hierarchySort ? { paddingLeft: `${depth * 20}px` } : undefined}>
-                        {hierarchySort && isManager && onToggle && (
-                            <div className="cursor-pointer p-1 rounded-md transition-colors bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500" onClick={onToggle}>
-                                {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
-                            </div>
-                        )}
-                        <div className="relative shrink-0">
-                            <div className={`rounded-full flex items-center justify-center text-xs font-bold border shadow-sm ${isManager ? 'w-9 h-9 bg-indigo-50 text-indigo-600 border-indigo-100' : 'w-8 h-8 bg-white text-slate-600 border-slate-100'}`}>
-                                {(name || '?').charAt(0)}
-                            </div>
-                            {s.is_online && (
-                                <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500"></span>
-                            )}
-                        </div>
-                        <div className="min-w-0 flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-700 text-sm truncate cursor-pointer hover:text-indigo-600 hover:underline transition-colors" onClick={() => handleEmployeeClick(id)}>{name}</span>
-                                {isManager && nodeStats && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold shrink-0">{nodeStats.count} Kişi</span>}
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-medium truncate">{title}</span>
-                        </div>
-                    </div>
-                </td>
-                {/* Durum */}
-                <td className="py-3 px-3">
-                    {s.is_online ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">Ofiste</span>
-                    ) : (
-                        <span className="text-[10px] font-bold text-slate-400">Dışarıda</span>
-                    )}
-                </td>
-                {/* BUGÜN: Normal */}
-                <td className="py-3 px-3 text-center">
-                    <span className="text-xs font-bold text-slate-700 font-mono">{formatMinutes(s.today_normal)}</span>
-                </td>
-                {/* BUGÜN: F.Mesai */}
-                <td className="py-3 px-3 text-center">
-                    {(s.today_overtime || 0) > 0 ? (
-                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(s.today_overtime)}</span>
-                    ) : <span className="text-slate-300">-</span>}
-                </td>
-                {/* BUGÜN: Mola */}
-                <td className="py-3 px-3 text-center">
-                    {(s.today_break || 0) > 0 ? (
-                        <span className="text-xs font-medium text-slate-500 font-mono">{formatMinutes(s.today_break)}</span>
-                    ) : <span className="text-slate-300">-</span>}
-                </td>
-                {/* AYLIK: Çalışma */}
-                <td className="py-3 px-3 text-center">
-                    <span className="text-xs font-semibold text-slate-600 font-mono">{formatMinutes(s.total_worked || 0)}</span>
-                </td>
-                {/* AYLIK: F.Mesai */}
-                <td className="py-3 px-3 text-center">
-                    {(s.total_overtime || 0) > 0 ? (
-                        <span className="text-xs font-bold text-amber-600 font-mono">+{formatMinutes(s.total_overtime)}</span>
-                    ) : <span className="text-slate-300">-</span>}
-                </td>
-                {/* AYLIK: Net Durum */}
-                <td className="py-3 px-3 text-center">
-                    {(() => {
-                        const missing = s.total_missing || 0;
-                        const overtime = s.total_overtime || 0;
-                        if (missing > 0) {
-                            return (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
-                                    <ArrowDownRight size={11} />
-                                    {formatMinutes(missing)} Eksik
-                                </span>
-                            );
-                        }
-                        if (overtime > 0) {
-                            return (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
-                                    <ArrowUpRight size={11} />
-                                    {formatMinutes(overtime)} Fazla
-                                </span>
-                            );
-                        }
-                        return <span className="text-slate-300 text-xs">—</span>;
-                    })()}
-                </td>
-                {/* Actions */}
-                <td className="py-3 px-3 text-center">
-                    <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => setSelectedEmployee(s)}>
-                        <Activity size={14} />
-                    </button>
-                </td>
-            </tr>
-        );
-    };
-
     const renderHierarchyRows = (nodes, depth = 0) => {
         if (!nodes) return null;
 
@@ -390,49 +290,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             if (node.type === 'GROUP') {
                 const isExpanded = expandedDepts[node.id];
                 const nodeStats = calculateNodeStats(node);
-                const memberCount = node.children ? node.children.length : 0;
-                const cnt = nodeStats.count || 1;
-                const avg = {
-                    total_worked: Math.round(nodeStats.total_worked / cnt),
-                    total_overtime: Math.round(nodeStats.total_overtime / cnt),
-                    total_missing: Math.round(nodeStats.total_missing / cnt),
-                };
 
                 return (
                     <React.Fragment key={node.id}>
-                        <tr className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
-                            <td className="p-3 pl-6">
-                                <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => toggleDept(node.id)} style={{ paddingLeft: `${depth * 20}px` }}>
-                                    <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500'}`}>
-                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
-                                    </div>
-                                    <span className="font-bold text-sm text-slate-700">{node.name}</span>
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{memberCount} Kişi</span>
-                                </div>
-                            </td>
-                            <td className="p-3">
-                                {nodeStats.onlineCount > 0 && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                        {nodeStats.onlineCount} Ofiste
-                                    </span>
-                                )}
-                            </td>
-                            <td colSpan={3} className="p-3 text-center"></td>
-                            <td className="p-3 text-center">
-                                {avg.total_worked > 0 && <span className="text-xs font-mono font-semibold text-slate-500">ort. {formatMinutes(avg.total_worked)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {avg.total_overtime > 0 && <span className="text-xs font-mono font-semibold text-amber-500">ort. +{formatMinutes(avg.total_overtime)}</span>}
-                            </td>
-                            <td className="p-3 text-center">
-                                {avg.total_missing > 0 ? (
-                                    <span className="text-xs font-semibold text-red-400">ort. {formatMinutes(avg.total_missing)} Eksik</span>
-                                ) : avg.total_overtime > 0 ? (
-                                    <span className="text-xs font-semibold text-emerald-400">ort. {formatMinutes(avg.total_overtime)} Fazla</span>
-                                ) : <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="p-3"></td>
-                        </tr>
+                        <HierarchyGroupRow
+                            node={node}
+                            depth={depth}
+                            isExpanded={isExpanded}
+                            onToggle={() => toggleDept(node.id)}
+                            nodeStats={nodeStats}
+                        />
                         {isExpanded && renderHierarchyRows(node.children, depth + 1)}
                     </React.Fragment>
                 );
@@ -459,12 +326,20 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             return (
                 <React.Fragment key={(hasChildren ? 'mgr-' : 'emp-') + node.id}>
-                    {renderEmployeeRow(s, node.name, node.title, node.id, depth, {
-                        isManager: hasChildren,
-                        nodeStats,
-                        isExpanded,
-                        onToggle: hasChildren ? () => toggleDept(node.id) : null
-                    })}
+                    <EmployeeAttendanceRow
+                        s={s}
+                        name={node.name}
+                        title={node.title}
+                        id={node.id}
+                        depth={depth}
+                        isManager={hasChildren}
+                        nodeStats={nodeStats}
+                        isExpanded={isExpanded}
+                        onToggle={hasChildren ? () => toggleDept(node.id) : null}
+                        hierarchySort={hierarchySort}
+                        onEmployeeClick={handleEmployeeClick}
+                        onDetailClick={setSelectedEmployee}
+                    />
                     {hasChildren && isExpanded && renderHierarchyRows(node.children, depth + 1)}
                 </React.Fragment>
             );
@@ -731,13 +606,18 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 sortedStats.length === 0 ? (
                                     <tr><td colSpan="9" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
                                 ) : (
-                                    sortedStats.map(item => renderEmployeeRow(
-                                        item,
-                                        item.employee_name,
-                                        item.department,
-                                        item.employee_id,
-                                        0,
-                                        {}
+                                    sortedStats.map(item => (
+                                        <EmployeeAttendanceRow
+                                            key={'emp-' + item.employee_id}
+                                            s={item}
+                                            name={item.employee_name}
+                                            title={item.department}
+                                            id={item.employee_id}
+                                            depth={0}
+                                            hierarchySort={hierarchySort}
+                                            onEmployeeClick={handleEmployeeClick}
+                                            onDetailClick={setSelectedEmployee}
+                                        />
                                     ))
                                 )
                             )}
@@ -747,123 +627,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             </div>
 
             {/* DETAIL MODAL */}
-            {
-                selectedEmployee && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedEmployee(null)} />
-
-                        <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-200">
-                                        {(selectedEmployee.employee_name || '?').charAt(0)}
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-800">{selectedEmployee.employee_name}</h3>
-                                        <p className="text-sm text-slate-500 font-medium">{selectedEmployee.department}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setSelectedEmployee(null)}
-                                    className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {/* Body - Daily Details */}
-                            <div className="p-6 space-y-8">
-
-                                {/* Stats Grid */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                        <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Normal</div>
-                                        <div className="text-2xl font-bold text-blue-700">{formatMinutes(selectedEmployee.today_normal || 0)}</div>
-                                    </div>
-                                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                                        <div className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Fazla</div>
-                                        <div className="text-2xl font-bold text-amber-700">+{formatMinutes(selectedEmployee.today_overtime || 0)}</div>
-                                    </div>
-                                    <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-                                        <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Eksik</div>
-                                        <div className="text-2xl font-bold text-red-700">-{formatMinutes(selectedEmployee.today_missing || 0)}</div>
-                                    </div>
-                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mola</div>
-                                        <div className="text-2xl font-bold text-slate-700">{formatMinutes(selectedEmployee.today_break || 0)}</div>
-                                    </div>
-                                </div>
-
-                                {/* Timeline */}
-                                <div>
-                                    <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                        <Clock size={16} className="text-slate-400" />
-                                        Zaman Çizelgesi
-                                    </h4>
-                                    <div className="relative w-full h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                                        {/* Using same logic as row but bigger */}
-                                        {(() => {
-                                            if (!selectedEmployee.today_check_in) return <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">Giriş Yok</div>;
-
-                                            const startMin = 420; // 07:00
-                                            const totalRange = 900; // 15 hours
-                                            const getMin = (iso) => {
-                                                if (!iso) return null;
-                                                const d = moment(iso);
-                                                return d.hours() * 60 + d.minutes();
-                                            };
-                                            const inMin = getMin(selectedEmployee.today_check_in);
-                                            const outMin = getMin(selectedEmployee.today_check_out) || (selectedEmployee.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60);
-
-                                            const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
-                                            const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
-
-                                            return (
-                                                <>
-                                                    {[0, 20, 40, 60, 80, 100].map(p => (
-                                                        <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/50" style={{ left: `${p}%` }}>
-                                                            <span className="absolute top-1 left-1 text-[10px] text-slate-400 font-mono">
-                                                                {moment().startOf('day').add(7 + (p / 100) * 15, 'hours').format('HH:mm')}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                    <div
-                                                        className={`absolute top-4 bottom-4 rounded-md shadow-sm flex items-center justify-center px-4 text-xs font-bold text-white whitespace-nowrap transition-all duration-500 ${selectedEmployee.is_online ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-slate-400'}`}
-                                                        style={{ left: `${barStart}%`, width: `${barWidth}%` }}
-                                                    >
-                                                        {moment(selectedEmployee.today_check_in).format('HH:mm')} - {selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm') : 'Şimdi'}
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
-
-                                {/* Additional Details (Times) */}
-                                <div className="flex items-center justify-between text-sm p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogIn size={16} /></div>
-                                        <div>
-                                            <div className="text-xs text-slate-400 font-semibold">Giriş Saati</div>
-                                            <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_in ? moment(selectedEmployee.today_check_in).format('HH:mm:ss') : '-'}</div>
-                                        </div>
-                                    </div>
-                                    <div className="h-8 w-px bg-slate-200"></div>
-                                    <div className="flex items-center gap-3 text-right">
-                                        <div>
-                                            <div className="text-xs text-slate-400 font-semibold">Çıkış Saati</div>
-                                            <div className="font-bold text-slate-700 font-mono">{selectedEmployee.today_check_out ? moment(selectedEmployee.today_check_out).format('HH:mm:ss') : (selectedEmployee.is_online ? <span className="text-emerald-500 animate-pulse">Ofiste</span> : '-')}</div>
-                                        </div>
-                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogOut size={16} /></div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+            <EmployeeDetailModal
+                employee={selectedEmployee}
+                onClose={() => setSelectedEmployee(null)}
+            />
         </div >
     );
 };

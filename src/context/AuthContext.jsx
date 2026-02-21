@@ -9,11 +9,9 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            // Check both storages
             const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
             if (token) {
                 try {
-                    // Fetch user profile from backend
                     const response = await api.get('/employees/me/');
                     setUser(response.data);
                 } catch (error) {
@@ -29,6 +27,16 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
         };
         checkAuth();
+
+        // Cross-tab logout sync: if another tab clears the token, logout here too
+        const handleStorageChange = (e) => {
+            if (e.key === 'access_token' && !e.newValue) {
+                setUser(null);
+                window.location.href = '/login';
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     const login = async (username, password, remember = false) => {

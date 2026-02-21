@@ -6,8 +6,9 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { tr } from 'date-fns/locale';
 import {
     Search, User, Calendar as CalendarIcon, ChevronLeft, ChevronRight,
-    Save, Trash2, Plus, ArrowLeft, Database, Download, Upload, ChevronDown, ChevronUp, X
+    ArrowLeft, Database, Download, Upload, ChevronDown, ChevronUp, X
 } from 'lucide-react';
+import DayEditModal from './data-management/DayEditModal';
 
 function YearlyStatsMatrix({ employee, initialYear }) {
     const [year, setYear] = useState(initialYear);
@@ -35,7 +36,7 @@ function YearlyStatsMatrix({ employee, initialYear }) {
 
     // Prepare matrix data: columns are months 1-12
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
-    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    const monthNames = ["Ocak", "\u015eubat", "Mart", "Nisan", "May\u0131s", "Haziran", "Temmuz", "A\u011fustos", "Eyl\u00fcl", "Ekim", "Kas\u0131m", "Aral\u0131k"];
 
     const getVal = (m, field) => {
         const found = stats.find(s => s.month === m);
@@ -46,7 +47,7 @@ function YearlyStatsMatrix({ employee, initialYear }) {
         <div className="bg-white rounded-lg border shadow-sm p-4 overflow-hidden">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-4">
-                    <h4 className="text-sm font-bold text-slate-800">Yıllık Özet Tablosu</h4>
+                    <h4 className="text-sm font-bold text-slate-800">Y\u0131ll\u0131k \u00d6zet Tablosu</h4>
 
                     <div className="flex items-center bg-slate-100 rounded-lg p-1">
                         <button
@@ -64,7 +65,7 @@ function YearlyStatsMatrix({ employee, initialYear }) {
                         </button>
                     </div>
                 </div>
-                {loading && <span className="text-xs text-slate-400 animate-pulse">Yükleniyor...</span>}
+                {loading && <span className="text-xs text-slate-400 animate-pulse">Y\u00fckleniyor...</span>}
             </div>
 
             <div className="overflow-x-auto pb-2">
@@ -160,15 +161,15 @@ export default function DataManagement() {
 
     const openSettlement = (employee, month, stat) => {
         // stat has { normal, ot, missing, net_balance (if available) }
-        // bulkStats might not have net_balance? 
-        // We can infer Net = (Normal + OT) - Target? Or just (OT - Missing)? 
+        // bulkStats might not have net_balance?
+        // We can infer Net = (Normal + OT) - Target? Or just (OT - Missing)?
         // Usually Net Balance = Total Work - Target.
         // But here we rely on what 'bulkStats' returns.
         // Let's ensure bulkStats returns 'net_balance' or 'balance'.
 
         // If not available, we assume Balance ~= OT - Missing (roughly for visualization)
         // But for settlement we need exact.
-        // Let's pass what we have, and maybe fetch exact in modal? 
+        // Let's pass what we have, and maybe fetch exact in modal?
         // Or assume the user wants to settle the visible surplus/deficit.
         const balance = stat.balance !== undefined ? stat.balance : (stat.ot - stat.missing);
 
@@ -228,7 +229,7 @@ export default function DataManagement() {
     };
 
     const handleAutoFill = async () => {
-        if (!window.confirm(`${format(currentMonth, 'MMMM', { locale: tr })} ayı için eksik günleri otomatik tamamlamak istiyor musunuz?`)) return;
+        if (!window.confirm(`${format(currentMonth, 'MMMM', { locale: tr })} ay\u0131 i\u00e7in eksik g\u00fcnleri otomatik tamamlamak istiyor musunuz?`)) return;
 
         try {
             const res = await api.post('/system-data/auto_fill_month/', {
@@ -236,7 +237,7 @@ export default function DataManagement() {
                 year: currentMonth.getFullYear(),
                 month: currentMonth.getMonth() + 1
             });
-            alert(`${res.data.filled_days} gün otomatik tamamlandı.`);
+            alert(`${res.data.filled_days} g\u00fcn otomatik tamamland\u0131.`);
             fetchMonthlyData(); // Refresh calendar
         } catch (e) {
             alert('Hata: ' + e.message);
@@ -280,7 +281,7 @@ export default function DataManagement() {
 
     const handleExport = async (fmt) => {
         try {
-            setMessage({ type: 'info', text: 'Yedek hazırlanıyor, lütfen bekleyin...' });
+            setMessage({ type: 'info', text: 'Yedek haz\u0131rlan\u0131yor, l\u00fctfen bekleyin...' });
             const response = await api.get(`/system-data/export_backup/?format=${fmt}`, {
                 responseType: 'blob'
             });
@@ -307,10 +308,10 @@ export default function DataManagement() {
             link.click();
             link.remove();
 
-            setMessage({ type: 'success', text: 'Yedek başarıyla indirildi.' });
+            setMessage({ type: 'success', text: 'Yedek ba\u015far\u0131yla indirildi.' });
         } catch (err) {
             console.error(err);
-            setMessage({ type: 'error', text: 'İndirme başarısız: ' + (err.response?.data?.error || err.message) });
+            setMessage({ type: 'error', text: '\u0130ndirme ba\u015far\u0131s\u0131z: ' + (err.response?.data?.error || err.message) });
         }
     };
 
@@ -318,8 +319,8 @@ export default function DataManagement() {
         const file = e.target.files[0];
         if (!file) return;
 
-        let msg = 'DİKKAT: Veriler güncellenecektir. Devam?';
-        if (dryRun) msg = 'SİMÜLASYON MODU: Veriler taranacak fakat veritabanı DEĞİŞTİRİLMEYECEKTİR. Devam?';
+        let msg = 'D\u0130KKAT: Veriler g\u00fcncellenecektir. Devam?';
+        if (dryRun) msg = 'S\u0130M\u00dcLASYON MODU: Veriler taranacak fakat veritaban\u0131 DE\u011e\u0130\u015eT\u0130R\u0130LMEYECEKT\u0130R. Devam?';
 
         if (!window.confirm(msg)) {
             e.target.value = null; // Reset input
@@ -336,9 +337,9 @@ export default function DataManagement() {
 
             if (res.data.summary) {
                 setSimulationReport(res.data.summary);
-                setMessage({ type: 'success', text: 'Simülasyon Tamamlandı. Raporu inceleyin.' });
+                setMessage({ type: 'success', text: 'Sim\u00fclasyon Tamamland\u0131. Raporu inceleyin.' });
             } else {
-                setMessage({ type: 'success', text: res.data.message || 'Geri yükleme başarılı.' });
+                setMessage({ type: 'success', text: res.data.message || 'Geri y\u00fckleme ba\u015far\u0131l\u0131.' });
             }
         } catch (err) {
             setMessage({ type: 'error', text: 'Hata: ' + (err.response?.data?.error || err.message) });
@@ -350,14 +351,14 @@ export default function DataManagement() {
 
     // Matrix Helper
     const monthCols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-    const monthNamesShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+    const monthNamesShort = ["Oca", "\u015eub", "Mar", "Nis", "May", "Haz", "Tem", "A\u011fu", "Eyl", "Eki", "Kas", "Ara"];
 
     // Permission Check
     if (!hasPermission('PAGE_DATA_MANAGEMENT') && !hasPermission('SYSTEM_FULL_ACCESS')) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
-                <h2 className="text-xl font-bold text-red-500 mb-2">Erişim Reddedildi</h2>
-                <p className="text-slate-600">Bu sayfayı görüntülemek için yeterli yetkiniz bulunmamaktadır.</p>
+                <h2 className="text-xl font-bold text-red-500 mb-2">Eri\u015fim Reddedildi</h2>
+                <p className="text-slate-600">Bu sayfay\u0131 g\u00f6r\u00fcnt\u00fclemek i\u00e7in yeterli yetkiniz bulunmamaktad\u0131r.</p>
             </div>
         );
     }
@@ -367,7 +368,7 @@ export default function DataManagement() {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Database className="text-blue-600" />
-                    Sistem Veri Yönetimi (Yıllık Matris)
+                    Sistem Veri Y\u00f6netimi (Y\u0131ll\u0131k Matris)
                 </h1>
 
                 <div className="flex bg-white rounded-lg shadow-sm p-1 border">
@@ -375,7 +376,7 @@ export default function DataManagement() {
                         onClick={() => setActiveTab('browse_users')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'browse_users' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-gray-50'}`}
                     >
-                        Yıllık Matris
+                        Y\u0131ll\u0131k Matris
                     </button>
                     <button
                         onClick={() => setActiveTab('backup')}
@@ -389,7 +390,7 @@ export default function DataManagement() {
             {message && (
                 <div className={`p-4 mb-6 rounded-lg flex justify-between items-center ${message.type === 'error' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100'}`}>
                     <span>{message.text}</span>
-                    <button onClick={() => setMessage(null)} className="font-bold hover:opacity-75">×</button>
+                    <button onClick={() => setMessage(null)} className="font-bold hover:opacity-75">{'\u00d7'}</button>
                 </div>
             )}
 
@@ -402,25 +403,25 @@ export default function DataManagement() {
                                 <Download className="text-blue-600" size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800">Veri Dışa Aktar</h2>
-                                <p className="text-sm text-slate-500">Sistem yedeğini indir</p>
+                                <h2 className="text-lg font-bold text-slate-800">Veri D\u0131\u015fa Aktar</h2>
+                                <p className="text-sm text-slate-500">Sistem yede\u011fini indir</p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <button onClick={() => handleExport('json')} className="w-full flex items-center justify-between p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group">
                                 <span className="font-medium text-slate-700 group-hover:text-blue-700">JSON (Tam Yedek)</span>
-                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-blue-200 group-hover:text-blue-800">Restore İçin</span>
+                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-blue-200 group-hover:text-blue-800">Restore \u0130\u00e7in</span>
                             </button>
                             {/* SQL Export Disabled
                             <button onClick={() => handleExport('sql')} className="w-full flex items-center justify-between p-4 border rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group">
                                 <span className="font-medium text-slate-700 group-hover:text-purple-700">SQL Dump (PostgreSQL)</span>
-                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-purple-200 group-hover:text-purple-800">DB Yöneticisi İçin</span>
+                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-purple-200 group-hover:text-purple-800">DB Y\u00f6neticisi \u0130\u00e7in</span>
                             </button>
                             */}
                             <button onClick={() => handleExport('csv')} className="w-full flex items-center justify-between p-4 border rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group">
                                 <span className="font-medium text-slate-700 group-hover:text-green-700">CSV (Excel)</span>
-                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-green-200 group-hover:text-green-800">Raporlama İçin</span>
+                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-green-200 group-hover:text-green-800">Raporlama \u0130\u00e7in</span>
                             </button>
                         </div>
                     </div>
@@ -432,8 +433,8 @@ export default function DataManagement() {
                                 <Upload className="text-orange-600" size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800">Geri Yükle</h2>
-                                <p className="text-sm text-slate-500">JSON yedeğinden geri dön</p>
+                                <h2 className="text-lg font-bold text-slate-800">Geri Y\u00fckle</h2>
+                                <p className="text-sm text-slate-500">JSON yede\u011finden geri d\u00f6n</p>
                             </div>
                         </div>
 
@@ -449,9 +450,9 @@ export default function DataManagement() {
                             <label htmlFor="backup-upload" className="cursor-pointer block">
                                 <Database size={48} className="mx-auto text-slate-300 mb-4" />
                                 <span className="block font-medium text-slate-700 mb-1">
-                                    {importing ? 'Yükleniyor...' : 'Dosya Seç veya Sürükle'}
+                                    {importing ? 'Y\u00fckleniyor...' : 'Dosya Se\u00e7 veya S\u00fcr\u00fckle'}
                                 </span>
-                                <span className="text-xs text-slate-400">Sadece .json dosyaları</span>
+                                <span className="text-xs text-slate-400">Sadece .json dosyalar\u0131</span>
                             </label>
 
                             <div className="mt-6 pt-4 border-t border-slate-100">
@@ -463,8 +464,8 @@ export default function DataManagement() {
                                         className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-slate-300 transition-colors"
                                     />
                                     <div className="text-left">
-                                        <div className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Sadece Doğrula (Simülasyon Modu)</div>
-                                        <div className="text-xs text-slate-500">İşaretlerseniz veritabanında değişiklik yapılmaz.</div>
+                                        <div className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Sadece Do\u011frula (Sim\u00fclasyon Modu)</div>
+                                        <div className="text-xs text-slate-500">\u0130\u015faretlerseniz veritaban\u0131nda de\u011fi\u015fiklik yap\u0131lmaz.</div>
                                     </div>
                                 </label>
                             </div>
@@ -478,7 +479,7 @@ export default function DataManagement() {
                     {viewMode === 'list' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                                <h2 className="font-bold text-slate-700">Yıllık Personel Özeti</h2>
+                                <h2 className="font-bold text-slate-700">Y\u0131ll\u0131k Personel \u00d6zeti</h2>
 
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
@@ -514,7 +515,7 @@ export default function DataManagement() {
                                             {monthNamesShort.map((m, i) => (
                                                 <th key={m} className={`px-2 py-3 text-center border-b min-w-[70px] ${i % 2 === 0 ? 'bg-slate-50/95' : 'bg-white/95'}`}>{m}</th>
                                             ))}
-                                            <th className="px-4 py-3 border-b text-right min-w-[100px]">İşlem</th>
+                                            <th className="px-4 py-3 border-b text-right min-w-[100px]">\u0130\u015flem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -564,9 +565,9 @@ export default function DataManagement() {
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); openSettlement(emp, m, stat); }}
                                                                         className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 rounded"
-                                                                        title="Mahsuplaş / Sıfırla"
+                                                                        title="Mahsupla\u015f / S\u0131f\u0131rla"
                                                                     >
-                                                                        Sıfırla
+                                                                        S\u0131f\u0131rla
                                                                     </button>
                                                                 )}
                                                             </td>
@@ -577,7 +578,7 @@ export default function DataManagement() {
                                                         <button
                                                             onClick={() => handleSelectUser(emp)}
                                                             className="text-slate-400 hover:text-blue-600 transition-colors"
-                                                            title="Takvimi Aç"
+                                                            title="Takvimi A\u00e7"
                                                         >
                                                             <CalendarIcon size={18} />
                                                         </button>
@@ -588,7 +589,7 @@ export default function DataManagement() {
                                     </tbody>
                                 </table>
                                 {filteredEmployees.length === 0 && (
-                                    <div className="p-8 text-center text-slate-500">Sonuç bulunamadı.</div>
+                                    <div className="p-8 text-center text-slate-500">Sonu\u00e7 bulunamad\u0131.</div>
                                 )}
                             </div>
                         </div>
@@ -601,7 +602,7 @@ export default function DataManagement() {
                                     className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors"
                                 >
                                     <ArrowLeft size={20} />
-                                    <span className="font-medium">Listeye Dön</span>
+                                    <span className="font-medium">Listeye D\u00f6n</span>
                                 </button>
 
                                 <div className="flex flex-col items-center gap-2">
@@ -620,7 +621,7 @@ export default function DataManagement() {
                                         onClick={handleAutoFill}
                                         className="text-xs text-blue-600 hover:underline font-bold"
                                     >
-                                        Ayı Otomatik Tamamla (Eksikleri Doldur)
+                                        Ay\u0131 Otomatik Tamamla (Eksikleri Doldur)
                                     </button>
                                 </div>
 
@@ -637,7 +638,7 @@ export default function DataManagement() {
 
                             {/* Calendar Grid */}
                             {loadingCalendar ? (
-                                <div className="h-[400px] flex items-center justify-center text-slate-400">Yükleniyor...</div>
+                                <div className="h-[400px] flex items-center justify-center text-slate-400">Y\u00fckleniyor...</div>
                             ) : (
                                 <CalendarGrid
                                     currentMonth={currentMonth}
@@ -676,7 +677,7 @@ export default function DataManagement() {
                         <div className="p-6 border-b flex justify-between items-center bg-slate-50">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                Simülasyon Raporu
+                                Sim\u00fclasyon Raporu
                             </h3>
                             <button onClick={() => setSimulationReport(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
                                 <X size={24} />
@@ -685,12 +686,12 @@ export default function DataManagement() {
 
                         <div className="p-6 max-h-[60vh] overflow-y-auto">
                             <div className="mb-4 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
-                                <p className="font-bold mb-1">Doğrulama Başarılı!</p>
-                                <p>Aşağıdaki veriler veritabanına aktarılmak üzere başarıyla tarandı. (Şu an hiçbir değişiklik yapılmadı)</p>
+                                <p className="font-bold mb-1">Do\u011frulama Ba\u015far\u0131l\u0131!</p>
+                                <p>A\u015fa\u011f\u0131daki veriler veritaban\u0131na aktar\u0131lmak \u00fczere ba\u015far\u0131yla tarand\u0131. (\u015eu an hi\u00e7bir de\u011fi\u015fiklik yap\u0131lmad\u0131)</p>
                             </div>
 
                             <div className="space-y-2">
-                                <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider mb-3">Bulunan Kayıtlar</h4>
+                                <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider mb-3">Bulunan Kay\u0131tlar</h4>
                                 {Object.entries(simulationReport).map(([model, count]) => (
                                     <div key={model} className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-100">
                                         <span className="font-mono text-sm text-slate-600">{model}</span>
@@ -698,7 +699,7 @@ export default function DataManagement() {
                                     </div>
                                 ))}
                                 {Object.keys(simulationReport).length === 0 && (
-                                    <div className="text-slate-500 italic text-center py-4">Özet oluşturulamadı veya dosya boş.</div>
+                                    <div className="text-slate-500 italic text-center py-4">\u00d6zet olu\u015fturulamad\u0131 veya dosya bo\u015f.</div>
                                 )}
                             </div>
                         </div>
@@ -734,7 +735,7 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
     return (
         <div>
             <div className="grid grid-cols-7 mb-4 border-b pb-2">
-                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
+                {['Pzt', 'Sal', '\u00c7ar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
                     <div key={d} className="text-center text-xs font-bold text-slate-400 uppercase tracking-wider">{d}</div>
                 ))}
             </div>
@@ -768,7 +769,7 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
                                 <div className="flex gap-0.5">
                                     {hasLeave && (
                                         <span className={`text-[8px] px-1 py-0.5 rounded font-bold ${hasLeave.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                            İZİN
+                                            \u0130Z\u0130N
                                         </span>
                                     )}
                                     {hasOtReq && (
@@ -806,7 +807,7 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
                                 </div>
                             ) : !hasLeave ? (
                                 <div className="flex justify-center items-center h-full pb-4 text-xs text-slate-300 group-hover:text-blue-500 font-medium mt-2">
-                                    Kayıt Yok
+                                    Kay\u0131t Yok
                                 </div>
                             ) : null}
                         </div>
@@ -822,7 +823,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState('');
 
-    const monthNames = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const monthNames = ['', 'Ocak', '\u015eubat', 'Mart', 'Nisan', 'May\u0131s', 'Haziran', 'Temmuz', 'A\u011fustos', 'Eyl\u00fcl', 'Ekim', 'Kas\u0131m', 'Aral\u0131k'];
 
     useEffect(() => {
         if (isOpen) {
@@ -834,7 +835,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
 
     const handleAction = async () => {
         if (mode === 'real_reset' && confirmText !== 'ONAYLA') {
-            alert('Onaylamak için "ONAYLA" yazın.');
+            alert('Onaylamak i\u00e7in "ONAYLA" yaz\u0131n.');
             return;
         }
         setLoading(true);
@@ -847,7 +848,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                 year: data.year,
                 month: data.month,
             });
-            alert(res.data.message || 'İşlem başarılı.');
+            alert(res.data.message || '\u0130\u015flem ba\u015far\u0131l\u0131.');
             onSaveSuccess();
             onClose();
         } catch (e) {
@@ -870,18 +871,18 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                {/* Header — Çalışan + Dönem bilgisi */}
+                {/* Header \u2014 \u00c7al\u0131\u015fan + D\u00f6nem bilgisi */}
                 <div className="px-6 py-5 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
                     <div className="flex justify-between items-start">
                         <div>
-                            <div className="text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Bakiye İşlemi</div>
+                            <div className="text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Bakiye \u0130\u015flemi</div>
                             <h3 className="text-xl font-bold">{empName}</h3>
                             <div className="flex items-center gap-3 mt-1.5">
                                 {empDept && <span className="text-xs bg-white/10 px-2 py-0.5 rounded">{empDept}</span>}
                                 <span className="text-sm font-semibold text-blue-300">{periodLabel}</span>
                             </div>
                         </div>
-                        <button onClick={onClose} className="text-white/50 hover:text-white text-2xl font-bold leading-none mt-1">×</button>
+                        <button onClick={onClose} className="text-white/50 hover:text-white text-2xl font-bold leading-none mt-1">{'\u00d7'}</button>
                     </div>
                 </div>
 
@@ -906,18 +907,18 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                         <div className="flex items-start gap-3">
                             <input type="radio" name="smode" checked={mode === 'settle'} readOnly className="mt-1 w-4 h-4 text-blue-600" />
                             <div>
-                                <div className="font-bold text-slate-900">Mutabakat (Sıfırla)</div>
+                                <div className="font-bold text-slate-900">Mutabakat (S\u0131f\u0131rla)</div>
                                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Bakiyeyi sıfırlar ve bir sonraki aya devretmesini engeller.
-                                    {isSurplus && ' Artı bakiye için ödeme yapıldığını,'}
-                                    {isDeficit && ' Eksi bakiye için maaştan düşüldüğünü,'}
-                                    {' '}muhasebe elle takip eder. Mesai kayıtları değişmez.
+                                    Bakiyeyi s\u0131f\u0131rlar ve bir sonraki aya devretmesini engeller.
+                                    {isSurplus && ' Art\u0131 bakiye i\u00e7in \u00f6deme yap\u0131ld\u0131\u011f\u0131n\u0131,'}
+                                    {isDeficit && ' Eksi bakiye i\u00e7in maa\u015ftan d\u00fc\u015f\u00fcld\u00fc\u011f\u00fcn\u00fc,'}
+                                    {' '}muhasebe elle takip eder. Mesai kay\u0131tlar\u0131 de\u011fi\u015fmez.
                                 </p>
                             </div>
                         </div>
                     </label>
 
-                    {/* Option 2: Gerçek Sıfırla */}
+                    {/* Option 2: Ger\u00e7ek S\u0131f\u0131rla */}
                     <label
                         className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${mode === 'real_reset' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300'}`}
                         onClick={() => setMode('real_reset')}
@@ -925,10 +926,10 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                         <div className="flex items-start gap-3">
                             <input type="radio" name="smode" checked={mode === 'real_reset'} readOnly className="mt-1 w-4 h-4 text-red-600" />
                             <div>
-                                <div className="font-bold text-slate-900">Gerçek Sıfırla</div>
+                                <div className="font-bold text-slate-900">Ger\u00e7ek S\u0131f\u0131rla</div>
                                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Eksik saatleri mesai kaydı olarak doldurur. Çalışan o saatleri çalışmış gibi
-                                    görünür ve normal mesai tam olur. <strong className="text-red-600">Bu işlem geri alınamaz.</strong>
+                                    Eksik saatleri mesai kayd\u0131 olarak doldurur. \u00c7al\u0131\u015fan o saatleri \u00e7al\u0131\u015fm\u0131\u015f gibi
+                                    g\u00f6r\u00fcn\u00fcr ve normal mesai tam olur. <strong className="text-red-600">Bu i\u015flem geri al\u0131namaz.</strong>
                                 </p>
                             </div>
                         </div>
@@ -937,7 +938,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                     {/* Confirm input for real reset */}
                     {mode === 'real_reset' && (
                         <div className="ml-7 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-xs text-red-700 mb-2 font-semibold">Onaylamak için "ONAYLA" yazın:</p>
+                            <p className="text-xs text-red-700 mb-2 font-semibold">Onaylamak i\u00e7in "ONAYLA" yaz\u0131n:</p>
                             <input
                                 type="text"
                                 value={confirmText}
@@ -952,567 +953,15 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                 {/* Actions */}
                 <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2.5 text-sm text-slate-600 font-semibold hover:bg-slate-200 rounded-lg">
-                        İptal
+                        \u0130ptal
                     </button>
                     <button
                         onClick={handleAction}
                         disabled={loading || (mode === 'real_reset' && confirmText !== 'ONAYLA')}
                         className={`px-6 py-2.5 text-sm text-white font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'real_reset' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        {loading ? 'İşleniyor...' : mode === 'real_reset' ? 'Gerçek Sıfırla' : 'Mutabakat Yap'}
+                        {loading ? '\u0130\u015fleniyor...' : mode === 'real_reset' ? 'Ger\u00e7ek S\u0131f\u0131rla' : 'Mutabakat Yap'}
                     </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-function DayEditModal({ isOpen, onClose, employee, date, onSaveSuccess }) {
-    const [records, setRecords] = useState([]);
-    const [leaves, setLeaves] = useState([]);
-    const [otRequests, setOtRequests] = useState([]);
-    const [leaveBalance, setLeaveBalance] = useState([]);
-    const [requestTypes, setRequestTypes] = useState([]);
-    const [dailyTarget, setDailyTarget] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [deleteIds, setDeleteIds] = useState([]);
-    const [activeTab, setActiveTab] = useState('overview');
-
-    // Smart Entry State
-    const [workStart, setWorkStart] = useState('08:00');
-    const [workDuration, setWorkDuration] = useState(9);
-    const [otDuration, setOtDuration] = useState(2);
-
-    // Leave Create Form
-    const [leaveTypeId, setLeaveTypeId] = useState('');
-    const [leaveStart, setLeaveStart] = useState('');
-    const [leaveEnd, setLeaveEnd] = useState('');
-    const [leaveReason, setLeaveReason] = useState('');
-
-    const dateStr = format(date, 'yyyy-MM-dd');
-
-    const loadData = () => {
-        setLoading(true);
-        setDeleteIds([]);
-        api.get('/system-data/daily_records/', {
-            params: { employee_id: employee.id, date: dateStr }
-        }).then(res => {
-            setRecords(res.data.records || []);
-            setLeaves(res.data.leaves || []);
-            setOtRequests(res.data.overtime_requests || []);
-            setLeaveBalance(res.data.leave_balance || []);
-            setRequestTypes(res.data.request_types || []);
-            setDailyTarget(res.data.daily_target_seconds || 0);
-            if (res.data.request_types?.length > 0 && !leaveTypeId) {
-                setLeaveTypeId(res.data.request_types[0].id);
-            }
-        }).finally(() => setLoading(false));
-    };
-
-    useEffect(() => {
-        if (isOpen) {
-            loadData();
-            setLeaveStart(dateStr);
-            setLeaveEnd(dateStr);
-            setLeaveReason('');
-        }
-    }, [isOpen, employee.id, dateStr]);
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.post('/system-data/update_daily_records/', {
-                employee_id: employee.id, date: dateStr,
-                records: records, delete_ids: deleteIds
-            });
-            alert('Kaydedildi!');
-            if (onSaveSuccess) onSaveSuccess();
-            loadData();
-        } catch (e) { alert('Hata: ' + e.message); }
-        finally { setSaving(false); }
-    };
-
-    const addRecord = () => {
-        setRecords([...records, {
-            id: null, check_in: `${dateStr}T09:00`, check_out: `${dateStr}T18:00`,
-            source: 'MANUAL', status: 'OPEN'
-        }]);
-    };
-
-    const updateRec = (idx, field, val) => {
-        const n = [...records]; n[idx][field] = val; setRecords(n);
-    };
-
-    const removeRec = (idx) => {
-        const rec = records[idx];
-        if (rec.id) setDeleteIds([...deleteIds, rec.id]);
-        setRecords(records.filter((_, i) => i !== idx));
-    };
-
-    const applyDailyWork = () => {
-        const idsToDelete = records.filter(r => r.id).map(r => r.id);
-        setDeleteIds([...deleteIds, ...idsToDelete]);
-        const [sh, sm] = workStart.split(':').map(Number);
-        const startDate = new Date(date); startDate.setHours(sh, sm, 0, 0);
-        const endDate = new Date(startDate.getTime() + workDuration * 60 * 60 * 1000);
-        setRecords([{
-            id: null, check_in: `${dateStr}T${workStart}`,
-            check_out: format(endDate, "yyyy-MM-dd'T'HH:mm"), source: 'MANUAL', status: 'OPEN'
-        }]);
-        alert('Günlük kayıt oluşturuldu. Kaydet butonuna basmayı unutmayın.');
-    };
-
-    const addOvertime = () => {
-        let lastEnd = new Date(date); lastEnd.setHours(18, 0, 0, 0);
-        if (records.length > 0) {
-            const sorted = [...records].sort((a, b) => new Date(b.check_out) - new Date(a.check_out));
-            if (sorted[0].check_out) lastEnd = new Date(sorted[0].check_out);
-        }
-        const end = new Date(lastEnd.getTime() + otDuration * 60 * 60 * 1000);
-        setRecords([...records, {
-            id: null, check_in: format(lastEnd, "yyyy-MM-dd'T'HH:mm"),
-            check_out: format(end, "yyyy-MM-dd'T'HH:mm"), source: 'MANUAL', status: 'OPEN'
-        }]);
-    };
-
-    const totalHours = () => {
-        let t = 0;
-        records.forEach(r => { if (r.check_in && r.check_out) { const d = new Date(r.check_out) - new Date(r.check_in); if (d > 0) t += d; } });
-        return (t / (1000 * 60 * 60)).toFixed(1);
-    };
-
-    const handleCreateLeave = async () => {
-        if (!leaveTypeId || !leaveStart || !leaveEnd) { alert('Lütfen tüm alanları doldurun'); return; }
-        setSaving(true);
-        try {
-            const res = await api.post('/system-data/admin_create_leave/', {
-                employee_id: employee.id, request_type_id: leaveTypeId,
-                start_date: leaveStart, end_date: leaveEnd, reason: leaveReason || 'Muhasebe tarafından oluşturuldu'
-            });
-            alert(res.data.message);
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) { alert('Hata: ' + (e.response?.data?.error || e.message)); }
-        finally { setSaving(false); }
-    };
-
-    const handleCancelLeave = async (leaveId) => {
-        if (!confirm('Bu izni iptal etmek istediğinize emin misiniz?')) return;
-        try {
-            const res = await api.post('/system-data/admin_cancel_leave/', { leave_id: leaveId });
-            alert(res.data.message);
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) { alert('Hata: ' + (e.response?.data?.error || e.message)); }
-    };
-
-    const handleOtAction = async (otId, action) => {
-        const reason = action === 'reject' ? prompt('Red sebebi:') : '';
-        if (action === 'reject' && reason === null) return;
-        try {
-            const res = await api.post('/system-data/admin_manage_overtime/', {
-                overtime_id: otId, action, reason
-            });
-            alert(res.data.message);
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) { alert('Hata: ' + (e.response?.data?.error || e.message)); }
-    };
-
-    const fmtSec = (s) => { const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h}s ${m}dk`; };
-
-    const statusBadge = (status) => {
-        const map = {
-            'APPROVED': 'bg-emerald-100 text-emerald-700',
-            'PENDING': 'bg-yellow-100 text-yellow-700',
-            'REJECTED': 'bg-red-100 text-red-700',
-            'CANCELLED': 'bg-slate-100 text-slate-500',
-            'POTENTIAL': 'bg-blue-100 text-blue-700',
-        };
-        return <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${map[status] || 'bg-slate-100 text-slate-600'}`}>{status}</span>;
-    };
-
-    if (!isOpen) return null;
-
-    const tabs = [
-        { key: 'overview', icon: '📊', label: 'Özet' },
-        { key: 'attendance', icon: '📝', label: 'Giriş/Çıkış' },
-        { key: 'leave', icon: '🏖️', label: 'İzin' },
-        { key: 'overtime', icon: '⏰', label: 'Fazla Mesai' },
-    ];
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
-                {/* Header */}
-                <div className="p-5 border-b flex justify-between items-center bg-gradient-to-r from-slate-50 to-blue-50/30">
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            {format(date, 'd MMMM yyyy, EEEE', { locale: tr })}
-                            <span className="text-xs font-normal text-slate-500 bg-white border px-2 py-1 rounded-full">
-                                {employee.first_name} {employee.last_name}
-                            </span>
-                        </h3>
-                        <div className="text-sm text-slate-500 mt-1 flex gap-4 flex-wrap">
-                            <span>Toplam: <b className="text-slate-800">{totalHours()} Saat</b></span>
-                            {dailyTarget > 0 && <span>Hedef: <b className="text-blue-600">{fmtSec(dailyTarget)}</b></span>}
-                            {leaves.length > 0 && <span className="text-emerald-600 font-bold">🏖️ İzinli</span>}
-                            {otRequests.length > 0 && <span className="text-amber-600 font-bold">⏰ {otRequests.length} FM Talebi</span>}
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-red-500">
-                        <span className="font-bold text-xl">×</span>
-                    </button>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex border-b bg-white">
-                    {tabs.map(tab => (
-                        <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                            className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-1.5
-                                ${activeTab === tab.key ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-slate-500 hover:bg-slate-50'}`}>
-                            <span>{tab.icon}</span> {tab.label}
-                            {tab.key === 'leave' && leaves.length > 0 && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded-full">{leaves.length}</span>}
-                            {tab.key === 'overtime' && otRequests.length > 0 && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded-full">{otRequests.length}</span>}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="p-5 overflow-y-auto flex-1 bg-slate-50/30">
-                    {loading ? (
-                        <div className="text-center py-10">Yükleniyor...</div>
-                    ) : (
-                        <>
-                            {/* ========== OVERVIEW TAB ========== */}
-                            {activeTab === 'overview' && (
-                                <div className="space-y-4 animate-fade-in">
-                                    {/* Summary Cards */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        {[
-                                            { label: 'Hedef', value: fmtSec(dailyTarget), color: 'blue', icon: '🎯' },
-                                            { label: 'Normal', value: fmtSec(records.reduce((s, r) => s + (r.normal_seconds || 0), 0)), color: 'green', icon: '✅' },
-                                            { label: 'Fazla Mesai', value: fmtSec(records.reduce((s, r) => s + (r.overtime_seconds || 0), 0)), color: 'amber', icon: '⏰' },
-                                            { label: 'Eksik', value: fmtSec(records.reduce((s, r) => s + (r.missing_seconds || 0), 0)), color: 'red', icon: '❌' },
-                                        ].map((card, i) => (
-                                            <div key={i} className={`bg-white rounded-xl border p-3 border-${card.color}-100`}>
-                                                <div className="text-xs text-slate-500 mb-1">{card.icon} {card.label}</div>
-                                                <div className={`text-lg font-bold text-${card.color}-600`}>{card.value}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Attendance Records Preview */}
-                                    <div className="bg-white rounded-xl border p-4">
-                                        <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-blue-500 rounded-full"></div> Giriş/Çıkış Kayıtları
-                                        </h4>
-                                        {records.length > 0 ? (
-                                            <div className="space-y-1">
-                                                {records.map((rec, i) => (
-                                                    <div key={i} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg">
-                                                        <span className="font-mono text-slate-600">
-                                                            {rec.check_in ? format(new Date(rec.check_in), 'HH:mm') : '?'} → {rec.check_out ? format(new Date(rec.check_out), 'HH:mm') : '?'}
-                                                        </span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs bg-slate-200 text-slate-500 px-2 py-0.5 rounded">{rec.source}</span>
-                                                            {rec.normal_seconds > 0 && <span className="text-[10px] text-green-600">{fmtSec(rec.normal_seconds)}</span>}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : <p className="text-sm text-slate-400 italic">Kayıt yok</p>}
-                                    </div>
-
-                                    {/* Leaves on this day */}
-                                    {leaves.length > 0 && (
-                                        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4">
-                                            <h4 className="text-sm font-bold text-emerald-700 mb-2">🏖️ İzin Kayıtları</h4>
-                                            {leaves.map((lr, i) => (
-                                                <div key={i} className="flex justify-between items-center bg-white rounded-lg p-2 mb-1 border border-emerald-100">
-                                                    <div>
-                                                        <span className="font-medium text-sm text-slate-700">{lr.type_name}</span>
-                                                        <span className="text-xs text-slate-400 ml-2">{lr.start_date} → {lr.end_date} ({lr.total_days} gün)</span>
-                                                    </div>
-                                                    {statusBadge(lr.status)}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* OT Requests on this day */}
-                                    {otRequests.length > 0 && (
-                                        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-                                            <h4 className="text-sm font-bold text-amber-700 mb-2">⏰ Fazla Mesai Talepleri</h4>
-                                            {otRequests.map((ot, i) => (
-                                                <div key={i} className="flex justify-between items-center bg-white rounded-lg p-2 mb-1 border border-amber-100">
-                                                    <div>
-                                                        <span className="font-mono text-sm text-slate-600">{ot.start_time} → {ot.end_time}</span>
-                                                        {ot.reason && <span className="text-xs text-slate-400 ml-2">({ot.reason})</span>}
-                                                    </div>
-                                                    {statusBadge(ot.status)}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Leave Balance */}
-                                    {leaveBalance.length > 0 && (
-                                        <div className="bg-white rounded-xl border p-4">
-                                            <h4 className="text-sm font-bold text-slate-700 mb-2">📋 Yıllık İzin Bakiyesi</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                                {leaveBalance.map((bal, i) => (
-                                                    <div key={i} className="bg-slate-50 rounded-lg p-3 text-center">
-                                                        <div className="text-xs text-slate-400 mb-1">{bal.year}</div>
-                                                        <div className="text-2xl font-bold text-blue-600">{bal.remaining_days}</div>
-                                                        <div className="text-[10px] text-slate-400">Kalan / {bal.total_days} toplam ({bal.used_days} kullanıldı)</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* ========== ATTENDANCE TAB ========== */}
-                            {activeTab === 'attendance' && (
-                                <div className="space-y-5 animate-fade-in">
-                                    {/* Smart Entry */}
-                                    <div className="bg-white p-5 rounded-xl border shadow-sm">
-                                        <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                            <div className="w-1 h-5 bg-blue-500 rounded-full"></div> ⚡ Hızlı İşlem
-                                        </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Başlangıç</label>
-                                                <input type="time" value={workStart} onChange={e => setWorkStart(e.target.value)}
-                                                    className="w-full border p-2 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Süre (Saat)</label>
-                                                <input type="number" step="0.5" value={workDuration} onChange={e => setWorkDuration(Number(e.target.value))}
-                                                    className="w-full border p-2 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                            </div>
-                                            <button onClick={applyDailyWork}
-                                                className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-blue-200 shadow-lg text-sm">
-                                                Günü Oluştur
-                                            </button>
-                                            <div className="flex gap-2 items-end">
-                                                <div className="flex-1">
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Mesai (Saat)</label>
-                                                    <input type="number" step="0.5" value={otDuration} onChange={e => setOtDuration(Number(e.target.value))}
-                                                        className="w-full border p-2 rounded-lg font-mono text-sm focus:ring-2 focus:ring-amber-200 outline-none" />
-                                                </div>
-                                                <button onClick={addOvertime}
-                                                    className="bg-amber-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-amber-700 transition-colors text-sm whitespace-nowrap">
-                                                    +Mesai
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Raw Records Table */}
-                                    <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
-                                        <div className="flex justify-between p-3 items-center border-b bg-slate-50">
-                                            <div className="text-sm text-slate-600 font-medium">Kayıtlar ({records.length})</div>
-                                            <button onClick={addRecord} className="flex items-center gap-1.5 text-blue-600 font-bold hover:bg-blue-50 px-3 py-1 rounded-lg text-sm border border-blue-100">
-                                                <Plus size={14} /> Yeni
-                                            </button>
-                                        </div>
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-slate-50 text-xs text-slate-500 uppercase font-bold">
-                                                <tr>
-                                                    <th className="p-3">Giriş</th>
-                                                    <th className="p-3">Çıkış</th>
-                                                    <th className="p-3 w-28">Kaynak</th>
-                                                    <th className="p-3 w-10"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {records.map((rec, i) => (
-                                                    <tr key={i} className="group hover:bg-blue-50/20 transition-colors">
-                                                        <td className="p-2">
-                                                            <input type="text" className="w-full border p-2 rounded bg-white font-mono text-sm focus:border-blue-400 outline-none"
-                                                                value={rec.check_in || ''} onChange={e => updateRec(i, 'check_in', e.target.value)} placeholder="YYYY-MM-DDTHH:MM" />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input type="text" className="w-full border p-2 rounded bg-white font-mono text-sm focus:border-blue-400 outline-none"
-                                                                value={rec.check_out || ''} onChange={e => updateRec(i, 'check_out', e.target.value)} placeholder="YYYY-MM-DDTHH:MM" />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <select value={rec.source} onChange={e => updateRec(i, 'source', e.target.value)}
-                                                                className="w-full border p-2 rounded bg-white text-sm focus:border-blue-400 outline-none">
-                                                                <option value="MANUAL">MANUAL</option>
-                                                                <option value="CARD">CARD</option>
-                                                                <option value="FACE">FACE</option>
-                                                                <option value="QR">QR</option>
-                                                            </select>
-                                                        </td>
-                                                        <td className="p-2 text-center">
-                                                            <button onClick={() => removeRec(i)} className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors" title="Sil">
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {records.length === 0 && (
-                                                    <tr><td colSpan="4" className="p-6 text-center text-slate-400 italic">Kayıt bulunamadı.</td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ========== LEAVE TAB ========== */}
-                            {activeTab === 'leave' && (
-                                <div className="space-y-5 animate-fade-in">
-                                    {/* Leave Balance Summary */}
-                                    {leaveBalance.length > 0 && (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            {leaveBalance.map((bal, i) => (
-                                                <div key={i} className="bg-white rounded-xl border p-4">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-sm font-bold text-slate-600">{bal.year}</span>
-                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{bal.remaining_days} kalan</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 rounded-full h-2.5">
-                                                        <div className="bg-blue-500 h-2.5 rounded-full transition-all" style={{ width: `${Math.min((bal.used_days / bal.total_days) * 100, 100)}%` }}></div>
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-400 mt-1">{bal.used_days} kullanıldı / {bal.total_days} toplam</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Existing Leaves */}
-                                    <div className="bg-white rounded-xl border p-4">
-                                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-emerald-500 rounded-full"></div> Bu Güne Ait İzinler
-                                        </h4>
-                                        {leaves.length > 0 ? leaves.map((lr, i) => (
-                                            <div key={i} className="flex justify-between items-center bg-slate-50 rounded-lg p-3 mb-2">
-                                                <div className="flex-1">
-                                                    <div className="font-medium text-sm text-slate-700">{lr.type_name}</div>
-                                                    <div className="text-xs text-slate-400">{lr.start_date} → {lr.end_date} ({lr.total_days} gün) {lr.reason && `• ${lr.reason}`}</div>
-                                                    {lr.approved_by && <div className="text-[10px] text-slate-400 mt-0.5">Onaylayan: {lr.approved_by}</div>}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {statusBadge(lr.status)}
-                                                    {lr.status !== 'CANCELLED' && (
-                                                        <button onClick={() => handleCancelLeave(lr.id)}
-                                                            className="text-xs text-red-500 hover:text-red-700 font-bold hover:bg-red-50 px-2 py-1 rounded transition-colors">
-                                                            İptal
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )) : <p className="text-sm text-slate-400 italic">Bu tarihte izin kaydı yok.</p>}
-                                    </div>
-
-                                    {/* Create New Leave */}
-                                    <div className="bg-white rounded-xl border p-4">
-                                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-blue-500 rounded-full"></div> Yeni İzin Oluştur
-                                        </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">İzin Türü</label>
-                                                <select value={leaveTypeId} onChange={e => setLeaveTypeId(e.target.value)}
-                                                    className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 outline-none">
-                                                    {requestTypes.map(rt => (
-                                                        <option key={rt.id} value={rt.id}>{rt.name} ({rt.category})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Sebep</label>
-                                                <input type="text" value={leaveReason} onChange={e => setLeaveReason(e.target.value)}
-                                                    placeholder="Opsiyonel" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Başlangıç</label>
-                                                <input type="date" value={leaveStart} onChange={e => setLeaveStart(e.target.value)}
-                                                    className="w-full border p-2 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Bitiş</label>
-                                                <input type="date" value={leaveEnd} onChange={e => setLeaveEnd(e.target.value)}
-                                                    className="w-full border p-2 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                            </div>
-                                        </div>
-                                        <button onClick={handleCreateLeave} disabled={saving}
-                                            className="mt-3 w-full bg-emerald-600 text-white font-bold py-2.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-200 text-sm">
-                                            {saving ? 'Oluşturuluyor...' : '✓ İzin Oluştur ve Onayla'}
-                                        </button>
-                                        <p className="text-[10px] text-slate-400 mt-1">⚡ Admin izni otomatik olarak onaylanacak ve bakiyeden düşülecektir.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ========== OVERTIME TAB ========== */}
-                            {activeTab === 'overtime' && (
-                                <div className="space-y-5 animate-fade-in">
-                                    <div className="bg-white rounded-xl border p-4">
-                                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-amber-500 rounded-full"></div> Fazla Mesai Talepleri
-                                        </h4>
-                                        {otRequests.length > 0 ? otRequests.map((ot, i) => (
-                                            <div key={i} className="bg-slate-50 rounded-lg p-4 mb-2">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <div className="font-mono text-sm text-slate-700 font-bold">{ot.start_time} → {ot.end_time}</div>
-                                                        <div className="text-xs text-slate-400 mt-1">
-                                                            Süre: {fmtSec(ot.duration_seconds || 0)}
-                                                            {ot.reason && ` • Sebep: ${ot.reason}`}
-                                                        </div>
-                                                        {ot.approval_manager && <div className="text-[10px] text-slate-400 mt-0.5">Yönetici: {ot.approval_manager}</div>}
-                                                        {ot.rejection_reason && <div className="text-[10px] text-red-500 mt-0.5">Red sebebi: {ot.rejection_reason}</div>}
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {statusBadge(ot.status)}
-                                                    </div>
-                                                </div>
-                                                {(ot.status === 'PENDING' || ot.status === 'POTENTIAL') && (
-                                                    <div className="flex gap-2 mt-3 border-t pt-3">
-                                                        <button onClick={() => handleOtAction(ot.id, 'approve')}
-                                                            className="flex-1 bg-emerald-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-emerald-700 transition-colors">
-                                                            ✓ Onayla
-                                                        </button>
-                                                        <button onClick={() => handleOtAction(ot.id, 'reject')}
-                                                            className="flex-1 bg-red-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-red-700 transition-colors">
-                                                            ✗ Reddet
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )) : (
-                                            <p className="text-sm text-slate-400 italic py-4 text-center">Bu tarihte fazla mesai talebi bulunmuyor.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t bg-white flex justify-between items-center">
-                    <div className="text-xs text-slate-400">
-                        {activeTab === 'attendance' && deleteIds.length > 0 && (
-                            <span className="text-red-500 font-bold">{deleteIds.length} kayıt silinecek</span>
-                        )}
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose} className="px-5 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors text-sm">Kapat</button>
-                        {activeTab === 'attendance' && (
-                            <button onClick={handleSave} disabled={saving || loading}
-                                className="px-8 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-all shadow-lg shadow-green-200 text-sm">
-                                {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-                            </button>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>
