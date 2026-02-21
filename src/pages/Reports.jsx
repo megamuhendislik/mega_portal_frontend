@@ -97,6 +97,7 @@ const Reports = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Download failed:', error);
             alert('Rapor indirilemedi.');
@@ -122,6 +123,7 @@ const Reports = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('PDF download failed:', error);
             alert('PDF rapor indirilemedi.');

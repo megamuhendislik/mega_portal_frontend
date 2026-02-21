@@ -759,7 +759,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                             <div key={e.id} className="flex justify-between items-center p-3 bg-white border border-indigo-100 rounded-lg shadow-sm group hover:border-indigo-300 transition-all">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
-                                        {e.first_name[0]}{e.last_name[0]}
+                                        {e.first_name?.[0]}{e.last_name?.[0]}
                                     </div>
                                     <div>
                                         <div className="font-medium text-slate-800">{e.first_name} {e.last_name}</div>
@@ -782,7 +782,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                             <div key={e.id} className="flex justify-between items-center p-3 bg-slate-50 border border-transparent rounded-lg hover:bg-white hover:border-slate-200 hover:shadow-sm transition-all group">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">
-                                        {e.first_name[0]}{e.last_name[0]}
+                                        {e.first_name?.[0]}{e.last_name?.[0]}
                                     </div>
                                     <div>
                                         <div className="font-medium text-slate-600">{e.first_name} {e.last_name}</div>

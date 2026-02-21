@@ -133,10 +133,14 @@ const FiscalCalendarView = ({
         fetchData();
     }, [year, calendarId]);
 
-    // Auto-select first template as brush
+    // Auto-select first template as brush, reset if current brush no longer valid
     useEffect(() => {
-        if (paintMode && templates.length > 0 && !selectedBrushId) {
-            setSelectedBrushId(templates[0].id);
+        if (paintMode && templates.length > 0) {
+            const brushStillValid = templates.some(t => t.id === selectedBrushId);
+            if (!selectedBrushId || !brushStillValid) {
+                setSelectedBrushId(templates[0].id);
+                setEraserActive(false);
+            }
         }
     }, [paintMode, templates]);
 
@@ -158,7 +162,8 @@ const FiscalCalendarView = ({
             const responses = await Promise.all(requests);
 
             const hSet = new Set();
-            responses[0].data.filter(e => e.status === 'HOLIDAY').forEach(e => {
+            const eventsData = responses[0].data.results || responses[0].data;
+            (Array.isArray(eventsData) ? eventsData : []).filter(e => e.status === 'HOLIDAY').forEach(e => {
                 hSet.add(moment(e.start).format('YYYY-MM-DD'));
             });
             setHolidays(hSet);

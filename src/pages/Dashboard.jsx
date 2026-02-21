@@ -132,7 +132,7 @@ const Dashboard = () => {
                     </div>
                     <div>
                         <p className="text-sm font-bold text-slate-800">{req.request_type_name || 'Talep'}</p>
-                        <p className="text-xs text-slate-500">{format(new Date(req.start_date || req.created_at), 'd MMM', { locale: tr })}</p>
+                        <p className="text-xs text-slate-500">{(req.start_date || req.created_at) ? format(new Date(req.start_date || req.created_at), 'd MMM', { locale: tr }) : '-'}</p>
                     </div>
                 </div>
                 <span className={clsx("text-[10px] px-2 py-0.5 rounded-full font-bold", statusColors[req.status] || 'bg-slate-100 text-slate-500')}>
@@ -304,7 +304,7 @@ const Dashboard = () => {
                             {calendarEvents.slice(0, 4).map((ev, i) => (
                                 <div key={i} className="text-xs bg-slate-50 p-2 rounded border border-slate-100 flex justify-between">
                                     <span className="font-bold text-slate-600 truncate max-w-[150px]" title={ev.title}>{ev.title}</span>
-                                    <span className="text-slate-400 shrink-0">{format(new Date(ev.start), 'd MMM')}</span>
+                                    <span className="text-slate-400 shrink-0">{ev.start ? format(new Date(ev.start), 'd MMM') : '-'}</span>
                                 </div>
                             ))}
                             {calendarEvents.length === 0 && <p className="text-xs text-slate-400">Etkinlik yok.</p>}
