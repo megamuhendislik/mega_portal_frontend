@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, User, ArrowRight, Loader2, Info, X } from 'lucide-react';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [remember, setRemember] = useState(false);
+    const [remember, setRemember] = useState(true);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -128,9 +129,13 @@ const Login = () => {
                                         />
                                         <span className="ml-2 text-sm text-slate-600">Beni Hatırla</span>
                                     </label>
-                                    <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowForgotPassword(true)}
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                                    >
                                         Şifremi Unuttum?
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -152,6 +157,38 @@ const Login = () => {
                     </form>
                 </div>
             </div>
+
+            {/* Şifremi Unuttum Popup */}
+            {showForgotPassword && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <Info className="h-5 w-5 text-blue-600" />
+                                <h3 className="text-lg font-semibold text-slate-900">Şifre Sıfırlama</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowForgotPassword(false)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                            Şifrenizi yalnızca yetkili bir kişi değiştirebilir. Lütfen yöneticiniz veya sistem yöneticisi ile iletişime geçin.
+                        </p>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                            Yeni şifrenizi aldıktan sonra <span className="font-medium text-slate-800">Profil</span> sayfanızdan şifrenizi güncelleyebilirsiniz.
+                        </p>
+                        <button
+                            onClick={() => setShowForgotPassword(false)}
+                            className="w-full btn-primary"
+                        >
+                            Anladım
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
