@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import moment from 'moment';
 import api from '../services/api';
 import { createPortal } from 'react-dom';
@@ -628,60 +627,9 @@ const WorkSchedules = () => {
 // --- Sub-Components ---
 
 const GeneralSettingsForm = ({ data, onChange }) => {
-    const [holidays, setHolidays] = useState([]);
-    const [showHolidayBuilder, setShowHolidayBuilder] = useState(false);
-
-    useEffect(() => {
-        api.get('/public-holidays/').then(res => {
-            const data = res.data.results || res.data;
-            setHolidays(data);
-        });
-    }, []);
-
     const handleChange = (field, value) => {
         onChange({ ...data, [field]: value });
     };
-
-    const handleDeleteHoliday = async (h) => {
-        if (!window.confirm(`${h.date} tarihindeki "${h.name}" tatilini silmek istediğinize emin misiniz?`)) return;
-        try {
-            await api.delete(`/core/public-holidays/${h.id}/`);
-            setHolidays(holidays.filter(item => item.id !== h.id));
-            const current = data.public_holidays || [];
-            handleChange('public_holidays', current.filter(id => id !== h.id));
-        } catch (error) {
-            alert('Silme sırasında hata oluştu: ' + error.message);
-        }
-    };
-
-    const [selectedForDeletion, setSelectedForDeletion] = useState(new Set());
-
-    const toggleDeleteSelection = (hId) => {
-        const newSet = new Set(selectedForDeletion);
-        if (newSet.has(hId)) newSet.delete(hId);
-        else newSet.add(hId);
-        setSelectedForDeletion(newSet);
-    };
-
-    const handleBulkDelete = async () => {
-        if (selectedForDeletion.size === 0) return;
-        if (!window.confirm(`${selectedForDeletion.size} adet tatil kalıcı olarak silinecek. Onaylıyor musunuz?`)) return;
-        try {
-            for (const id of selectedForDeletion) {
-                await api.delete(`/core/public-holidays/${id}/`);
-            }
-            setHolidays(holidays.filter(h => !selectedForDeletion.has(h.id)));
-            const current = data.public_holidays || [];
-            handleChange('public_holidays', current.filter(id => !selectedForDeletion.has(id)));
-            setSelectedForDeletion(new Set());
-        } catch (error) {
-            alert("Silme işlemi sırasında hata: " + error.message);
-        }
-    };
-
-    const activeHolidays = holidays
-        .filter(h => (data.public_holidays || []).includes(h.id))
-        .sort((a, b) => a.date.localeCompare(b.date));
 
     return (
         <div className="space-y-4">
@@ -702,88 +650,6 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                     </label>
                 </div>
             </div>
-
-            <div>
-                <div className="flex justify-between items-center mb-2">
-                    <label className="block text-xs font-semibold text-slate-500 uppercase">Resmi Tatiller ({activeHolidays.length})</label>
-                    <div className="flex items-center gap-2">
-                        {selectedForDeletion.size > 0 && (
-                            <button onClick={handleBulkDelete}
-                                className="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors flex items-center gap-1 animate-in fade-in">
-                                <Trash2 size={14} /> {selectedForDeletion.size} Sil
-                            </button>
-                        )}
-                        <button onClick={() => setShowHolidayBuilder(true)}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:bg-indigo-50 px-2 py-1 rounded transition-colors">
-                            <Calendar size={14} /> Görsel Düzenle
-                        </button>
-                        <Link to="/public-holidays" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 border-l pl-2 border-slate-300">
-                            <Settings size={12} /> Listeyi Aç
-                        </Link>
-                    </div>
-                </div>
-
-                <div className="bg-white border rounded-lg overflow-hidden flex flex-col h-[400px]">
-                    <div className="bg-slate-50 p-2 border-b flex items-center gap-2">
-                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                            checked={activeHolidays.length > 0 && selectedForDeletion.size === activeHolidays.length}
-                            onChange={(e) => {
-                                if (e.target.checked) setSelectedForDeletion(new Set(activeHolidays.map(h => h.id)));
-                                else setSelectedForDeletion(new Set());
-                            }} />
-                        <span className="text-xs font-bold text-slate-500">Tümünü Seç</span>
-                    </div>
-
-                    <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                        {activeHolidays.map(h => {
-                            const isSelected = selectedForDeletion.has(h.id);
-                            return (
-                                <div key={h.id}
-                                    className={`flex items-center gap-3 p-2 rounded border transition-all ${isSelected ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
-                                    <input type="checkbox" checked={isSelected} onChange={() => toggleDeleteSelection(h.id)}
-                                        className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="font-medium text-sm text-slate-700">{h.name}</div>
-                                            <div className={`w-2 h-2 rounded-full ${h.type === 'HALF_DAY' ? 'bg-amber-500' : 'bg-red-500'}`} title={h.type === 'HALF_DAY' ? 'Yarım Gün' : 'Tam Gün'}></div>
-                                        </div>
-                                        <div className="text-xs text-slate-500 font-mono">{h.date} {h.type === 'HALF_DAY' && h.start_time ? `(${h.start_time}-${h.end_time})` : ''}</div>
-                                    </div>
-                                    <button onClick={() => handleDeleteHoliday(h)}
-                                        className="p-1.5 text-slate-300 hover:text-red-500 rounded-md transition-colors" title="Tek Sil">
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                        {activeHolidays.length === 0 && (
-                            <div className="text-center py-12 text-slate-400 flex flex-col items-center">
-                                <Calendar size={32} className="mb-2 opacity-20" />
-                                <span className="text-sm">Henüz tatil eklenmemiş.</span>
-                                <span className="text-xs mt-1">Yukarıdaki "Görsel Düzenle" butonunu kullanın.</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {showHolidayBuilder && (
-                <HolidayBuilderModal
-                    onClose={() => setShowHolidayBuilder(false)}
-                    selectedHolidayIds={data.public_holidays || []}
-                    allHolidays={holidays}
-                    onUpdateSelection={(newIds) => onChange({ ...data, public_holidays: newIds })}
-                    onNewHolidayCreated={(newHoliday) => {
-                        setHolidays([...holidays, newHoliday]);
-                    }}
-                    onHolidayDeleted={(deletedId) => {
-                        setHolidays(holidays.filter(h => h.id !== deletedId));
-                        if ((data.public_holidays || []).includes(deletedId)) {
-                            onChange({ ...data, public_holidays: data.public_holidays.filter(id => id !== deletedId) });
-                        }
-                    }}
-                />
-            )}
         </div>
     );
 };
