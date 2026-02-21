@@ -30,9 +30,8 @@ const Login = () => {
         <div className="min-h-screen flex bg-slate-50">
             {/* Left Side - Visual */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-900/60 to-slate-900/80 z-10" />
-                {/* Construction/Bridge Background - More Corporate/Serious */}
-                <div className="absolute inset-0 bg-[url('https://cdnuploads.aa.com.tr/uploads/userFiles/0ea4db8a-29ff-4f86-a203-a8545f881617/kasim%2F20191211_2_39782445_50258294.jpg')] bg-cover bg-center" />
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-blue-950 z-10" />
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_25%_25%,_white_1px,_transparent_1px)] bg-[length:40px_40px]" />
 
                 <div className="relative z-20 flex flex-col justify-between p-12 w-full text-white">
                     <div className="flex items-center space-x-4">
