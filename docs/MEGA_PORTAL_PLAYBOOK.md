@@ -236,7 +236,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | SYS-07 | PENDING | — | — | |
 | SYS-08 | PENDING | — | — | |
 | SYS-09 | PENDING | — | — | |
-| SYS-10 | DONE | BE: 8f9f104, 6266f0d, 108ebc9, 723b19a, 8df0c94, c5d37ac, 597dc4b, f4215b4, 8d0f793 / FE: 28b9646, 8b94ee5 | Railway autodeploy OK | SecurityAuditRunner 36 test (SEC-31,32,34~37 eklendi), SecurityAuditTab UI, test data cleanup, crash-proof infra, FIX-01~03 RBAC fix'leri |
+| SYS-10 | DONE | BE: 8f9f104...8d0f793, ed71ae6, aee03fd, bc20492 / FE: 28b9646, 8b94ee5, c40bf5d, 0fc392c | Railway autodeploy OK | SecurityAuditRunner **52 test** (SEC-01~52), SecurityAuditTab UI, test data cleanup, crash-proof infra, FIX-01~03 RBAC fix'leri, AUTH-04/05 SEC testleri, SEC-33~52 tam kapsam |
 | SYS-11 | PENDING | — | — | |
 | SYS-12 | PENDING | — | — | |
 | SYS-13 | PENDING | — | — | |
@@ -374,19 +374,40 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 ### SYS-10 — Security Audit Runner (Regression Test)
 - **Status:** DONE
 - **What we changed:**
-  - **SecurityAuditRunner (`core/security_audit_runner.py`):** In-process Django APIClient RBAC test framework, 30 test 11 grupta
-  - **Test Gruplari (30 test):**
-    - Authentication Basics (SEC-01~03): JWT'siz erisim, yanlis credentials, gecerli token
-    - Permission Enforcement (SEC-04~06): PAGE_EMPLOYEES gate, yetkisiz CRUD, excluded_permissions
-    - Object-Level Security (SEC-07~09): Attendance scope, leave request scope, dashboard IDOR
-    - Admin Endpoint Protection (SEC-10~12): SystemSettings, recalculate-all, wipe-all guard
-    - IDOR Prevention (SEC-13~16): Attendance employee_id, stats, live-status, PersonalCalendar
-    - Rate Limiting (SEC-17~18): Login brute force, anonymous throttle
-    - AllowAny Data Leakage (SEC-19): Secure gate error mesaji PII kontrolu
-    - Org Chart Edit Suite (SEC-20~25): Yetkisiz reassignment, hierarchy, recalculate, bulk ops
-    - Employee Data Integrity (SEC-26): Hierarchy tutarliligi, yetim kayit kontrolu
+  - **SecurityAuditRunner (`core/security_audit_runner.py`):** In-process Django APIClient RBAC test framework, **52 test** 35 grupta
+  - **Test Gruplari (52 test):**
+    - DepartmentViewSet (SEC-01, SEC-18): Yetkisiz POST + admin POST
+    - EmployeeViewSet (SEC-02, SEC-31, SEC-32): Yetkisiz PATCH/DELETE/POST → 403
+    - SystemSettingsViewSet (SEC-03, SEC-34, SEC-52): Yetkisiz PATCH/DELETE/PUT → 403
+    - WorkScheduleViewSet (SEC-04): Yetkisiz POST → 403
+    - PublicHolidayViewSet (SEC-05): Yetkisiz POST → 403
+    - FiscalCalendarViewSet (SEC-06, SEC-35~37): POST + recalculate + assign/assigned_employees → 403
+    - ScheduleTemplateViewSet (SEC-07): Yetkisiz POST → 403
+    - DayTemplateAssignmentViewSet (SEC-08, SEC-43, SEC-44): POST + bulk_assign/bulk_remove → 403
+    - DailyScheduleOverrideViewSet (SEC-09, SEC-42): POST + bulk_delete → 403
+    - FiscalPeriodViewSet (SEC-10): Yetkisiz POST → 403
+    - MonthlyReportViewSet (SEC-11, SEC-45): export_excel + IDOR → 403
+    - GateEventLogViewSet (SEC-12): Baskasinin log'larini goremez
+    - PersonalCalendarEvent (SEC-13): Baskasinin etkinliklerini goremez
+    - Self-Approval (SEC-14, SEC-15): OT + Leave self-approval → 403
+    - Attendance IDOR (SEC-16): today_summary → 403
+    - Dashboard IDOR (SEC-17): stats → 403
+    - full_debug (SEC-19): Yetkisiz → 403
+    - employee_reassignment (SEC-20): Yetkisiz manager PATCH → 403
+    - OrgChart Edit Suite (SEC-21~25): Hierarchy, dept PATCH/DELETE, secondary, admin PATCH
+    - Data Integrity (SEC-26): 64 calisan veri butunlugu taramasi
     - Manager Assignment Edge Cases (SEC-27~30): Self-assign, duplicate, cross-type, null fields
-    - Employee CRUD Access (SEC-31~32): Yetkisiz create/delete → 403
+    - OvertimeRequest Approve (SEC-33): Yetkisiz approve → 403/404
+    - Role & Permission ViewSets (SEC-38, SEC-39): LIST → 403
+    - Password Change (SEC-40): Ayni sifre → 400
+    - PersonalEventGroup Isolation (SEC-41): Baskasinin grubuna erisim → 200 degil
+    - LiveStatus IDOR (SEC-46): expected_fail — baskasinin durumu gorunuyor
+    - CalendarEvents IDOR (SEC-47): expected_fail — baskasinin takvimi gorunuyor
+    - AttendanceStats IDOR (SEC-48): expected_fail — baskasinin istatistikleri gorunuyor
+    - Dashboard Department IDOR (SEC-49): Baska departman verisi — kisitli (PASS)
+    - Secure Gate PII (SEC-50): Hata yaniti PII icermiyor
+    - Cardless Self-Approval (SEC-51): expected_fail — kendi talebini onaylayabiliyor
+  - **Prod Son Sonuc: 48 PASS, 0 FAIL, 4 EXPECTED_FAIL**
   - **Altyapi:**
     - Crash-proof: garantili test data cleanup (try/finally/on_commit)
     - ALLOWED_HOSTS + SECURE_SSL_REDIRECT bypass
@@ -860,14 +881,14 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | FIX-23 | MANAGE_SUBSTITUTE permission'i DB'ye ekle veya frontend referansini kaldir | DB-09 |
 | FIX-24 | FEATURE_BREAK_ANALYSIS dead code temizle veya enforce et | Dead code — 4 role atanmis ama kullanilmiyor |
 
-#### Severity Ozet (Guncellenmis)
+#### Severity Ozet (Guncellenmis — 2026-02-22)
 
 | Seviye | Toplam | Kalan | Tamamlanan | En Kritik (Kalan) |
 |--------|--------|-------|------------|-------------------|
-| **CRITICAL** | 3 | **0** | 3 (FIX-01, FIX-02, FIX-03) | — Hepsi kapatildi |
-| **HIGH** | 10 | **9** | 1 (FIX-10 kismi) | PersonalCalendar IDOR, FiscalPeriod, WorkSchedule/Holiday CRUD, Reports export, Gate logs |
-| **MEDIUM** | 5 | **2** | 3 (FIX-15, FIX-16, FIX-18) | Self-approval |
-| **LOW** | 6 | **6** | 0 | Rol temizligi, unused perms, phantom perms |
+| **CRITICAL** | 3 | **0** | 3 (FIX-01, FIX-02, FIX-03) | ✅ Hepsi kapatildi |
+| **HIGH** | 10 | **9** | 1 (FIX-10 kismi) | FIX-04~09, FIX-10 kalan IDOR'lar, FIX-11, FIX-12, FIX-13 |
+| **MEDIUM** | 5 | **2** | 3 (FIX-15, FIX-16, FIX-18) | FIX-14 (self-approval), FIX-17 (SYSTEM_ADMIN rol atama) |
+| **LOW** | 6 | **6** | 0 | FIX-19~24 (rol temizligi, unused/phantom perms) |
 | **TOPLAM** | **24** | **17** | **7** | — |
 
 ---
@@ -876,17 +897,17 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 
 ### Tamamlanan Ozellikler (9/88)
 
-| Feature | Kategori | Tarih |
-|---------|----------|-------|
-| AUTH-01 | Auth & RBAC | JWT Login — popup, remember-me, bg image |
-| AUTH-02 | Auth & RBAC | Token Refresh — verify only, no changes needed |
-| AUTH-03 | Auth & RBAC | RBAC Deep Audit + excluded_permissions fix + SecurityAuditTab |
-| AUTH-04 | Auth & RBAC | Role Management — RoleViewSet + PermissionViewSet PAGE_EMPLOYEES gating |
-| AUTH-05 | Auth & RBAC | Password Change — same-password rejection |
-| ORG-07 | Organization | Matrix Management — CROSS→SECONDARY, validation, shared component |
-| ORG-09 | Organization | Drag & Drop Reassignment — D&D, context menu, SEC-20~30 |
-| SYS-10 | System Admin | SecurityAuditRunner — 30 test, 11 group, crash-proof infra |
-| FIX-15+16 | RBAC Fix | Sidebar hasPermission + Token refresh permission sync |
+| Feature | Kategori | Tarih | Ozet |
+|---------|----------|-------|------|
+| AUTH-01 | Auth & RBAC | 2026-02-22 | JWT Login — popup, remember-me, bg image |
+| AUTH-02 | Auth & RBAC | 2026-02-22 | Token Refresh — verify only, no changes needed |
+| AUTH-03 | Auth & RBAC | 2026-02-22 | RBAC Deep Audit + excluded_permissions fix + SecurityAuditTab |
+| AUTH-04 | Auth & RBAC | 2026-02-22 | Role Management — RoleViewSet + PermissionViewSet PAGE_EMPLOYEES gating |
+| AUTH-05 | Auth & RBAC | 2026-02-22 | Password Change — same-password rejection |
+| ORG-07 | Organization | 2026-02-22 | Matrix Management — CROSS→SECONDARY, validation, shared component |
+| ORG-09 | Organization | 2026-02-22 | Drag & Drop Reassignment — D&D, context menu, SEC-20~30 |
+| SYS-10 | System Admin | 2026-02-22 | SecurityAuditRunner — **52 test**, 35 grup, crash-proof infra |
+| FIX-15+16 | RBAC Fix | 2026-02-22 | Sidebar hasPermission + Token refresh permission sync |
 
 ### Tamamlanan Guvenlik Fix'leri (7/24)
 
@@ -895,31 +916,46 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | FIX-01 | **DONE** — EmployeeViewSet CUD RBAC (PAGE_EMPLOYEES + SYSTEM_FULL_ACCESS) |
 | FIX-02 | **DONE** — SystemSettingsViewSet RBAC (IsSystemAdmin perm class) |
 | FIX-03 | **DONE** — FiscalCalendarViewSet assigned_employees PII fix |
-| FIX-10 | **KISMI** — Dashboard IDOR fix'lendi, diger IDOR'lar PENDING |
+| FIX-10 | **KISMI** — Dashboard IDOR fix'lendi, diger IDOR'lar PENDING (SEC-46,47,48) |
 | FIX-15 | **DONE** — Sidebar `hasPermission()` bug fix |
 | FIX-16 | **DONE** — Token refresh permission sync |
 | FIX-18 | **DONE** — RoleViewSet/PermissionViewSet PAGE_EMPLOYEES gating |
 
+### Guvenlik Test Durumu (Prod Son Calistirma)
+
+| Metrik | Deger |
+|--------|-------|
+| Toplam Test | **52** |
+| Basarili (PASS) | **48** |
+| Basarisiz (FAIL) | **0** |
+| Beklenen Hata (EXPECTED_FAIL) | **4** (SEC-46, SEC-47, SEC-48, SEC-51) |
+
+**Beklenen Hatalar (bilinen zafiyetler, fix yapilinca otomatik PASS'e donecek):**
+- SEC-46: LiveStatus IDOR — baskasinin canli durumu goruntulenebiliyor (FIX-10 kapsaminda)
+- SEC-47: CalendarEvents IDOR — baskasinin takvimi goruntulenebiliyor (FIX-10 kapsaminda)
+- SEC-48: AttendanceStats IDOR — baskasinin istatistikleri goruntulenebiliyor (FIX-10 kapsaminda)
+- SEC-51: Cardless self-approval — kendi talebini onaylayabiliyor (FIX-14 kapsaminda)
+
 ### Kalan Is (79 feature + 17 fix)
 
-| Kategori | Toplam | Done | Kalan |
-|----------|--------|------|-------|
-| Auth & RBAC | 5 | 5 | 0 — Auth fazi tamamlandi |
-| Organization | 9 | 2 | 7 (ORG-01~06, ORG-08) |
-| Calendar | 9 | 0 | 9 |
-| Attendance | 12 | 0 | 12 |
-| Gate | 3 | 0 | 3 |
-| Overtime | 3 | 0 | 3 |
-| Leave | 7 | 0 | 7 |
-| Meal | 2 | 0 | 2 |
-| Cardless | 2 | 0 | 2 |
-| Approvals | 8 | 0 | 8 |
-| Notifications | 2 | 0 | 2 |
-| Reports | 7 | 0 | 7 |
-| System Admin | 17 | 1 | 16 |
-| External | 2 | 0 | 2 |
-| **TOPLAM** | **88** | **7** | **81** |
-| RBAC Fix'ler | 24 | 6 | **18** (0 CRITICAL, 9 HIGH, 3 MEDIUM, 6 LOW) |
+| Kategori | Toplam | Done | Kalan | Siradaki Batch |
+|----------|--------|------|-------|----------------|
+| Auth & RBAC | 5 | **5** | 0 | ~~Batch 0~~ TAMAMLANDI |
+| Organization | 9 | **2** | 7 (ORG-01~06, ORG-08) | **Batch 1** ← SIRADAKI |
+| Calendar | 9 | 0 | 9 | Batch 2 |
+| Attendance | 12 | 0 | 12 | Batch 3 |
+| Gate | 3 | 0 | 3 | Batch 3 |
+| Overtime | 3 | 0 | 3 | Batch 4 |
+| Leave | 7 | 0 | 7 | Batch 4 |
+| Meal | 2 | 0 | 2 | Batch 4 |
+| Cardless | 2 | 0 | 2 | Batch 4 |
+| Approvals | 8 | 0 | 8 | Batch 4 |
+| Notifications | 2 | 0 | 2 | Batch 5 |
+| Reports | 7 | 0 | 7 | Batch 5 |
+| System Admin | 17 | **1** | 16 | Batch 6 |
+| External | 2 | 0 | 2 | Batch 6 |
+| **TOPLAM** | **88** | **8** | **80** | |
+| RBAC Fix'ler | 24 | **7** | **17** (0 CRITICAL, 9 HIGH, 2 MEDIUM, 6 LOW) | Fix'ler ilgili batch ile birlikte |
 
 ### Migration Durumu
 - core: 0123 (0118 → 0119, 0120, 0121, 0122, 0123 eklendi)
@@ -930,36 +966,34 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 
 ## 8) Next Feature
 
-**Sonraki:** BATCH 1 — ORG-01 (Departman Yonetimi)
-
 ### Walkthrough Sirasi
 ```
-Auth > Org > Calendar > Attendance > Gate > Overtime > Leave > Meal >
+Auth ✅ > Org (devam) > Calendar > Attendance > Gate > Overtime > Leave > Meal >
 Cardless > Approvals > Notifications > Reports > Admin > External
 ```
 
-### Oneri: RBAC Fix'ler Oncelikli
-
-> **GUNCELLEME:** 3 CRITICAL RBAC fix (FIX-01, FIX-02, FIX-03) tamamlandi. SEC-31~37 testleri eklendi.
-> Bu fix'ler herhangi bir auth user'in employee silebilmesini, sistem ayarlarini degistirebilmesini,
-> ve toplu attendance recalculation tetikleyebilmesini engelleyecek.
->
-> ~~**Oneri 1 (Guvenlik Oncelikli):** AUTH-04'ten once FIX-01~03 CRITICAL fix'leri yap~~ **TAMAMLANDI**
-> **Oneri 2 (Walkthrough Sirasi):** AUTH-04 → AUTH-05 → ORG-01~08 sirasiyla devam et, FIX'leri paralel yap
->
-> Her iki durumda da FIX-01~03 en kisa surede implement edilmeli.
-
-### Auth Fazinda Durum
-- AUTH-01: DONE ✓
-- AUTH-02: DONE ✓
+### Auth Fazi — ✅ TAMAMLANDI
+- AUTH-01: DONE ✓ (JWT Login)
+- AUTH-02: DONE ✓ (Token Refresh)
 - AUTH-03: DONE ✓ (Deep Audit + SecurityAuditRunner + SecurityAuditTab)
-- AUTH-04: DONE ✓ (RoleViewSet + PermissionViewSet → PAGE_EMPLOYEES, FIX-18 uygulandı, SEC-38/39)
+- AUTH-04: DONE ✓ (RoleViewSet + PermissionViewSet → PAGE_EMPLOYEES, FIX-18, SEC-38/39)
 - AUTH-05: DONE ✓ (change_password same-password rejection, SEC-40)
 
-### ORG Fazinda Durum
+### ORG Fazi — DEVAM EDIYOR (2/9 tamamlandi)
 - ORG-07: DONE ✓ (Matrix Management — once yapildi, altyapi)
 - ORG-09: DONE ✓ (D&D — ORG-07'nin uzantisi)
-- ORG-01~06, ORG-08: PENDING (7 feature)
+- **ORG-01: SIRADAKI** — Departman Yonetimi (DOGRULA)
+- ORG-02: PENDING — Pozisyon Yonetimi (DOGRULA)
+- ORG-03: PENDING — Calisan CRUD (DOGRULA, ORG-01+02 sonrasi)
+- ORG-04: PENDING — Calisan Detay Profili (DOGRULA, ORG-03 sonrasi)
+- ORG-05: PENDING — Kisisel Profil (DOGRULA, paralel)
+- ORG-06: PENDING — Sirket Rehberi (DOGRULA, paralel)
+- ORG-08: PENDING — Calisan Etiketleri (DOGRULA, paralel)
+
+### Sonraki Adim
+**BATCH 1 — ORG-01 (Departman Yonetimi)** walkthrough basla.
+> Not: Batch 1'deki 7 feature'in cogu "DOGRULA" tipinde — backend+frontend zaten var,
+> walkthrough ile dogrula + eksik RBAC/validation ekle. Yeni kod yazimi minimal.
 
 ---
 
@@ -994,19 +1028,19 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 - **AUTH-04 DONE (FIX-18):** `core/views.py` → RoleViewSet + PermissionViewSet list/retrieve → PAGE_EMPLOYEES required. SEC-38/39 testleri eklendi
 - **AUTH-05 DONE:** `core/views.py:change_password` → old_password == new_password rejection eklendi. SEC-40 testi eklendi
 
-### BATCH 1 — ORGANIZASYON TEMELI (7 ozellik)
-**Bagimlillik: Batch 0 tamamlanmis ✅ | 5/7 paralel**
+### BATCH 1 — ORGANIZASYON TEMELI (7 ozellik) ← SIRADAKI
+**Bagimlillik: Batch 0 tamamlanmis ✅ | 5/7 paralel | Tip: DOGRULA (backend+frontend var)**
 
-| # | Ozellik | Tip | Paralel? |
-|---|---------|-----|----------|
-| ORG-01 | Departman Yonetimi | DOGRULA | Evet |
-| ORG-02 | Pozisyon Yonetimi | DOGRULA | Evet |
-| ORG-03 | Calisan CRUD | DOGRULA | ORG-01+02 sonrasi |
-| ORG-04 | Calisan Detay | DOGRULA | ORG-03 sonrasi |
-| ORG-05 | Kisisel Profil | DOGRULA | Evet |
-| ORG-06 | Sirket Rehberi | DOGRULA | Evet |
-| ORG-08 | Calisan Etiketleri | DOGRULA | Evet |
-| ~~FIX-18~~ | ~~RoleViewSet admin-only~~ | ~~FIX-MEDIUM~~ | **DONE** (Batch 0'da tamamlandi) |
+| # | Ozellik | Tip | Paralel? | Durum |
+|---|---------|-----|----------|-------|
+| **ORG-01** | **Departman Yonetimi** | DOGRULA | Evet | **SIRADAKI** |
+| ORG-02 | Pozisyon Yonetimi | DOGRULA | Evet | PENDING |
+| ORG-03 | Calisan CRUD | DOGRULA | ORG-01+02 sonrasi | PENDING |
+| ORG-04 | Calisan Detay | DOGRULA | ORG-03 sonrasi | PENDING |
+| ORG-05 | Kisisel Profil | DOGRULA | Evet | PENDING |
+| ORG-06 | Sirket Rehberi | DOGRULA | Evet | PENDING |
+| ORG-08 | Calisan Etiketleri | DOGRULA | Evet | PENDING |
+| ~~FIX-18~~ | ~~RoleViewSet admin-only~~ | ~~FIX-MEDIUM~~ | — | **DONE** (Batch 0'da) |
 
 ### BATCH 2 — TAKVIM & PROGRAM (9 ozellik + 4 fix)
 **Bagimlillik: Batch 1 | 3/9 bagimsiz**
@@ -1047,16 +1081,16 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 
 ### Batch Ozet Tablosu
 
-| Batch | Isim | Feature | Fix | Paralel Firsat |
-|-------|------|---------|-----|----------------|
-| 0 | Acil Guvenlik | 2 | 3 CRITICAL | FIX'ler paralel |
-| 1 | Organizasyon | 7 | 1 | 5/7 paralel |
-| 2 | Takvim | 9 | 4 | 3/9 paralel |
-| 3 | Puantaj + Gate | 15 | 2 | 10/15 paralel |
-| 4 | Talepler + Onaylar | 22 | 2 | 3 alt grup paralel |
-| 5 | Raporlama | 9 | 2 | 7/9 paralel |
-| 6 | Admin + Temizlik | 18 | 6 | Tamamen paralel |
-| **TOPLAM** | | **81** | **21** | |
+| Batch | Isim | Feature | Fix | Paralel Firsat | Durum |
+|-------|------|---------|-----|----------------|-------|
+| 0 | Acil Guvenlik | 2 | 3 CRITICAL | FIX'ler paralel | ✅ **TAMAMLANDI** |
+| **1** | **Organizasyon** | **7** | **0** | **5/7 paralel** | **← SIRADAKI** |
+| 2 | Takvim | 9 | 4 | 3/9 paralel | BEKLIYOR |
+| 3 | Puantaj + Gate | 15 | 2 | 10/15 paralel | BEKLIYOR |
+| 4 | Talepler + Onaylar | 22 | 2 | 3 alt grup paralel | BEKLIYOR |
+| 5 | Raporlama | 9 | 2 | 7/9 paralel | BEKLIYOR |
+| 6 | Admin + Temizlik | 18 | 6 | Tamamen paralel | BEKLIYOR |
+| **TOPLAM** | | **82** | **19** | | **Batch 0 done, 6 kaldi** |
 
 ---
 
@@ -1069,16 +1103,19 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 
 | Audit Bulgu | Seviye | Test | Durum |
 |-------------|--------|------|-------|
-| EmployeeViewSet NO RBAC | CRITICAL | SEC-02, SEC-31, SEC-32 | **DONE** — PATCH + DELETE + CREATE test eklendi |
-| SystemSettingsViewSet NO RBAC | CRITICAL | SEC-03, SEC-34 | **DONE** — PATCH + DELETE test eklendi |
-| FiscalCalendarViewSet NO RBAC | CRITICAL | SEC-06, SEC-35~37 | **DONE** — POST + recalculate + assign_employees + assigned_employees test eklendi |
-| PersonalEventGroupViewSet | HIGH | — | **GAP** |
-| IDOR-04: monthly-reports export | HIGH | — | **GAP** |
-| IDOR-05: live-status PK | MEDIUM | — | **GAP** |
-| IDOR-06: calendar-events | MEDIUM | — | **GAP** |
-| Destructive endpoints (7 adet) | CRITICAL-HIGH | — | **GAP** — hic yok |
-| AllowAny PII sizintisi | MEDIUM | — | **GAP** |
-| Self-approval: Cardless | MEDIUM | — | **GAP** |
+| EmployeeViewSet NO RBAC | CRITICAL | SEC-02, SEC-31, SEC-32 | **DONE** — PATCH + DELETE + CREATE test |
+| SystemSettingsViewSet NO RBAC | CRITICAL | SEC-03, SEC-34, SEC-52 | **DONE** — PATCH + DELETE + PUT test |
+| FiscalCalendarViewSet NO RBAC | CRITICAL | SEC-06, SEC-35~37 | **DONE** — POST + recalculate + assign/assigned_employees test |
+| PersonalEventGroupViewSet | HIGH | SEC-41 | **DONE** — Isolation test (Got 500 = queryset bug, veri sizmiyor) |
+| IDOR-04: monthly-reports export | HIGH | SEC-45 | **DONE** — Export IDOR → 403 |
+| IDOR-05: live-status PK | MEDIUM | SEC-46 | **DONE** — EXPECTED_FAIL (zafiyet mevcut, FIX-10 ile kapanacak) |
+| IDOR-06: calendar-events | MEDIUM | SEC-47 | **DONE** — EXPECTED_FAIL (zafiyet mevcut, FIX-10 ile kapanacak) |
+| Destructive endpoints (bulk ops) | HIGH | SEC-42, SEC-43, SEC-44 | **DONE** — bulk_delete + bulk_assign + bulk_remove → 403 |
+| AllowAny PII sizintisi | MEDIUM | SEC-50 | **DONE** — SecureGate hata yaniti PII icermiyor |
+| Self-approval: Cardless | MEDIUM | SEC-51 | **DONE** — EXPECTED_FAIL (zafiyet mevcut, FIX-14 ile kapanacak) |
+| OvertimeRequest approve | HIGH | SEC-33 | **DONE** — Yetkisiz approve → 404 (queryset filter) |
+| AttendanceStats IDOR | MEDIUM | SEC-48 | **DONE** — EXPECTED_FAIL (zafiyet mevcut, FIX-10 ile kapanacak) |
+| Dashboard Dept IDOR | MEDIUM | SEC-49 | **DONE** — Korunuyor (PASS) |
 
 ### Eklenen Testler (SEC-31 ~ SEC-52) — TAMAMLANDI ✅
 
