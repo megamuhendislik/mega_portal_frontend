@@ -864,11 +864,11 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 
 | Seviye | Toplam | Kalan | Tamamlanan | En Kritik (Kalan) |
 |--------|--------|-------|------------|-------------------|
-| **CRITICAL** | 3 | **3** | 0 | EmployeeViewSet (DELETE acik!), SystemSettings acik, FiscalCalendar acik |
+| **CRITICAL** | 3 | **0** | 3 (FIX-01, FIX-02, FIX-03) | — Hepsi kapatildi |
 | **HIGH** | 10 | **9** | 1 (FIX-10 kismi) | PersonalCalendar IDOR, FiscalPeriod, WorkSchedule/Holiday CRUD, Reports export, Gate logs |
 | **MEDIUM** | 5 | **3** | 2 (FIX-15, FIX-16) | Self-approval, role atama |
 | **LOW** | 6 | **6** | 0 | Rol temizligi, unused perms, phantom perms |
-| **TOPLAM** | **24** | **21** | **3** | — |
+| **TOPLAM** | **24** | **18** | **6** | — |
 
 ---
 
@@ -1064,7 +1064,7 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 
 | Audit Bulgu | Seviye | Test | Durum |
 |-------------|--------|------|-------|
-| EmployeeViewSet NO RBAC | CRITICAL | SEC-02 | **KISMI** — sadece PATCH, DELETE/LIST/CREATE yok |
+| EmployeeViewSet NO RBAC | CRITICAL | SEC-02, SEC-31, SEC-32 | **DONE** — PATCH + DELETE + CREATE test eklendi |
 | SystemSettingsViewSet NO RBAC | CRITICAL | SEC-03, SEC-34 | **DONE** — PATCH + DELETE test eklendi |
 | FiscalCalendarViewSet NO RBAC | CRITICAL | SEC-06, SEC-35~37 | **DONE** — POST + recalculate + assign_employees + assigned_employees test eklendi |
 | PersonalEventGroupViewSet | HIGH | — | **GAP** |
