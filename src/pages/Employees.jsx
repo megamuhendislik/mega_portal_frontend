@@ -36,7 +36,9 @@ const INITIAL_FORM_STATE = {
     department: '', // Hierarchy Dept (Auto-filled)
     job_position: '',
     assignments: [], // Matrix (Dept+Title)
-    reports_to: '', // Manager ID (Primary)
+    reports_to: '', // Manager ID (Primary) - Legacy
+    primary_manager_ids: [], // Birincil Yöneticiler (Multiple)
+    cross_manager_ids: [], // Çapraz Yöneticiler (Multiple)
     substitutes: [], // [NEW] Substitutes
     // functional_department: '', // REMOVED
     tags: [], // [NEW] Employee Tags
@@ -232,6 +234,58 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                             </>
                         }
                     />
+                </div>
+
+                {/* 1b. PRIMARY & CROSS MANAGERS (Multi-select) */}
+                <div className="md:col-span-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Birincil)</label>
+                            <div className="h-36 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
+                                {potentialManagers.map(mgr => (
+                                    <label key={mgr.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={(formData.primary_manager_ids || []).includes(mgr.id)}
+                                            onChange={() => {
+                                                const current = formData.primary_manager_ids || [];
+                                                const updated = current.includes(mgr.id)
+                                                    ? current.filter(id => id !== mgr.id)
+                                                    : [...current, mgr.id];
+                                                handleChange('primary_manager_ids', updated);
+                                            }}
+                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm">{mgr.first_name} {mgr.last_name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
+                            <div className="h-36 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
+                                {potentialManagers.map(mgr => (
+                                    <label key={mgr.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={(formData.cross_manager_ids || []).includes(mgr.id)}
+                                            onChange={() => {
+                                                const current = formData.cross_manager_ids || [];
+                                                const updated = current.includes(mgr.id)
+                                                    ? current.filter(id => id !== mgr.id)
+                                                    : [...current, mgr.id];
+                                                handleChange('cross_manager_ids', updated);
+                                            }}
+                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm">{mgr.first_name} {mgr.last_name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">Proje/fonksiyonel bazlı çapraz yöneticiler.</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* 2. DEPARTMENT (Editable) */}
@@ -1229,6 +1283,8 @@ const Employees = () => {
                 department: data.department?.id || data.department,
                 job_position: data.job_position?.id || data.job_position,
                 reports_to: data.reports_to || '',
+                primary_manager_ids: (data.primary_managers || []).map(m => m.id),
+                cross_manager_ids: (data.cross_managers || []).map(m => m.id),
                 // functional_department: data.functional_unit || '', // REMOVED
                 tags: (data.tags || []).map(t => t.id), // Map Tags
 

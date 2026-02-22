@@ -345,6 +345,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     };
     const isInsufficientBalance = selectedType === 'LEAVE' && getInsufficientBalanceState();
 
+    const getRelationshipLabel = (rel) => ({
+        'PRIMARY': 'Birincil Yönetici',
+        'CROSS': 'Çapraz Yönetici',
+        'DEPT_ASSIGNMENT': 'Birim Görev Yöneticisi',
+        'DEPT_MANAGER': 'Departman Yöneticisi',
+        'DEPT_HIERARCHY': 'Üst Birim Yöneticisi',
+    }[rel] || 'Yönetici');
+
     const renderApproverDropdown = () => {
         if (selectedType === 'MEAL') return null;
         if (approversLoading) {
@@ -362,7 +370,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     <Users size={16} className="text-blue-500 shrink-0" />
                     <span className="text-sm font-medium text-blue-700">
                         Onaya gidecek: <strong>{availableApprovers[0].name}</strong>
-                        {availableApprovers[0].via && <span className="text-blue-500 font-normal"> ({availableApprovers[0].via} yerine)</span>}
+                        <span className="text-blue-500 font-normal"> ({getRelationshipLabel(availableApprovers[0].relationship)})</span>
+                        {availableApprovers[0].via && <span className="text-blue-500 font-normal"> — {availableApprovers[0].via}</span>}
                     </span>
                 </div>
             );
@@ -383,8 +392,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     <option value="">Yönetici seçiniz</option>
                     {availableApprovers.map(a => (
                         <option key={a.id} value={a.id}>
-                            {a.name} ({a.relationship === 'PRIMARY' ? 'Birincil Yönetici' : 'Çapraz Yönetici'})
-                            {a.via ? ` — ${a.via} yerine` : ''}
+                            {a.name} ({getRelationshipLabel(a.relationship)})
+                            {a.via ? ` — ${a.via}` : ''}
                         </option>
                     ))}
                 </select>

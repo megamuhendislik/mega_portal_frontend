@@ -107,6 +107,13 @@ const EmployeeDetail = () => {
                 primary_manager_ids: managers.primary_managers.map(m => m.id),
                 cross_manager_ids: managers.cross_managers.map(m => m.id),
 
+                // DepartmentAssignment (secondary assignments)
+                assignments: (emp.assignments || []).filter(a => !a.is_primary).map(a => ({
+                    department_id: a.department?.id || a.department || '',
+                    job_position_id: a.job_position?.id || a.job_position || '',
+                    manager_id: a.manager?.id || a.manager || '',
+                })),
+
                 work_schedule: emp.work_schedule?.id || '',
                 attendance_tolerance_minutes: emp.attendance_tolerance_minutes || 0,
                 daily_break_allowance: emp.daily_break_allowance || 0,
@@ -370,6 +377,101 @@ const EmployeeDetail = () => {
                                             <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* İkincil Görevlendirmeler (DepartmentAssignment) */}
+                                <div className="card p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4">İkincil Görevlendirmeler (Matrix)</h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = formData.assignments || [];
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    assignments: [...current, { department_id: '', job_position_id: '', manager_id: '' }]
+                                                }));
+                                            }}
+                                            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
+                                        >
+                                            <Plus size={14} /> Yeni Görev Ekle
+                                        </button>
+                                    </div>
+
+                                    {(!formData.assignments || formData.assignments.length === 0) ? (
+                                        <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-sm text-slate-400">
+                                            Ek görevlendirme bulunmuyor.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {formData.assignments.map((asn, idx) => (
+                                                <div key={idx} className="flex gap-2 items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-slate-500 mb-1">Departman</label>
+                                                        <select
+                                                            value={asn.department_id || ''}
+                                                            onChange={e => {
+                                                                const newAsn = [...formData.assignments];
+                                                                newAsn[idx] = { ...newAsn[idx], department_id: e.target.value };
+                                                                setFormData(prev => ({ ...prev, assignments: newAsn }));
+                                                            }}
+                                                            className="w-full p-2 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                        >
+                                                            <option value="">Seçiniz...</option>
+                                                            {departments.map(d => (
+                                                                <option key={d.id} value={d.id}>{d.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-slate-500 mb-1">Pozisyon</label>
+                                                        <select
+                                                            value={asn.job_position_id || ''}
+                                                            onChange={e => {
+                                                                const newAsn = [...formData.assignments];
+                                                                newAsn[idx] = { ...newAsn[idx], job_position_id: e.target.value };
+                                                                setFormData(prev => ({ ...prev, assignments: newAsn }));
+                                                            }}
+                                                            className="w-full p-2 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                        >
+                                                            <option value="">Seçiniz...</option>
+                                                            {jobPositions.map(p => (
+                                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-slate-500 mb-1">Yönetici</label>
+                                                        <select
+                                                            value={asn.manager_id || ''}
+                                                            onChange={e => {
+                                                                const newAsn = [...formData.assignments];
+                                                                newAsn[idx] = { ...newAsn[idx], manager_id: e.target.value };
+                                                                setFormData(prev => ({ ...prev, assignments: newAsn }));
+                                                            }}
+                                                            className="w-full p-2 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                        >
+                                                            <option value="">Opsiyonel...</option>
+                                                            {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
+                                                                <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newAsn = formData.assignments.filter((_, i) => i !== idx);
+                                                            setFormData(prev => ({ ...prev, assignments: newAsn }));
+                                                        }}
+                                                        className="mt-6 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-slate-500 mt-2">Bu çalışanın ek departman görevlendirmeleri. Her görevlendirmeye ayrı yönetici atanabilir.</p>
                                 </div>
                             </div>
                         )}
