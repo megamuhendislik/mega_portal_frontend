@@ -180,6 +180,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
     // const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü'; // Removed logic
     const rootDepartments = departments.filter(d => !d.parent);
     const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
+    const potentialManagers = employees || [];
 
     // Board muafiyet kontrolü
     const selectedDept = departments.find(d => String(d.id) === String(formData.department));
