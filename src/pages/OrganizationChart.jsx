@@ -906,7 +906,7 @@ const OrganizationChart = () => {
                     <button
                         onClick={() => setShowDebug(!showDebug)}
                         className={`
-                            flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - xs md: text - sm font - medium transition - colors border shadow - sm whitespace - nowrap
+                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
                             ${showDebug
                                 ? 'bg-amber-100 text-amber-700 border-amber-200'
                                 : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
