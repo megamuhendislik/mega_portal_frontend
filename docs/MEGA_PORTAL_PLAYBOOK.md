@@ -236,7 +236,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | SYS-07 | PENDING | — | — | |
 | SYS-08 | PENDING | — | — | |
 | SYS-09 | PENDING | — | — | |
-| SYS-10 | DONE | BE: 8f9f104, 6266f0d, 108ebc9, 723b19a, 8df0c94, c5d37ac, 597dc4b, f4215b4, 8d0f793 / FE: 28b9646, 8b94ee5 | Railway autodeploy OK | SecurityAuditRunner 37 test (SEC-31~37 eklendi), SecurityAuditTab UI, test data cleanup, crash-proof infra, FIX-01~03 RBAC fix'leri |
+| SYS-10 | DONE | BE: 8f9f104, 6266f0d, 108ebc9, 723b19a, 8df0c94, c5d37ac, 597dc4b, f4215b4, 8d0f793 / FE: 28b9646, 8b94ee5 | Railway autodeploy OK | SecurityAuditRunner 36 test (SEC-31,32,34~37 eklendi), SecurityAuditTab UI, test data cleanup, crash-proof infra, FIX-01~03 RBAC fix'leri |
 | SYS-11 | PENDING | — | — | |
 | SYS-12 | PENDING | — | — | |
 | SYS-13 | PENDING | — | — | |
@@ -409,7 +409,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
   - **FIX-01 (EmployeeViewSet):** `core/views.py` — `_check_employee_permission()` eklendi: CREATE/UPDATE/PARTIAL_UPDATE icin PAGE_EMPLOYEES, DELETE icin SYSTEM_FULL_ACCESS. LIST/RETRIEVE acik (12+ frontend component bagimli). SEC-02,31,32 testleri eklendi
   - **FIX-02 (SystemSettingsViewSet):** `core/views.py` — `get_permissions()` method'u ile CUD: `IsSystemAdmin`, read: `IsAuthenticated`. `IsSystemAdmin` yeni DRF permission class (`core/permissions.py`). SEC-03,34 testleri eklendi
   - **FIX-03 (FiscalCalendar assigned_employees):** `attendance/views_calendar.py` — `assigned_employees` GET action'ina `_check_schedule_permission` eklendi (PII exposure fix). SEC-35,36,37 testleri eklendi
-  - **Security Audit Runner:** 7 yeni test eklendi (SEC-31~37), toplam 37 test
+  - **Security Audit Runner:** 6 yeni test eklendi (SEC-31,32,34,35,36,37), toplam 36 test
 - **Files changed:**
   - `core/permissions.py` — `IsSystemAdmin` class eklendi
   - `core/views.py` — EmployeeViewSet CUD permission checks + SystemSettingsViewSet `get_permissions()`
@@ -1114,4 +1114,4 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 | FIX-13 | SEC-47 |
 | FIX-14 | SEC-48 |
 
-### Mevcut Durum: 37/49 test (%76 kapsam) | Hedef: 49/49 = %100
+### Mevcut Durum: 36/49 test (%73 kapsam) | Hedef: 49/49 = %100
