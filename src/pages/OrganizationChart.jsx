@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactDOM from 'react-dom';
 import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
+import toast, { Toaster } from 'react-hot-toast';
 
 // --- Helper Functions (Module Scope) ---
 
@@ -103,6 +105,7 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
 // Simple Modal Component for Employee Details
 // Live Employee Detail Modal
 const EmployeeDetailModal = ({ employee, onClose }) => {
+    const navigate = useNavigate();
     const [liveData, setLiveData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -248,7 +251,7 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
                 {/* Footer */}
                 <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0">
                     <button
-                        onClick={() => alert('Profil detay sayfasına yönlendirilecek...')}
+                        onClick={() => { onClose(); navigate(`/employees/${employee.id}`); }}
                         className="text-sm text-blue-600 font-bold hover:underline"
                     >
                         Tam Profili Görüntüle
@@ -707,11 +710,13 @@ const OrganizationChart = () => {
             } else {
                 await api.patch(`/departments/${modalConfig.node.id}/`, data);
             }
+            const msg = modalConfig.mode === 'create' ? 'Departman oluşturuldu.' : 'Departman güncellendi.';
             setModalConfig(null);
             fetchHierarchy();
+            toast.success(msg);
         } catch (err) {
             console.error(err);
-            alert("İşlem başarısız.");
+            toast.error(err.response?.data?.error || "İşlem başarısız.");
         }
     };
 
@@ -720,9 +725,10 @@ const OrganizationChart = () => {
         try {
             await api.delete(`/departments/${node.id}/`);
             fetchHierarchy();
+            toast.success('Departman silindi.');
         } catch (err) {
             console.error(err);
-            alert("Silinemedi (Personel atanmış olabilir).");
+            toast.error(err.response?.data?.error || "Silinemedi (Personel atanmış olabilir).");
         }
     };
 
@@ -803,6 +809,7 @@ const OrganizationChart = () => {
 
     return (
         <div className="space-y-2 h-full flex flex-col overflow-hidden relative">
+            <Toaster position="top-right" />
             {selectedEmployee && (
                 <EmployeeDetailModal
                     employee={selectedEmployee}
