@@ -17,6 +17,7 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
   const [dropTargetId, setDropTargetId] = useState(null);
   const [pendingReassignment, setPendingReassignment] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [contextMenuTarget, setContextMenuTarget] = useState(null);
 
   /**
    * Called when drag starts on an employee card.
@@ -89,47 +90,63 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
   /**
    * Called when the user confirms the reassignment in the modal.
    * Sends a PATCH request to update the employee's manager or department.
+   *
+   * @param {'PRIMARY' | 'SECONDARY'} managerType - Which manager list to add to
    */
-  const confirmReassignment = useCallback(async () => {
+  const confirmReassignment = useCallback(async (managerType = 'PRIMARY') => {
     if (!pendingReassignment) return;
-
     const { employee, target } = pendingReassignment;
     setIsSaving(true);
 
     try {
-      let patchData;
-
       if (target.type === 'employee') {
-        patchData = {
-          primary_managers: [{
-            manager_id: target.id,
-            department_id: target.department_id,
-            job_position_id: target.job_position_id,
-          }],
+        // Fetch current managers
+        const empRes = await api.get(`/employees/${employee.id}/`);
+        const currentPrimary = (empRes.data.primary_managers || []).map(m => ({
+          manager_id: m.id, department_id: m.department_id, job_position_id: m.job_position_id,
+        }));
+        const currentSecondary = (empRes.data.secondary_managers || []).map(m => ({
+          manager_id: m.id, department_id: m.department_id, job_position_id: m.job_position_id,
+        }));
+
+        const newEntry = {
+          manager_id: target.id,
+          department_id: target.department_id,
+          job_position_id: target.job_position_id,
         };
+
+        let patchData;
+        if (managerType === 'PRIMARY') {
+          if (currentPrimary.some(m => m.manager_id === target.id)) {
+            toast.error('Bu kişi zaten birincil yönetici olarak atanmış.');
+            setIsSaving(false);
+            return;
+          }
+          patchData = { primary_managers: [...currentPrimary, newEntry] };
+        } else {
+          if (currentSecondary.some(m => m.manager_id === target.id)) {
+            toast.error('Bu kişi zaten ikincil yönetici olarak atanmış.');
+            setIsSaving(false);
+            return;
+          }
+          patchData = { secondary_managers: [...currentSecondary, newEntry] };
+        }
+
+        await api.patch(`/employees/${employee.id}/`, patchData);
       } else if (target.type === 'department') {
-        patchData = {
+        await api.patch(`/employees/${employee.id}/`, {
           department: target.id,
-          primary_managers: [],
-        };
+        });
       }
 
-      await api.patch(`/employees/${employee.id}/`, patchData);
-
-      toast.success(
-        `${employee.name} basariyla yeniden atandi.`
-      );
+      toast.success(`${employee.name} başarıyla yeniden atandı.`);
       setPendingReassignment(null);
-
-      if (onReassignComplete) {
-        onReassignComplete();
-      }
+      if (onReassignComplete) onReassignComplete();
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.detail ||
-        error.response?.data?.message ||
-        (typeof error.response?.data === 'string' ? error.response.data : null) ||
-        'Atama sirasinda bir hata olustu.';
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || (typeof error.response?.data === 'string' ? error.response.data : null)
+        || 'Atama sırasında bir hata oluştu.';
       toast.error(errorMessage);
     } finally {
       setIsSaving(false);
@@ -144,12 +161,27 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
     setPendingReassignment(null);
   }, []);
 
+  const handleContextMenu = useCallback((e, employeeData) => {
+    if (!isEditMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenuTarget({
+      employee: employeeData,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  }, [isEditMode]);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuTarget(null);
+  }, []);
+
   return {
     // State
     draggedEmployee,
     dropTargetId,
     pendingReassignment,
     isSaving,
+    contextMenuTarget,
 
     // Handlers
     handleDragStart,
@@ -159,5 +191,7 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
     handleDrop,
     confirmReassignment,
     cancelReassignment,
+    handleContextMenu,
+    closeContextMenu,
   };
 }

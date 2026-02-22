@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { useOrgChartDnD } from './useOrgChartDnD';
 import ReassignConfirmModal from './ReassignConfirmModal';
+import OrgChartContextMenu from './OrgChartContextMenu';
+import ManagerEditModal from './ManagerEditModal';
 
 // --- Helper Functions (Module Scope) ---
 
@@ -267,7 +269,7 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 
 // Horizontal Employee Card (Compact)
 // Horizontal Employee Card (Compact)
-const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode }) => {
+const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }) => {
     const category = getRoleCategory(emp.title);
     const colorKey = getColorForCategory(category);
     const theme = getThemeClasses(colorKey);
@@ -303,6 +305,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode }) => {
                 if (onClick) onClick(emp);
             }}
             onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
+            onContextMenu={isEditMode && onContextMenu ? (e) => onContextMenu(e, empData) : undefined}
         >
             {/* Avatar Left with Status Dot */}
             <div className="relative shrink-0">
@@ -389,7 +392,7 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd })
 
 // Stacked Group Node (New)
 // Grid Group Node (Modified)
-const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode }) => {
+const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onContextMenu }) => {
     // Define Color Styles
     const colors = {
         'blue': 'bg-blue-50/50 border-blue-200 text-blue-900',
@@ -438,6 +441,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode }) =>
                             showTags={showTags}
                             dnd={dnd}
                             isEditMode={isEditMode}
+                            onContextMenu={onContextMenu}
                         />
                     </div>
                 ))}
@@ -446,7 +450,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode }) =>
     );
 };
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu }) => {
     // 1. Determine Type Dynamically
     // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
     // because groups have 'employees' property which triggers the department logic
@@ -575,9 +579,10 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         showTags={showTags}
                         dnd={dnd}
                         isEditMode={isEditMode}
+                        onContextMenu={onContextMenu}
                     />
                 ) : (
-                    <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} dnd={dnd} isEditMode={isEditMode} />
+                    <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} dnd={dnd} isEditMode={isEditMode} onContextMenu={onContextMenu} />
                 )}
             </div>
 
@@ -596,6 +601,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                             dnd={dnd}
                             onEdit={onEdit}
                             onDelete={onDelete}
+                            onContextMenu={onContextMenu}
                         />
                     ))}
                 </ul>
@@ -614,6 +620,7 @@ const OrganizationChart = () => {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
+    const [managerEditTarget, setManagerEditTarget] = useState(null); // { id, name } for ManagerEditModal
     const { hasPermission } = useAuth();
     const canReassign = hasPermission('ACTION_ORG_CHART_EDIT') && hasPermission('PAGE_EMPLOYEES');
 
@@ -872,6 +879,23 @@ const OrganizationChart = () => {
                 isSaving={dnd.isSaving}
             />
 
+            <OrgChartContextMenu
+                visible={!!dnd.contextMenuTarget}
+                position={dnd.contextMenuTarget?.position || { x: 0, y: 0 }}
+                employee={dnd.contextMenuTarget?.employee}
+                onClose={dnd.closeContextMenu}
+                onEditManagers={(emp) => setManagerEditTarget(emp)}
+            />
+
+            {managerEditTarget && (
+                <ManagerEditModal
+                    employeeId={managerEditTarget.id}
+                    employeeName={managerEditTarget.name}
+                    onClose={() => setManagerEditTarget(null)}
+                    onSaved={() => { setManagerEditTarget(null); fetchHierarchy(); }}
+                />
+            )}
+
             <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 px-1 gap-2">
                 <div>
                     <h2 className="text-xl md:text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
@@ -976,6 +1000,7 @@ const OrganizationChart = () => {
                                     onEdit={(node) => setModalConfig({ mode: 'edit', node })}
                                     onDelete={handleDeleteDepartment}
                                     dnd={isEditMode && canReassign ? dnd : undefined}
+                                    onContextMenu={isEditMode && canReassign ? dnd.handleContextMenu : undefined}
                                 />
                             ))}
                         </ul>
