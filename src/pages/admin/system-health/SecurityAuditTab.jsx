@@ -6,7 +6,8 @@ import {
     ArrowPathIcon,
     CheckCircleIcon,
     ExclamationTriangleIcon,
-    XCircleIcon
+    XCircleIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
 
 export default function SecurityAuditTab() {
@@ -14,6 +15,8 @@ export default function SecurityAuditTab() {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
     const [groupFilter, setGroupFilter] = useState('ALL');
+    const [cleanupLoading, setCleanupLoading] = useState(false);
+    const [cleanupResult, setCleanupResult] = useState(null);
 
     const runAudit = async () => {
         setLoading(true);
@@ -25,6 +28,20 @@ export default function SecurityAuditTab() {
             setError(e.response?.data?.error || e.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const cleanupTestData = async () => {
+        if (!confirm('Tüm SEC_ prefixli test verilerini (kullanıcılar, çalışanlar, departmanlar vb.) silmek istiyor musunuz?')) return;
+        setCleanupLoading(true);
+        setCleanupResult(null);
+        try {
+            const res = await api.post('/system/health-check/cleanup-security-audit-data/');
+            setCleanupResult(res.data);
+        } catch (e) {
+            setCleanupResult({ status: 'error', message: e.response?.data?.error || e.message });
+        } finally {
+            setCleanupLoading(false);
         }
     };
 
@@ -69,23 +86,57 @@ export default function SecurityAuditTab() {
                             Tüm API endpoint'lerinin RBAC (yetki kontrolü) uyumunu test eder.
                         </p>
                     </div>
-                    <button
-                        onClick={runAudit}
-                        disabled={loading}
-                        className={`px-6 py-3 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center gap-2
-                            ${loading
-                                ? 'bg-gray-100 text-gray-400 cursor-wait'
-                                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'}
-                        `}
-                    >
-                        {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
-                        {loading ? 'Test Ediliyor...' : 'Tüm Testleri Çalıştır'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={cleanupTestData}
+                            disabled={cleanupLoading || loading}
+                            className={`px-4 py-3 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center gap-2
+                                ${cleanupLoading
+                                    ? 'bg-gray-100 text-gray-400 cursor-wait'
+                                    : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'}
+                            `}
+                            title="Önceki testlerden kalan SEC_ verilerini temizle"
+                        >
+                            {cleanupLoading ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <TrashIcon className="w-4 h-4" />}
+                            Test Verilerini Temizle
+                        </button>
+                        <button
+                            onClick={runAudit}
+                            disabled={loading}
+                            className={`px-6 py-3 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center gap-2
+                                ${loading
+                                    ? 'bg-gray-100 text-gray-400 cursor-wait'
+                                    : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'}
+                            `}
+                        >
+                            {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
+                            {loading ? 'Test Ediliyor...' : 'Tüm Testleri Çalıştır'}
+                        </button>
+                    </div>
                 </div>
 
                 {error && (
                     <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                         Hata: {error}
+                    </div>
+                )}
+
+                {cleanupResult && (
+                    <div className={`mt-4 p-3 rounded-lg text-sm ${
+                        cleanupResult.status === 'error'
+                            ? 'bg-red-50 border border-red-200 text-red-700'
+                            : cleanupResult.total > 0
+                                ? 'bg-green-50 border border-green-200 text-green-700'
+                                : 'bg-gray-50 border border-gray-200 text-gray-600'
+                    }`}>
+                        <div className="font-bold">{cleanupResult.message}</div>
+                        {cleanupResult.deleted && Object.keys(cleanupResult.deleted).length > 0 && (
+                            <div className="mt-2 text-xs space-y-0.5">
+                                {Object.entries(cleanupResult.deleted).map(([model, count]) => (
+                                    <div key={model}>{model}: {count} kayıt silindi</div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
