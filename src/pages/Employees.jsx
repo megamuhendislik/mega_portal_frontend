@@ -37,8 +37,8 @@ const INITIAL_FORM_STATE = {
     job_position: '',
     assignments: [], // Matrix (Dept+Title)
     reports_to: '', // Manager ID (Primary) - Legacy
-    primary_manager_ids: [], // Birincil Yöneticiler (Multiple)
-    cross_manager_ids: [], // Çapraz Yöneticiler (Multiple)
+    primary_managers: [], // Birincil Yöneticiler [{manager_id, department_id, job_position_id}]
+    secondary_managers: [], // İkincil Yöneticiler [{manager_id, department_id, job_position_id}]
     substitutes: [], // [NEW] Substitutes
     // functional_department: '', // REMOVED
     tags: [], // [NEW] Employee Tags
@@ -236,56 +236,90 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     />
                 </div>
 
-                {/* 1b. PRIMARY & CROSS MANAGERS (Multi-select) */}
+                {/* 1b. BIRINCIL YÖNETICILER (Structured Rows) */}
                 <div className="md:col-span-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Birincil)</label>
-                            <div className="h-36 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
-                                {potentialManagers.map(mgr => (
-                                    <label key={mgr.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={(formData.primary_manager_ids || []).includes(mgr.id)}
-                                            onChange={() => {
-                                                const current = formData.primary_manager_ids || [];
-                                                const updated = current.includes(mgr.id)
-                                                    ? current.filter(id => id !== mgr.id)
-                                                    : [...current, mgr.id];
-                                                handleChange('primary_manager_ids', updated);
-                                            }}
-                                            className="rounded text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm">{mgr.first_name} {mgr.last_name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
-                            <div className="h-36 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
-                                {potentialManagers.map(mgr => (
-                                    <label key={mgr.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={(formData.cross_manager_ids || []).includes(mgr.id)}
-                                            onChange={() => {
-                                                const current = formData.cross_manager_ids || [];
-                                                const updated = current.includes(mgr.id)
-                                                    ? current.filter(id => id !== mgr.id)
-                                                    : [...current, mgr.id];
-                                                handleChange('cross_manager_ids', updated);
-                                            }}
-                                            className="rounded text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm">{mgr.first_name} {mgr.last_name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">Proje/fonksiyonel bazlı çapraz yöneticiler.</p>
-                        </div>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">Birincil Yöneticiler</label>
+                        <button type="button" onClick={() => handleChange('primary_managers', [...(formData.primary_managers || []), { manager_id: '', department_id: '', job_position_id: '' }])} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
+                            <Plus size={12} /> Ekle
+                        </button>
                     </div>
+                    {(formData.primary_managers || []).length === 0 ? (
+                        <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">Birincil yönetici atanmadı.</div>
+                    ) : (
+                        <div className="space-y-2">
+                            {(formData.primary_managers || []).map((entry, idx) => (
+                                <div key={idx} className="flex gap-2 items-start p-2 bg-blue-50/50 rounded-xl border border-blue-100">
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
+                                        <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; handleChange('primary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option value="">Seçiniz...</option>
+                                            {potentialManagers.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
+                                        <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; handleChange('primary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option value="">Seçiniz...</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
+                                        <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; handleChange('primary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option value="">Seçiniz...</option>
+                                            {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <button type="button" onClick={() => handleChange('primary_managers', formData.primary_managers.filter((_, i) => i !== idx))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler. Ekip listesinde görünür.</p>
+                </div>
+
+                {/* 1c. İKİNCİL YÖNETICILER (Structured Rows) */}
+                <div className="md:col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">İkincil Yöneticiler</label>
+                        <button type="button" onClick={() => handleChange('secondary_managers', [...(formData.secondary_managers || []), { manager_id: '', department_id: '', job_position_id: '' }])} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">
+                            <Plus size={12} /> Ekle
+                        </button>
+                    </div>
+                    {(formData.secondary_managers || []).length === 0 ? (
+                        <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">İkincil yönetici atanmadı.</div>
+                    ) : (
+                        <div className="space-y-2">
+                            {(formData.secondary_managers || []).map((entry, idx) => (
+                                <div key={idx} className="flex gap-2 items-start p-2 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
+                                        <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; handleChange('secondary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                            <option value="">Seçiniz...</option>
+                                            {potentialManagers.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
+                                        <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; handleChange('secondary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                            <option value="">Seçiniz...</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
+                                        <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; handleChange('secondary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                            <option value="">Seçiniz...</option>
+                                            {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <button type="button" onClick={() => handleChange('secondary_managers', formData.secondary_managers.filter((_, i) => i !== idx))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <p className="text-xs text-slate-500 mt-1">Sadece talep onayı verebilir, ekip listesinde görünmez.</p>
                 </div>
 
                 {/* 2. DEPARTMENT (Editable) */}
@@ -1283,8 +1317,16 @@ const Employees = () => {
                 department: data.department?.id || data.department,
                 job_position: data.job_position?.id || data.job_position,
                 reports_to: data.reports_to || '',
-                primary_manager_ids: (data.primary_managers || []).map(m => m.id),
-                cross_manager_ids: (data.cross_managers || []).map(m => m.id),
+                primary_managers: (data.primary_managers || []).map(m => ({
+                    manager_id: m.id,
+                    department_id: m.department_id || '',
+                    job_position_id: m.job_position_id || ''
+                })),
+                secondary_managers: (data.secondary_managers || []).map(m => ({
+                    manager_id: m.id,
+                    department_id: m.department_id || '',
+                    job_position_id: m.job_position_id || ''
+                })),
                 // functional_department: data.functional_unit || '', // REMOVED
                 tags: (data.tags || []).map(t => t.id), // Map Tags
 

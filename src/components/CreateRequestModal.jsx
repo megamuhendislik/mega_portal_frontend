@@ -347,7 +347,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     const getRelationshipLabel = (rel) => ({
         'PRIMARY': 'Birincil Yönetici',
-        'CROSS': 'Çapraz Yönetici',
+        'SECONDARY': 'İkincil Yönetici',
         'DEPT_ASSIGNMENT': 'Birim Görev Yöneticisi',
         'DEPT_MANAGER': 'Departman Yöneticisi',
         'DEPT_HIERARCHY': 'Üst Birim Yöneticisi',

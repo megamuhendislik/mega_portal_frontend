@@ -37,7 +37,7 @@ const EmployeeDetail = () => {
         // Corporate
         department: '', job_position: '',
         hired_date: '', employee_code: '',
-        primary_manager_ids: [], cross_manager_ids: [],
+        primary_managers: [], secondary_managers: [],
         is_active: true,
         is_profile_editable: false,
 
@@ -103,9 +103,17 @@ const EmployeeDetail = () => {
                 is_active: emp.is_active,
                 is_profile_editable: emp.is_profile_editable || false,
 
-                // Map managers to IDs
-                primary_manager_ids: managers.primary_managers.map(m => m.id),
-                cross_manager_ids: managers.cross_managers.map(m => m.id),
+                // Map managers to structured format
+                primary_managers: (managers.primary_managers || []).map(m => ({
+                    manager_id: m.id,
+                    department_id: m.department_id || '',
+                    job_position_id: m.job_position_id || ''
+                })),
+                secondary_managers: (managers.secondary_managers || []).map(m => ({
+                    manager_id: m.id,
+                    department_id: m.department_id || '',
+                    job_position_id: m.job_position_id || ''
+                })),
 
                 // DepartmentAssignment (secondary assignments)
                 assignments: (emp.assignments || []).filter(a => !a.is_primary).map(a => ({
@@ -341,41 +349,91 @@ const EmployeeDetail = () => {
 
                                 <div className="card p-6">
                                     <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Yönetici Atamaları</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Ana Yöneticiler (Primary)</label>
-                                            <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
-                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
-                                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={formData.primary_manager_ids.includes(emp.id)}
-                                                            onChange={() => toggleArrayItem('primary_manager_ids', emp.id)}
-                                                            className="rounded text-blue-600 focus:ring-blue-500"
-                                                        />
-                                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
-                                                    </label>
+
+                                    {/* Birincil Yöneticiler */}
+                                    <div className="mb-6">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-slate-700">Birincil Yöneticiler</label>
+                                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, primary_managers: [...prev.primary_managers, { manager_id: '', department_id: '', job_position_id: '' }] }))} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
+                                                <Plus size={12} /> Ekle
+                                            </button>
+                                        </div>
+                                        {formData.primary_managers.length === 0 ? (
+                                            <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">Birincil yönetici atanmadı.</div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {formData.primary_managers.map((entry, idx) => (
+                                                    <div key={idx} className="flex gap-2 items-start p-2 bg-blue-50/50 rounded-xl border border-blue-100">
+                                                        <div className="flex-1">
+                                                            <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
+                                                            <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; setFormData(prev => ({ ...prev, primary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                                                <option value="">Seçiniz...</option>
+                                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
+                                                            <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; setFormData(prev => ({ ...prev, primary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                                                <option value="">Seçiniz...</option>
+                                                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
+                                                            <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; setFormData(prev => ({ ...prev, primary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                                                <option value="">Seçiniz...</option>
+                                                                {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, primary_managers: prev.primary_managers.filter((_, i) => i !== idx) }))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
+                                                    </div>
                                                 ))}
                                             </div>
-                                            <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler.</p>
+                                        )}
+                                        <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler. Ekip listesinde görünür.</p>
+                                    </div>
+
+                                    {/* İkincil Yöneticiler */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-slate-700">İkincil Yöneticiler</label>
+                                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, secondary_managers: [...prev.secondary_managers, { manager_id: '', department_id: '', job_position_id: '' }] }))} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">
+                                                <Plus size={12} /> Ekle
+                                            </button>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Çapraz Yöneticiler (Cross)</label>
-                                            <div className="h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50">
-                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
-                                                    <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={formData.cross_manager_ids.includes(emp.id)}
-                                                            onChange={() => toggleArrayItem('cross_manager_ids', emp.id)}
-                                                            className="rounded text-blue-600 focus:ring-blue-500"
-                                                        />
-                                                        <span className="text-sm">{emp.first_name} {emp.last_name}</span>
-                                                    </label>
+                                        {formData.secondary_managers.length === 0 ? (
+                                            <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">İkincil yönetici atanmadı.</div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {formData.secondary_managers.map((entry, idx) => (
+                                                    <div key={idx} className="flex gap-2 items-start p-2 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                                                        <div className="flex-1">
+                                                            <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
+                                                            <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; setFormData(prev => ({ ...prev, secondary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                                <option value="">Seçiniz...</option>
+                                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
+                                                            <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; setFormData(prev => ({ ...prev, secondary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                                <option value="">Seçiniz...</option>
+                                                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
+                                                            <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; setFormData(prev => ({ ...prev, secondary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                                <option value="">Seçiniz...</option>
+                                                                {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, secondary_managers: prev.secondary_managers.filter((_, i) => i !== idx) }))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
+                                                    </div>
                                                 ))}
                                             </div>
-                                            <p className="text-xs text-slate-500 mt-1">Sadece görev atayabilen yöneticiler.</p>
-                                        </div>
+                                        )}
+                                        <p className="text-xs text-slate-500 mt-1">Sadece talep onayı verebilir, ekip listesinde görünmez.</p>
                                     </div>
                                 </div>
 
@@ -696,7 +754,7 @@ const EmployeeDetail = () => {
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Yöneticiler</span>
-                                <span className="font-medium text-slate-800">{formData.primary_manager_ids.length} Ana, {formData.cross_manager_ids.length} Çapraz</span>
+                                <span className="font-medium text-slate-800">{formData.primary_managers.length} Birincil, {formData.secondary_managers.length} İkincil</span>
                             </div>
                         </div>
                         {canEdit && (
