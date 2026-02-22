@@ -6,6 +6,8 @@ import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
 import toast, { Toaster } from 'react-hot-toast';
+import { useOrgChartDnD } from './useOrgChartDnD';
+import ReassignConfirmModal from './ReassignConfirmModal';
 
 // --- Helper Functions (Module Scope) ---
 
@@ -265,23 +267,42 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 
 // Horizontal Employee Card (Compact)
 // Horizontal Employee Card (Compact)
-const EmployeeNode = ({ emp, onClick, showTags }) => {
+const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode }) => {
     const category = getRoleCategory(emp.title);
     const colorKey = getColorForCategory(category);
     const theme = getThemeClasses(colorKey);
 
+    const isDragSource = dnd?.draggedEmployee?.id === emp.id;
+    const isDragTarget = dnd?.dropTargetId === emp.id;
+    const canDrag = isEditMode && !emp.is_secondary;
+
+    const empData = {
+        id: emp.id, name: emp.name, title: emp.title,
+        department_id: emp.department_id, job_position_id: emp.job_position_id,
+    };
+
     return (
         <div
+            draggable={canDrag}
+            onDragStart={canDrag ? (e) => dnd.handleDragStart(e, empData) : undefined}
+            onDragEnd={canDrag ? () => dnd.handleDragEnd() : undefined}
+            onDragOver={dnd ? (e) => dnd.handleDragOver(e, { ...empData, type: 'employee' }) : undefined}
+            onDragLeave={dnd ? () => dnd.handleDragLeave() : undefined}
+            onDrop={dnd ? (e) => dnd.handleDrop(e, { ...empData, type: 'employee' }) : undefined}
             className={`
                 relative z-10 p-1.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
                 bg-white ${theme.border} ${theme.text}
                 flex flex-row items-center gap-2
                 w-[170px] h-[48px] group /* Fixed compact width/height */
+                ${isDragSource ? 'opacity-40 scale-95' : ''}
+                ${isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : ''}
+                ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
             `}
             onClick={(e) => {
                 e.stopPropagation();
                 if (onClick) onClick(emp);
             }}
+            onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
         >
             {/* Avatar Left with Status Dot */}
             <div className="relative shrink-0">
@@ -321,12 +342,19 @@ const EmployeeNode = ({ emp, onClick, showTags }) => {
 };
 
 // White Department Card
-const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete }) => (
+const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd }) => {
+    const isDragTarget = dnd?.dropTargetId === node.id;
+
+    return (
     <div
+        onDragOver={dnd ? (e) => dnd.handleDragOver(e, { id: node.id, name: node.name, type: 'department' }) : undefined}
+        onDragLeave={dnd ? () => dnd.handleDragLeave() : undefined}
+        onDrop={dnd ? (e) => dnd.handleDrop(e, { id: node.id, name: node.name, type: 'department' }) : undefined}
         className={`
             relative z-10 p-3 rounded-xl border-l-4 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer
             bg-white border-slate-200 border-l-emerald-500 text-slate-800
             min-w-[220px] max-w-[260px] group
+            ${isDragTarget ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}
         `}
         onClick={(e) => {
             e.stopPropagation();
@@ -356,11 +384,12 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete }) => (
             )}
         </div>
     </div>
-);
+    );
+};
 
 // Stacked Group Node (New)
 // Grid Group Node (Modified)
-const GroupNode = ({ group, colorClass, onClick, showTags }) => {
+const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode }) => {
     // Define Color Styles
     const colors = {
         'blue': 'bg-blue-50/50 border-blue-200 text-blue-900',
@@ -407,6 +436,8 @@ const GroupNode = ({ group, colorClass, onClick, showTags }) => {
                             emp={{ ...emp, is_secondary: false }} // Ensure clean props
                             onClick={onClick}
                             showTags={showTags}
+                            dnd={dnd}
+                            isEditMode={isEditMode}
                         />
                     </div>
                 ))}
@@ -415,7 +446,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags }) => {
     );
 };
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd }) => {
     // 1. Determine Type Dynamically
     // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
     // because groups have 'employees' property which triggers the department logic
@@ -534,6 +565,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         onAddChild={onAddChild}
                         onEdit={onEdit}
                         onDelete={onDelete}
+                        dnd={dnd}
                     />
                 ) : node.type === 'group' ? (
                     <GroupNode
@@ -541,9 +573,11 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         colorClass={node.color}
                         onClick={onEmployeeClick}
                         showTags={showTags}
+                        dnd={dnd}
+                        isEditMode={isEditMode}
                     />
                 ) : (
-                    <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} />
+                    <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} dnd={dnd} isEditMode={isEditMode} />
                 )}
             </div>
 
@@ -559,6 +593,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                             onEmployeeClick={onEmployeeClick}
                             isEditMode={isEditMode}
                             onAddChild={onAddChild}
+                            dnd={dnd}
                             onEdit={onEdit}
                             onDelete={onDelete}
                         />
@@ -580,6 +615,7 @@ const OrganizationChart = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
     const { hasPermission } = useAuth();
+    const canReassign = hasPermission('ACTION_ORG_CHART_EDIT') && hasPermission('PAGE_EMPLOYEES');
 
     // Zoom & Pan State
     const [scale, setScale] = useState(1); // Default 100% zoom as requested
@@ -702,6 +738,9 @@ const OrganizationChart = () => {
     useEffect(() => {
         fetchHierarchy();
     }, []);
+
+    // Drag & Drop for employee reassignment (must be after fetchHierarchy definition)
+    const dnd = useOrgChartDnD({ isEditMode: isEditMode && canReassign, onReassignComplete: fetchHierarchy });
 
     const handleSaveDepartment = async (data) => {
         try {
@@ -826,6 +865,13 @@ const OrganizationChart = () => {
                 />
             )}
 
+            <ReassignConfirmModal
+                reassignment={dnd.pendingReassignment}
+                onConfirm={dnd.confirmReassignment}
+                onCancel={dnd.cancelReassignment}
+                isSaving={dnd.isSaving}
+            />
+
             <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 px-1 gap-2">
                 <div>
                     <h2 className="text-xl md:text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
@@ -884,6 +930,13 @@ const OrganizationChart = () => {
                 <DebugConsole treeData={treeData} />
             )}
 
+            {isEditMode && canReassign && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700 flex items-center gap-2">
+                    <span className="font-bold">Sürükle & Bırak:</span>
+                    Personel kartlarını sürükleyerek yönetici veya departman ataması yapabilirsiniz.
+                </div>
+            )}
+
             <div
                 className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
@@ -922,6 +975,7 @@ const OrganizationChart = () => {
                                     onAddChild={(node) => setModalConfig({ mode: 'create', node })}
                                     onEdit={(node) => setModalConfig({ mode: 'edit', node })}
                                     onDelete={handleDeleteDepartment}
+                                    dnd={isEditMode && canReassign ? dnd : undefined}
                                 />
                             ))}
                         </ul>
