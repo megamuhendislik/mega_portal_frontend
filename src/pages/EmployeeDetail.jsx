@@ -6,6 +6,8 @@ import {
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
+import toast, { Toaster } from 'react-hot-toast';
+import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
 
 const EmployeeDetail = () => {
     const { id } = useParams();
@@ -26,6 +28,7 @@ const EmployeeDetail = () => {
     const [workSchedules, setWorkSchedules] = useState([]);
     const [allPermissions, setAllPermissions] = useState([]);
     const [allRoles, setAllRoles] = useState([]);
+    const [showManagerValidation, setShowManagerValidation] = useState(false);
 
     // Form Data State (Unified)
     const [formData, setFormData] = useState({
@@ -142,7 +145,7 @@ const EmployeeDetail = () => {
 
         } catch (error) {
             console.error('Error fetching employee details:', error);
-            alert('Veriler yüklenirken hata oluştu.');
+            toast.error('Veriler yüklenirken hata oluştu.');
         } finally {
             setLoading(false);
         }
@@ -165,11 +168,34 @@ const EmployeeDetail = () => {
     };
 
     const handleSave = async () => {
+        // Pre-save yönetici validasyonu
+        const deptObj = departments.find(d => String(d.id) === String(formData.department));
+        const posObj = jobPositions.find(p => String(p.id) === String(formData.job_position));
+        const boardExempt = deptObj?.code?.startsWith('BOARD') || posObj?.key?.startsWith('BOARD_') || false;
+
+        if (!boardExempt) {
+            const pm = formData.primary_managers || [];
+            const hasValidPrimary = pm.length > 0 && pm.every(m => m.manager_id && m.department_id && m.job_position_id);
+            if (!hasValidPrimary) {
+                setShowManagerValidation(true);
+                toast.error('En az bir birincil yönetici atanmalı ve tüm alanları doldurulmalıdır.');
+                return;
+            }
+        }
+
+        // İkincil yönetici satırları dolu mu kontrol
+        const sm = formData.secondary_managers || [];
+        if (sm.length > 0 && sm.some(m => !m.manager_id || !m.department_id || !m.job_position_id)) {
+            setShowManagerValidation(true);
+            toast.error('İkincil yönetici satırlarındaki tüm alanlar doldurulmalıdır.');
+            return;
+        }
+
         try {
             // Prepare payload
             const payload = {
                 ...formData,
-                work_schedule: formData.work_schedule || null, // Handle empty string
+                work_schedule: formData.work_schedule || null,
                 department: formData.department || null,
                 job_position: formData.job_position || null,
             };
@@ -178,22 +204,34 @@ const EmployeeDetail = () => {
             if (formData.new_password) {
                 payload.password = formData.new_password;
             } else {
-                delete payload.new_password; // Don't send empty new_password field to backend if it expects 'password'
+                delete payload.new_password;
             }
 
             await api.patch(`/employees/${id}/`, payload);
-            alert('Değişiklikler başarıyla kaydedildi.');
+            toast.success('Değişiklikler başarıyla kaydedildi.');
+            setShowManagerValidation(false);
             fetchInitialData(); // Refresh to ensure sync
         } catch (error) {
             console.error('Error updating employee:', error);
-            alert('Güncelleme sırasında hata oluştu: ' + (error.response?.data?.detail || error.message));
+            const data = error.response?.data;
+            if (data?.primary_managers) {
+                toast.error(Array.isArray(data.primary_managers) ? data.primary_managers.join(' ') : data.primary_managers);
+            } else {
+                toast.error('Güncelleme sırasında hata oluştu: ' + (data?.detail || error.message));
+            }
         }
     };
+
+    // Board muafiyet kontrolü
+    const selectedDept = departments.find(d => String(d.id) === String(formData.department));
+    const selectedPos = jobPositions.find(p => String(p.id) === String(formData.job_position));
+    const isBoardMember = selectedDept?.code?.startsWith('BOARD') || selectedPos?.key?.startsWith('BOARD_') || false;
 
     if (loading) return <div className="p-8 text-center">Yükleniyor...</div>;
 
     return (
         <div className="space-y-6">
+            <Toaster position="top-right" />
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
@@ -350,91 +388,29 @@ const EmployeeDetail = () => {
                                 <div className="card p-6">
                                     <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-4">Yönetici Atamaları</h3>
 
-                                    {/* Birincil Yöneticiler */}
-                                    <div className="mb-6">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-medium text-slate-700">Birincil Yöneticiler</label>
-                                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, primary_managers: [...prev.primary_managers, { manager_id: '', department_id: '', job_position_id: '' }] }))} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
-                                                <Plus size={12} /> Ekle
-                                            </button>
-                                        </div>
-                                        {formData.primary_managers.length === 0 ? (
-                                            <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">Birincil yönetici atanmadı.</div>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {formData.primary_managers.map((entry, idx) => (
-                                                    <div key={idx} className="flex gap-2 items-start p-2 bg-blue-50/50 rounded-xl border border-blue-100">
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
-                                                            <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; setFormData(prev => ({ ...prev, primary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                                <option value="">Seçiniz...</option>
-                                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
-                                                            <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; setFormData(prev => ({ ...prev, primary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                                <option value="">Seçiniz...</option>
-                                                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
-                                                            <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; setFormData(prev => ({ ...prev, primary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                                <option value="">Seçiniz...</option>
-                                                                {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, primary_managers: prev.primary_managers.filter((_, i) => i !== idx) }))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler. Ekip listesinde görünür.</p>
-                                    </div>
+                                    <ManagerAssignmentSection
+                                        type="primary"
+                                        managers={formData.primary_managers}
+                                        onChange={mgrs => setFormData(prev => ({ ...prev, primary_managers: mgrs }))}
+                                        employeeList={allEmployees}
+                                        departments={departments}
+                                        jobPositions={jobPositions}
+                                        excludeEmployeeId={parseInt(id)}
+                                        isBoardMember={isBoardMember}
+                                        showValidation={showManagerValidation}
+                                    />
 
-                                    {/* İkincil Yöneticiler */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-medium text-slate-700">İkincil Yöneticiler</label>
-                                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, secondary_managers: [...prev.secondary_managers, { manager_id: '', department_id: '', job_position_id: '' }] }))} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">
-                                                <Plus size={12} /> Ekle
-                                            </button>
-                                        </div>
-                                        {formData.secondary_managers.length === 0 ? (
-                                            <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">İkincil yönetici atanmadı.</div>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {formData.secondary_managers.map((entry, idx) => (
-                                                    <div key={idx} className="flex gap-2 items-start p-2 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
-                                                            <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; setFormData(prev => ({ ...prev, secondary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                                <option value="">Seçiniz...</option>
-                                                                {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
-                                                            <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; setFormData(prev => ({ ...prev, secondary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                                <option value="">Seçiniz...</option>
-                                                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
-                                                            <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; setFormData(prev => ({ ...prev, secondary_managers: arr })); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                                <option value="">Seçiniz...</option>
-                                                                {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, secondary_managers: prev.secondary_managers.filter((_, i) => i !== idx) }))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <p className="text-xs text-slate-500 mt-1">Sadece talep onayı verebilir, ekip listesinde görünmez.</p>
-                                    </div>
+                                    <ManagerAssignmentSection
+                                        type="secondary"
+                                        managers={formData.secondary_managers}
+                                        onChange={mgrs => setFormData(prev => ({ ...prev, secondary_managers: mgrs }))}
+                                        employeeList={allEmployees}
+                                        departments={departments}
+                                        jobPositions={jobPositions}
+                                        excludeEmployeeId={parseInt(id)}
+                                        isBoardMember={isBoardMember}
+                                        showValidation={showManagerValidation}
+                                    />
                                 </div>
 
                                 {/* İkincil Görevlendirmeler (DepartmentAssignment) */}

@@ -3,6 +3,8 @@ import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefc
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
 
 
 // --- Constants ---
@@ -174,11 +176,15 @@ const StepPersonal = ({ formData, handleChange, canEditSensitive = true, canChan
     </div>
 );
 
-const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees, availableTags }) => {
+const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees, availableTags, showManagerValidation }) => {
     // const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü'; // Removed logic
     const rootDepartments = departments.filter(d => !d.parent);
     const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
-    const potentialManagers = employees.filter(e => e.is_active);
+
+    // Board muafiyet kontrolü
+    const selectedDept = departments.find(d => String(d.id) === String(formData.department));
+    const selectedPos = jobPositions.find(p => String(p.id) === String(formData.job_position));
+    const isBoardMember = selectedDept?.code?.startsWith('BOARD') || selectedPos?.key?.startsWith('BOARD_') || false;
 
     const renderDepartmentOptions = (depts, level = 0) => {
         return depts.map(dept => {
@@ -213,90 +219,34 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                {/* 1. BIRINCIL YÖNETICILER (Structured Rows) */}
+                {/* 1. BIRINCIL YÖNETICILER */}
                 <div className="md:col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-slate-700">Birincil Yöneticiler</label>
-                        <button type="button" onClick={() => handleChange('primary_managers', [...(formData.primary_managers || []), { manager_id: '', department_id: '', job_position_id: '' }])} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
-                            <Plus size={12} /> Ekle
-                        </button>
-                    </div>
-                    {(formData.primary_managers || []).length === 0 ? (
-                        <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">Birincil yönetici atanmadı.</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {(formData.primary_managers || []).map((entry, idx) => (
-                                <div key={idx} className="flex gap-2 items-start p-2 bg-blue-50/50 rounded-xl border border-blue-100">
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
-                                        <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; handleChange('primary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option value="">Seçiniz...</option>
-                                            {potentialManagers.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
-                                        <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; handleChange('primary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option value="">Seçiniz...</option>
-                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
-                                        <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.primary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; handleChange('primary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option value="">Seçiniz...</option>
-                                            {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <button type="button" onClick={() => handleChange('primary_managers', formData.primary_managers.filter((_, i) => i !== idx))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <p className="text-xs text-slate-500 mt-1">İzin ve mesai onayı verecek yöneticiler. Ekip listesinde görünür.</p>
+                    <ManagerAssignmentSection
+                        type="primary"
+                        managers={formData.primary_managers || []}
+                        onChange={mgrs => handleChange('primary_managers', mgrs)}
+                        employeeList={employees}
+                        departments={departments}
+                        jobPositions={jobPositions}
+                        excludeEmployeeId={null}
+                        isBoardMember={isBoardMember}
+                        showValidation={showManagerValidation}
+                    />
                 </div>
 
-                {/* 1c. İKİNCİL YÖNETICILER (Structured Rows) */}
+                {/* 1c. İKİNCİL YÖNETICILER */}
                 <div className="md:col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-slate-700">İkincil Yöneticiler</label>
-                        <button type="button" onClick={() => handleChange('secondary_managers', [...(formData.secondary_managers || []), { manager_id: '', department_id: '', job_position_id: '' }])} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">
-                            <Plus size={12} /> Ekle
-                        </button>
-                    </div>
-                    {(formData.secondary_managers || []).length === 0 ? (
-                        <div className="p-3 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-xs text-slate-400">İkincil yönetici atanmadı.</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {(formData.secondary_managers || []).map((entry, idx) => (
-                                <div key={idx} className="flex gap-2 items-start p-2 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-500 mb-0.5">Yönetici</label>
-                                        <select value={entry.manager_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], manager_id: e.target.value }; handleChange('secondary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                            <option value="">Seçiniz...</option>
-                                            {potentialManagers.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-500 mb-0.5">Departman</label>
-                                        <select value={entry.department_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], department_id: e.target.value }; handleChange('secondary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                            <option value="">Seçiniz...</option>
-                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-500 mb-0.5">Pozisyon</label>
-                                        <select value={entry.job_position_id || ''} onChange={e => { const arr = [...formData.secondary_managers]; arr[idx] = { ...arr[idx], job_position_id: e.target.value }; handleChange('secondary_managers', arr); }} className="w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                            <option value="">Seçiniz...</option>
-                                            {jobPositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <button type="button" onClick={() => handleChange('secondary_managers', formData.secondary_managers.filter((_, i) => i !== idx))} className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><X size={14} /></button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <p className="text-xs text-slate-500 mt-1">Sadece talep onayı verebilir, ekip listesinde görünmez.</p>
+                    <ManagerAssignmentSection
+                        type="secondary"
+                        managers={formData.secondary_managers || []}
+                        onChange={mgrs => handleChange('secondary_managers', mgrs)}
+                        employeeList={employees}
+                        departments={departments}
+                        jobPositions={jobPositions}
+                        excludeEmployeeId={null}
+                        isBoardMember={isBoardMember}
+                        showValidation={showManagerValidation}
+                    />
                 </div>
 
                 {/* 2. DEPARTMENT (Editable) */}
@@ -1121,6 +1071,7 @@ const Employees = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState(INITIAL_FORM_STATE);
     const [completedSteps, setCompletedSteps] = useState([]);
+    const [showManagerValidation, setShowManagerValidation] = useState(false);
 
     // Filters & Search
     const [searchTerm, setSearchTerm] = useState('');
@@ -1208,17 +1159,30 @@ const Employees = () => {
         switch (step) {
             case 1: // Personal
                 return first_name && last_name && tc_number && email && formData.username && formData.password;
-            case 2: // Corporate
+            case 2: {
                 // Department and Position are MUST.
                 let valid = department && job_position && employee_code;
+                if (!valid) return false;
 
-                // Special Rule: If 'Departman Müdürü', strictly require functional_department
-                // REMOVED: Functional Dept is deprecated.
-                // const posName = jobPositions.find(p => p.id == job_position)?.name;
-                // if (posName === 'Departman Müdürü' && !functional_department) {
-                //     return false;
-                // }
-                return valid;
+                // Board muafiyet kontrolü
+                const selDept = departments.find(d => String(d.id) === String(department));
+                const selPos = jobPositions.find(p => String(p.id) === String(job_position));
+                const boardExempt = selDept?.code?.startsWith('BOARD') || selPos?.key?.startsWith('BOARD_') || false;
+
+                // Birincil yönetici zorunlu (board hariç)
+                if (!boardExempt) {
+                    const pm = formData.primary_managers || [];
+                    if (pm.length === 0 || pm.some(e => !e.manager_id || !e.department_id || !e.job_position_id)) {
+                        return false;
+                    }
+                }
+                // İkincil yönetici satırlarında eksik alan varsa engelle
+                const sm = formData.secondary_managers || [];
+                if (sm.length > 0 && sm.some(e => !e.manager_id || !e.department_id || !e.job_position_id)) {
+                    return false;
+                }
+                return true;
+            }
             case 3: // Contact
                 return true; // Optional fields mostly
             case 4: // Details
@@ -1232,11 +1196,13 @@ const Employees = () => {
 
     const handleNext = () => {
         if (validateStep(currentStep)) {
+            if (currentStep === 2) setShowManagerValidation(false);
             setCompletedSteps(prev => [...new Set([...prev, currentStep])]);
             setCurrentStep(prev => Math.min(prev + 1, 7));
             window.scrollTo(0, 0);
         } else {
-            alert("Lütfen zorunlu alanları doldurunuz.");
+            if (currentStep === 2) setShowManagerValidation(true);
+            toast.error("Lütfen zorunlu alanları doldurunuz.");
         }
     };
 
@@ -1424,38 +1390,27 @@ const Employees = () => {
                 //     });
                 // }
 
-                alert("Personel ve Kullanıcı Hesabı başarıyla oluşturuldu.");
+                toast.success("Personel ve Kullanıcı Hesabı başarıyla oluşturuldu.");
             } else if (viewMode === 'edit') {
-                // Update
-                // Remove readonly fields if necessary or backend handles it.
-                // For safety, remove password if empty/null
                 if (!payload.password) delete payload.password;
-
                 await api.patch(`/employees/${payload.id}/`, payload);
-
-                // [NEW] Update Entitlements if changed
-                // (Now handled by PATCH /employees/:id/)
-                // if (payload.leave_entitlements && payload.leave_entitlements.length > 0) {
-                //     try {
-                //         await api.post(`/employees/${payload.id}/update_entitlements/`, {
-                //             entitlements: payload.leave_entitlements
-                //         });
-                //     } catch (entError) {
-                //         console.error("Entitlement save error", entError);
-                //         alert("Personel güncellendi ancak yıllık izin detayları kaydedilirken hata oluştu.");
-                //     }
-                // }
-
-                alert("Personel bilgileri güncellendi.");
+                toast.success("Personel bilgileri güncellendi.");
             }
 
             fetchInitialData();
             setViewMode('list');
             setFormData(INITIAL_FORM_STATE);
             setCurrentStep(1);
+            setShowManagerValidation(false);
         } catch (error) {
             console.error("Submit Error:", error);
-            alert("Hata: " + (error.response?.data?.detail || "İşlem başarısız."));
+            const errData = error.response?.data;
+            if (errData?.primary_managers) {
+                setShowManagerValidation(true);
+                toast.error(typeof errData.primary_managers === 'string' ? errData.primary_managers : 'Birincil yönetici bilgilerini kontrol ediniz.');
+            } else {
+                toast.error("Hata: " + (errData?.detail || errData?.non_field_errors?.[0] || "İşlem başarısız."));
+            }
         } finally {
             setSubmitting(false);
         }
@@ -1522,6 +1477,7 @@ const Employees = () => {
 
         return (
             <div className="min-h-screen bg-slate-50/50 p-6 md:p-8 animate-fade-in">
+                <Toaster position="top-right" />
                 <div className="max-w-[1600px] mx-auto">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -1855,7 +1811,7 @@ const Employees = () => {
 
                                 {/* Section 2: Corporate */}
                                 <section id="sec-corporate" className="scroll-mt-24 pt-8 border-t border-slate-100">
-                                    <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />
+                                    <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} showManagerValidation={showManagerValidation} />
                                 </section>
 
                                 {/* Section 3: Contact */}
@@ -1884,7 +1840,7 @@ const Employees = () => {
                             /* CREATE WIZARD MODE */
                             <div className="h-full">
                                 {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={true} canChangePassword={true} />}
-                                {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} />}
+                                {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} showManagerValidation={showManagerValidation} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
                                 {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
