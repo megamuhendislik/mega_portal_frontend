@@ -28,7 +28,7 @@ G) Manual test checklist (5-10 adim)
 
 ---
 
-## 1) Feature Inventory (v2 — 87 Feature, 14 Kategori)
+## 1) Feature Inventory (v3 — 88 Feature, 14 Kategori)
 
 ### Auth & RBAC (5)
 - AUTH-01: JWT Login (Giris)
@@ -37,7 +37,7 @@ G) Manual test checklist (5-10 adim)
 - AUTH-04: Role Management
 - AUTH-05: Password Change
 
-### Organization & Employees (8)
+### Organization & Employees (9)
 - ORG-01: Departman Yonetimi
 - ORG-02: Pozisyon Yonetimi
 - ORG-03: Calisan CRUD
@@ -46,6 +46,7 @@ G) Manual test checklist (5-10 adim)
 - ORG-06: Sirket Rehberi
 - ORG-07: Yonetici Hiyerarsisi (Matrix)
 - ORG-08: Calisan Etiketleri
+- ORG-09: Org Chart Drag & Drop (Surukle-Birak Atama)
 
 ### Work Schedules & Calendar (9)
 - CAL-01: WorkSchedule (Legacy)
@@ -170,6 +171,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | ORG-06 | PENDING | — | — | |
 | ORG-07 | DONE | BE: 9fb028e, 5be42ac, 5bbedc0 / FE: 43f5f15, a50cd23, 9e345ef | Railway autodeploy OK | CROSS→SECONDARY rename, reports_to→PRIMARY migration, ManagerAssignmentSection shared component, zorunlu birincil yönetici validasyonu (board exempt), duplicate/self-assignment prevention, toast notifications |
 | ORG-08 | PENDING | — | — | |
+| ORG-09 | DONE | BE: 433f71b, 3351339, dfcb462, 85cb3aa / FE: 319f293, d67390b, 8b22bea, 431b463 | Railway autodeploy OK | Native HTML5 D&D, useOrgChartDnD hook, ReassignConfirmModal, OrgChartContextMenu, ACTION_ORG_CHART_MANAGER_ASSIGN permission, SEC-20~30 tests |
 | CAL-01 | PENDING | — | — | |
 | CAL-02 | PENDING | — | — | |
 | CAL-03 | PENDING | — | — | |
@@ -234,7 +236,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | SYS-07 | PENDING | — | — | |
 | SYS-08 | PENDING | — | — | |
 | SYS-09 | PENDING | — | — | |
-| SYS-10 | PENDING | — | — | |
+| SYS-10 | DONE | BE: 8f9f104, 6266f0d, 108ebc9, 723b19a, 8df0c94, c5d37ac, 597dc4b, f4215b4, 8d0f793 / FE: 28b9646, 8b94ee5 | Railway autodeploy OK | SecurityAuditRunner 37 test (SEC-31~37 eklendi), SecurityAuditTab UI, test data cleanup, crash-proof infra, FIX-01~03 RBAC fix'leri |
 | SYS-11 | PENDING | — | — | |
 | SYS-12 | PENDING | — | — | |
 | SYS-13 | PENDING | — | — | |
@@ -308,6 +310,117 @@ Cardless > Approvals > Notifications > Reports > Admin > External
   - EmployeeDetail: mevcut yoneticiler dogru yuklenir, ayni kurallar gecerli
   - Build: `npm run build` hatasiz
 - **Deploy notes:** Railway autodeploy her iki repo icin tetiklendi
+
+### AUTH-03A — Security Audit Tab + Sidebar Fix + Token Refresh Sync
+- **Status:** DONE (AUTH-03 kapsaminda ek calisma)
+- **What we changed:**
+  - **SecurityAuditTab (FE):** `/admin/system-health` icinde yeni tab — SecurityAuditRunner'i calistir, sonuclari goruntule, test verilerini temizle
+  - **FIX-15 Sidebar RBAC fix:** `MainLayout.jsx:146` — `user.all_permissions?.includes(p)` → `hasPermission(p)` (SYSTEM_ADMIN sidebar gorunurlugu duzeltildi)
+  - **FIX-16 Token Refresh Permission Sync:** `api.js` refresh interceptor'da `/employees/me/` cagrilarak permission'lar guncelleniyor
+  - **DashboardTab unicode fix:** Turkce karakter bozukluklari duzeltildi
+- **Commits:**
+  - Frontend: `28b9646` (security audit tab + sidebar fix + token refresh sync), `eeffb46` (DashboardTab unicode), `8b94ee5` (test data cleanup button)
+- **Files changed:**
+  - Frontend: `src/pages/SecurityAuditTab.jsx` (NEW), `src/layouts/MainLayout.jsx`, `src/services/api.js`, `src/pages/DashboardTab.jsx`
+
+### ORG-09 — Org Chart Drag & Drop (Surukle-Birak Atama)
+- **Status:** DONE
+- **What we changed:**
+  - **Phase 1 — Backend Enrichment:**
+    - Hierarchy API'ye `department_id` + `job_position_id` eklendi (build_employee_tree)
+    - `ACTION_ORG_CHART_MANAGER_ASSIGN` permission olusturuldu (SYSTEM_ADMIN only) — migration 0121
+    - Test data: Evren→Aykut, Mehmet→Buse birincil yonetici atamalari — migrations 0122, 0123
+  - **Phase 2 — Frontend D&D:**
+    - `useOrgChartDnD.js` (YENi): Native HTML5 D&D hook — drag/drop state, API cagrilari, confirmation flow
+    - `ReassignConfirmModal.jsx` (YENi): Portal-rendered onay modali, PRIMARY/SECONDARY secimi, loading state
+    - `OrgChartContextMenu.jsx` (YENi): Sag tik menu — "Yoneticileri Duzenle" ile ManagerEditModal'i ac
+    - `OrganizationChart.jsx`: EmployeeNode + DepartmentNode D&D entegrasyonu, visual feedback (ring, opacity, cursor)
+    - Edit mode gating: `ACTION_ORG_CHART_MANAGER_ASSIGN` permission kontrolu
+  - **Phase 3 — Bug Fixes:**
+    - `isSaving` guard: drag sirasinda API cagrisini engelle
+    - Self-assignment defense-in-depth: confirmReassignment icinde ek kontrol
+    - Duplicate detection: `setPendingReassignment(null)` eklendi (modal kapanma)
+    - Null fallback: `department_id || null`, `job_position_id || null`
+    - DepartmentNode: `onMouseDown stopPropagation` (pan/zoom cakismasi)
+    - OrgChartContextMenu: viewport kenar tespiti iyilestirmesi
+    - ReassignConfirmModal: sadece tiklanan buton loading gosterir
+  - **Phase 4 — Security Tests (SEC-20~30):**
+    - SEC-20: Yetkisiz employee manager reassignment → 403
+    - SEC-21~25: Org chart edit suite (yetkisiz hierarchy erisimi, yetkisiz recalculate, vs.)
+    - SEC-26: Employee data integrity audit (hierarchy tutarliligi)
+    - SEC-27: Self-assignment prevention → 400
+    - SEC-28: Duplicate manager same list → 400
+    - SEC-29: Cross-type duplicate (PRIMARY+SECONDARY) → 400
+    - SEC-30: Null department_id/job_position_id graceful → not 500
+- **Commits:**
+  - Backend: `433f71b` (hierarchy API), `3351339` (permission migration 0121), `dfcb462` (manager assignments 0122), `85cb3aa`/`13f9fef` (fix 0123), `c5d37ac` (SEC-20), `597dc4b` (SEC-21~25), `f4215b4` (SEC-26), `8d0f793` (SEC-27~30)
+  - Frontend: `319f293` (D&D feature), `d67390b` (context menu + multi-manager), `8b22bea` (edit mode gating), `431b463` (bug fixes + UX)
+- **Files changed:**
+  - Backend: `core/views.py` (build_employee_tree), `core/security_audit_runner.py` (SEC-20~30), `core/migrations/0121_*`, `0122_*`, `0123_*`
+  - Frontend: `src/pages/useOrgChartDnD.js` (NEW), `src/pages/ReassignConfirmModal.jsx` (NEW), `src/pages/OrgChartContextMenu.jsx` (NEW), `src/pages/OrganizationChart.jsx`, `src/pages/ManagerEditModal.jsx`
+- **Manual checks:**
+  - Edit mode KAPALI → kartlar suruklenemez, pan normal calisir
+  - Edit mode ACIK → kart suruklenebilir, hedef mavi/yesil highlight
+  - Employee'ye drop → onay modali → PRIMARY/SECONDARY secimi → Onayla → tree refresh
+  - Department'a drop → onay modali → "Departmana tasinacak" → Onayla → tree refresh
+  - Kendine drop → hicbir sey olmaz
+  - Sag tik → "Yoneticileri Duzenle" → ManagerEditModal acilir
+  - Cancel → modal kapanir, degisiklik yok
+  - API hata → toast mesaji
+  - SecurityAuditRunner: 30/30 PASS
+  - `npm run build` hatasiz
+- **Deploy notes:** Railway autodeploy her iki repo icin tetiklendi
+
+### SYS-10 — Security Audit Runner (Regression Test)
+- **Status:** DONE
+- **What we changed:**
+  - **SecurityAuditRunner (`core/security_audit_runner.py`):** In-process Django APIClient RBAC test framework, 30 test 11 grupta
+  - **Test Gruplari (30 test):**
+    - Authentication Basics (SEC-01~03): JWT'siz erisim, yanlis credentials, gecerli token
+    - Permission Enforcement (SEC-04~06): PAGE_EMPLOYEES gate, yetkisiz CRUD, excluded_permissions
+    - Object-Level Security (SEC-07~09): Attendance scope, leave request scope, dashboard IDOR
+    - Admin Endpoint Protection (SEC-10~12): SystemSettings, recalculate-all, wipe-all guard
+    - IDOR Prevention (SEC-13~16): Attendance employee_id, stats, live-status, PersonalCalendar
+    - Rate Limiting (SEC-17~18): Login brute force, anonymous throttle
+    - AllowAny Data Leakage (SEC-19): Secure gate error mesaji PII kontrolu
+    - Org Chart Edit Suite (SEC-20~25): Yetkisiz reassignment, hierarchy, recalculate, bulk ops
+    - Employee Data Integrity (SEC-26): Hierarchy tutarliligi, yetim kayit kontrolu
+    - Manager Assignment Edge Cases (SEC-27~30): Self-assign, duplicate, cross-type, null fields
+    - Employee CRUD Access (SEC-31~32): Yetkisiz create/delete → 403
+  - **Altyapi:**
+    - Crash-proof: garantili test data cleanup (try/finally/on_commit)
+    - ALLOWED_HOSTS + SECURE_SSL_REDIRECT bypass
+    - DEBUG=True for 500 tracebacks during test
+    - `/api/cleanup-security-audit-data/` endpoint
+    - Frontend SecurityAuditTab: test calistir, sonuclari goruntule, cleanup butonu
+  - **Dashboard IDOR Fix (FIX-10 kismen):**
+    - `d339cef`: Dashboard stats employee_id ownership check — deny by default
+    - `2022d57`: UnboundLocalError fix ('status' variable name collision)
+- **Commits:**
+  - Backend: `8f9f104` (crash-proof), `6266f0d` (cleanup endpoint), `108ebc9` (SSL redirect fix), `723b19a` (ALLOWED_HOSTS), `8df0c94` (SERVER_NAME), `c5d37ac`→`8d0f793` (SEC-20~30), `d339cef`+`2022d57` (Dashboard IDOR fix)
+  - Frontend: `28b9646` (SecurityAuditTab), `8b94ee5` (cleanup button)
+- **Files changed:**
+  - Backend: `core/security_audit_runner.py` (NEW, ~1370 lines), `core/views.py` (cleanup endpoint + dashboard IDOR fix), `core/urls.py`
+  - Frontend: `src/pages/SecurityAuditTab.jsx` (NEW)
+
+### FIX-01~03 — CRITICAL RBAC Fix'leri
+- **Status:** DONE
+- **What we changed:**
+  - **FIX-01 (EmployeeViewSet):** `core/views.py` — `_check_employee_permission()` eklendi: CREATE/UPDATE/PARTIAL_UPDATE icin PAGE_EMPLOYEES, DELETE icin SYSTEM_FULL_ACCESS. LIST/RETRIEVE acik (12+ frontend component bagimli). SEC-02,31,32 testleri eklendi
+  - **FIX-02 (SystemSettingsViewSet):** `core/views.py` — `get_permissions()` method'u ile CUD: `IsSystemAdmin`, read: `IsAuthenticated`. `IsSystemAdmin` yeni DRF permission class (`core/permissions.py`). SEC-03,34 testleri eklendi
+  - **FIX-03 (FiscalCalendar assigned_employees):** `attendance/views_calendar.py` — `assigned_employees` GET action'ina `_check_schedule_permission` eklendi (PII exposure fix). SEC-35,36,37 testleri eklendi
+  - **Security Audit Runner:** 7 yeni test eklendi (SEC-31~37), toplam 37 test
+- **Files changed:**
+  - `core/permissions.py` — `IsSystemAdmin` class eklendi
+  - `core/views.py` — EmployeeViewSet CUD permission checks + SystemSettingsViewSet `get_permissions()`
+  - `attendance/views_calendar.py` — `assigned_employees` permission check
+  - `core/security_audit_runner.py` — SEC-31~37 testleri
+
+### Diger Bug Fix'ler (Playbook disinda yapilan)
+- **`a11218c`** — OrgChart: `alert()` → `toast`, profile navigation eklendi
+- **`29bf2aa`** — gate-logs router basename fix
+- **`d8ea755`** — DailyScheduleOverride import fix + test data cleanup
+- **FIX-10 (KISMI):** Dashboard IDOR — `today_summary` + `stats` employee_id ownership check eklendi. Diger IDOR'lar (live-status, calendar-events) henuz fix'lenmedi
 
 ---
 
@@ -707,9 +820,9 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 
 | # | Baslik | Kapsam | Etki |
 |---|--------|--------|------|
-| FIX-01 | **EmployeeViewSet'e RBAC ekle** | permission_classes + get_queryset scope. LIST/RETRIEVE icin PAGE_EMPLOYEES, CREATE/UPDATE/DELETE icin SYSTEM_FULL_ACCESS | Herkes employee silebilir bugunu kapatir |
-| FIX-02 | **SystemSettingsViewSet'e RBAC ekle** | SYSTEM_FULL_ACCESS veya superuser check | Sistem ayarlari herkese acik bugunu kapatir |
-| FIX-03 | **FiscalCalendarViewSet'e RBAC ekle** | SYSTEM_FULL_ACCESS. assign_employees, recalculate, generate_periods korunmali | Toplu islemler herkese acik bugunu kapatir |
+| FIX-01 | ~~**EmployeeViewSet'e RBAC ekle**~~ | **DONE** — CUD: PAGE_EMPLOYEES, DELETE: SYSTEM_FULL_ACCESS. READ acik (frontend bagimlilik). SEC-02,31,32 test eklendi | Herkes employee silebilir bugunu kapatir |
+| FIX-02 | ~~**SystemSettingsViewSet'e RBAC ekle**~~ | **DONE** — `IsSystemAdmin` perm class eklendi, CUD: IsSystemAdmin, read: IsAuthenticated. SEC-03,34 test eklendi | Sistem ayarlari herkese acik bugunu kapatir |
+| FIX-03 | ~~**FiscalCalendarViewSet'e RBAC ekle**~~ | **DONE** — assigned_employees GET'e `_check_schedule_permission` eklendi. SEC-35,36,37 test eklendi | Toplu islemler herkese acik bugunu kapatir |
 
 #### HIGH
 
@@ -721,7 +834,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | FIX-07 | DailyScheduleOverride/ScheduleTemplate/DayTemplateAssignment'a RBAC ekle | PAGE_WORK_SCHEDULES veya SYSTEM_FULL_ACCESS |
 | FIX-08 | MonthlyReportViewSet'e RBAC ekle | PAGE_REPORTS |
 | FIX-09 | GateEventLogViewSet'e RBAC ekle | SYSTEM_FULL_ACCESS |
-| FIX-10 | IDOR fix: today_summary, stats, dashboard employee_id param'i ownership check | get_queryset scope ile intersect |
+| FIX-10 | ~~IDOR fix: today_summary, stats, dashboard~~ | **KISMI DONE** — Dashboard IDOR fix'lendi (`d339cef`, `2022d57`). live-status, calendar-events IDOR'lari PENDING |
 | FIX-11 | Debug endpoint backend perm check | PAGE_DEBUG veya SYSTEM_FULL_ACCESS |
 | FIX-12 | DepartmentViewSet.full_debug'a RBAC ekle | SYSTEM_FULL_ACCESS |
 | FIX-13 | secure-gate + external-auth'a rate limit ekle | IP-bazli throttle |
@@ -731,8 +844,8 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | # | Baslik | Kapsam |
 |---|--------|--------|
 | FIX-14 | Self-approval prevention ekle | OT/Leave/Cardless approve: `if request.employee == obj.employee: reject` |
-| FIX-15 | Sidebar hasPermission() bug fix | MainLayout.jsx:146 — `includes()` yerine `hasPermission()` kullan |
-| FIX-16 | Token refresh'te permission yenileme | api.js refresh interceptor'da `/employees/me/` cagir |
+| FIX-15 | ~~Sidebar hasPermission() bug fix~~ | **DONE** — `28b9646` MainLayout.jsx `includes()` → `hasPermission()` |
+| FIX-16 | ~~Token refresh'te permission yenileme~~ | **DONE** — `28b9646` api.js refresh interceptor `/employees/me/` cagiriyor |
 | FIX-17 | SYSTEM_ADMIN rolunu birine ata | DB-01 |
 | FIX-18 | RoleViewSet/PermissionViewSet'i admin-only yap | SYSTEM_FULL_ACCESS |
 
@@ -747,22 +860,258 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | FIX-23 | MANAGE_SUBSTITUTE permission'i DB'ye ekle veya frontend referansini kaldir | DB-09 |
 | FIX-24 | FEATURE_BREAK_ANALYSIS dead code temizle veya enforce et | Dead code — 4 role atanmis ama kullanilmiyor |
 
-#### Severity Ozet
+#### Severity Ozet (Guncellenmis)
 
-| Seviye | Sayi | En Kritik |
-|--------|------|-----------|
-| **CRITICAL** | 3 | EmployeeViewSet (DELETE acik!), SystemSettings acik, FiscalCalendar acik |
-| **HIGH** | 10 | PersonalCalendar IDOR, FiscalPeriod, WorkSchedule/Holiday CRUD acik, Reports export, Gate logs, IDOR'lar |
-| **MEDIUM** | 5 | Self-approval, sidebar bug, token refresh, role atama |
-| **LOW** | 6 | Rol temizligi, unused perms, phantom perms |
+| Seviye | Toplam | Kalan | Tamamlanan | En Kritik (Kalan) |
+|--------|--------|-------|------------|-------------------|
+| **CRITICAL** | 3 | **3** | 0 | EmployeeViewSet (DELETE acik!), SystemSettings acik, FiscalCalendar acik |
+| **HIGH** | 10 | **9** | 1 (FIX-10 kismi) | PersonalCalendar IDOR, FiscalPeriod, WorkSchedule/Holiday CRUD, Reports export, Gate logs |
+| **MEDIUM** | 5 | **3** | 2 (FIX-15, FIX-16) | Self-approval, role atama |
+| **LOW** | 6 | **6** | 0 | Rol temizligi, unused perms, phantom perms |
+| **TOPLAM** | **24** | **21** | **3** | — |
 
 ---
 
-## 7) Next Feature
+## 7) Genel Ilerleme Ozeti
 
-**ORG-07 — Yonetici Hiyerarsisi (Matrix)** (DONE: CROSS→SECONDARY + reports_to sync + validation + shared UI)
-**Next:** AUTH-04 — Role Management
+### Tamamlanan Ozellikler (7/88)
 
-Walkthrough sirasi: Auth > Org > Calendar > Attendance > Gate > Overtime > Leave > Meal > Cardless > Approvals > Notifications > Reports > Admin > External
+| Feature | Kategori | Tarih |
+|---------|----------|-------|
+| AUTH-01 | Auth & RBAC | JWT Login — popup, remember-me, bg image |
+| AUTH-02 | Auth & RBAC | Token Refresh — verify only, no changes needed |
+| AUTH-03 | Auth & RBAC | RBAC Deep Audit + excluded_permissions fix + SecurityAuditTab |
+| ORG-07 | Organization | Matrix Management — CROSS→SECONDARY, validation, shared component |
+| ORG-09 | Organization | Drag & Drop Reassignment — D&D, context menu, SEC-20~30 |
+| SYS-10 | System Admin | SecurityAuditRunner — 30 test, 11 group, crash-proof infra |
+| FIX-15+16 | RBAC Fix | Sidebar hasPermission + Token refresh permission sync |
 
-> **Not:** Auth fazinda 3/5 tamamlandi (AUTH-04, AUTH-05 kaldi). ORG fazinda 1/8 tamamlandi (ORG-07 once yapildi cunku manager hiyerarsisi diger ORG feature'larinin altyapisi).
+### Tamamlanan Guvenlik Fix'leri (6/24)
+
+| Fix | Durum |
+|-----|-------|
+| FIX-01 | **DONE** — EmployeeViewSet CUD RBAC (PAGE_EMPLOYEES + SYSTEM_FULL_ACCESS) |
+| FIX-02 | **DONE** — SystemSettingsViewSet RBAC (IsSystemAdmin perm class) |
+| FIX-03 | **DONE** — FiscalCalendarViewSet assigned_employees PII fix |
+| FIX-10 | **KISMI** — Dashboard IDOR fix'lendi, diger IDOR'lar PENDING |
+| FIX-15 | **DONE** — Sidebar `hasPermission()` bug fix |
+| FIX-16 | **DONE** — Token refresh permission sync |
+
+### Kalan Is (81 feature + 18 fix)
+
+| Kategori | Toplam | Done | Kalan |
+|----------|--------|------|-------|
+| Auth & RBAC | 5 | 3 | 2 (AUTH-04, AUTH-05) |
+| Organization | 9 | 2 | 7 (ORG-01~06, ORG-08) |
+| Calendar | 9 | 0 | 9 |
+| Attendance | 12 | 0 | 12 |
+| Gate | 3 | 0 | 3 |
+| Overtime | 3 | 0 | 3 |
+| Leave | 7 | 0 | 7 |
+| Meal | 2 | 0 | 2 |
+| Cardless | 2 | 0 | 2 |
+| Approvals | 8 | 0 | 8 |
+| Notifications | 2 | 0 | 2 |
+| Reports | 7 | 0 | 7 |
+| System Admin | 17 | 1 | 16 |
+| External | 2 | 0 | 2 |
+| **TOPLAM** | **88** | **7** | **81** |
+| RBAC Fix'ler | 24 | 6 | **18** (0 CRITICAL, 9 HIGH, 3 MEDIUM, 6 LOW) |
+
+### Migration Durumu
+- core: 0123 (0118 → 0119, 0120, 0121, 0122, 0123 eklendi)
+- attendance: 0043
+- leave_requests: 0009
+
+---
+
+## 8) Next Feature
+
+**Sonraki:** AUTH-04 — Role Management
+
+### Walkthrough Sirasi
+```
+Auth > Org > Calendar > Attendance > Gate > Overtime > Leave > Meal >
+Cardless > Approvals > Notifications > Reports > Admin > External
+```
+
+### Oneri: RBAC Fix'ler Oncelikli
+
+> **GUNCELLEME:** 3 CRITICAL RBAC fix (FIX-01, FIX-02, FIX-03) tamamlandi. SEC-31~37 testleri eklendi.
+> Bu fix'ler herhangi bir auth user'in employee silebilmesini, sistem ayarlarini degistirebilmesini,
+> ve toplu attendance recalculation tetikleyebilmesini engelleyecek.
+>
+> ~~**Oneri 1 (Guvenlik Oncelikli):** AUTH-04'ten once FIX-01~03 CRITICAL fix'leri yap~~ **TAMAMLANDI**
+> **Oneri 2 (Walkthrough Sirasi):** AUTH-04 → AUTH-05 → ORG-01~08 sirasiyla devam et, FIX'leri paralel yap
+>
+> Her iki durumda da FIX-01~03 en kisa surede implement edilmeli.
+
+### Auth Fazinda Durum
+- AUTH-01: DONE ✓
+- AUTH-02: DONE ✓
+- AUTH-03: DONE ✓ (Deep Audit + SecurityAuditRunner + SecurityAuditTab)
+- AUTH-04: PENDING — Role Management (CRUD + inheritance + permission assignment UI)
+- AUTH-05: PENDING — Password Change
+
+### ORG Fazinda Durum
+- ORG-07: DONE ✓ (Matrix Management — once yapildi, altyapi)
+- ORG-09: DONE ✓ (D&D — ORG-07'nin uzantisi)
+- ORG-01~06, ORG-08: PENDING (7 feature)
+
+---
+
+## 9) Sprint Bazli Yol Haritasi (Batch Plani)
+
+> **Tarih:** 2026-02-22 | **Hazirlayan:** Architect Agent (team review)
+> **Yaklasim:** Hibrit — CRITICAL fix'ler oncelikli, HIGH fix'ler ilgili feature ile birlikte
+
+### Ozellik Siniflandirmasi
+
+| Kategori | Sayi | Aciklama |
+|----------|------|----------|
+| TAMAMLANDI | 7 | AUTH-01~03, ORG-07, ORG-09, SYS-10 |
+| DOGRULA+FIX | ~55 | Backend+Frontend var, walkthrough ile dogrula + RBAC ekle |
+| YENI INSA | ~15-20 | Onemli yeni kod yazimi gerekli |
+
+### BATCH 0 — ACIL GUVENLIK (3 fix + 2 feature)
+**Oncelik: EN YUKSEK | FIX'ler birbiriyle paralel**
+
+| # | Is | Tip | Tahmini LOC |
+|---|--|-----|-------------|
+| ~~FIX-01~~ | ~~EmployeeViewSet RBAC~~ | ~~CRITICAL FIX~~ | **DONE** |
+| ~~FIX-02~~ | ~~SystemSettingsViewSet RBAC~~ | ~~CRITICAL FIX~~ | **DONE** |
+| ~~FIX-03~~ | ~~FiscalCalendarViewSet assigned_employees RBAC~~ | ~~CRITICAL FIX~~ | **DONE** |
+| AUTH-04 | Role Management (CRUD + UI) | DOGRULA+GELISTIR | Orta |
+| AUTH-05 | Password Change | DOGRULA | Kucuk |
+
+**FIX Implementasyon Detayi (TAMAMLANDI):**
+- **FIX-02 DONE:** `core/views.py` → `IsSystemAdmin` DRF perm class eklendi (`core/permissions.py`), CUD: IsSystemAdmin, read: IsAuthenticated
+- **FIX-03 DONE:** `attendance/views_calendar.py:96` → `assigned_employees` action'ina `_check_schedule_permission` eklendi
+- **FIX-01 DONE:** `core/views.py:944` → CUD: PAGE_EMPLOYEES, DELETE: SYSTEM_FULL_ACCESS. READ acik birakildı (12+ frontend component bagimli). SEC-31,32,34,35,36,37 testleri eklendi
+
+### BATCH 1 — ORGANIZASYON TEMELI (7 ozellik + 1 fix)
+**Bagimlillik: Batch 0 tamamlanmis | 5/7 paralel**
+
+| # | Ozellik | Tip | Paralel? |
+|---|---------|-----|----------|
+| ORG-01 | Departman Yonetimi | DOGRULA | Evet |
+| ORG-02 | Pozisyon Yonetimi | DOGRULA | Evet |
+| ORG-03 | Calisan CRUD | DOGRULA | ORG-01+02 sonrasi |
+| ORG-04 | Calisan Detay | DOGRULA | ORG-03 sonrasi |
+| ORG-05 | Kisisel Profil | DOGRULA | Evet |
+| ORG-06 | Sirket Rehberi | DOGRULA | Evet |
+| ORG-08 | Calisan Etiketleri | DOGRULA | Evet |
+| FIX-18 | RoleViewSet admin-only | FIX-MEDIUM | AUTH-04 ile birlikte |
+
+### BATCH 2 — TAKVIM & PROGRAM (9 ozellik + 4 fix)
+**Bagimlillik: Batch 1 | 3/9 bagimsiz**
+
+| # | Ozellik | Fix |
+|---|---------|-----|
+| CAL-01 | WorkSchedule (Legacy) | + FIX-06 (RBAC) |
+| CAL-06 | Resmi Tatiller | + FIX-06 (RBAC) |
+| CAL-02 | Fiscal Calendar | (FIX-03 Batch 0'da) |
+| CAL-03 | Schedule Template | + FIX-07 (RBAC) |
+| CAL-04 | Gun Bazli Atama | + FIX-07 (RBAC) |
+| CAL-05 | Gunluk Override | + FIX-07 (RBAC) |
+| CAL-07 | Kisisel Takvim | + FIX-04 (IDOR) |
+| CAL-08 | Mali Donem | + FIX-05 (RBAC) |
+| CAL-09 | get_day_rules() Motor | — |
+
+### BATCH 3 — PUANTAJ MOTORU + GATE (15 ozellik + 2 fix)
+**Bagimlillik: CAL-09 dogrulanmis | 10/15 paralel**
+
+ATT-01~12 + GATE-01~03. FIX-09 (Gate RBAC), FIX-13 (rate limit), FIX-10 kalan IDOR'lar.
+
+### BATCH 4 — TALEPLER & ONAYLAR (22 ozellik + 2 fix)
+**Bagimlillik: ATT-02 + ORG-03 | 3 alt grup**
+
+- **4A — Talep Olusturma (paralel):** OT-01, OT-03, LV-01, LV-04, ML-01, CE-01
+- **4B — Onay Workflow (sirayla):** APR-01, OT-02, LV-02, CE-02, ML-02, APR-02, APR-08 + FIX-14
+- **4C — Ileri Ozellikler:** LV-03, LV-05~07, APR-03~07
+
+### BATCH 5 — RAPORLAMA & BILDIRIMLER (9 ozellik + 2 fix)
+**Bagimlillik: ATT + LV dogrulanmis**
+
+NOT-01~02, RPT-01~07 + FIX-08 (Reports RBAC), FIX-11, FIX-12
+
+### BATCH 6 — SISTEM ADMIN & TEMIZLIK (18 ozellik + 6 fix)
+**Bagimlillik: YOK — herhangi bir batch ile paralel**
+
+SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
+
+### Batch Ozet Tablosu
+
+| Batch | Isim | Feature | Fix | Paralel Firsat |
+|-------|------|---------|-----|----------------|
+| 0 | Acil Guvenlik | 2 | 3 CRITICAL | FIX'ler paralel |
+| 1 | Organizasyon | 7 | 1 | 5/7 paralel |
+| 2 | Takvim | 9 | 4 | 3/9 paralel |
+| 3 | Puantaj + Gate | 15 | 2 | 10/15 paralel |
+| 4 | Talepler + Onaylar | 22 | 2 | 3 alt grup paralel |
+| 5 | Raporlama | 9 | 2 | 7/9 paralel |
+| 6 | Admin + Temizlik | 18 | 6 | Tamamen paralel |
+| **TOPLAM** | | **81** | **21** | |
+
+---
+
+## 10) Guvenlik Test Kapsam Analizi
+
+> **Tarih:** 2026-02-22 | **Hazirlayan:** QA Analyst Agent (team review)
+> **Mevcut Kapsam:** 30 test / 49 gerekli = **%61**
+
+### Mevcut Test Durumu (SEC-01 ~ SEC-30)
+
+| Audit Bulgu | Seviye | Test | Durum |
+|-------------|--------|------|-------|
+| EmployeeViewSet NO RBAC | CRITICAL | SEC-02 | **KISMI** — sadece PATCH, DELETE/LIST/CREATE yok |
+| SystemSettingsViewSet NO RBAC | CRITICAL | SEC-03, SEC-34 | **DONE** — PATCH + DELETE test eklendi |
+| FiscalCalendarViewSet NO RBAC | CRITICAL | SEC-06, SEC-35~37 | **DONE** — POST + recalculate + assign_employees + assigned_employees test eklendi |
+| PersonalEventGroupViewSet | HIGH | — | **GAP** |
+| IDOR-04: monthly-reports export | HIGH | — | **GAP** |
+| IDOR-05: live-status PK | MEDIUM | — | **GAP** |
+| IDOR-06: calendar-events | MEDIUM | — | **GAP** |
+| Destructive endpoints (7 adet) | CRITICAL-HIGH | — | **GAP** — hic yok |
+| AllowAny PII sizintisi | MEDIUM | — | **GAP** |
+| Self-approval: Cardless | MEDIUM | — | **GAP** |
+
+### Onerilen Yeni Testler (SEC-31 ~ SEC-49)
+
+**CRITICAL (6 test) — TAMAMLANDI:**
+- ~~SEC-31: Employee DELETE → 403~~ **DONE**
+- ~~SEC-32: Employee CREATE (yetkisiz) → 403~~ **DONE**
+- ~~SEC-34: SystemSettings DELETE → 403~~ **DONE**
+- ~~SEC-35: FiscalCalendar recalculate → 403~~ **DONE**
+- ~~SEC-36: FiscalCalendar assign_employees → 403~~ **DONE**
+- ~~SEC-37: FiscalCalendar assigned_employees GET → 403~~ **DONE**
+
+**HIGH (9 test):**
+- SEC-38: PersonalEventGroup isolation
+- SEC-39: DailyScheduleOverride bulk_delete → 403
+- SEC-40: DayTemplateAssignment bulk_assign → 403
+- SEC-41: DayTemplateAssignment bulk_remove → 403
+- SEC-42: MonthlyReport IDOR export
+- SEC-43: live-status IDOR
+- SEC-44: calendar-events IDOR
+- SEC-45: attendance stats IDOR
+- SEC-46: dashboard department_id IDOR
+
+**MEDIUM (3 test):**
+- SEC-47: AllowAny secure-gate PII kontrolu
+- SEC-48: Cardless entry self-approval
+- SEC-49: SystemSettings PUT → 403
+
+### FIX-Test Eslesmesi
+
+| FIX | Gerekli Testler |
+|-----|-----------------|
+| ~~FIX-01~~ | ~~SEC-31, 32~~ **DONE** (SEC-02 mevcut, SEC-31 DELETE, SEC-32 CREATE) |
+| ~~FIX-02~~ | ~~SEC-34~~ **DONE** (SEC-03 mevcut, SEC-34 DELETE) |
+| ~~FIX-03~~ | ~~SEC-35, 36, 37~~ **DONE** (SEC-06 mevcut, SEC-35 recalculate, SEC-36 assign, SEC-37 assigned_employees) |
+| FIX-04 | SEC-38 |
+| FIX-07 | SEC-39, 40, 41 |
+| FIX-08+10 | SEC-42~46 |
+| FIX-13 | SEC-47 |
+| FIX-14 | SEC-48 |
+
+### Mevcut Durum: 37/49 test (%76 kapsam) | Hedef: 49/49 = %100
