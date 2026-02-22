@@ -161,8 +161,8 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | AUTH-01 | DONE | ab627bd, cdd5e8a | Railway autodeploy OK | Forgot password popup, remember-me default true, bg image restored, copyright updated |
 | AUTH-02 | DONE | (no changes) | — | Verified: refresh, queue, expire redirect all OK |
 | AUTH-03 | DONE | df334dd | Railway autodeploy OK | RBAC Deep Audit completed + AUTH-03A excluded_permissions fix |
-| AUTH-04 | PENDING | — | — | |
-| AUTH-05 | PENDING | — | — | |
+| AUTH-04 | DONE | — | — | RoleViewSet + PermissionViewSet → PAGE_EMPLOYEES required (FIX-18), SEC-38/39 tests |
+| AUTH-05 | DONE | — | — | change_password same-password rejection, SEC-40 test |
 | ORG-01 | PENDING | — | — | |
 | ORG-02 | PENDING | — | — | |
 | ORG-03 | PENDING | — | — | |
@@ -847,7 +847,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | FIX-15 | ~~Sidebar hasPermission() bug fix~~ | **DONE** — `28b9646` MainLayout.jsx `includes()` → `hasPermission()` |
 | FIX-16 | ~~Token refresh'te permission yenileme~~ | **DONE** — `28b9646` api.js refresh interceptor `/employees/me/` cagiriyor |
 | FIX-17 | SYSTEM_ADMIN rolunu birine ata | DB-01 |
-| FIX-18 | RoleViewSet/PermissionViewSet'i admin-only yap | SYSTEM_FULL_ACCESS |
+| FIX-18 | ~~RoleViewSet/PermissionViewSet'i admin-only yap~~ | **DONE** — PAGE_EMPLOYEES required for list/retrieve |
 
 #### LOW
 
@@ -866,27 +866,29 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 |--------|--------|-------|------------|-------------------|
 | **CRITICAL** | 3 | **0** | 3 (FIX-01, FIX-02, FIX-03) | — Hepsi kapatildi |
 | **HIGH** | 10 | **9** | 1 (FIX-10 kismi) | PersonalCalendar IDOR, FiscalPeriod, WorkSchedule/Holiday CRUD, Reports export, Gate logs |
-| **MEDIUM** | 5 | **3** | 2 (FIX-15, FIX-16) | Self-approval, role atama |
+| **MEDIUM** | 5 | **2** | 3 (FIX-15, FIX-16, FIX-18) | Self-approval |
 | **LOW** | 6 | **6** | 0 | Rol temizligi, unused perms, phantom perms |
-| **TOPLAM** | **24** | **18** | **6** | — |
+| **TOPLAM** | **24** | **17** | **7** | — |
 
 ---
 
 ## 7) Genel Ilerleme Ozeti
 
-### Tamamlanan Ozellikler (7/88)
+### Tamamlanan Ozellikler (9/88)
 
 | Feature | Kategori | Tarih |
 |---------|----------|-------|
 | AUTH-01 | Auth & RBAC | JWT Login — popup, remember-me, bg image |
 | AUTH-02 | Auth & RBAC | Token Refresh — verify only, no changes needed |
 | AUTH-03 | Auth & RBAC | RBAC Deep Audit + excluded_permissions fix + SecurityAuditTab |
+| AUTH-04 | Auth & RBAC | Role Management — RoleViewSet + PermissionViewSet PAGE_EMPLOYEES gating |
+| AUTH-05 | Auth & RBAC | Password Change — same-password rejection |
 | ORG-07 | Organization | Matrix Management — CROSS→SECONDARY, validation, shared component |
 | ORG-09 | Organization | Drag & Drop Reassignment — D&D, context menu, SEC-20~30 |
 | SYS-10 | System Admin | SecurityAuditRunner — 30 test, 11 group, crash-proof infra |
 | FIX-15+16 | RBAC Fix | Sidebar hasPermission + Token refresh permission sync |
 
-### Tamamlanan Guvenlik Fix'leri (6/24)
+### Tamamlanan Guvenlik Fix'leri (7/24)
 
 | Fix | Durum |
 |-----|-------|
@@ -896,12 +898,13 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | FIX-10 | **KISMI** — Dashboard IDOR fix'lendi, diger IDOR'lar PENDING |
 | FIX-15 | **DONE** — Sidebar `hasPermission()` bug fix |
 | FIX-16 | **DONE** — Token refresh permission sync |
+| FIX-18 | **DONE** — RoleViewSet/PermissionViewSet PAGE_EMPLOYEES gating |
 
-### Kalan Is (81 feature + 18 fix)
+### Kalan Is (79 feature + 17 fix)
 
 | Kategori | Toplam | Done | Kalan |
 |----------|--------|------|-------|
-| Auth & RBAC | 5 | 3 | 2 (AUTH-04, AUTH-05) |
+| Auth & RBAC | 5 | 5 | 0 — Auth fazi tamamlandi |
 | Organization | 9 | 2 | 7 (ORG-01~06, ORG-08) |
 | Calendar | 9 | 0 | 9 |
 | Attendance | 12 | 0 | 12 |
@@ -927,7 +930,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 
 ## 8) Next Feature
 
-**Sonraki:** AUTH-04 — Role Management
+**Sonraki:** BATCH 1 — ORG-01 (Departman Yonetimi)
 
 ### Walkthrough Sirasi
 ```
@@ -950,8 +953,8 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 - AUTH-01: DONE ✓
 - AUTH-02: DONE ✓
 - AUTH-03: DONE ✓ (Deep Audit + SecurityAuditRunner + SecurityAuditTab)
-- AUTH-04: PENDING — Role Management (CRUD + inheritance + permission assignment UI)
-- AUTH-05: PENDING — Password Change
+- AUTH-04: DONE ✓ (RoleViewSet + PermissionViewSet → PAGE_EMPLOYEES, FIX-18 uygulandı, SEC-38/39)
+- AUTH-05: DONE ✓ (change_password same-password rejection, SEC-40)
 
 ### ORG Fazinda Durum
 - ORG-07: DONE ✓ (Matrix Management — once yapildi, altyapi)
@@ -973,24 +976,26 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | DOGRULA+FIX | ~55 | Backend+Frontend var, walkthrough ile dogrula + RBAC ekle |
 | YENI INSA | ~15-20 | Onemli yeni kod yazimi gerekli |
 
-### BATCH 0 — ACIL GUVENLIK (3 fix + 2 feature)
-**Oncelik: EN YUKSEK | FIX'ler birbiriyle paralel**
+### BATCH 0 — ACIL GUVENLIK (3 fix + 2 feature) ✅ TAMAMLANDI
+**Oncelik: EN YUKSEK | Tum itemlar tamamlandi**
 
 | # | Is | Tip | Tahmini LOC |
 |---|--|-----|-------------|
 | ~~FIX-01~~ | ~~EmployeeViewSet RBAC~~ | ~~CRITICAL FIX~~ | **DONE** |
 | ~~FIX-02~~ | ~~SystemSettingsViewSet RBAC~~ | ~~CRITICAL FIX~~ | **DONE** |
 | ~~FIX-03~~ | ~~FiscalCalendarViewSet assigned_employees RBAC~~ | ~~CRITICAL FIX~~ | **DONE** |
-| AUTH-04 | Role Management (CRUD + UI) | DOGRULA+GELISTIR | Orta |
-| AUTH-05 | Password Change | DOGRULA | Kucuk |
+| ~~AUTH-04~~ | ~~Role Management~~ | ~~DOGRULA+GELISTIR~~ | **DONE** |
+| ~~AUTH-05~~ | ~~Password Change~~ | ~~DOGRULA~~ | **DONE** |
 
 **FIX Implementasyon Detayi (TAMAMLANDI):**
 - **FIX-02 DONE:** `core/views.py` → `IsSystemAdmin` DRF perm class eklendi (`core/permissions.py`), CUD: IsSystemAdmin, read: IsAuthenticated
 - **FIX-03 DONE:** `attendance/views_calendar.py:96` → `assigned_employees` action'ina `_check_schedule_permission` eklendi
 - **FIX-01 DONE:** `core/views.py:944` → CUD: PAGE_EMPLOYEES, DELETE: SYSTEM_FULL_ACCESS. READ acik birakildı (12+ frontend component bagimli). SEC-31,32,34,35,36,37 testleri eklendi
+- **AUTH-04 DONE (FIX-18):** `core/views.py` → RoleViewSet + PermissionViewSet list/retrieve → PAGE_EMPLOYEES required. SEC-38/39 testleri eklendi
+- **AUTH-05 DONE:** `core/views.py:change_password` → old_password == new_password rejection eklendi. SEC-40 testi eklendi
 
-### BATCH 1 — ORGANIZASYON TEMELI (7 ozellik + 1 fix)
-**Bagimlillik: Batch 0 tamamlanmis | 5/7 paralel**
+### BATCH 1 — ORGANIZASYON TEMELI (7 ozellik)
+**Bagimlillik: Batch 0 tamamlanmis ✅ | 5/7 paralel**
 
 | # | Ozellik | Tip | Paralel? |
 |---|---------|-----|----------|
@@ -1001,7 +1006,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | ORG-05 | Kisisel Profil | DOGRULA | Evet |
 | ORG-06 | Sirket Rehberi | DOGRULA | Evet |
 | ORG-08 | Calisan Etiketleri | DOGRULA | Evet |
-| FIX-18 | RoleViewSet admin-only | FIX-MEDIUM | AUTH-04 ile birlikte |
+| ~~FIX-18~~ | ~~RoleViewSet admin-only~~ | ~~FIX-MEDIUM~~ | **DONE** (Batch 0'da tamamlandi) |
 
 ### BATCH 2 — TAKVIM & PROGRAM (9 ozellik + 4 fix)
 **Bagimlillik: Batch 1 | 3/9 bagimsiz**
@@ -1058,9 +1063,9 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 ## 10) Guvenlik Test Kapsam Analizi
 
 > **Tarih:** 2026-02-22 | **Hazirlayan:** QA Analyst Agent (team review)
-> **Mevcut Kapsam:** 30 test / 49 gerekli = **%61**
+> **Mevcut Kapsam:** 39 test / 52 gerekli = **%75**
 
-### Mevcut Test Durumu (SEC-01 ~ SEC-30)
+### Mevcut Test Durumu (SEC-01 ~ SEC-40)
 
 | Audit Bulgu | Seviye | Test | Durum |
 |-------------|--------|------|-------|
@@ -1085,21 +1090,26 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 - ~~SEC-36: FiscalCalendar assign_employees → 403~~ **DONE**
 - ~~SEC-37: FiscalCalendar assigned_employees GET → 403~~ **DONE**
 
+**AUTH-04/05 (3 test) — TAMAMLANDI:**
+- ~~SEC-38: RoleViewSet LIST (yetkisiz) → 403~~ **DONE**
+- ~~SEC-39: PermissionViewSet LIST (yetkisiz) → 403~~ **DONE**
+- ~~SEC-40: ChangePassword same old/new password → 400~~ **DONE**
+
 **HIGH (9 test):**
-- SEC-38: PersonalEventGroup isolation
-- SEC-39: DailyScheduleOverride bulk_delete → 403
-- SEC-40: DayTemplateAssignment bulk_assign → 403
-- SEC-41: DayTemplateAssignment bulk_remove → 403
-- SEC-42: MonthlyReport IDOR export
-- SEC-43: live-status IDOR
-- SEC-44: calendar-events IDOR
-- SEC-45: attendance stats IDOR
-- SEC-46: dashboard department_id IDOR
+- SEC-41: PersonalEventGroup isolation
+- SEC-42: DailyScheduleOverride bulk_delete → 403
+- SEC-43: DayTemplateAssignment bulk_assign → 403
+- SEC-44: DayTemplateAssignment bulk_remove → 403
+- SEC-45: MonthlyReport IDOR export
+- SEC-46: live-status IDOR
+- SEC-47: calendar-events IDOR
+- SEC-48: attendance stats IDOR
+- SEC-49: dashboard department_id IDOR
 
 **MEDIUM (3 test):**
-- SEC-47: AllowAny secure-gate PII kontrolu
-- SEC-48: Cardless entry self-approval
-- SEC-49: SystemSettings PUT → 403
+- SEC-50: AllowAny secure-gate PII kontrolu
+- SEC-51: Cardless entry self-approval
+- SEC-52: SystemSettings PUT → 403
 
 ### FIX-Test Eslesmesi
 
@@ -1108,10 +1118,12 @@ SYS-01~09, SYS-11~17, EXT-01~02 + FIX-17, FIX-19~24
 | ~~FIX-01~~ | ~~SEC-31, 32~~ **DONE** (SEC-02 mevcut, SEC-31 DELETE, SEC-32 CREATE) |
 | ~~FIX-02~~ | ~~SEC-34~~ **DONE** (SEC-03 mevcut, SEC-34 DELETE) |
 | ~~FIX-03~~ | ~~SEC-35, 36, 37~~ **DONE** (SEC-06 mevcut, SEC-35 recalculate, SEC-36 assign, SEC-37 assigned_employees) |
-| FIX-04 | SEC-38 |
-| FIX-07 | SEC-39, 40, 41 |
-| FIX-08+10 | SEC-42~46 |
-| FIX-13 | SEC-47 |
-| FIX-14 | SEC-48 |
+| ~~FIX-18~~ | ~~SEC-38, 39~~ **DONE** (RoleViewSet + PermissionViewSet LIST gating) |
+| ~~AUTH-05~~ | ~~SEC-40~~ **DONE** (ChangePassword same-password rejection) |
+| FIX-04 | SEC-41 |
+| FIX-07 | SEC-42, 43, 44 |
+| FIX-08+10 | SEC-45~49 |
+| FIX-13 | SEC-50 |
+| FIX-14 | SEC-51 |
 
-### Mevcut Durum: 36/49 test (%73 kapsam) | Hedef: 49/49 = %100
+### Mevcut Durum: 39/52 test (%75 kapsam) | Hedef: 52/52 = %100
