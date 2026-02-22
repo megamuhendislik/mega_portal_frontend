@@ -40,7 +40,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
     const saveStartDate = async () => {
         if (!startDateInput) return;
-        if (!window.confirm(`Sistem ba\u015Flang\u0131\u00E7 tarihi "${startDateInput}" olarak ayarlanacak.\n\nBu tarihten \u00F6nceki t\u00FCm puantaj verileri hesaplamalarda dikkate al\u0131nmayacakt\u0131r.\n\nOnayl\u0131yor musunuz?`)) return;
+        if (!window.confirm(`Sistem başlangıç tarihi "${startDateInput}" olarak ayarlanacak.\n\nBu tarihten önceki tüm puantaj verileri hesaplamalarda dikkate alınmayacaktır.\n\nOnaylıyor musunuz?`)) return;
         setStartDateSaving(true);
         try {
             const settingsId = systemSettings?.id;
@@ -50,7 +50,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                 await api.post('/settings/', { attendance_start_date: startDateInput });
             }
             setSystemSettings(prev => ({ ...prev, attendance_start_date: startDateInput }));
-            alert('Sistem ba\u015Flang\u0131\u00E7 tarihi kaydedildi.');
+            alert('Sistem başlangıç tarihi kaydedildi.');
         } catch (e) {
             alert('Hata: ' + (e.response?.data?.error || e.message));
         } finally {
@@ -59,7 +59,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
     };
 
     const clearStartDate = async () => {
-        if (!window.confirm('Sistem ba\u015Flang\u0131\u00E7 tarihi kald\u0131r\u0131lacak. Onayl\u0131yor musunuz?')) return;
+        if (!window.confirm('Sistem başlangıç tarihi kaldırılacak. Onaylıyor musunuz?')) return;
         setStartDateSaving(true);
         try {
             const settingsId = systemSettings?.id;
@@ -68,7 +68,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
             }
             setSystemSettings(prev => ({ ...prev, attendance_start_date: null }));
             setStartDateInput('');
-            alert('Sistem ba\u015Flang\u0131\u00E7 tarihi kald\u0131r\u0131ld\u0131.');
+            alert('Sistem başlangıç tarihi kaldırıldı.');
         } catch (e) {
             alert('Hata: ' + (e.response?.data?.error || e.message));
         } finally {
@@ -89,20 +89,20 @@ export default function DashboardTab({ stats, refresh, loading }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
             {/* KPI Cards */}
             <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard title="Toplam \u00C7al\u0131\u015Fan" value={stats?.total_employees} icon={CpuChipIcon} color="blue" loading={loading} />
-                <KPICard title="Aktif \u00C7al\u0131\u015Fan" value={stats?.active_employees} icon={CheckCircleIcon} color="green" loading={loading} />
-                <KPICard title="Bug\u00FCnk\u00FC Kay\u0131t" value={stats?.attendance_today} icon={ClockIcon} color="indigo" loading={loading} />
-                <KPICard title="Bekleyen \u0130zin" value={stats?.pending_leave_requests} icon={ExclamationTriangleIcon} color="orange" loading={loading} />
+                <KPICard title="Toplam Çalışan" value={stats?.total_employees} icon={CpuChipIcon} color="blue" loading={loading} />
+                <KPICard title="Aktif Çalışan" value={stats?.active_employees} icon={CheckCircleIcon} color="green" loading={loading} />
+                <KPICard title="Bugünkü Kayıt" value={stats?.attendance_today} icon={ClockIcon} color="indigo" loading={loading} />
+                <KPICard title="Bekleyen İzin" value={stats?.pending_leave_requests} icon={ExclamationTriangleIcon} color="orange" loading={loading} />
             </div>
 
             {/* Runtime Config */}
             <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                 <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <CpuChipIcon className="w-4 h-4 text-gray-400" />
-                    Sistem Ayarlari
+                    Sistem Ayarları
                 </h3>
                 <div className="space-y-5">
-                    {/* Toggle: Servis Loglar\u0131 */}
+                    {/* Toggle: Servis Logları */}
                     <label className="flex items-center gap-3 cursor-pointer select-none">
                         <div className="relative">
                             <input
@@ -116,22 +116,22 @@ export default function DashboardTab({ stats, refresh, loading }) {
                             <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
                         </div>
                         <div>
-                            <span className="text-sm font-medium text-gray-700">Servis Loglari</span>
-                            <p className="text-xs text-gray-400">Acildiginda puantaj motorunun detayli loglarini DB'ye yazar. Servis Kontrol sayfasinda gorunur.</p>
+                            <span className="text-sm font-medium text-gray-700">Servis Logları</span>
+                            <p className="text-xs text-gray-400">Açıldığında puantaj motorunun detaylı loglarını DB'ye yazar. Servis Kontrol sayfasında görünür.</p>
                         </div>
                     </label>
 
-                    {/* Sistem Ba\u015Flang\u0131\u00E7 Tarihi */}
+                    {/* Sistem Başlangıç Tarihi */}
                     <div className="pt-4 border-t border-gray-100">
                         <div className="flex items-start gap-3">
                             <div className="p-2 bg-amber-50 rounded-lg mt-0.5">
                                 <ExclamationTriangleIcon className="w-5 h-5 text-amber-600" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="text-sm font-bold text-gray-800">Sistem Baslangic Tarihi</h4>
+                                <h4 className="text-sm font-bold text-gray-800">Sistem Başlangıç Tarihi</h4>
                                 <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                                    Bu tarih sistemin canli olarak kullanilmaya basladigi gunu belirtir.
-                                    Bu tarihten onceki puantaj verileri hesaplamalarda dikkate alinmaz.
+                                    Bu tarih sistemin canlı olarak kullanılmaya başladığı günü belirtir.
+                                    Bu tarihten önceki puantaj verileri hesaplamalarda dikkate alınmaz.
                                 </p>
                                 <div className="flex items-center gap-3 mt-3">
                                     <input
@@ -153,7 +153,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                             disabled={startDateSaving}
                                             className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                         >
-                                            Kaldir
+                                            Kaldır
                                         </button>
                                     )}
                                 </div>
@@ -168,7 +168,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                 {!systemSettings?.attendance_start_date && (
                                     <div className="mt-2 flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                                        <span className="text-xs text-gray-400">Henuz ayarlanmadi</span>
+                                        <span className="text-xs text-gray-400">Henüz ayarlanmadı</span>
                                     </div>
                                 )}
                             </div>
@@ -181,12 +181,12 @@ export default function DashboardTab({ stats, refresh, loading }) {
             <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <TrashIcon className="w-5 h-5 text-gray-400" />
-                    Veri Temizli\u011Fi ve Y\u00F6netimi (Tehlikeli \u0130\u015Flemler)
+                    Veri Temizliği ve Yönetimi (Tehlikeli İşlemler)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ActionButton
-                        label="Hata Taramas\u0131 (Regression Scan)"
-                        description="Sistemde bilinen hatalar\u0131n (False Pending, Ghost Records) kal\u0131nt\u0131lar\u0131n\u0131 tarar."
+                        label="Hata Taraması (Regression Scan)"
+                        description="Sistemde bilinen hataların (False Pending, Ghost Records) kalıntılarını tarar."
                         hazard={false}
                         onClick={async () => {
                             try {
@@ -198,37 +198,37 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                     (rep.details.length > 0 ? "Detaylar:\n" + rep.details.join('\n') : "Sistem Temiz.");
                                 alert(msg);
                             } catch (e) {
-                                alert("Tarama Hatas\u0131: " + (e.response?.data?.error || e.message));
+                                alert("Tarama Hatası: " + (e.response?.data?.error || e.message));
                             }
                         }}
                     />
 
                     <ActionButton
-                        label="Sistemi Yeniden Hesapla (Detayl\u0131 Log)"
-                        description="Mevcut giri\u015F/\u00E7\u0131k\u0131\u015F verilerini koruyarak t\u00FCm puantaj hesaplamalar\u0131n\u0131 yeniler ve i\u015Flem loglar\u0131n\u0131 d\u00F6ker."
+                        label="Sistemi Yeniden Hesapla (Detaylı Log)"
+                        description="Mevcut giriş/çıkış verilerini koruyarak tüm puantaj hesaplamalarını yeniler ve işlem loglarını döker."
                         hazard={false}
                         onClick={() => setRecalcConsoleOpen(true)}
                     />
 
                     <ActionButton
-                        label="Molalar\u0131 Yeniden Olu\u015Ftur (Otomatik Kesinti)"
-                        description="Belirtilen tarih aral\u0131\u011F\u0131ndaki t\u00FCm kay\u0131tlar\u0131 tarar ve personelin ba\u011Fl\u0131 oldu\u011Fu takvimin mola kurallar\u0131na g\u00F6re (\u00F6rn: 30dk veya 60dk) otomatik d\u00FC\u015F\u00FCm yapar."
+                        label="Molaları Yeniden Oluştur (Otomatik Kesinti)"
+                        description="Belirtilen tarih aralığındaki tüm kayıtları tarar ve personelin bağlı olduğu takvimin mola kurallarına göre (örn: 30dk veya 60dk) otomatik düşüm yapar."
                         hazard={false}
                         onClick={async () => {
-                            const start = prompt("Ba\u015Flang\u0131\u00E7 Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
+                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
                             if (!start) return;
-                            const end = prompt("Biti\u015F Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
                             if (!end) return;
 
-                            if (confirm(`${start} - ${end} aras\u0131 t\u00FCm personelin molalar\u0131 takvim kurallar\u0131na g\u00F6re yeniden hesaplanacak. Onayl\u0131yor musunuz?`)) {
+                            if (confirm(`${start} - ${end} arası tüm personelin molaları takvim kurallarına göre yeniden hesaplanacak. Onaylıyor musunuz?`)) {
                                 try {
                                     setRecalcConsoleOpen(true);
                                     setRecalcLoading(true);
-                                    setRecalcLogs(['> Mola \u0130yile\u015Ftirme Ba\u015Flat\u0131l\u0131yor...', `> Aral\u0131k: ${start} - ${end}`]);
+                                    setRecalcLogs(['> Mola İyileştirme Başlatılıyor...', `> Aralık: ${start} - ${end}`]);
 
                                     const res = await api.post('/system/health-check/regenerate_compliance/', { start_date: start, end_date: end });
 
-                                    setRecalcLogs(prev => [...prev, ...res.data.logs, `> SONU\u00C7: ${res.data.message}`]);
+                                    setRecalcLogs(prev => [...prev, ...res.data.logs, `> SONUÇ: ${res.data.message}`]);
                                     alert(res.data.message);
                                     refresh();
                                 } catch (e) {
@@ -243,23 +243,23 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
                     <ActionButton
                         label="Standart Mesai Harici Temizle"
-                        description="Vardiya saatleri d\u0131\u015F\u0131ndaki (Erken Giri\u015F / Ge\u00E7 \u00C7\u0131k\u0131\u015F) t\u00FCm s\u00FCreleri siler ve giri\u015F-\u00E7\u0131k\u0131\u015F saatlerini vardiya saatlerine e\u015Fitler. Fazla mesaileri s\u0131f\u0131rlar."
+                        description="Vardiya saatleri dışındaki (Erken Giriş / Geç Çıkış) tüm süreleri siler ve giriş-çıkış saatlerini vardiya saatlerine eşitler. Fazla mesaileri sıfırlar."
                         hazard={true}
                         onClick={async () => {
-                            const start = prompt("Ba\u015Flang\u0131\u00E7 Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
+                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
                             if (!start) return;
-                            const end = prompt("Biti\u015F Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
                             if (!end) return;
 
-                            if (confirm(`D\u0130KKAT: ${start} - ${end} aras\u0131ndaki t\u00FCm kay\u0131tlarda ERKEN G\u0130R\u0130\u015E ve GE\u00C7 \u00C7IKI\u015ELAR S\u0130L\u0130NECEK. Sadece standart \u00E7al\u0131\u015Fma saatleri kalacak. Onayl\u0131yor musunuz?`)) {
+                            if (confirm(`DİKKAT: ${start} - ${end} arasındaki tüm kayıtlarda ERKEN GİRİŞ ve GEÇ ÇIKIŞLAR SİLİNECEK. Sadece standart çalışma saatleri kalacak. Onaylıyor musunuz?`)) {
                                 try {
                                     setRecalcConsoleOpen(true);
                                     setRecalcLoading(true);
-                                    setRecalcLogs(['> Vardiyaya E\u015Fitleme Ba\u015Flat\u0131l\u0131yor...', `> Aral\u0131k: ${start} - ${end}`, '> Bu i\u015Flem fazla mesaileri silebilir.']);
+                                    setRecalcLogs(['> Vardiyaya Eşitleme Başlatılıyor...', `> Aralık: ${start} - ${end}`, '> Bu işlem fazla mesaileri silebilir.']);
 
                                     const res = await api.post('/system/health-check/snap_attendance_to_shift/', { start_date: start, end_date: end });
 
-                                    setRecalcLogs(prev => [...prev, `> Ba\u015Far\u0131yla G\u00FCncellendi: ${res.data.updated_count} kay\u0131t`, `> Mesaj: ${res.data.message}`]);
+                                    setRecalcLogs(prev => [...prev, `> Başarıyla Güncellendi: ${res.data.updated_count} kayıt`, `> Mesaj: ${res.data.message}`]);
                                     alert(res.data.message);
                                     refresh();
                                 } catch (e) {
@@ -289,14 +289,14 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                 <div className="flex-1 bg-gray-950 p-4 overflow-y-auto font-mono text-xs text-green-300 space-y-1">
                                     {recalcLogs.length === 0 && !recalcLoading && (
                                         <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
-                                            <p>Log d\u00F6k\u00FCm\u00FC i\u00E7in i\u015Flemi ba\u015Flat\u0131n.</p>
+                                            <p>Log dökümü için işlemi başlatın.</p>
                                             <button
                                                 onClick={async () => {
                                                     setRecalcLoading(true);
-                                                    setRecalcLogs(['> Ba\u015Flat\u0131l\u0131yor...', '> T\u00FCm personel taran\u0131yor...']);
+                                                    setRecalcLogs(['> Başlatılıyor...', '> Tüm personel taranıyor...']);
                                                     try {
                                                         const res = await api.post('/attendance/recalculate-history/', { debug_console: true });
-                                                        setRecalcLogs(prev => [...prev, ...res.data.logs, `> B\u0130TT\u0130: ${res.data.status}`]);
+                                                        setRecalcLogs(prev => [...prev, ...res.data.logs, `> BİTTİ: ${res.data.status}`]);
                                                         refresh();
                                                     } catch (e) {
                                                         setRecalcLogs(prev => [...prev, `> HATA: ${e.response?.data?.error || e.message}`]);
@@ -306,7 +306,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                                 }}
                                                 className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold transition"
                                             >
-                                                BA\u015ELAT (DEBUG MODE)
+                                                BAŞLAT (DEBUG MODE)
                                             </button>
                                         </div>
                                     )}
@@ -321,18 +321,18 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                             </div>
                                         );
                                     })}
-                                    {recalcLoading && <div className="animate-pulse text-green-500 mt-2">_ \u0130\u015Fleniyor...</div>}
+                                    {recalcLoading && <div className="animate-pulse text-green-500 mt-2">_ İşleniyor...</div>}
                                 </div>
                             </div>
                         </div>
                     )}
 
                     <ActionButton
-                        label="T\u00FCm Verileri S\u0131f\u0131rla (Fabrika Ayarlar\u0131)"
-                        description="T\u00DCM Mesai, \u0130zin ve Talep verilerini TAMAMEN S\u0130LER."
+                        label="Tüm Verileri Sıfırla (Fabrika Ayarları)"
+                        description="TÜM Mesai, İzin ve Talep verilerini TAMAMEN SİLER."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('D\u0130KKAT: T\u00DCM KATILIM VER\u0130LER\u0130N\u0130 S\u0130LMEK \u00DCZER\u0130S\u0130N\u0130Z!\nBu i\u015Flem geri al\u0131namaz.\nDevam etmek istiyor musunuz?')) {
+                            if (confirm('DİKKAT: TÜM KATILIM VERİLERİNİ SİLMEK ÜZERİSİNİZ!\nBu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
                                 try {
                                     const res = await api.post('/attendance/reset-all-data/');
                                     alert(res.data.status);
@@ -347,16 +347,16 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
                     <ActionButton
                         label="Test Verilerini Temizle"
-                        description="Stres testi s\u0131ras\u0131nda olu\u015Fturulan ge\u00E7ici kullan\u0131c\u0131lar\u0131 (Test User*) siler."
+                        description="Stres testi sırasında oluşturulan geçici kullanıcıları (Test User*) siler."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('Test kullan\u0131c\u0131lar\u0131n\u0131 silmek istiyor musunuz?')) {
+                            if (confirm('Test kullanıcılarını silmek istiyor musunuz?')) {
                                 try {
                                     const res = await api.post('/employees/cleanup-test-data/');
                                     const deletedUsers = res.data.deleted_users || [];
 
                                     if (deletedUsers.length > 0) {
-                                        alert(`${res.data.status}\n\nSilinen: ${deletedUsers.length} kullan\u0131c\u0131`);
+                                        alert(`${res.data.status}\n\nSilinen: ${deletedUsers.length} kullanıcı`);
                                     } else {
                                         alert(res.data.status);
                                     }
@@ -373,11 +373,11 @@ export default function DashboardTab({ stats, refresh, loading }) {
                     />
 
                     <ActionButton
-                        label="T\u00DCM \u0130zin ve Mesai Taleplerini Sil"
-                        description="Sistemdeki T\u00DCM talep kay\u0131tlar\u0131n\u0131 (\u0130zin, Fazla Mesai, Yemek, Karts\u0131z Giri\u015F) kal\u0131c\u0131 olarak siler."
+                        label="TÜM İzin ve Mesai Taleplerini Sil"
+                        description="Sistemdeki TÜM talep kayıtlarını (İzin, Fazla Mesai, Yemek, Kartsız Giriş) kalıcı olarak siler."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('D\u0130KKAT: Sistemdeki T\u00DCM talepleri (\u0130zin, FM, Yemek, vb.) silmek \u00FCzeresiniz!\nBu i\u015Flem geri al\u0131namaz.\nDevam etmek istiyor musunuz?')) {
+                            if (confirm('DİKKAT: Sistemdeki TÜM talepleri (İzin, FM, Yemek, vb.) silmek üzeresiniz!\nBu işlem geri alınamaz.\nDevam etmek istiyor musunuz?')) {
                                 try {
                                     const res = await api.post('/system/health-check/clear_requests/', { model_type: 'all' });
                                     alert(res.data.message);
@@ -390,24 +390,24 @@ export default function DashboardTab({ stats, refresh, loading }) {
                     />
 
                     <ActionButton
-                        label="T\u00FCm Test Departman/Pozisyon Verilerini Sil"
-                        description="'Stress', 'Diagnostic', 'Test', 'Deneme' i\u00E7eren t\u00FCm yap\u0131lar\u0131 temizler."
+                        label="Tüm Test Departman/Pozisyon Verilerini Sil"
+                        description="'Stress', 'Diagnostic', 'Test', 'Deneme' içeren tüm yapıları temizler."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('\u0130\u00E7inde "Test", "Stress", "Diagnostic" ge\u00E7en T\u00DCM Departman ve Pozisyonlar silinecek.\nBu i\u015Flem geri al\u0131namaz. Onayl\u0131yor musunuz?')) {
+                            if (confirm('İçinde "Test", "Stress", "Diagnostic" geçen TÜM Departman ve Pozisyonlar silinecek.\nBu işlem geri alınamaz. Onaylıyor musunuz?')) {
                                 setRecalcConsoleOpen(true);
-                                setRecalcLogs(['> Temizlik \u0130\u015Flemi Ba\u015Flat\u0131l\u0131yor...', '> Hedef: Stress, Diagnostic, Test, Deneme...']);
+                                setRecalcLogs(['> Temizlik İşlemi Başlatılıyor...', '> Hedef: Stress, Diagnostic, Test, Deneme...']);
                                 setRecalcLoading(true);
                                 try {
                                     // Artificial delay to show "Scanning" feel if super fast
                                     await new Promise(r => setTimeout(r, 800));
 
                                     const res = await api.post('/system/health-check/run_metadata_cleanup/');
-                                    setRecalcLogs(prev => [...prev, `> \u0130\u015ELEM BA\u015EARILI.`, `> Mesaj: ${res.data.message}`]);
+                                    setRecalcLogs(prev => [...prev, `> İŞLEM BAŞARILI.`, `> Mesaj: ${res.data.message}`]);
                                     refresh();
                                 } catch (e) {
                                     const errMsg = e.response?.data?.error || e.message;
-                                    setRecalcLogs(prev => [...prev, `> \u274C HATA: ${errMsg}`, '> Endpoint 404 ise: Backend deploy edilmemi\u015F olabilir.']);
+                                    setRecalcLogs(prev => [...prev, `> \u274C HATA: ${errMsg}`, '> Endpoint 404 ise: Backend deploy edilmemiş olabilir.']);
                                 } finally {
                                     setRecalcLoading(false);
                                 }
@@ -416,18 +416,18 @@ export default function DashboardTab({ stats, refresh, loading }) {
                     />
 
                     <ActionButton
-                        label="Celery Kuyru\u011Funu Temizle (AC\u0130L)"
-                        description="Sistemdeki t\u00FCm bekleyen g\u00F6revleri (Queue) siler. Log ta\u015Fmas\u0131 veya g\u00F6rev birikmesi durumunda kullan\u0131n."
+                        label="Celery Kuyruğunu Temizle (ACİL)"
+                        description="Sistemdeki tüm bekleyen görevleri (Queue) siler. Log taşması veya görev birikmesi durumunda kullanın."
                         hazard={true}
                         onClick={async () => {
-                            if (confirm('D\u0130KKAT! Bekleyen T\u00DCM arka plan g\u00F6revleri silinecek. Log ta\u015Fmas\u0131 veya s\u0131k\u0131\u015Fma varsa bunu kullan\u0131n.\n\nDevam edilsin mi?')) {
+                            if (confirm('DİKKAT! Bekleyen TÜM arka plan görevleri silinecek. Log taşması veya sıkışma varsa bunu kullanın.\n\nDevam edilsin mi?')) {
                                 try {
                                     setRecalcConsoleOpen(true);
                                     setRecalcLoading(true);
                                     setRecalcLogs([
-                                        '> \uD83D\uDE80 Temizlik \u0130\u015Flemi Ba\u015Flat\u0131l\u0131yor...',
-                                        '> \uD83D\uDD0C Redis Sunucusuna Ba\u011Flan\u0131l\u0131yor...',
-                                        '> \u2622\uFE0F FLUSHALL komutu haz\u0131rlan\u0131yor...'
+                                        '> \uD83D\uDE80 Temizlik İşlemi Başlatılıyor...',
+                                        '> \uD83D\uDD0C Redis Sunucusuna Bağlanılıyor...',
+                                        '> \u2622\uFE0F FLUSHALL komutu hazırlanıyor...'
                                     ]);
 
                                     // Artificial delay for UX
@@ -437,11 +437,11 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
                                     setRecalcLogs(prev => [
                                         ...prev,
-                                        '> \u2622\uFE0F KOMUT G\u00D6NDER\u0130LD\u0130: FLUSHALL',
+                                        '> \u2622\uFE0F KOMUT GÖNDERİLDİ: FLUSHALL',
                                         `> \u2705 SUNUCU YANITI: ${res.data.status.toUpperCase()}`,
                                         `> \uD83D\uDCC4 MESAJ: ${res.data.message}`,
-                                        `> \uD83D\uDDD1\uFE0F Silinen (Soft) G\u00F6rev: ${res.data.purged_count}`,
-                                        '> \uD83C\uDFC1 \u0130\u015ELEM TAMAMLANDI.'
+                                        `> \uD83D\uDDD1\uFE0F Silinen (Soft) Görev: ${res.data.purged_count}`,
+                                        '> \uD83C\uDFC1 İŞLEM TAMAMLANDI.'
                                     ]);
                                 } catch (e) {
                                     setRecalcLogs(prev => [
@@ -462,7 +462,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Servis Durumu</h3>
                 <div className="space-y-4">
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium text-gray-600">Veritaban\u0131</span>
+                        <span className="text-sm font-medium text-gray-600">Veritabanı</span>
                         <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">CONNECTED</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
