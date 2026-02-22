@@ -147,7 +147,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                     <span>Bu gune ozel mesai saatleri tanimlayin.</span>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Baslangic</label>
                                         <input
@@ -173,7 +173,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                         <Coffee size={14} className="text-amber-500" />
                                         <span>Ogle Molasi</span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Baslangic</label>
                                             <input

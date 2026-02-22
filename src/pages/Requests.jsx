@@ -170,7 +170,7 @@ const MyRequestsSection = ({
                     <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsız" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <div className="h-8 w-px bg-slate-200 mx-1 self-center hidden sm:block"></div>
                     <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tümü" color="slate" />
                     <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
@@ -357,7 +357,7 @@ const TeamRequestsSection = ({
 
                     <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block"></div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Hepsi" color="slate" />
                         <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
                         <FilterChip active={statusFilter === 'POTENTIAL'} onClick={() => setStatusFilter('POTENTIAL')} label="Potansiyel" count={counts.potential} color="purple" icon={<AlertCircle size={14} />} />

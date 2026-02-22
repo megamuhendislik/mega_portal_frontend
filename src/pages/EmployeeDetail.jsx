@@ -233,7 +233,7 @@ const EmployeeDetail = () => {
         <div className="space-y-6">
             <Toaster position="top-right" />
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/employees')}
@@ -262,8 +262,8 @@ const EmployeeDetail = () => {
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-slate-200 mb-6">
-                <div className="flex space-x-8">
+            <div className="border-b border-slate-200 mb-6 overflow-x-auto">
+                <div className="flex space-x-4 md:space-x-8 min-w-max">
                     <button
                         onClick={() => setActiveTab('overview')}
                         className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
@@ -439,8 +439,8 @@ const EmployeeDetail = () => {
                                     ) : (
                                         <div className="space-y-3">
                                             {formData.assignments.map((asn, idx) => (
-                                                <div key={idx} className="flex gap-2 items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
-                                                    <div className="flex-1">
+                                                <div key={idx} className="flex flex-wrap md:flex-nowrap gap-2 items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                                    <div className="flex-1 min-w-[140px]">
                                                         <label className="block text-xs text-slate-500 mb-1">Departman</label>
                                                         <select
                                                             value={asn.department_id || ''}
@@ -457,7 +457,7 @@ const EmployeeDetail = () => {
                                                             ))}
                                                         </select>
                                                     </div>
-                                                    <div className="flex-1">
+                                                    <div className="flex-1 min-w-[140px]">
                                                         <label className="block text-xs text-slate-500 mb-1">Pozisyon</label>
                                                         <select
                                                             value={asn.job_position_id || ''}
@@ -474,7 +474,7 @@ const EmployeeDetail = () => {
                                                             ))}
                                                         </select>
                                                     </div>
-                                                    <div className="flex-1">
+                                                    <div className="flex-1 min-w-[140px]">
                                                         <label className="block text-xs text-slate-500 mb-1">Yönetici</label>
                                                         <select
                                                             value={asn.manager_id || ''}
@@ -515,7 +515,7 @@ const EmployeeDetail = () => {
                                 {/* Profile Edit Permission (New) */}
                                 {canEditSensitive && (
                                     <div className={`card p-6 border ${formData.is_profile_editable ? 'border-green-200 bg-green-50/30' : 'border-slate-200'}`}>
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                             <div>
                                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                                     <Settings size={20} className={formData.is_profile_editable ? "text-green-600" : "text-slate-400"} />

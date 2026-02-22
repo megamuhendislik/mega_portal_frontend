@@ -65,7 +65,7 @@ const AttendanceDebugger = () => {
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Employee</label>
                     <select
-                        className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-medium w-64"
+                        className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-medium w-full md:w-64"
                         value={selectedEmp}
                         onChange={(e) => setSelectedEmp(e.target.value)}
                     >

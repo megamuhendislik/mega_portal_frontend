@@ -352,7 +352,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                             </div>
                         )}
                         {(formData.assignments || []).map((asn, idx) => (
-                            <div key={idx} className="flex gap-2 items-start animate-fade-in">
+                            <div key={idx} className="flex flex-wrap md:flex-nowrap gap-2 items-start animate-fade-in">
                                 <div className="flex-1">
                                     <select
                                         value={asn.department_id || ''}
@@ -880,7 +880,7 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
                 <p className="text-slate-500 text-sm">Kullanıcının rollerini ve detaylı erişim yetkilerini belirleyiniz.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[500px]">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[300px] md:min-h-[500px]">
 
                 {/* COL 1: ROLES (Presets) */}
                 <div className="lg:col-span-1 bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col">
@@ -1717,7 +1717,7 @@ const Employees = () => {
     const progress = ((currentStep - 1) / (STEPS.length - 1)) * 100;
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col items-center py-10 px-4 font-sans text-slate-900">
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center py-6 px-2 md:py-10 md:px-4 font-sans text-slate-900">
             {/* Nav Back */}
             <div className="w-full max-w-7xl mb-6">
                 <button
@@ -1732,11 +1732,11 @@ const Employees = () => {
             </div>
 
             {/* Main Card Container */}
-            <div className={`w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[700px] flex flex-col ${viewMode === 'create' ? 'md:flex-row' : ''}`}> {/* Full width for edit */}
+            <div className={`w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[400px] md:min-h-[700px] flex flex-col ${viewMode === 'create' ? 'md:flex-row' : ''}`}> {/* Full width for edit */}
 
                 {/* Left Sidebar - Stepper (Only for Wizard/Create) */}
                 {viewMode === 'create' && (
-                    <div className="w-full md:w-80 bg-slate-900 text-white p-8 flex flex-col relative overflow-hidden shrink-0">
+                    <div className="w-full md:w-80 bg-slate-900 text-white p-4 md:p-8 flex flex-col relative overflow-hidden shrink-0">
                         {/* Decorative Background Elements */}
                         <div className="absolute top-0 left-0 w-full h-full bg-slate-900 z-0">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -1780,7 +1780,7 @@ const Employees = () => {
                 {/* Right Content Area */}
                 <div className="flex-1 bg-white flex flex-col h-full max-h-[calc(100vh-100px)]"> {/* Constrain height for scrolling */}
                     {/* Header */}
-                    <div className="px-10 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-20">
+                    <div className="px-4 py-4 md:px-10 md:py-6 border-b border-slate-100 flex flex-wrap justify-between items-center bg-white sticky top-0 z-20 gap-2">
                         <div>
                             <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                                 {viewMode === 'edit' ? <Edit2 className="text-blue-600" size={28} /> : (STEPS[currentStep - 1]?.icon && React.createElement(STEPS[currentStep - 1].icon, { className: "text-blue-600", size: 24 }))}
@@ -1794,10 +1794,10 @@ const Employees = () => {
                     </div>
 
                     {/* Content Scroll Area */}
-                    <div className="flex-1 p-10 overflow-y-auto custom-scrollbar scroll-smooth">
+                    <div className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar scroll-smooth">
                         {viewMode === 'edit' ? (
                             /* EDIT MODE: SINGLE PAGE SCROLL */
-                            <div className="max-w-4xl mx-auto space-y-12 pb-20">
+                            <div className="max-w-full md:max-w-4xl mx-auto space-y-12 pb-20">
                                 {/* Section 1: Personal */}
                                 <section id="sec-personal" className="scroll-mt-24">
                                     {/* Re-using Step Components directly */}
@@ -1847,7 +1847,7 @@ const Employees = () => {
                                 {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 6 && hasPermission('SYSTEM_FULL_ACCESS') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
                                 {currentStep === 6 && !hasPermission('SYSTEM_FULL_ACCESS') && (
-                                    <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-fade-in">
+                                    <div className="flex flex-col items-center justify-center h-full p-4 md:p-10 text-center animate-fade-in">
                                         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400"><Key size={32} /></div>
                                         <h3 className="text-xl font-bold text-slate-700">Yetkilendirme Erişimi Kısıtlı</h3>
                                         <p className="text-slate-500 mt-2 max-w-md mx-auto">
@@ -1862,7 +1862,7 @@ const Employees = () => {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center sticky bottom-0 z-20 w-full">
+                    <div className="p-4 md:p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center sticky bottom-0 z-20 w-full gap-2">
                         {/* Back / Cancel Button */}
                         <button
                             onClick={viewMode === 'edit' ? () => setViewMode('list') : handleBack}

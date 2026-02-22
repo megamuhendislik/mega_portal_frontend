@@ -182,9 +182,9 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] md:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="p-5 border-b flex justify-between items-center bg-gradient-to-r from-slate-50 to-blue-50/30">
+                <div className="p-3 md:p-5 border-b flex justify-between items-center bg-gradient-to-r from-slate-50 to-blue-50/30">
                     <div>
                         <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                             {format(date, 'd MMMM yyyy, EEEE', { locale: tr })}
@@ -217,7 +217,7 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
                     ))}
                 </div>
 
-                <div className="p-5 overflow-y-auto flex-1 bg-slate-50/30">
+                <div className="p-3 md:p-5 overflow-y-auto flex-1 bg-slate-50/30">
                     {loading ? (
                         <div className="text-center py-10">Y\u00fckleniyor...</div>
                     ) : (
@@ -226,7 +226,7 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
                             {activeTab === 'overview' && (
                                 <div className="space-y-4 animate-fade-in">
                                     {/* Summary Cards */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                                         {[
                                             { label: 'Hedef', value: fmtSec(dailyTarget), color: 'blue', icon: '\ud83c\udfaf' },
                                             { label: 'Normal', value: fmtSec(records.reduce((s, r) => s + (r.normal_seconds || 0), 0)), color: 'green', icon: '\u2705' },
@@ -350,7 +350,7 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
                                     </div>
 
                                     {/* Raw Records Table */}
-                                    <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+                                    <div className="bg-white rounded-xl border overflow-x-auto shadow-sm">
                                         <div className="flex justify-between p-3 items-center border-b bg-slate-50">
                                             <div className="text-sm text-slate-600 font-medium">Kay\u0131tlar ({records.length})</div>
                                             <button onClick={addRecord} className="flex items-center gap-1.5 text-blue-600 font-bold hover:bg-blue-50 px-3 py-1 rounded-lg text-sm border border-blue-100">

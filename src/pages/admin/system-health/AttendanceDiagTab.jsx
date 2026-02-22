@@ -104,7 +104,7 @@ export default function AttendanceDiagTab() {
                         const mismatched = emps.filter(e => Object.values(e.months).some(m => m.mismatch)).length;
                         const withMissing = emps.filter(e => Object.values(e.months).some(m => m.fresh_missing_h > 0)).length;
                         return (
-                            <div className="grid grid-cols-4 gap-3 mb-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                                 <div className="p-3 bg-blue-50 rounded-lg text-center">
                                     <div className="text-2xl font-bold text-blue-700">{emps.length}</div>
                                     <div className="text-xs text-blue-600">Toplam Çalışan</div>

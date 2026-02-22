@@ -366,8 +366,8 @@ const CompanyDirectory = () => {
                     {employees.map(renderEmployeeCard)}
                 </div>
             ) : (
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <table className="w-full">
+                <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
                         <thead className="bg-slate-50 border-b border-slate-200">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Calisan</th>

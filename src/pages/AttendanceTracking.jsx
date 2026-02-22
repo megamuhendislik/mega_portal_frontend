@@ -347,7 +347,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     };
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto space-y-8">
+        <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6 md:space-y-8">
 
             {/* Header Area */}
             {!embedded && (
@@ -366,7 +366,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <input
                                 type="text"
                                 placeholder="Personel ara..."
-                                className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-48"
+                                className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-full md:w-48"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -405,7 +405,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <select
                             value={selectedDept}
                             onChange={(e) => setSelectedDept(e.target.value)}
-                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors max-w-[200px]"
+                            className="bg-slate-50 border-none rounded-xl text-sm font-semibold text-slate-700 py-2 pl-3 pr-8 cursor-pointer hover:bg-slate-100 transition-colors w-full md:max-w-[200px]"
                         >
                             <option value="">Tum Departmanlar</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -426,13 +426,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             {/* Embedded Controls */}
             {embedded && (
                 <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
-                    <div className="flex gap-3">
-                        <div className="relative">
+                    <div className="flex flex-wrap gap-3">
+                        <div className="relative flex-1 min-w-[180px]">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 type="text"
                                 placeholder="Ekip içinde ara..."
-                                className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-64 shadow-sm"
+                                className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 transition-all w-full md:w-64 shadow-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -440,7 +440,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <select
                             value={selectedDept}
                             onChange={(e) => setSelectedDept(e.target.value)}
-                            className="bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 py-2.5 pl-3 pr-8 cursor-pointer hover:border-indigo-300 transition-colors max-w-[200px] shadow-sm"
+                            className="bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 py-2.5 pl-3 pr-8 cursor-pointer hover:border-indigo-300 transition-colors w-full md:max-w-[200px] shadow-sm"
                         >
                             <option value="">Tum Ekip</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -458,7 +458,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             )}
 
             {/* Executive Summary Cards */}
-            <div className={`grid gap-6 ${scope === 'DAILY' ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
+            <div className={`grid gap-4 md:gap-6 ${scope === 'DAILY' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'}`}>
                 <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white p-6 rounded-3xl shadow-lg shadow-indigo-200 transition-all hover:shadow-xl hover:-translate-y-1">
                     <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
                     <div className="flex items-center gap-4 relative z-10">
@@ -539,7 +539,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             {/* Main Table */}
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
                 {/* Toolbar */}
-                <div className="flex items-center gap-4 px-6 py-3 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex flex-wrap items-center gap-3 md:gap-4 px-4 md:px-6 py-3 border-b border-slate-100 bg-slate-50/50">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input
                             type="checkbox"

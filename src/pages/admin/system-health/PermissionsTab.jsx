@@ -383,7 +383,7 @@ function PermissionMatrixView() {
                                 <div key={u.id} className={`bg-white rounded-xl shadow-sm border overflow-hidden transition-all ${issues.some(i => i.type === 'error') ? 'border-red-200' : issues.some(i => i.type === 'warning') ? 'border-amber-200' : 'border-gray-100'}`}>
                                     {/* Header Row */}
                                     <div
-                                        className="p-4 flex items-center gap-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                                        className="p-4 flex items-center gap-4 cursor-pointer hover:bg-gray-50/50 transition-colors flex-wrap"
                                         onClick={() => setExpandedUser(isExpanded ? null : u.id)}
                                     >
                                         {/* Avatar */}
@@ -397,17 +397,17 @@ function PermissionMatrixView() {
                                                 <span className="font-bold text-slate-800">{u.full_name}</span>
                                                 {u.is_superuser && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">SUPERUSER</span>}
                                             </div>
-                                            <div className="text-xs text-slate-400 flex items-center gap-3">
+                                            <div className="text-xs text-slate-400 flex items-center gap-3 flex-wrap">
                                                 <span>@{u.username}</span>
-                                                <span className="text-slate-300">|</span>
+                                                <span className="text-slate-300 hidden md:inline">|</span>
                                                 <span>{u.department}</span>
-                                                <span className="text-slate-300">|</span>
+                                                <span className="text-slate-300 hidden md:inline">|</span>
                                                 <span>{u.job_position}</span>
                                             </div>
                                         </div>
 
                                         {/* Roles */}
-                                        <div className="flex flex-wrap gap-1 max-w-[300px]">
+                                        <div className="flex flex-wrap gap-1 max-w-full md:max-w-[300px]">
                                             {u.roles.map(r => (
                                                 <span key={r} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[10px] font-bold">{r}</span>
                                             ))}

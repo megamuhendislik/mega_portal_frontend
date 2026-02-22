@@ -364,9 +364,9 @@ export default function DataManagement() {
     }
 
     return (
-        <div className="p-6 max-w-[1800px] mx-auto min-h-screen">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <div className="p-3 md:p-6 max-w-[1800px] mx-auto min-h-screen">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Database className="text-blue-600" />
                     Sistem Veri Y\u00f6netimi (Y\u0131ll\u0131k Matris)
                 </h1>
@@ -395,9 +395,9 @@ export default function DataManagement() {
             )}
 
             {activeTab === 'backup' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 animate-fade-in">
                     {/* Export Card */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-slate-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-3 bg-blue-50 rounded-lg">
                                 <Download className="text-blue-600" size={24} />
@@ -427,7 +427,7 @@ export default function DataManagement() {
                     </div>
 
                     {/* Import Card */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-slate-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-3 bg-orange-50 rounded-lg">
                                 <Upload className="text-orange-600" size={24} />
@@ -478,10 +478,10 @@ export default function DataManagement() {
                 <div className="animate-fade-in">
                     {viewMode === 'list' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <div className="p-3 md:p-4 border-b flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-50/50 gap-3">
                                 <h2 className="font-bold text-slate-700">Y\u0131ll\u0131k Personel \u00d6zeti</h2>
 
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full md:w-auto">
                                     <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
                                         <button onClick={() => setListYear(listYear - 1)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
                                             <ChevronLeft size={18} />
@@ -494,7 +494,7 @@ export default function DataManagement() {
                                         </button>
                                     </div>
 
-                                    <div className="relative w-64">
+                                    <div className="relative w-full md:w-64">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                         <input
                                             type="text"
@@ -507,7 +507,7 @@ export default function DataManagement() {
                                 </div>
                             </div>
 
-                            <div className="max-h-[700px] overflow-auto">
+                            <div className="max-h-[400px] md:max-h-[700px] overflow-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-slate-50 sticky top-0 z-20 text-xs uppercase text-slate-500 font-bold tracking-wider shadow-sm">
                                         <tr>
@@ -594,9 +594,9 @@ export default function DataManagement() {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-6">
                             {/* Calendar Header */}
-                            <div className="flex items-center justify-between mb-8">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 md:mb-8 gap-3">
                                 <button
                                     onClick={() => setViewMode('list')}
                                     className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors"
@@ -638,7 +638,7 @@ export default function DataManagement() {
 
                             {/* Calendar Grid */}
                             {loadingCalendar ? (
-                                <div className="h-[400px] flex items-center justify-center text-slate-400">Y\u00fckleniyor...</div>
+                                <div className="h-[250px] md:h-[400px] flex items-center justify-center text-slate-400">Y\u00fckleniyor...</div>
                             ) : (
                                 <CalendarGrid
                                     currentMonth={currentMonth}

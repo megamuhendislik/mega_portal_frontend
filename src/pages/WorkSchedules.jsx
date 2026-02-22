@@ -354,20 +354,20 @@ const WorkSchedules = () => {
     if (loading && calendars.length === 0) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-4rem)] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+        <div className="p-3 md:p-6 max-w-[1600px] mx-auto h-[calc(100vh-4rem)] flex flex-col">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Mali Takvim Yönetimi</h1>
-                    <p className="text-slate-500">Çalışma saatleri, şablonlar ve tatilleri tek ekrandan yönetin.</p>
+                    <h1 className="text-xl md:text-2xl font-bold text-slate-800">Mali Takvim Yönetimi</h1>
+                    <p className="text-slate-500 text-sm md:text-base">Çalışma saatleri, şablonlar ve tatilleri tek ekrandan yönetin.</p>
                 </div>
                 <button onClick={handleCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
                     <Plus size={18} /> Yeni Takvim
                 </button>
             </div>
 
-            <div className="flex gap-6 flex-1 overflow-hidden">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <div className="w-72 flex-shrink-0 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div className="w-full md:w-72 flex-shrink-0 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
                     <div className="p-4 bg-slate-50 border-b border-slate-100 font-bold text-slate-600 flex items-center gap-2">
                         <Calendar size={18} /> Takvim Listesi
                     </div>
@@ -406,7 +406,7 @@ const WorkSchedules = () => {
                             </div>
 
                             {/* Tab Navigation */}
-                            <div className="flex border-b border-slate-200 bg-slate-50 px-4">
+                            <div className="flex overflow-x-auto border-b border-slate-200 bg-slate-50 px-4">
                                 {TABS.map(tab => {
                                     const Icon = tab.icon;
                                     return (
@@ -426,12 +426,12 @@ const WorkSchedules = () => {
                             </div>
 
                             {/* Tab Content */}
-                            <div className="flex-1 overflow-y-auto p-6">
+                            <div className="flex-1 overflow-y-auto p-3 md:p-6">
                                 {/* Tab: Şablonlar */}
                                 {activeTab === 'templates' && (
-                                    <div className="flex gap-6 h-full">
+                                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full">
                                         {/* Template List */}
-                                        <div className="w-64 flex-shrink-0 space-y-2">
+                                        <div className="w-full md:w-64 flex-shrink-0 space-y-2">
                                             <button onClick={handleCreateTemplate}
                                                 className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
                                                 <Plus size={16} /> Yeni Şablon
@@ -749,7 +749,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                 <input placeholder="Personel ara..." className="input-field max-w-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[500px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[300px] md:h-[500px]">
                 <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4 flex flex-col">
                     <h3 className="font-bold mb-3 text-indigo-700 flex justify-between items-center">
                         <span>Bu Takvime Dahil ({assigned.length})</span>
@@ -828,8 +828,8 @@ const HolidaysList = ({ publicHolidayIds }) => {
                 Resmi Tatiller
                 <span className="text-xs font-normal text-slate-400">({activeHolidays.length} gün)</span>
             </h4>
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
+            <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+                <table className="w-full text-sm min-w-[500px]">
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
                             <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Tarih</th>
@@ -924,7 +924,7 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
 
     return createPortal(
         <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-in fade-in zoom-in-95" style={{ zIndex: 10000 }}>
-            <div className={`bg-white rounded-xl shadow-2xl p-6 w-full ${isBulkHalfDay ? 'max-w-2xl' : 'max-w-sm'} transition-all`}>
+            <div className={`bg-white rounded-xl shadow-2xl p-4 md:p-6 w-full ${isBulkHalfDay ? 'max-w-[calc(100vw-2rem)] md:max-w-2xl' : 'max-w-sm'} transition-all`}>
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold text-slate-800">Tatil Detayları</h3>
                     <div className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono">
@@ -1065,7 +1065,7 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
 
     return createPortal(
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in" style={{ zIndex: 9999 }}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] md:max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative">
                 {pendingRange && (
                     <HolidayDetailModal range={pendingRange} onClose={() => setPendingRange(null)} onSave={confirmHolidayCreation} />
                 )}

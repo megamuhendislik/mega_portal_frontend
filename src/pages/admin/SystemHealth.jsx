@@ -93,7 +93,7 @@ export default function SystemHealth() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`
-                                flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                                flex items-center gap-2 px-2 py-1.5 md:px-4 md:py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap
                                 ${activeTab === tab.id
                                     ? 'bg-red-50 text-red-700'
                                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}
@@ -645,7 +645,7 @@ function StressTestTab() {
 
             {/* Console Output */}
             <div className="col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[700px]">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[400px] md:h-[700px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
                         <span className="text-xs font-mono text-gray-400">
                             root@mega-engine:~# {activeTest ? `./run_${activeTest === 'Puantaj Stres Testi' ? 'stress' : 'readiness'}_test.sh` : 'awaiting...'}
@@ -824,7 +824,7 @@ function TestSuiteTab() {
             </div>
 
             <div className="lg:col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[600px]">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[350px] md:h-[600px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
                         <span className="text-xs font-mono text-gray-400">root@mega-engine:~# python comprehensive_test.py</span>
                         {error && <span className="text-xs font-bold text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">{error}</span>}
@@ -956,7 +956,7 @@ function SyntheticDataTab() {
 
             {/* Console Output */}
             <div className="col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[600px]">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[350px] md:h-[600px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
                         <span className="text-xs font-mono text-gray-400">root@mega-engine:~# ./generate_synthetic_data.py</span>
                         <div className="flex gap-1.5">

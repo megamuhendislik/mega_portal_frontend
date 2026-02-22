@@ -144,9 +144,9 @@ const Dashboard = () => {
 
     if (loading) {
         return (
-            <div className="p-8 max-w-[1600px] mx-auto space-y-6">
+            <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-6">
                 <Skeleton className="h-10 w-48" />
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                     {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
                 </div>
                 <Skeleton className="h-96 rounded-2xl" />
@@ -270,7 +270,7 @@ const Dashboard = () => {
 
 
                 {/* Main Chart (8 cols) */}
-                <div className="xl:col-span-8 h-[420px]">
+                <div className="xl:col-span-8 h-[280px] md:h-[420px]">
                     <AttendanceAnalyticsChart
                         logs={logs}
                         employeeId={user?.id}
@@ -279,7 +279,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Activity / Requests (4 Cols) - Moved up from bottom */}
-                <div className="xl:col-span-4 h-[420px] bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                <div className="xl:col-span-4 h-[280px] md:h-[420px] bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                             <FileText size={20} className="text-indigo-500" />
@@ -314,8 +314,8 @@ const Dashboard = () => {
             </div>
 
             {/* 3. Bottom: Monthly Summary (Full Width) */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center gap-3 mb-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
+                <div className="flex items-center gap-3 mb-4 md:mb-6">
                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                         <ArrowUpRight size={20} />
                     </div>

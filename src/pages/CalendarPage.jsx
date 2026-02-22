@@ -442,7 +442,7 @@ const CalendarPage = () => {
     };
 
     const Legend = () => (
-        <div className="flex flex-wrap gap-4 mt-6 p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-xs">
+        <div className="flex flex-wrap gap-3 md:gap-4 mt-6 p-3 md:p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-xs">
             <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                 <span className="text-slate-600 font-bold">Genel</span>
@@ -576,7 +576,7 @@ const CalendarPage = () => {
                             {mode === 'YEAR' ? 'Yıllık Görünüm' : mode === 'FISCAL' ? 'Mali Takvim (Yönetici)' : 'Ajanda Modu'}
                         </span>
                     </h1>
-                    <div className="flex items-center gap-4 mt-2">
+                    <div className="flex flex-wrap items-center gap-4 mt-2">
                         <p className="text-slate-500 font-medium">
                             Planlarınızı yönetin ve takip edin.
                         </p>
@@ -601,7 +601,7 @@ const CalendarPage = () => {
             {mode === 'YEAR' && <YearView />}
 
             {mode === 'CALENDAR' && (
-                <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-6 h-[800px] animate-in zoom-in-95 duration-300">
+                <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-4 md:p-6 h-[500px] md:h-[800px] animate-in zoom-in-95 duration-300">
                     <Calendar
                         localizer={localizer}
                         culture="tr"

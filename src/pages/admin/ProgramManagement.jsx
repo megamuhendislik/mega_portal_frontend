@@ -149,7 +149,7 @@ const ProgramManagement = () => {
 
             {/* Dashboard Stats */}
             {dashboard && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-blue-50 rounded-lg"><Package size={20} className="text-blue-600" /></div>

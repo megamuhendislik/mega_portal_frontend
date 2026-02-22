@@ -87,7 +87,7 @@ const CreatePersonalEventModal = ({ onClose, onSuccess, initialDate }) => {
                     </div>
 
                     {/* Date & Time */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-slate-600 mb-1">Başlangıç</label>
                             <div className="flex gap-2">
