@@ -36,7 +36,6 @@ const INITIAL_FORM_STATE = {
     department: '', // Hierarchy Dept (Auto-filled)
     job_position: '',
     assignments: [], // Matrix (Dept+Title)
-    reports_to: '', // Manager ID (Primary) - Legacy
     primary_managers: [], // Birincil Yöneticiler [{manager_id, department_id, job_position_id}]
     secondary_managers: [], // İkincil Yöneticiler [{manager_id, department_id, job_position_id}]
     substitutes: [], // [NEW] Substitutes
@@ -208,35 +207,13 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                 <div>
                     <h4 className="font-bold text-blue-900 text-sm">Matris Organizasyon Yapısı</h4>
                     <p className="text-blue-800/80 text-xs mt-1 leading-relaxed">
-                        Lütfen önce <strong>Yönetici (Reports To)</strong> seçimini yapınız. Ana departman yöneticiden otomatik çekilecektir.
-                        Eğer <strong>"Departman Müdürü"</strong> unvanı seçilirse, Fonksiyonel Birim seçimi zorunlu hale gelir.
+                        Lütfen <strong>Birincil Yöneticiler</strong> bölümünden en az bir yönetici atayınız. İlk birincil yönetici ana raporlama hattı olarak kullanılır.
                     </p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                {/* 1. MANAGER (Optional for Top Level) */}
-                <div className="md:col-span-2">
-                    <SelectField
-                        label="Bağlı Olduğu Yönetici (Reports To)"
-                        value={formData.reports_to}
-                        onChange={e => handleChange('reports_to', e.target.value)}
-                        icon={UserPlus}
-                        className="bg-blue-50/30 border-blue-200"
-                        options={
-                            <>
-                                <option value="">Bir Yönetici Seçiniz (Opsiyonel / En Üst Düzey)...</option>
-                                {potentialManagers.map(mgr => (
-                                    <option key={mgr.id} value={mgr.id}>
-                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position_name || 'Pozisyonsuz'} ({mgr.department_name || '-'})
-                                    </option>
-                                ))}
-                            </>
-                        }
-                    />
-                </div>
-
-                {/* 1b. BIRINCIL YÖNETICILER (Structured Rows) */}
+                {/* 1. BIRINCIL YÖNETICILER (Structured Rows) */}
                 <div className="md:col-span-2">
                     <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-slate-700">Birincil Yöneticiler</label>
@@ -1057,7 +1034,8 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
 };
 
 const StepPreview = ({ formData, departments, jobPositions, employees }) => {
-    const mgr = employees.find(e => e.id == formData.reports_to);
+    const firstPrimaryMgrId = formData.primary_managers?.[0]?.manager_id;
+    const mgr = firstPrimaryMgrId ? employees.find(e => e.id == firstPrimaryMgrId) : null;
     const dept = departments.find(d => d.id == formData.department)?.name;
     // const func = departments.find(d => d.id == formData.functional_department)?.name || '-'; // REMOVED
     const pos = jobPositions.find(p => p.id == formData.job_position)?.name;
@@ -1086,7 +1064,7 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     <div className="font-bold text-blue-700">{dept}</div>
                 </div>
                 <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                    <div className="w-1/3 text-slate-500 font-medium">Yönetici</div>
+                    <div className="w-1/3 text-slate-500 font-medium">Birincil Yönetici</div>
                     <div className="font-bold text-blue-700">{mgr ? mgr.first_name + ' ' + mgr.last_name : '-'}</div>
                 </div>
                 {/* REMOVED FUNCTIONAL UNIT DISPLAY */}
@@ -1194,11 +1172,15 @@ const Employees = () => {
         setFormData(prev => {
             const newState = { ...prev, [field]: value };
 
-            // Logic: Manager Selection -> Auto Dept
-            if (field === 'reports_to') {
-                const manager = employees.find(e => e.id == value);
-                if (manager && manager.department) {
-                    newState.department = manager.department.id || manager.department; // Auto-assign Manager's Dept
+            // Logic: First primary manager auto-dept (legacy reports_to davranışı)
+            // primary_managers array değiştiğinde ilk yöneticinin departmanını ata
+            if (field === 'primary_managers' && Array.isArray(value) && value.length > 0) {
+                const firstMgrId = value[0]?.manager_id;
+                if (firstMgrId) {
+                    const manager = employees.find(e => e.id == firstMgrId);
+                    if (manager && manager.department) {
+                        newState.department = manager.department.id || manager.department;
+                    }
                 }
             }
 
@@ -1222,13 +1204,12 @@ const Employees = () => {
 
     // --- Wizard Navigation ---
     const validateStep = (step) => {
-        const { first_name, last_name, tc_number, email, department, job_position, employee_code, reports_to, functional_department } = formData;
+        const { first_name, last_name, tc_number, email, department, job_position, employee_code } = formData;
         switch (step) {
             case 1: // Personal
                 return first_name && last_name && tc_number && email && formData.username && formData.password;
             case 2: // Corporate
-                // reports_to is OPTIONAL for top-level managers (CEO, GM) or first employee
-                // But Department and Position are MUST.
+                // Department and Position are MUST.
                 let valid = department && job_position && employee_code;
 
                 // Special Rule: If 'Departman Müdürü', strictly require functional_department
@@ -1316,7 +1297,6 @@ const Employees = () => {
 
                 department: data.department?.id || data.department,
                 job_position: data.job_position?.id || data.job_position,
-                reports_to: data.reports_to || '',
                 primary_managers: (data.primary_managers || []).map(m => ({
                     manager_id: m.id,
                     department_id: m.department_id || '',
