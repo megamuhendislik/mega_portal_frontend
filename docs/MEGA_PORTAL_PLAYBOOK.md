@@ -168,7 +168,7 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 | ORG-04 | PENDING | — | — | |
 | ORG-05 | PENDING | — | — | |
 | ORG-06 | PENDING | — | — | |
-| ORG-07 | PENDING | — | — | |
+| ORG-07 | DONE | BE: 9fb028e, 5be42ac, 5bbedc0 / FE: 43f5f15, a50cd23, 9e345ef | Railway autodeploy OK | CROSS→SECONDARY rename, reports_to→PRIMARY migration, ManagerAssignmentSection shared component, zorunlu birincil yönetici validasyonu (board exempt), duplicate/self-assignment prevention, toast notifications |
 | ORG-08 | PENDING | — | — | |
 | CAL-01 | PENDING | — | — | |
 | CAL-02 | PENDING | — | — | |
@@ -276,6 +276,38 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 - **Files changed:** Yok
 - **Manual checks:** Kullanici tarafindan prod'da dogrulandi
 - **Deploy notes:** Deploy yok
+
+### ORG-07 — Yonetici Hiyerarsisi (Matrix)
+- **Status:** DONE
+- **What we changed:**
+  - **Phase 1 — Model Refactoring:**
+    - EmployeeManager.relationship_type: `CROSS` → `SECONDARY` rename (migration 0119)
+    - `reports_to` field → ilk PRIMARY manager'dan otomatik sync (migration 0120)
+    - Frontend'te tum CROSS referanslari SECONDARY'ye guncellendi
+  - **Phase 2 — Validation & Shared Component:**
+    - `ManagerAssignmentSection.jsx` (YENİ): Primary/Secondary yonetici atama icin paylasilan component
+    - Backend `validate_manager_entries()` + `is_board_exempt()` helper fonksiyonlari
+    - EmployeeCreateSerializer.validate() + EmployeeUpdateSerializer.validate(): zorunlu birincil yonetici (board exempt), duplicate/self-assignment prevention, row-level alan kontrolu
+    - Employees.jsx + EmployeeDetail.jsx: ~170 satir tekrarli inline kod → shared component
+    - `alert()` → `react-hot-toast` (toast.success/error)
+    - Inline validasyon: kirmizi border + "Zorunlu"/"Tekrar" hata mesajlari
+    - Board muafiyet: dept.code BOARD* veya pos.key BOARD_* ise birincil yonetici opsiyonel
+- **Commits:**
+  - Backend: `9fb028e` (CROSS→SECONDARY rename), `5be42ac` (reports_to sync migration), `5bbedc0` (serializer validation)
+  - Frontend: `43f5f15` (CROSS→SECONDARY UI), `a50cd23` (reports_to field removal), `9e345ef` (shared component + validation)
+- **Files changed:**
+  - Backend: `core/models.py`, `core/serializers.py`, `core/migrations/0119_*`, `core/migrations/0120_*`
+  - Frontend: `src/components/ManagerAssignmentSection.jsx` (NEW), `src/pages/Employees.jsx`, `src/pages/EmployeeDetail.jsx`
+- **Manual checks:**
+  - Yeni calisan: birincil yonetici olmadan Step 2 gecilemez
+  - Board uyesi: birincil yonetici olmadan kayit olabilir
+  - Yonetici secimi: dept + pos otomatik dolur
+  - Duplicate: ayni kisi 2 kez secilemez (dropdown'da gorunmez)
+  - Bos satir: submit'te kirmizi border + "Zorunlu" hata mesaji
+  - Backend: validasyonsuz API istegi → 400 + Turkce hata
+  - EmployeeDetail: mevcut yoneticiler dogru yuklenir, ayni kurallar gecerli
+  - Build: `npm run build` hatasiz
+- **Deploy notes:** Railway autodeploy her iki repo icin tetiklendi
 
 ---
 
@@ -728,7 +760,9 @@ Cardless > Approvals > Notifications > Reports > Admin > External
 
 ## 7) Next Feature
 
-**AUTH-03 — RBAC Permission System** (DONE: Audit + AUTH-03A Fix)
+**ORG-07 — Yonetici Hiyerarsisi (Matrix)** (DONE: CROSS→SECONDARY + reports_to sync + validation + shared UI)
 **Next:** AUTH-04 — Role Management
 
 Walkthrough sirasi: Auth > Org > Calendar > Attendance > Gate > Overtime > Leave > Meal > Cardless > Approvals > Notifications > Reports > Admin > External
+
+> **Not:** Auth fazinda 3/5 tamamlandi (AUTH-04, AUTH-05 kaldi). ORG fazinda 1/8 tamamlandi (ORG-07 once yapildi cunku manager hiyerarsisi diger ORG feature'larinin altyapisi).

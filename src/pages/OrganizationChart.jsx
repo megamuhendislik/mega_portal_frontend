@@ -353,6 +353,7 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd })
         onDragOver={dnd ? (e) => dnd.handleDragOver(e, { id: node.id, name: node.name, type: 'department' }) : undefined}
         onDragLeave={dnd ? () => dnd.handleDragLeave() : undefined}
         onDrop={dnd ? (e) => dnd.handleDrop(e, { id: node.id, name: node.name, type: 'department' }) : undefined}
+        onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
         className={`
             relative z-10 p-3 rounded-xl border-l-4 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer
             bg-white border-slate-200 border-l-emerald-500 text-slate-800

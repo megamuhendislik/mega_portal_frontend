@@ -30,12 +30,15 @@ const OrgChartContextMenu = ({ visible, position, employee, onClose, onEditManag
   if (!visible || !employee) return null;
 
   const menuWidth = 220;
-  const menuHeight = 44;
+  const menuHeight = 48;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  const pad = 8;
 
-  const left = position.x + menuWidth > vw ? position.x - menuWidth : position.x;
-  const top = position.y + menuHeight > vh ? position.y - menuHeight : position.y;
+  let left = position.x;
+  if (left + menuWidth + pad > vw) left = Math.max(pad, position.x - menuWidth);
+  let top = position.y;
+  if (top + menuHeight + pad > vh) top = Math.max(pad, position.y - menuHeight);
 
   const handleEditManagers = () => {
     onEditManagers(employee);

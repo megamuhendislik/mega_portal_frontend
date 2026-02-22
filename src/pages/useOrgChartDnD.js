@@ -28,12 +28,12 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
    *   { id, name, title, department_id, job_position_id, manager_id }
    */
   const handleDragStart = useCallback((e, employeeData) => {
-    if (!isEditMode) return;
+    if (!isEditMode || isSaving) return;
 
     setDraggedEmployee(employeeData);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('application/json', JSON.stringify(employeeData));
-  }, [isEditMode]);
+  }, [isEditMode, isSaving]);
 
   /**
    * Called when drag ends. Clears all drag-related state.
@@ -75,7 +75,7 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
   const handleDrop = useCallback((e, targetData) => {
     e.preventDefault();
 
-    if (!draggedEmployee) return;
+    if (!draggedEmployee || isSaving) return;
     if (targetData.id === draggedEmployee.id) return;
 
     setPendingReassignment({
@@ -85,7 +85,7 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
 
     setDraggedEmployee(null);
     setDropTargetId(null);
-  }, [draggedEmployee]);
+  }, [draggedEmployee, isSaving]);
 
   /**
    * Called when the user confirms the reassignment in the modal.
@@ -96,11 +96,18 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
   const confirmReassignment = useCallback(async (managerType = 'PRIMARY') => {
     if (!pendingReassignment) return;
     const { employee, target } = pendingReassignment;
+
+    // Defense-in-depth: prevent self-assignment
+    if (target.type === 'employee' && target.id === employee.id) {
+      setPendingReassignment(null);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       if (target.type === 'employee') {
-        // Fetch current managers
+        // Fetch current managers right before PATCH to minimize race window
         const empRes = await api.get(`/employees/${employee.id}/`);
         const currentPrimary = (empRes.data.primary_managers || []).map(m => ({
           manager_id: m.id, department_id: m.department_id, job_position_id: m.job_position_id,
@@ -111,14 +118,15 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
 
         const newEntry = {
           manager_id: target.id,
-          department_id: target.department_id,
-          job_position_id: target.job_position_id,
+          department_id: target.department_id || null,
+          job_position_id: target.job_position_id || null,
         };
 
         let patchData;
         if (managerType === 'PRIMARY') {
           if (currentPrimary.some(m => m.manager_id === target.id)) {
             toast.error('Bu kişi zaten birincil yönetici olarak atanmış.');
+            setPendingReassignment(null);
             setIsSaving(false);
             return;
           }
@@ -126,6 +134,7 @@ export function useOrgChartDnD({ isEditMode, onReassignComplete }) {
         } else {
           if (currentSecondary.some(m => m.manager_id === target.id)) {
             toast.error('Bu kişi zaten ikincil yönetici olarak atanmış.');
+            setPendingReassignment(null);
             setIsSaving(false);
             return;
           }

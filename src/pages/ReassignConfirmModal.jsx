@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { ExclamationTriangleIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import { UserPlus, Star } from 'lucide-react';
 
 const ReassignConfirmModal = ({ reassignment, onConfirm, onCancel, isSaving }) => {
+    const [clickedType, setClickedType] = useState(null);
+
     if (!reassignment) return null;
 
     const { employee, target } = reassignment;
     const isEmployeeTarget = target.type === 'employee';
+
+    const handleConfirm = (type) => {
+        setClickedType(type);
+        onConfirm(type);
+    };
 
     const descriptionText = isEmployeeTarget
         ? `${employee.name} adlı personel ${target.name} altına atanacaktır.`
@@ -75,21 +82,21 @@ const ReassignConfirmModal = ({ reassignment, onConfirm, onCancel, isSaving }) =
                         <p className="text-sm font-medium text-slate-700">Atama tipini seçin:</p>
                         <button
                             type="button"
-                            onClick={() => onConfirm('PRIMARY')}
+                            onClick={() => handleConfirm('PRIMARY')}
                             disabled={isSaving}
                             className="w-full px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             <UserPlus className="w-4 h-4" />
-                            {isSaving ? 'Kaydediliyor...' : 'Birincil Yönetici Olarak Ata'}
+                            {isSaving && clickedType === 'PRIMARY' ? 'Kaydediliyor...' : 'Birincil Yönetici Olarak Ata'}
                         </button>
                         <button
                             type="button"
-                            onClick={() => onConfirm('SECONDARY')}
+                            onClick={() => handleConfirm('SECONDARY')}
                             disabled={isSaving}
                             className="w-full px-4 py-2.5 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             <Star className="w-4 h-4" />
-                            {isSaving ? 'Kaydediliyor...' : 'İkincil Yönetici Olarak Ata'}
+                            {isSaving && clickedType === 'SECONDARY' ? 'Kaydediliyor...' : 'İkincil Yönetici Olarak Ata'}
                         </button>
                         <button
                             type="button"
@@ -112,7 +119,7 @@ const ReassignConfirmModal = ({ reassignment, onConfirm, onCancel, isSaving }) =
                         </button>
                         <button
                             type="button"
-                            onClick={() => onConfirm('PRIMARY')}
+                            onClick={() => handleConfirm('PRIMARY')}
                             disabled={isSaving}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
