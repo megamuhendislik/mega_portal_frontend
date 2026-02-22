@@ -622,7 +622,7 @@ const OrganizationChart = () => {
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
     const [managerEditTarget, setManagerEditTarget] = useState(null); // { id, name } for ManagerEditModal
     const { hasPermission } = useAuth();
-    const canReassign = hasPermission('ACTION_ORG_CHART_EDIT') && hasPermission('PAGE_EMPLOYEES');
+    const canReassign = hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN');
 
     // Zoom & Pan State
     const [scale, setScale] = useState(1); // Default 100% zoom as requested
@@ -930,7 +930,7 @@ const OrganizationChart = () => {
                         {showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}
                     </button>
 
-                    {hasPermission('ACTION_ORG_CHART_EDIT') && (
+                    {hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN') && (
                         <button
                             onClick={() => setIsEditMode(!isEditMode)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap ${isEditMode ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
