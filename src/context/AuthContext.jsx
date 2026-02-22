@@ -36,7 +36,19 @@ export const AuthProvider = ({ children }) => {
             }
         };
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+
+        // Permission refresh after token refresh
+        const handlePermissionsRefreshed = (e) => {
+            if (e.detail) {
+                setUser(e.detail);
+            }
+        };
+        window.addEventListener('permissions-refreshed', handlePermissionsRefreshed);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('permissions-refreshed', handlePermissionsRefreshed);
+        };
     }, []);
 
     const login = async (username, password, remember = false) => {

@@ -31,7 +31,7 @@ import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
 
 const MainLayout = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, hasPermission } = useAuth();
     const location = useLocation();
 
     // Sidebar State - Default closed on mobile (< 768px)
@@ -143,7 +143,7 @@ const MainLayout = () => {
 
         if (!item.permission) return true;
         const permissions = Array.isArray(item.permission) ? item.permission : [item.permission];
-        return permissions.some(p => user.all_permissions?.includes(p));
+        return permissions.some(p => hasPermission(p));
     });
 
     return (

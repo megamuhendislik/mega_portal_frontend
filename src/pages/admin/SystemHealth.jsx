@@ -25,6 +25,7 @@ import ResourceMonitor from '../../components/ResourceMonitor';
 import PermissionsTab from './system-health/PermissionsTab';
 import DashboardTab from './system-health/DashboardTab';
 import AttendanceDiagTab from './system-health/AttendanceDiagTab';
+import SecurityAuditTab from './system-health/SecurityAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -79,6 +80,7 @@ export default function SystemHealth() {
                         { id: 'test_suite', name: 'Sistem Testleri', icon: CheckCircleIcon },
                         { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
+                        { id: 'security_audit', name: 'RBAC Denetimi', icon: ShieldCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                         { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
@@ -112,6 +114,7 @@ export default function SystemHealth() {
                 {activeTab === 'test_suite' && <TestSuiteTab />}
                 {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
+                {activeTab === 'security_audit' && <SecurityAuditTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
