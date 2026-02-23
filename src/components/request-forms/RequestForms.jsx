@@ -107,9 +107,12 @@ export const LeaveRequestForm = ({
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
                 >
                     <option value="">Seçiniz</option>
-                    {requestTypes.filter(t => t.category !== 'EXTERNAL_DUTY').map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
+                    {requestTypes
+                        .filter(t => t.category !== 'EXTERNAL_DUTY')
+                        .filter((t, i, arr) => arr.findIndex(x => x.code === t.code) === i)
+                        .map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
                 </select>
             </div>
 

@@ -312,7 +312,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
           <div>
-            {requestType === 'LEAVE' && (
+            {(requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && (
               <button
                 onClick={() => handleDownloadDocx(request.id)}
                 disabled={downloadLoading}
