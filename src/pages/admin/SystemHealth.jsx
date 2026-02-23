@@ -28,6 +28,7 @@ import DashboardTab from './system-health/DashboardTab';
 import AttendanceDiagTab from './system-health/AttendanceDiagTab';
 import SecurityAuditTab from './system-health/SecurityAuditTab';
 import AttendanceForensicTab from './system-health/AttendanceForensicTab';
+import RBACAuditTab from './system-health/RBACAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -83,6 +84,7 @@ export default function SystemHealth() {
                         { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                         { id: 'security_audit', name: 'RBAC Denetimi', icon: ShieldCheckIcon },
+                        { id: 'rbac_audit', name: 'RBAC Uyumluluk', icon: ClipboardDocumentCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                         { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
@@ -118,6 +120,7 @@ export default function SystemHealth() {
                 {activeTab === 'logs' && <ServiceLogsTab />}
                 {activeTab === 'security' && <SecurityTab />}
                 {activeTab === 'security_audit' && <SecurityAuditTab />}
+                {activeTab === 'rbac_audit' && <RBACAuditTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
