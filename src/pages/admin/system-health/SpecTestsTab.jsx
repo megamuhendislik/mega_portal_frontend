@@ -8,6 +8,8 @@ import {
     ShieldCheckIcon,
     ClipboardDocumentCheckIcon,
     ClockIcon,
+    TrashIcon,
+    MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -38,6 +40,39 @@ export default function SpecTestsTab() {
         const m = Math.floor(s / 60);
         const sec = s % 60;
         return m > 0 ? `${m}dk ${sec}sn` : `${sec}sn`;
+    };
+
+    const [scanResult, setScanResult] = useState(null);
+    const [scanning, setScanning] = useState(false);
+    const [purging, setPurging] = useState(false);
+    const [purgeResult, setPurgeResult] = useState(null);
+
+    const scanTestData = async () => {
+        setScanning(true);
+        setPurgeResult(null);
+        try {
+            const res = await api.get('/system/health-check/scan-test-data/');
+            setScanResult(res.data);
+        } catch (e) {
+            setError(e.response?.data?.error || e.message);
+        } finally {
+            setScanning(false);
+        }
+    };
+
+    const purgeTestData = async () => {
+        if (!confirm('TÜM test verilerini (SEC_, PRT_, STR_, TST_, TRBAC_ prefix\'li) silmek istediğinize emin misiniz?')) return;
+        setPurging(true);
+        setPurgeResult(null);
+        try {
+            const res = await api.post('/system/health-check/purge-all-test-data/');
+            setPurgeResult(res.data);
+            setScanResult(null);
+        } catch (e) {
+            setError(e.response?.data?.error || e.message);
+        } finally {
+            setPurging(false);
+        }
     };
 
     const runTests = async (stage = 'all') => {
@@ -80,6 +115,88 @@ export default function SpecTestsTab() {
                     )}
                     {loading && runningStage === 'all' ? `Çalışıyor... (${formatTime(elapsed)})` : 'Tümünü Çalıştır'}
                 </button>
+            </div>
+
+            {/* Test Data Cleanup Section */}
+            <div className="mb-6 p-4 border border-orange-200 bg-orange-50/50 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                            <TrashIcon className="w-5 h-5 text-orange-600" />
+                            Test Verisi Temizleme
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            Testlerin oluşturduğu artık kayıtları (SEC_, PRT_, STR_, TST_ prefix'li) tarar ve siler
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={scanTestData}
+                            disabled={scanning || purging}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                scanning ? 'bg-gray-200 text-gray-400' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                            {scanning ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <MagnifyingGlassIcon className="w-4 h-4" />}
+                            {scanning ? 'Taranıyor...' : 'Tara'}
+                        </button>
+                        <button
+                            onClick={purgeTestData}
+                            disabled={scanning || purging}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-all ${
+                                purging ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700 active:scale-95'
+                            }`}
+                        >
+                            {purging ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <TrashIcon className="w-4 h-4" />}
+                            {purging ? 'Siliniyor...' : 'Tümünü Sil'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Scan Results */}
+                {scanResult && (
+                    <div className="mt-3 pt-3 border-t border-orange-200">
+                        <div className="flex items-center gap-2 mb-2">
+                            {scanResult.total > 0 ? (
+                                <span className="text-sm font-bold text-orange-700">
+                                    {scanResult.total} artık test kaydı bulundu
+                                </span>
+                            ) : (
+                                <span className="text-sm font-bold text-green-700">
+                                    Artık test verisi bulunamadı
+                                </span>
+                            )}
+                        </div>
+                        {scanResult.total > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                {Object.entries(scanResult.counts).filter(([, v]) => v > 0).map(([key, count]) => (
+                                    <div key={key} className="bg-white px-2 py-1 rounded border border-orange-200 flex justify-between">
+                                        <span className="text-gray-600">{key.replace(/_/g, ' ')}</span>
+                                        <span className="font-bold text-orange-700">{count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Purge Results */}
+                {purgeResult && (
+                    <div className={`mt-3 pt-3 border-t border-orange-200`}>
+                        <div className={`p-3 rounded-lg text-sm ${
+                            purgeResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                            <strong>{purgeResult.success ? 'Temizlik tamamlandı' : 'Hata'}:</strong> {purgeResult.message || purgeResult.error}
+                            {purgeResult.details && Object.keys(purgeResult.details).length > 0 && (
+                                <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-1 text-xs">
+                                    {Object.entries(purgeResult.details).map(([key, count]) => (
+                                        <span key={key} className="opacity-80">{key}: {count}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Loading indicator */}
