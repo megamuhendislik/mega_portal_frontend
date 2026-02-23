@@ -1,24 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Search, Phone, Mail, RefreshCw, Building2, Users,
-    Circle, LayoutGrid, List, MapPin, Wifi, WifiOff
+    Circle, LayoutGrid, List, MapPin, WifiOff
 } from 'lucide-react';
 import api from '../services/api';
 
 const PRESENCE_CONFIG = {
-    INSIDE:         { label: 'Ofiste',              color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
-    REMOTE_WORKING: { label: 'Uzaktan Calisiyor',   color: 'bg-blue-500',   text: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200',  ring: 'ring-blue-500/20' },
-    ON_LEAVE:       { label: 'Izinde',              color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', ring: 'ring-orange-500/20' },
-    LEFT:           { label: 'Cikis Yapti',          color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
-    OUTSIDE:        { label: 'Disarida',            color: 'bg-slate-300',  text: 'text-slate-500',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
-};
-
-const WORK_TYPE_LABELS = {
-    FULL_TIME: 'Ofis',
-    REMOTE: 'Uzaktan',
-    HYBRID: 'Hibrit',
-    PART_TIME: 'Yari Zamanli',
-    FIELD: 'Saha',
+    INSIDE:         { label: 'Ofiste',     color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
+    REMOTE_WORKING: { label: 'Ofiste',     color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
+    ON_LEAVE:       { label: 'Izinde',     color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', ring: 'ring-orange-500/20' },
+    LEFT:           { label: 'Disarida',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
+    OUTSIDE:        { label: 'Disarida',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
 };
 
 const getInitials = (firstName, lastName) => {
@@ -41,7 +33,7 @@ const CompanyDirectory = () => {
     const [selectedDepartment, setSelectedDepartment] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [viewMode, setViewMode] = useState('grid');
-    const [summary, setSummary] = useState({ total: 0, inside: 0, remote: 0, on_leave: 0, outside: 0 });
+    const [summary, setSummary] = useState({ total: 0, inside: 0, remote: 0, on_leave: 0, outside: 0, left: 0 });
     const [lastRefresh, setLastRefresh] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const searchTimerRef = useRef(null);
@@ -97,19 +89,16 @@ const CompanyDirectory = () => {
     const handleManualRefresh = () => fetchDirectory(true);
 
     const statCards = [
-        { key: 'inside', label: 'Ofiste', value: summary.inside, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <Building2 size={18} className="text-green-500" /> },
-        { key: 'remote', label: 'Uzaktan', value: summary.remote, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <Wifi size={18} className="text-blue-500" /> },
-        { key: 'on_leave', label: 'Izinde', value: summary.on_leave, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: <MapPin size={18} className="text-orange-500" /> },
-        { key: 'outside', label: 'Disarida', value: summary.outside, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', icon: <WifiOff size={18} className="text-slate-400" /> },
+        { key: 'inside', label: 'Ofiste', value: (summary.inside || 0) + (summary.remote || 0), color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <Building2 size={18} className="text-green-500" />, filterStatus: 'INSIDE' },
+        { key: 'on_leave', label: 'Izinde', value: summary.on_leave, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: <MapPin size={18} className="text-orange-500" />, filterStatus: 'ON_LEAVE' },
+        { key: 'outside', label: 'Disarida', value: (summary.outside || 0) + (summary.left || 0), color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', icon: <WifiOff size={18} className="text-slate-400" />, filterStatus: 'OUTSIDE' },
     ];
 
     const statusFilterPills = [
         { key: '', label: `Tumu (${summary.total})` },
-        { key: 'INSIDE', label: `Ofiste (${summary.inside})`, dot: 'bg-green-500' },
-        { key: 'REMOTE_WORKING', label: `Uzaktan (${summary.remote})`, dot: 'bg-blue-500' },
+        { key: 'INSIDE', label: `Ofiste (${(summary.inside || 0) + (summary.remote || 0)})`, dot: 'bg-green-500' },
         { key: 'ON_LEAVE', label: `Izinde (${summary.on_leave})`, dot: 'bg-orange-500' },
-        { key: 'LEFT', label: 'Cikis Yapti', dot: 'bg-slate-400' },
-        { key: 'OUTSIDE', label: 'Disarida', dot: 'bg-slate-300' },
+        { key: 'OUTSIDE', label: `Disarida (${(summary.outside || 0) + (summary.left || 0)})`, dot: 'bg-slate-400' },
     ];
 
     const renderEmployeeCard = (emp) => {
@@ -132,7 +121,6 @@ const CompanyDirectory = () => {
 
                         <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-slate-800 text-sm truncate">{emp.full_name}</h3>
-                            {emp.title && <p className="text-xs text-slate-500 truncate">{emp.title}</p>}
                             {emp.department_name && (
                                 <p className="text-xs text-slate-400 truncate flex items-center gap-1 mt-0.5">
                                     <Building2 size={10} />
@@ -164,20 +152,14 @@ const CompanyDirectory = () => {
                             )}
                         </div>
 
-                        {/* Work type + reachable badge */}
-                        <div className="flex items-center justify-between mt-2">
-                            {emp.work_type && WORK_TYPE_LABELS[emp.work_type] && (
-                                <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    {WORK_TYPE_LABELS[emp.work_type]}
-                                </span>
-                            )}
-                            {emp.is_reachable && (
+                        {emp.is_reachable && (
+                            <div className="flex items-center justify-end mt-2">
                                 <span className="text-[10px] font-bold text-green-600 flex items-center gap-0.5">
                                     <Circle size={6} fill="currentColor" />
                                     Ulasılabilir
                                 </span>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -198,7 +180,6 @@ const CompanyDirectory = () => {
                         </div>
                         <div className="min-w-0">
                             <p className="font-bold text-sm text-slate-800 truncate">{emp.full_name}</p>
-                            <p className="text-xs text-slate-400 truncate">{emp.title || ''}</p>
                         </div>
                     </div>
                 </td>
@@ -250,18 +231,16 @@ const CompanyDirectory = () => {
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
                 {statCards.map(s => (
                     <button
                         key={s.key}
                         onClick={() => {
-                            const statusMap = { inside: 'INSIDE', remote: 'REMOTE_WORKING', on_leave: 'ON_LEAVE', outside: '' };
-                            const newStatus = statusMap[s.key] || '';
-                            setSelectedStatus(prev => prev === newStatus ? '' : newStatus);
+                            setSelectedStatus(prev => prev === s.filterStatus ? '' : s.filterStatus);
                         }}
                         className={`${s.bg} ${s.border} border rounded-xl p-3 flex items-center gap-3 transition-all hover:shadow-md ${
-                            selectedStatus === { inside: 'INSIDE', remote: 'REMOTE_WORKING', on_leave: 'ON_LEAVE', outside: '' }[s.key]
-                                ? 'ring-2 ring-offset-1 ' + (s.key === 'inside' ? 'ring-green-500/40' : s.key === 'remote' ? 'ring-blue-500/40' : s.key === 'on_leave' ? 'ring-orange-500/40' : 'ring-slate-500/40')
+                            selectedStatus === s.filterStatus
+                                ? 'ring-2 ring-offset-1 ' + (s.key === 'inside' ? 'ring-green-500/40' : s.key === 'on_leave' ? 'ring-orange-500/40' : 'ring-slate-500/40')
                                 : ''
                         }`}
                     >
