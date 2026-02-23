@@ -4,8 +4,10 @@ import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, C
 import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
+import useIsMobile from '../hooks/useIsMobile';
 
 const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, initialViewMode = 'MONTHLY' }) => {
+    const isMobile = useIsMobile();
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState([]);
 
@@ -190,7 +192,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in zoom-in duration-200">
-            <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            <div className="bg-white w-full max-w-[calc(100vw-2rem)] md:max-w-5xl h-[70vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white z-10 shrink-0">
                     <div>
@@ -304,9 +306,9 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                     <TrendingUp size={16} className="text-blue-500" />
                                     {viewMode === 'MONTHLY' ? 'Günlük Kullanım Grafiği' : 'Aylık Bazda Günlük Ortalamalar'}
                                 </h3>
-                                <div className="h-80 w-full">
+                                <div className="h-56 md:h-80 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                        <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}>
                                             <defs>
                                                 <linearGradient id="colorCumulativeModal" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
@@ -318,11 +320,11 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                                 dataKey="label"
                                                 axisLine={false}
                                                 tickLine={false}
-                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                tick={{ fontSize: isMobile ? 9 : 11, fill: '#64748b' }}
                                                 dy={10}
                                                 minTickGap={30}
                                             />
-                                            <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#64748b' }} />
                                             <YAxis yAxisId="right" orientation="right" hide />
                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
 
@@ -388,6 +390,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                         {viewMode === 'MONTHLY' ? 'Günlük Detaylar' : 'Aylık Özet'}
                                     </h3>
                                 </div>
+                                <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                                         <tr>
@@ -439,6 +442,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                                         ))}
                                     </tbody>
                                 </table>
+                                </div>
                             </div>
 
                         </div>

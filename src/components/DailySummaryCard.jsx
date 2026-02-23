@@ -78,11 +78,11 @@ const DailySummaryCard = ({ summary, loading }) => {
                         <div>
                             <p className="text-[10px] font-bold text-indigo-900/60 uppercase tracking-wider">Kalan Süre</p>
                             {summary.remaining_work > 0 ? (
-                                <h4 className="text-xl font-black text-indigo-900 mt-1">
+                                <h4 className="text-base sm:text-lg md:text-xl font-black text-indigo-900 mt-1">
                                     {remainingHours}<span className="text-xs font-bold text-indigo-400 ml-0.5">sa</span> {remainingMinutes}<span className="text-xs font-bold text-indigo-400 ml-0.5">dk</span>
                                 </h4>
                             ) : (
-                                <h4 className="text-xl font-black text-emerald-600 mt-1 flex items-center gap-1">
+                                <h4 className="text-base sm:text-lg md:text-xl font-black text-emerald-600 mt-1 flex items-center gap-1">
                                     Tamamlandı <CheckCircle size={16} />
                                 </h4>
                             )}
@@ -126,7 +126,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mola</p>
-                            <h4 className="text-lg font-bold text-slate-700 mt-0.5">
+                            <h4 className="text-base sm:text-lg font-bold text-slate-700 mt-0.5">
                                 {Math.floor(summary.break_used / 60)} <span className="text-xs font-medium text-slate-400">/ {Math.floor((summary.break_used + summary.remaining_break) / 60)} dk</span>
                             </h4>
                         </div>
@@ -152,7 +152,7 @@ const DailySummaryCard = ({ summary, loading }) => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fazla Mesai</p>
-                            <h4 className={`text-lg font-bold mt-0.5 ${summary.current_overtime > 0 ? 'text-emerald-600' : 'text-slate-700'}`}>
+                            <h4 className={`text-base sm:text-lg font-bold mt-0.5 ${summary.current_overtime > 0 ? 'text-emerald-600' : 'text-slate-700'}`}>
                                 {Math.floor(summary.current_overtime / 60)} <span className="text-xs font-medium text-slate-400">dk</span>
                             </h4>
                         </div>

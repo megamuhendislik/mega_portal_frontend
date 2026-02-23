@@ -28,7 +28,7 @@ const StatCard = ({
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">{title}</p>
-                    <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none">{value}</h3>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight leading-none">{value}</h3>
                 </div>
                 <div className={clsx("p-3 rounded-xl transition-colors", currentStyle.bg, currentStyle.text)}>
                     {Icon && <Icon size={24} />}

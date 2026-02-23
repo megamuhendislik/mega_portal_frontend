@@ -211,7 +211,7 @@ const Attendance = () => {
             {/* 1. Page Header & Controls */}
             <div className="flex flex-col xl:flex-row justify-between items-end gap-6 border-b border-slate-100 pb-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                         {activeTab === 'team_attendance' ? 'Ekip Performansı' : 'Mesai Takibi'}
                         {activeTab === 'team_detail' && (
                             <span className="text-sm font-medium bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
@@ -325,7 +325,7 @@ const Attendance = () => {
                     <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
                         <button
                             onClick={() => setActiveTab('my_attendance')}
-                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'my_attendance' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                            className={`flex-1 sm:flex-none px-3 sm:px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'my_attendance' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
                         >
                             <User size={18} />
                             Kendi Mesaim
@@ -333,7 +333,7 @@ const Attendance = () => {
                         {hasTeam && (
                             <button
                                 onClick={() => setActiveTab('team_attendance')}
-                                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                                className={`flex-1 sm:flex-none px-3 sm:px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'team_attendance' || activeTab === 'team_detail' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
                             >
                                 <Users size={18} />
                                 Ekip

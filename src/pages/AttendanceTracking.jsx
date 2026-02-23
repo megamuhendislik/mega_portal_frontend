@@ -347,13 +347,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     };
 
     return (
-        <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6 md:space-y-8">
+        <div className="p-2 sm:p-4 md:p-6 max-w-[1600px] mx-auto space-y-4 sm:space-y-6 md:space-y-8">
 
             {/* Header Area */}
             {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
                             Yönetici Konsolu
                         </h1>
                         <p className="text-slate-500 mt-2 font-medium">Ekip performansı ve mesai durumunun gerçek zamanlı analizi.</p>
@@ -467,7 +467,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         </div>
                         <div>
                             <p className="text-indigo-100 text-sm font-medium">Toplam Personel</p>
-                            <h3 className="text-3xl font-bold">{summary.activeCount} <span className="text-sm font-normal text-indigo-200">Kişi</span></h3>
+                            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold">{summary.activeCount} <span className="text-sm font-normal text-indigo-200">Kişi</span></h3>
                         </div>
                     </div>
                 </div>
@@ -487,7 +487,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <div className="flex items-center gap-2">
                                 <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Şu an Ofiste</p>
                             </div>
-                            <h3 className="text-3xl font-bold text-slate-800">{summary.onlineCount} <span className="text-sm font-normal text-slate-400">Kişi</span></h3>
+                            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">{summary.onlineCount} <span className="text-sm font-normal text-slate-400">Kişi</span></h3>
                         </div>
                     </div>
                     {/* Progress Bar for Online Ratio */}
@@ -509,7 +509,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <div>
                                     <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Fazla Mesai</p>
                                     <div className="flex items-end gap-2">
-                                        <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalOvertime)}</h3>
+                                        <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">{formatMinutes(summary.totalOvertime)}</h3>
                                     </div>
                                     <p className="text-xs text-slate-400 mt-1">
                                         Ort: {formatMinutes(Math.round(summary.totalOvertime / (summary.activeCount || 1)))} / kişi
@@ -525,7 +525,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 </div>
                                 <div>
                                     <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Kayıp Zaman</p>
-                                    <h3 className="text-3xl font-bold text-slate-800">{formatMinutes(summary.totalMissing)}</h3>
+                                    <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">{formatMinutes(summary.totalMissing)}</h3>
                                     <p className="text-xs text-slate-400 mt-1">
                                         Ort: {formatMinutes(Math.round(summary.totalMissing / (summary.activeCount || 1)))} / kişi
                                     </p>

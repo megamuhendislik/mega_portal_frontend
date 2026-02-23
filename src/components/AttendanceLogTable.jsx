@@ -66,26 +66,26 @@ const AttendanceLogTable = ({ logs }) => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] uppercase text-slate-400 font-bold tracking-widest">
-                            <th className="p-5 pl-8">Tarih</th>
-                            <th className="p-5">Giriş</th>
-                            <th className="p-5">Çıkış</th>
-                            <th className="p-5">Süre</th>
-                            <th className="p-5">Beklenen</th>
-                            <th className="p-5">Mola</th>
-                            <th className="p-5">Durum</th>
-                            <th className="p-5 pr-8 text-right">Detay</th>
+                            <th className="p-2 pl-3 md:p-3 md:pl-5 lg:p-5 lg:pl-8">Tarih</th>
+                            <th className="p-2 md:p-3 lg:p-5">Giriş</th>
+                            <th className="p-2 md:p-3 lg:p-5">Çıkış</th>
+                            <th className="p-2 md:p-3 lg:p-5">Süre</th>
+                            <th className="p-2 md:p-3 lg:p-5">Beklenen</th>
+                            <th className="p-2 md:p-3 lg:p-5">Mola</th>
+                            <th className="p-2 md:p-3 lg:p-5">Durum</th>
+                            <th className="p-2 md:p-3 lg:p-5 pr-3 md:pr-5 lg:pr-8 text-right">Detay</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50/50">
                         {logs.map((log) => (
                             <tr key={log.id} className="group hover:bg-slate-50/80 transition-colors duration-200 cursor-default">
-                                <td className="p-5 pl-8">
+                                <td className="p-2 pl-3 md:p-3 md:pl-5 lg:p-5 lg:pl-8">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-slate-100 text-slate-400 rounded-xl group-hover:bg-white group-hover:text-indigo-500 group-hover:shadow-md transition-all duration-300">
                                             <Calendar size={16} />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-900 transition-colors">
+                                            <p className="text-xs sm:text-sm font-bold text-slate-700 group-hover:text-indigo-900 transition-colors">
                                                 {formatDate(log.work_date).split(' ').slice(0, 3).join(' ')}
                                             </p>
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
@@ -94,27 +94,27 @@ const AttendanceLogTable = ({ logs }) => {
                                         </div>
                                     </div>
                                 </td>
-                                <td className="p-5 font-mono text-sm text-slate-600 font-semibold">{formatTime(log.check_in)}</td>
-                                <td className="p-5 font-mono text-sm text-slate-600 font-semibold">{formatTime(log.check_out)}</td>
-                                <td className="p-5">
-                                    <span className="font-bold text-slate-800 text-sm">
+                                <td className="p-2 md:p-3 lg:p-5 font-mono text-xs sm:text-sm text-slate-600 font-semibold">{formatTime(log.check_in)}</td>
+                                <td className="p-2 md:p-3 lg:p-5 font-mono text-xs sm:text-sm text-slate-600 font-semibold">{formatTime(log.check_out)}</td>
+                                <td className="p-2 md:p-3 lg:p-5">
+                                    <span className="font-bold text-slate-800 text-xs sm:text-sm">
                                         {log.total_minutes ? `${Math.floor(log.total_minutes / 60)}s ${log.total_minutes % 60}dk` : '-'}
                                     </span>
                                 </td>
-                                <td className="p-5 text-slate-400 font-medium text-xs">
+                                <td className="p-2 md:p-3 lg:p-5 text-slate-400 font-medium text-xs">
                                     {log.normal_minutes || log.missing_minutes ?
                                         `${Math.floor(((log.normal_minutes || 0) + (log.missing_minutes || 0)) / 60)}s ${((log.normal_minutes || 0) + (log.missing_minutes || 0)) % 60}dk`
                                         : '-'
                                     }
                                 </td>
-                                <td className="p-5">
+                                <td className="p-2 md:p-3 lg:p-5">
                                     {log.break_minutes > 0 ? (
                                         <span className="text-amber-600 font-bold text-xs bg-amber-50 px-2 py-1 rounded-lg">
                                             {log.break_minutes} dk
                                         </span>
                                     ) : <span className="text-slate-300">-</span>}
                                 </td>
-                                <td className="p-5">
+                                <td className="p-2 md:p-3 lg:p-5">
                                     <div className="flex flex-col items-start gap-1">
                                         {getStatusBadge(log)}
                                         {log.overtime_minutes > 0 && (
@@ -125,7 +125,7 @@ const AttendanceLogTable = ({ logs }) => {
                                         )}
                                     </div>
                                 </td>
-                                <td className="p-5 pr-8 text-right">
+                                <td className="p-2 md:p-3 lg:p-5 pr-3 md:pr-5 lg:pr-8 text-right">
                                     {log.note && (
                                         <div className="group/note relative inline-block">
                                             {log.note.includes('eşik altı') ? (

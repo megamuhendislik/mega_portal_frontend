@@ -5,8 +5,10 @@ import { format, eachDayOfInterval, parseISO, isSameDay, startOfYear, endOfYear,
 import { tr } from 'date-fns/locale';
 import ExtendedBreakAnalysisModal from './ExtendedBreakAnalysisModal';
 import api from '../services/api';
+import useIsMobile from '../hooks/useIsMobile';
 
 const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, endDate, employeeId }) => {
+    const isMobile = useIsMobile();
     const [showExtended, setShowExtended] = useState(false);
     const [viewMode, setViewMode] = useState('MONTHLY'); // 'MONTHLY' | 'YEARLY'
     const [currentDate, setCurrentDate] = useState(startDate ? parseISO(startDate) : new Date());
@@ -243,13 +245,13 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                 <div className="grid grid-cols-2 gap-4 mb-4 z-10 w-full">
                     <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100/60">
                         <p className="text-[10px] text-amber-600/70 font-bold uppercase tracking-wide mb-1">DÖNEM TOPLAM</p>
-                        <div className="text-xl xl:text-2xl font-black text-slate-800 leading-none">
+                        <div className="text-base sm:text-lg md:text-xl xl:text-2xl font-black text-slate-800 leading-none">
                             {totalH}<span className="text-sm font-bold text-slate-400 ml-0.5">sa</span> {totalM}<span className="text-sm font-bold text-slate-400 ml-0.5">dk</span>
                         </div>
                     </div>
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-1">GÜNLÜK ORT.</p>
-                        <div className="text-xl xl:text-2xl font-black text-slate-700 leading-none">
+                        <div className="text-base sm:text-lg md:text-xl xl:text-2xl font-black text-slate-700 leading-none">
                             {dailyAvg}<span className="text-sm font-bold text-slate-400 ml-0.5">dk</span>
                         </div>
                     </div>
@@ -267,7 +269,7 @@ const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, 
                     </button>
 
                     <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                        <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}>
                             <defs>
                                 <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />

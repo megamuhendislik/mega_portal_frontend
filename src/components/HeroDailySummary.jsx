@@ -65,11 +65,11 @@ const HeroDailySummary = ({ summary, loading }) => {
                             </div>
 
                             <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor(totalWorkSeconds / 3600)}
                                 </span>
                                 <span className="text-sm font-bold text-slate-400 uppercase mr-2">sa</span>
-                                <span className="text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor((totalWorkSeconds % 3600) / 60)}
                                 </span>
                                 <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
@@ -113,11 +113,11 @@ const HeroDailySummary = ({ summary, loading }) => {
                             </div>
 
                             <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor(usedBreakSeconds / 3600)}
                                 </span>
                                 <span className="text-sm font-bold text-slate-400 uppercase mr-2">sa</span>
-                                <span className="text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor((usedBreakSeconds % 3600) / 60)}
                                 </span>
                                 <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
@@ -168,7 +168,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                             </div>
 
                             <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
                                     {Math.floor(overtimeSeconds / 60)}
                                 </span>
                                 <span className="text-sm font-bold text-slate-400 uppercase">dk</span>

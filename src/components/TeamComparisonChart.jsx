@@ -1,8 +1,10 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { Trophy } from 'lucide-react';
+import useIsMobile from '../hooks/useIsMobile';
 
 const TeamComparisonChart = ({ data }) => {
+    const isMobile = useIsMobile();
     // Sort by Actual descending for leaderboard feel
     const sortedData = [...data]
         .sort((a, b) => b.actual - a.actual)
@@ -22,7 +24,7 @@ const TeamComparisonChart = ({ data }) => {
             const isMet = percent >= 100;
 
             return (
-                <div className="bg-white/95 backdrop-blur-md p-3 border border-slate-100 shadow-xl rounded-xl text-xs z-50 min-w-[140px]">
+                <div className="bg-white/95 backdrop-blur-md p-3 border border-slate-100 shadow-xl rounded-xl text-xs z-50 min-w-0 md:min-w-[140px]">
                     <p className="font-bold text-slate-800 mb-2 border-b border-slate-50 pb-1">{item.name}</p>
                     <div className="space-y-1.5">
                         <div className="flex justify-between items-baseline gap-3">
@@ -58,7 +60,7 @@ const TeamComparisonChart = ({ data }) => {
                 </div>
             </div>
 
-            <div className="w-full h-[500px] min-h-[400px]">
+            <div className="w-full h-[300px] md:h-[500px] min-h-[250px] md:min-h-[400px]">
                 <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <BarChart
                         layout="vertical"
@@ -72,8 +74,8 @@ const TeamComparisonChart = ({ data }) => {
                             type="category"
                             axisLine={false}
                             tickLine={false}
-                            width={140}
-                            tick={{ fontSize: 12, fill: '#475569', fontWeight: 500 }}
+                            width={isMobile ? 70 : 140}
+                            tick={{ fontSize: isMobile ? 10 : 12, fill: '#475569', fontWeight: 500 }}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
 

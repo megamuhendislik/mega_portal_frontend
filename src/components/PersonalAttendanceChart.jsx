@@ -2,8 +2,10 @@ import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatDate } from '../utils/dateUtils';
 import { BarChart3 } from 'lucide-react';
+import useIsMobile from '../hooks/useIsMobile';
 
 const PersonalAttendanceChart = ({ logs }) => {
+    const isMobile = useIsMobile();
     // Aggregation Fix: Group logs by unique date
     const uniqueDates = [...new Set(logs.map(l => l.work_date))];
     const data = uniqueDates.map(dateStr => {
@@ -37,7 +39,7 @@ const PersonalAttendanceChart = ({ logs }) => {
         if (active && payload && payload.length) {
             const dataPoint = payload[0].payload;
             return (
-                <div className="bg-white/95 backdrop-blur-xl p-4 border border-slate-200 shadow-2xl rounded-2xl text-xs z-50 min-w-[180px]">
+                <div className="bg-white/95 backdrop-blur-xl p-4 border border-slate-200 shadow-2xl rounded-2xl text-xs z-50 min-w-0 md:min-w-[180px]">
                     <p className="font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 text-sm">{dataPoint.fullDate}</p>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center group">
@@ -90,11 +92,11 @@ const PersonalAttendanceChart = ({ logs }) => {
                 </div>
             </div>
 
-            <div className="h-[350px] w-full min-w-0">
+            <div className="h-[220px] md:h-[350px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <ComposedChart
                         data={data}
-                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}
                         barGap={0} // No gap between stacked
                     >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -102,13 +104,13 @@ const PersonalAttendanceChart = ({ logs }) => {
                             dataKey="name"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 600 }}
+                            tick={{ fill: '#94A3B8', fontSize: isMobile ? 9 : 11, fontWeight: 600 }}
                             dy={10}
                         />
                         <YAxis
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 500 }}
+                            tick={{ fill: '#94A3B8', fontSize: isMobile ? 9 : 11, fontWeight: 500 }}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
 

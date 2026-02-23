@@ -3,8 +3,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { startOfWeek, endOfWeek, addDays, format, isSameDay, parseISO, isWeekend, isBefore, startOfToday } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import useIsMobile from '../hooks/useIsMobile';
 
 const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h if not provided
+    const isMobile = useIsMobile();
     const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
     const weekData = useMemo(() => {
@@ -96,7 +98,7 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
         if (active && payload && payload.length) {
             const dataPoint = payload[0].payload;
             return (
-                <div className="bg-white/95 backdrop-blur-md p-4 border border-slate-200 shadow-xl rounded-xl text-xs z-50 min-w-[220px]">
+                <div className="bg-white/95 backdrop-blur-md p-4 border border-slate-200 shadow-xl rounded-xl text-xs z-50 min-w-0 md:min-w-[180px]">
                     <p className="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-2 flex justify-between items-center">
                         <span className="flex items-center gap-2">
                             <Calendar size={14} className="text-slate-500" />
@@ -187,9 +189,9 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
             </div>
 
             {/* Fixed height container to prevent Recharts -1 width error */}
-            <div style={{ width: '100%', height: 320, minWidth: 300 }}>
+            <div style={{ width: '100%', height: isMobile ? 220 : 320 }}>
                 <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                    <BarChart data={weekData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }} barSize={32}>
+                    <BarChart data={weekData} margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }} barSize={isMobile ? 16 : 32}>
                         <defs>
                             <pattern id="striped" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                                 <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
@@ -201,13 +203,13 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                             dataKey="name"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
+                            tick={{ fill: '#94a3b8', fontSize: isMobile ? 9 : 11, fontWeight: 600 }}
                             dy={10}
                         />
                         <YAxis
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#cbd5e1', fontSize: 11 }}
+                            tick={{ fill: '#cbd5e1', fontSize: isMobile ? 9 : 11 }}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
 

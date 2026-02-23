@@ -11,10 +11,12 @@ import {
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
+import useIsMobile from '../hooks/useIsMobile';
 
 // Sub-component for Weekly Bar Chart (Legacy Logic)
 // Sub-component for Weekly Bar Chart (Logs Based)
 const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
+    const isMobile = useIsMobile();
     // Default to start of logs or current week if no logs
     const [weekStart, setWeekStart] = useState(() => {
         if (logs && logs.length > 0) {
@@ -178,12 +180,12 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                     <button onClick={() => setWeekStart(d => addDays(d, 7))} className="p-1 hover:bg-white rounded shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"><ChevronRight size={16} /></button>
                 </div>
             </div>
-            <div className="flex-1 w-full" style={{ height: 320, minHeight: 320 }}>
+            <div className="flex-1 w-full" style={{ height: isMobile ? 220 : 320 }}>
                 <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <ComposedChart
                         data={data}
-                        barSize={32}
-                        margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
+                        barSize={isMobile ? 16 : 32}
+                        margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}
                         onClick={(e) => {
                             if (e && e.activePayload && e.activePayload.length > 0) {
                                 const payload = e.activePayload[0].payload;
@@ -201,8 +203,8 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                             </pattern>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={5} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 10, fill: '#94a3b8' }} dy={5} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 10, fill: '#94a3b8' }} />
                         <Tooltip
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             itemStyle={{ fontSize: '12px', fontWeight: 600 }}
@@ -270,22 +272,23 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
 
 // Sub-component for Trends (Line Chart)
 const TrendView = ({ data, xKey, unit = 'sa', showBreaks }) => {
+    const isMobile = useIsMobile();
     return (
-        <div className="w-full pt-4" style={{ height: 320, minHeight: 320 }}>
+        <div className="w-full pt-4" style={{ height: isMobile ? 220 : 320 }}>
             <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={data} margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis
                         dataKey={xKey}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
+                        tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }}
                         dy={10}
                     />
                     <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
+                        tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }}
                     />
                     <Tooltip
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
@@ -330,10 +333,11 @@ const TrendView = ({ data, xKey, unit = 'sa', showBreaks }) => {
 
 // Sub-component for Yearly View (Bars + Cumulative Line)
 const YearlyView = ({ data }) => {
+    const isMobile = useIsMobile();
     return (
-        <div className="w-full pt-4" style={{ height: 320, minHeight: 320 }}>
+        <div className="w-full pt-4" style={{ height: isMobile ? 220 : 320 }}>
             <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                <ComposedChart data={data} barSize={20} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+                <ComposedChart data={data} barSize={isMobile ? 12 : 20} margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}>
                     <defs>
                         <pattern id="striped-year" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                             <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
@@ -341,9 +345,9 @@ const YearlyView = ({ data }) => {
                         </pattern>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }} dy={10} />
-                    <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
-                    <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#8b5cf6' }} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }} dy={10} />
+                    <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8' }} />
+                    <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#8b5cf6' }} />
 
                     <Tooltip
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}

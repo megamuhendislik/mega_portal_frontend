@@ -119,17 +119,17 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wider">
                             {showEmployeeColumn && (
-                                <th className="p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('employee')}>
+                                <th className="p-2 sm:p-3 md:p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('employee')}>
                                     <div className="flex items-center gap-1">Çalışan <ArrowUpDown size={12} /></div>
                                 </th>
                             )}
-                            <th className="p-4 font-bold">Talep Türü</th>
-                            <th className="p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('date')}>
+                            <th className="p-2 sm:p-3 md:p-4 font-bold">Talep Türü</th>
+                            <th className="p-2 sm:p-3 md:p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('date')}>
                                 <div className="flex items-center gap-1">Tarih <ArrowUpDown size={12} /></div>
                             </th>
-                            <th className="p-4 font-bold">Detay / Süre</th>
-                            <th className="p-4 font-bold">Durum</th>
-                            <th className="p-4 font-bold text-right">İşlemler</th>
+                            <th className="p-2 sm:p-3 md:p-4 font-bold">Detay / Süre</th>
+                            <th className="p-2 sm:p-3 md:p-4 font-bold">Durum</th>
+                            <th className="p-2 sm:p-3 md:p-4 font-bold text-right">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -166,7 +166,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-slate-800 text-sm">{req.employee_name || 'Bilinmiyor'}</div>
+                                                    <div className="font-bold text-slate-800 text-sm truncate max-w-[120px] sm:max-w-[180px]">{req.employee_name || 'Bilinmiyor'}</div>
                                                     <div className="text-[10px] text-slate-400 font-medium">{req.employee_department || '-'}</div>
                                                 </div>
                                             </div>

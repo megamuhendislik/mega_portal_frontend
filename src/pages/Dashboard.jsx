@@ -160,7 +160,7 @@ const Dashboard = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-800">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-800">
                         <span className="block text-lg font-bold text-indigo-600 mb-0.5">Hoş Geldiniz,</span>
                         {user?.first_name || 'Kullanıcı'}
                     </h1>
@@ -181,7 +181,7 @@ const Dashboard = () => {
             </div>
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
                 <StatCard
                     title="BUGÜN ÇALIŞMA"
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
@@ -215,7 +215,7 @@ const Dashboard = () => {
 
                     <div className="flex justify-between items-end mb-4">
                         <div>
-                            <span className="text-3xl font-black text-slate-800 tracking-tight">
+                            <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
                                 {monthlySummary?.annual_leave_balance || 0}
                             </span>
                             <span className="text-xs font-bold text-slate-400 ml-1">GÜN</span>

@@ -103,7 +103,7 @@ const NotificationBell = () => {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 md:w-96 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 className="font-semibold text-slate-800">Bildirimler</h3>
                         {unreadCount > 0 && (
@@ -116,7 +116,7 @@ const NotificationBell = () => {
                         )}
                     </div>
 
-                    <div className="max-h-[400px] overflow-y-auto">
+                    <div className="max-h-[60vh] md:max-h-[400px] overflow-y-auto">
                         {notifications.length > 0 ? (
                             <div className="divide-y divide-slate-50">
                                 {notifications.map(notification => (
@@ -127,7 +127,7 @@ const NotificationBell = () => {
                                     >
                                         <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${!notification.is_read ? 'bg-blue-500' : 'bg-transparent'}`}></div>
                                         <div className="flex-1">
-                                            <p className={`text-sm ${!notification.is_read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                                            <p className={`text-sm truncate ${!notification.is_read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
                                                 {notification.title}
                                             </p>
                                             <p className="text-xs text-slate-500 mt-1 line-clamp-2">

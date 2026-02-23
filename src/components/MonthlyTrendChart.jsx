@@ -2,8 +2,10 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatDate } from '../utils/dateUtils';
 import { Activity } from 'lucide-react';
+import useIsMobile from '../hooks/useIsMobile';
 
 const MonthlyTrendChart = ({ logs }) => {
+    const isMobile = useIsMobile();
 
     const data = logs.map(log => ({
         name: new Date(log.work_date).getDate(),
@@ -16,7 +18,7 @@ const MonthlyTrendChart = ({ logs }) => {
         if (active && payload && payload.length) {
             const dataPoint = payload[0].payload;
             return (
-                <div className="bg-white/95 backdrop-blur-md p-4 border border-indigo-100 shadow-xl rounded-xl text-xs z-50 min-w-[150px]">
+                <div className="bg-white/95 backdrop-blur-md p-4 border border-indigo-100 shadow-xl rounded-xl text-xs z-50 min-w-0 md:min-w-[150px]">
                     <p className="font-bold text-slate-800 mb-3 border-b border-indigo-50 pb-2">{dataPoint.fullDate}</p>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center text-blue-600">
@@ -60,28 +62,28 @@ const MonthlyTrendChart = ({ logs }) => {
                 </div>
 
                 {/* Legend */}
-                <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 rounded-full bg-blue-500"></div>Normal</div>
                     <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 rounded-full bg-emerald-500"></div>Ek Mesai</div>
                 </div>
             </div>
 
-            <div className="flex-1 w-full min-h-[300px]">
+            <div className="flex-1 w-full min-h-[200px] md:min-h-[300px]">
                 <ResponsiveContainer width="100%" height="100%" debounce={50}>
-                    <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <LineChart data={data} margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                         <XAxis
                             dataKey="name"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
+                            tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }}
                             dy={10}
                             interval={2} // Show every 2nd day to avoid clutter
                         />
                         <YAxis
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
+                            tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1.5, strokeDasharray: '4 4' }} />
 

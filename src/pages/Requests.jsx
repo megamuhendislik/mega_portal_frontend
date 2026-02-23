@@ -20,7 +20,7 @@ import { useAuth } from '../context/AuthContext';
 const TabButton = ({ active, onClick, children, badge, icon }) => (
     <button
         onClick={onClick}
-        className={`relative px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 flex items-center gap-2 outline-none
+        className={`relative px-3 sm:px-4 md:px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 flex items-center gap-2 outline-none
             ${active ? 'text-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}
         `}
     >
@@ -63,7 +63,7 @@ const StatCard = ({ label, value, icon, color, trend }) => (
         <div className="flex justify-between items-start">
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-                <h3 className="text-3xl font-bold text-slate-800 tracking-tight group-hover:scale-105 transition-transform origin-left">{value}</h3>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 tracking-tight group-hover:scale-105 transition-transform origin-left">{value}</h3>
             </div>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} bg-opacity-10 text-opacity-100`}>
                 <div className={color.replace('bg-', 'text-').replace('/10', '')}>{icon}</div>
@@ -454,27 +454,27 @@ const RequestAnalyticsSection = ({ subordinates, loading }) => {
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                     <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Toplam Talep</p>
-                    <h3 className="text-3xl font-black">{data.total_requests}</h3>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black">{data.total_requests}</h3>
                     <div className="absolute -right-3 -bottom-3 opacity-10"><Layers size={56} /></div>
                 </div>
                 <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                     <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Onay Oranı</p>
-                    <h3 className="text-3xl font-black">{data.approval_rate || 0}%</h3>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black">{data.approval_rate || 0}%</h3>
                     <div className="absolute -right-3 -bottom-3 opacity-10"><CheckCircle2 size={56} /></div>
                 </div>
                 <div className="bg-gradient-to-br from-amber-500 to-orange-500 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                     <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Fazla Mesai</p>
-                    <h3 className="text-3xl font-black">{data.total_overtime_hours || 0}<span className="text-base ml-1 font-bold opacity-80">saat</span></h3>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black">{data.total_overtime_hours || 0}<span className="text-base ml-1 font-bold opacity-80">saat</span></h3>
                     <div className="absolute -right-3 -bottom-3 opacity-10"><Clock size={56} /></div>
                 </div>
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                     <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">İzin Günleri</p>
-                    <h3 className="text-3xl font-black">{data.total_leave_days || 0}<span className="text-base ml-1 font-bold opacity-80">gün</span></h3>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black">{data.total_leave_days || 0}<span className="text-base ml-1 font-bold opacity-80">gün</span></h3>
                     <div className="absolute -right-3 -bottom-3 opacity-10"><Calendar size={56} /></div>
                 </div>
                 <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                     <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Bekleyen</p>
-                    <h3 className="text-3xl font-black">{data.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0}</h3>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black">{data.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0}</h3>
                     <div className="absolute -right-3 -bottom-3 opacity-10"><AlertCircle size={56} /></div>
                 </div>
             </div>
@@ -1168,7 +1168,7 @@ const Requests = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Taleplerim</h1>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Taleplerim</h1>
                     <p className="text-slate-500 font-medium">Bütün izin, mesai ve diğer taleplerinizi tek yerden yönetin.</p>
                 </div>
                 <button

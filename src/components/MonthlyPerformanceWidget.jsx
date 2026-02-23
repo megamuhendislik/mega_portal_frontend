@@ -64,7 +64,7 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
             <div className="mb-8 z-10 relative">
                 <div className="flex justify-between items-end mb-2">
                     <div>
-                        <span className="text-3xl font-black text-slate-800 tracking-tight">{completed.toFixed(1)}</span>
+                        <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">{completed.toFixed(1)}</span>
                         <span className="text-sm font-bold text-slate-400 ml-1">/ {target.toFixed(0)} sa</span>
                     </div>
                 </div>
