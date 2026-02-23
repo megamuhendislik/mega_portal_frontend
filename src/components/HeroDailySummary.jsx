@@ -59,7 +59,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                     <Briefcase size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">PERFORMANS</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">PUANTAJ</p>
                                     <h3 className="text-base font-bold text-slate-700">Çalışma Süresi</h3>
                                 </div>
                             </div>

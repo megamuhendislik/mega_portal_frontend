@@ -275,7 +275,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 {/* A. Chart (Tube) */}
                                 <div className="mb-8">
                                     <div className="flex justify-between items-end mb-3 px-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PERFORMANS GRAFİĞİ</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PUANTAJ GRAFİĞİ</span>
                                     </div>
 
                                     <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
