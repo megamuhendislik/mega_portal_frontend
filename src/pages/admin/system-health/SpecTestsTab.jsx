@@ -316,7 +316,7 @@ export default function SpecTestsTab() {
             {/* Detailed Test Results */}
             {results?.stages?.map((stageResult) => {
                 const stage = STAGES.find(s => s.id === stageResult.stage);
-                if (!stageResult.tests?.length) return null;
+                if (!stageResult.tests?.length && !stageResult.log) return null;
 
                 return (
                     <div key={stageResult.stage} className="mb-6">
@@ -324,51 +324,55 @@ export default function SpecTestsTab() {
                             {stage && <stage.icon className="w-5 h-5" />}
                             Aşama {stageResult.stage}: {stageResult.stage_name}
                         </h3>
-                        <div className="border rounded-lg overflow-hidden">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-50 border-b">
-                                    <tr>
-                                        <th className="text-left px-4 py-2 text-gray-600 font-medium">Test</th>
-                                        <th className="text-center px-4 py-2 text-gray-600 font-medium w-24">Durum</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {stageResult.tests.map((test, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50">
-                                            <td className="px-4 py-2 text-gray-700 font-mono text-xs">
-                                                {test.name}
-                                            </td>
-                                            <td className="px-4 py-2 text-center">
-                                                {test.status === 'PASS' ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">
-                                                        <CheckCircleIcon className="w-3.5 h-3.5" />
-                                                        PASS
-                                                    </span>
-                                                ) : test.status === 'FAIL' ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">
-                                                        <XCircleIcon className="w-3.5 h-3.5" />
-                                                        FAIL
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
-                                                        {test.status}
-                                                    </span>
-                                                )}
-                                            </td>
+                        {stageResult.tests?.length > 0 && (
+                            <div className="border rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="text-left px-4 py-2 text-gray-600 font-medium">Test</th>
+                                            <th className="text-center px-4 py-2 text-gray-600 font-medium w-24">Durum</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {stageResult.tests.map((test, idx) => (
+                                            <tr key={idx} className={test.status === 'FAIL' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}>
+                                                <td className="px-4 py-2 text-gray-700 font-mono text-xs">
+                                                    {test.name}
+                                                </td>
+                                                <td className="px-4 py-2 text-center">
+                                                    {test.status === 'PASS' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                                                            <CheckCircleIcon className="w-3.5 h-3.5" />
+                                                            PASS
+                                                        </span>
+                                                    ) : test.status === 'FAIL' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">
+                                                            <XCircleIcon className="w-3.5 h-3.5" />
+                                                            FAIL
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
+                                                            {test.status}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
 
-                        {/* Log output (collapsed) */}
+                        {/* Log output — auto-open if stage failed */}
                         {stageResult.log && (
-                            <details className="mt-2">
-                                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                                    Konsol çıktısını göster
+                            <details className="mt-2" open={!stageResult.success}>
+                                <summary className={`text-xs cursor-pointer hover:text-gray-700 font-medium ${
+                                    stageResult.success ? 'text-gray-500' : 'text-red-600'
+                                }`}>
+                                    {stageResult.success ? 'Konsol çıktısını göster' : `Konsol çıktısı (${stageResult.failures} başarısız, ${stageResult.errors} hata)`}
                                 </summary>
-                                <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg text-xs overflow-x-auto max-h-64 overflow-y-auto">
-                                    {stageResult.log}
+                                <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg text-xs overflow-x-auto max-h-[600px] overflow-y-auto whitespace-pre-wrap break-words">
+{stageResult.log}
                                 </pre>
                             </details>
                         )}
