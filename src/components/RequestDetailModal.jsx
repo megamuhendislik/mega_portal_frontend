@@ -82,6 +82,24 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     }
   };
 
+  const handleDownloadDocx = async (requestId) => {
+    try {
+      const response = await api.get(`/leave/requests/${requestId}/export-docx/`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `izin_talebi_${requestId}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('DOCX indirme hatasi:', err);
+    }
+  };
+
   if (!isOpen || !request) return null;
 
   const canOverride = hasPermission('SYSTEM_FULL_ACCESS') &&
@@ -287,7 +305,18 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+          <div>
+            {requestType === 'LEAVE' && (
+              <button
+                onClick={() => handleDownloadDocx(request.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+              >
+                <FileText size={16} />
+                DOCX Indir
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium"
