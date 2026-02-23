@@ -16,7 +16,8 @@ import {
     SparklesIcon,
     ClipboardDocumentCheckIcon,
     WrenchScrewdriverIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    MagnifyingGlassCircleIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -26,6 +27,7 @@ import PermissionsTab from './system-health/PermissionsTab';
 import DashboardTab from './system-health/DashboardTab';
 import AttendanceDiagTab from './system-health/AttendanceDiagTab';
 import SecurityAuditTab from './system-health/SecurityAuditTab';
+import AttendanceForensicTab from './system-health/AttendanceForensicTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -84,6 +86,7 @@ export default function SystemHealth() {
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                         { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
+                        { id: 'attendance_forensic', name: 'Kayıt Soruşturma', icon: MagnifyingGlassCircleIcon },
                         { id: 'resources', name: 'Kaynak Kullanımı', icon: ChartBarIcon },
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'maintenance', name: 'Bakım & Onarım', icon: WrenchScrewdriverIcon },
@@ -118,6 +121,7 @@ export default function SystemHealth() {
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
+                {activeTab === 'attendance_forensic' && <AttendanceForensicTab />}
                 {activeTab === 'resources' && <ResourceMonitor />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'maintenance' && <MaintenanceTab />}
