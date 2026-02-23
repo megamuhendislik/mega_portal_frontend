@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Clock, Calendar, FileText, AlertCircle, Shield, Lock, CheckCircle, XCircle } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, Shield, Lock, CheckCircle, XCircle, Briefcase } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
@@ -14,12 +14,29 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [error, setError] = useState('');
   const [timeLockInfo, setTimeLockInfo] = useState(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [employeeHistory, setEmployeeHistory] = useState([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && request) {
       fetchTimeLockInfo();
     }
   }, [isOpen, request]);
+
+  useEffect(() => {
+    if (isOpen && request && requestType === 'LEAVE') {
+      api.get(`/leave/requests/?employee_id=${request.employee}&status=APPROVED&ordering=-start_date&page_size=5`)
+        .then(res => {
+          const data = res.data?.results || res.data || [];
+          setEmployeeHistory(data.slice(0, 5));
+        })
+        .catch(() => setEmployeeHistory([]));
+    } else {
+      setEmployeeHistory([]);
+    }
+  }, [isOpen, request, requestType]);
 
   const fetchTimeLockInfo = async () => {
     if (!request) return;
@@ -80,6 +97,28 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       setError(err.response?.data?.error || 'Override işlemi başarısız oldu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManagerCancel = async () => {
+    if (!cancelReason.trim()) {
+      setError('Iptal gerekcesi zorunludur');
+      return;
+    }
+    setCancelLoading(true);
+    setError('');
+    try {
+      await api.post(`/leave/requests/${request.id}/manager-cancel/`, {
+        reason: cancelReason
+      });
+      setShowCancelModal(false);
+      setCancelReason('');
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Iptal islemi basarisiz oldu');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -214,7 +253,88 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                   <span className="text-sm font-medium text-slate-600">Toplam Gün</span>
                   <span className="text-sm font-bold text-blue-600">{request.total_days}</span>
                 </div>
+                {/* Yil Bazli Kesim */}
+                {request.usage_breakdown && Object.keys(request.usage_breakdown).length > 0 && (
+                  <div className="pt-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase mb-1 block">Yil Bazli Kesim</span>
+                    <div className="space-y-1">
+                      {Object.entries(request.usage_breakdown).sort(([a], [b]) => a.localeCompare(b)).map(([year, days]) => (
+                        <div key={year} className="flex justify-between text-xs bg-indigo-50/50 p-2 rounded-lg border border-indigo-100">
+                          <span className="text-slate-600">{year} yili</span>
+                          <span className="font-bold text-indigo-700">{days} gun</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
+            )}
+
+            {/* Calisan Izin Bakiye Bilgisi - Yonetici Gorunumu */}
+            {requestType === 'LEAVE' && request.employee_annual_leave_balance && (
+              <div className="bg-blue-50/80 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Briefcase size={16} className="text-blue-600" />
+                  <h4 className="text-sm font-bold text-blue-700">Calisan Izin Bilgisi</h4>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                  <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kalan Bakiye</span>
+                    <span className="block font-black text-blue-700 text-lg">{request.employee_annual_leave_balance.remaining}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kullanilan</span>
+                    <span className="block font-black text-amber-600 text-lg">{request.employee_annual_leave_balance.used || 0}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Talep Sonrasi</span>
+                    <span className={`block font-black text-lg ${
+                      (request.employee_annual_leave_balance.remaining - request.total_days) < 0 ? 'text-red-600' : 'text-emerald-600'
+                    }`}>{request.employee_annual_leave_balance.remaining - request.total_days}</span>
+                  </div>
+                </div>
+                {/* Kidem ve Hakedis */}
+                <div className="flex items-center justify-between text-xs bg-white/60 p-2 rounded-lg">
+                  {request.employee_annual_leave_balance.years_of_service !== undefined && (
+                    <span className="text-slate-600">
+                      Kidem: <span className="font-bold text-slate-800">{request.employee_annual_leave_balance.years_of_service} Yil</span>
+                    </span>
+                  )}
+                  {request.employee_annual_leave_balance.entitlement_tier !== undefined && (
+                    <span className="text-slate-600">
+                      Yillik Hak: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.entitlement_tier} Gun</span>
+                    </span>
+                  )}
+                  {request.employee_annual_leave_balance.last_leave_date && (
+                    <span className="text-slate-600">
+                      Son Izin: <span className="font-bold text-slate-800">{new Date(request.employee_annual_leave_balance.last_leave_date).toLocaleDateString('tr-TR')}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Calisanin Son Onayli Izinleri */}
+            {requestType === 'LEAVE' && employeeHistory.length > 0 && (
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <h4 className="text-sm font-bold text-slate-600 mb-2.5 flex items-center gap-1.5">
+                  <Calendar size={14} />
+                  Calisanin Son Onayli Izinleri
+                </h4>
+                <div className="space-y-1.5">
+                  {employeeHistory.map((h, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-slate-100">
+                      <span className="font-medium text-slate-700">{h.leave_type_name || h.request_type_detail?.name || 'Izin'}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-500">
+                          {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                        </span>
+                        <span className="font-bold text-slate-700">{h.total_days} gun</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {requestType === 'OVERTIME' && (
@@ -258,13 +378,28 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </div>
             )}
 
-            {/* Hedef Onaylayıcı */}
+            {/* Hedef Onaylayici */}
             {(request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name) && (
               <div className="pt-3 border-t border-slate-200">
-                <span className="text-sm font-medium text-slate-600 block mb-1">Onaya Gönderilen</span>
-                <p className="text-sm text-blue-700 font-semibold">
-                  {request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name}
-                </p>
+                <span className="text-sm font-medium text-slate-600 block mb-1">Onaya Gonderilen</span>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-blue-700 font-semibold">
+                    {request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name}
+                  </p>
+                  {request.target_approver_detail?.department_name && (
+                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {request.target_approver_detail.department_name}
+                    </span>
+                  )}
+                  {request.target_approver_detail?.relationship && (
+                    <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                      {request.target_approver_detail.relationship === 'PRIMARY' ? 'Birincil Yonetici' :
+                       request.target_approver_detail.relationship === 'SECONDARY' ? 'Ikincil Yonetici' :
+                       request.target_approver_detail.relationship === 'DEPT_MANAGER' ? 'Departman Yoneticisi' :
+                       'Yonetici'}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -288,6 +423,17 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </div>
             )}
           </div>
+
+          {/* Manager Cancel Button */}
+          {requestType === 'LEAVE' && request.status === 'APPROVED' && !timeLockInfo?.is_locked && (hasPermission('APPROVAL_LEAVE') || hasPermission('SYSTEM_FULL_ACCESS')) && (
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
+            >
+              <XCircle size={20} />
+              Izni Iptal Et
+            </button>
+          )}
 
           {/* Override Button */}
           {canOverride && (
@@ -316,10 +462,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <button
                 onClick={() => handleDownloadDocx(request.id)}
                 disabled={downloadLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-bold shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FileText size={16} />
-                {downloadLoading ? 'İndiriliyor...' : 'DOCX İndir'}
+                {downloadLoading ? 'Indiriliyor...' : 'Resmi Form Indir (DOCX)'}
               </button>
             )}
           </div>
@@ -422,6 +568,49 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
               >
                 {loading ? 'İşleniyor...' : 'Onayla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manager Cancel Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Izin Iptali</h3>
+              <button onClick={() => { setShowCancelModal(false); setError(''); }} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2 text-sm text-red-700">
+                <AlertCircle size={16} className="mt-0.5" />
+                <p>Bu islem onayli izni iptal edecek ve kullanilan izin gunleri iade edilecektir.</p>
+              </div>
+            </div>
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Iptal Gerekcesi <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows="4"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="Iptal gerekcesini yaziniz..."
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => { setShowCancelModal(false); setError(''); }} className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+                Vazgec
+              </button>
+              <button onClick={handleManagerCancel} disabled={cancelLoading} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+                {cancelLoading ? 'Isleniyor...' : 'Iptal Et'}
               </button>
             </div>
           </div>

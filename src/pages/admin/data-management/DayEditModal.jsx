@@ -28,6 +28,22 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
     const [leaveEnd, setLeaveEnd] = useState('');
     const [leaveReason, setLeaveReason] = useState('');
 
+    // Entitlement editing state
+    const [editingEntitlement, setEditingEntitlement] = useState(null); // {year, days_entitled, days_used}
+    const [editEntReason, setEditEntReason] = useState('');
+    const [editEntSaving, setEditEntSaving] = useState(false);
+
+    // New year addition
+    const [showAddYear, setShowAddYear] = useState(false);
+    const [newYear, setNewYear] = useState(new Date().getFullYear());
+    const [newYearDays, setNewYearDays] = useState(14);
+    const [newYearReason, setNewYearReason] = useState('');
+
+    // Adjustment history
+    const [adjustmentHistory, setAdjustmentHistory] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
+
     const dateStr = format(date, 'yyyy-MM-dd');
 
     const loadData = () => {
@@ -143,6 +159,76 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
             loadData();
             if (onSaveSuccess) onSaveSuccess();
         } catch (e) { alert('Hata: ' + (e.response?.data?.error || e.message)); }
+    };
+
+    const handleSaveEntitlement = async () => {
+        if (!editingEntitlement || !editEntReason.trim()) {
+            alert('Gerekçe zorunludur');
+            return;
+        }
+        setEditEntSaving(true);
+        try {
+            const payload = {
+                employee_id: employee.id,
+                year: editingEntitlement.year,
+                reason: editEntReason,
+            };
+            if (editingEntitlement.days_entitled !== undefined) {
+                payload.days_entitled = editingEntitlement.days_entitled;
+            }
+            if (editingEntitlement.days_used !== undefined) {
+                payload.days_used = editingEntitlement.days_used;
+            }
+            const res = await api.post('/system-data/adjust_entitlement/', payload);
+            alert(res.data.message);
+            setEditingEntitlement(null);
+            setEditEntReason('');
+            loadData();
+            if (onSaveSuccess) onSaveSuccess();
+        } catch (e) {
+            alert('Hata: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setEditEntSaving(false);
+        }
+    };
+
+    const handleAddYear = async () => {
+        if (!newYearReason.trim()) {
+            alert('Gerekçe zorunludur');
+            return;
+        }
+        setEditEntSaving(true);
+        try {
+            const res = await api.post('/system-data/adjust_entitlement/', {
+                employee_id: employee.id,
+                year: newYear,
+                days_entitled: newYearDays,
+                days_used: 0,
+                reason: newYearReason || 'Yeni yıl eklendi',
+            });
+            alert(res.data.message);
+            setShowAddYear(false);
+            setNewYearReason('');
+            loadData();
+            if (onSaveSuccess) onSaveSuccess();
+        } catch (e) {
+            alert('Hata: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setEditEntSaving(false);
+        }
+    };
+
+    const fetchAdjustmentHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const res = await api.get(`/system-data/entitlement_history/?employee_id=${employee.id}`);
+            setAdjustmentHistory(res.data || []);
+        } catch (e) {
+            console.error('Failed to fetch history', e);
+            setAdjustmentHistory([]);
+        } finally {
+            setHistoryLoading(false);
+        }
     };
 
     const handleOtAction = async (otId, action) => {
@@ -412,14 +498,193 @@ export default function DayEditModal({ isOpen, onClose, employee, date, onSaveSu
                                                 <div key={i} className="bg-white rounded-xl border p-4">
                                                     <div className="flex justify-between items-center mb-2">
                                                         <span className="text-sm font-bold text-slate-600">{bal.year}</span>
-                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{bal.remaining_days} kalan</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{bal.remaining_days} kalan</span>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingEntitlement({
+                                                                        year: bal.year,
+                                                                        days_entitled: bal.total_days,
+                                                                        days_used: bal.used_days,
+                                                                    });
+                                                                    setEditEntReason('');
+                                                                }}
+                                                                className="text-[10px] bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-600 px-1.5 py-0.5 rounded transition-colors font-bold"
+                                                                title="Düzenle"
+                                                            >
+                                                                Düzenle
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="w-full bg-slate-100 rounded-full h-2.5">
-                                                        <div className="bg-blue-500 h-2.5 rounded-full transition-all" style={{ width: `${Math.min((bal.used_days / bal.total_days) * 100, 100)}%` }}></div>
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-400 mt-1">{bal.used_days} kullan\u0131ld\u0131 / {bal.total_days} toplam</div>
+                                                    {/* Inline Edit */}
+                                                    {editingEntitlement?.year === bal.year ? (
+                                                        <div className="space-y-2 mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Hak (Gün)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={editingEntitlement.days_entitled}
+                                                                        onChange={e => setEditingEntitlement({...editingEntitlement, days_entitled: parseFloat(e.target.value) || 0})}
+                                                                        className="w-full border p-1.5 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none"
+                                                                        step="0.5" min="0"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Kullanılan (Gün)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={editingEntitlement.days_used}
+                                                                        onChange={e => setEditingEntitlement({...editingEntitlement, days_used: parseFloat(e.target.value) || 0})}
+                                                                        className="w-full border p-1.5 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none"
+                                                                        step="0.5" min="0"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Gerekçe *</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={editEntReason}
+                                                                    onChange={e => setEditEntReason(e.target.value)}
+                                                                    placeholder="Düzeltme gerekçesi"
+                                                                    className="w-full border p-1.5 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none"
+                                                                />
+                                                            </div>
+                                                            <div className="flex gap-1.5">
+                                                                <button
+                                                                    onClick={handleSaveEntitlement}
+                                                                    disabled={editEntSaving || !editEntReason.trim()}
+                                                                    className="flex-1 text-xs bg-blue-600 text-white px-2 py-1.5 rounded hover:bg-blue-700 transition disabled:opacity-50 font-bold"
+                                                                >
+                                                                    {editEntSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingEntitlement(null)}
+                                                                    className="text-xs bg-slate-200 text-slate-600 px-2 py-1.5 rounded hover:bg-slate-300 transition font-bold"
+                                                                >
+                                                                    İptal
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-full bg-slate-100 rounded-full h-2.5">
+                                                                <div className="bg-blue-500 h-2.5 rounded-full transition-all" style={{ width: `${bal.total_days > 0 ? Math.min((bal.used_days / bal.total_days) * 100, 100) : 0}%` }}></div>
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-400 mt-1">{bal.used_days} kullanıldı / {bal.total_days} toplam</div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {/* Add Year + History Buttons */}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setShowAddYear(!showAddYear)}
+                                            className="flex items-center gap-1.5 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-2 rounded-lg border border-emerald-200 transition font-bold"
+                                        >
+                                            <Plus size={14} />
+                                            Yıl Ekle
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowHistory(!showHistory);
+                                                if (!showHistory && adjustmentHistory.length === 0) {
+                                                    fetchAdjustmentHistory();
+                                                }
+                                            }}
+                                            className="text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 transition font-bold"
+                                        >
+                                            Değişiklik Geçmişi
+                                        </button>
+                                    </div>
+
+                                    {/* Add Year Form */}
+                                    {showAddYear && (
+                                        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 space-y-3">
+                                            <h4 className="text-sm font-bold text-emerald-700">Yeni Yıl Ekle</h4>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Yıl</label>
+                                                    <input
+                                                        type="number"
+                                                        value={newYear}
+                                                        onChange={e => setNewYear(parseInt(e.target.value) || new Date().getFullYear())}
+                                                        className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 outline-none"
+                                                        min="2000" max="2100"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Hak (Gün)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={newYearDays}
+                                                        onChange={e => setNewYearDays(parseFloat(e.target.value) || 0)}
+                                                        className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 outline-none"
+                                                        step="0.5" min="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 mb-1">Gerekçe *</label>
+                                                <input
+                                                    type="text"
+                                                    value={newYearReason}
+                                                    onChange={e => setNewYearReason(e.target.value)}
+                                                    placeholder="Ekleme gerekçesi"
+                                                    className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 outline-none"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={handleAddYear}
+                                                    disabled={editEntSaving || !newYearReason.trim()}
+                                                    className="text-xs bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 font-bold"
+                                                >
+                                                    {editEntSaving ? 'Ekleniyor...' : 'Ekle'}
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowAddYear(false)}
+                                                    className="text-xs bg-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-300 transition font-bold"
+                                                >
+                                                    İptal
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Adjustment History */}
+                                    {showHistory && (
+                                        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                                <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                                                Değişiklik Geçmişi
+                                            </h4>
+                                            {historyLoading ? (
+                                                <p className="text-xs text-slate-400 italic">Yükleniyor...</p>
+                                            ) : adjustmentHistory.length > 0 ? (
+                                                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                                    {adjustmentHistory.map((log, i) => (
+                                                        <div key={i} className="flex items-start justify-between text-xs bg-white p-2.5 rounded-lg border border-slate-100">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-medium text-slate-700">
+                                                                    {log.year} — {log.field_changed === 'days_entitled' ? 'Hak' : 'Kullanılan'}: {log.old_value} → {log.new_value}
+                                                                </div>
+                                                                <div className="text-slate-400 truncate" title={log.reason}>{log.reason}</div>
+                                                            </div>
+                                                            <div className="text-right shrink-0 ml-2">
+                                                                <div className="text-slate-500 font-bold">{log.adjusted_by}</div>
+                                                                <div className="text-slate-400">{new Date(log.created_at).toLocaleDateString('tr-TR')}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-slate-400 italic">Kayıt bulunamadı.</p>
+                                            )}
                                         </div>
                                     )}
 

@@ -96,12 +96,21 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [cardlessSchedule, setCardlessSchedule] = useState(null);
     const [cardlessScheduleLoading, setCardlessScheduleLoading] = useState(false);
 
+    // Approver substitute info
+    const [approverSubstitutes, setApproverSubstitutes] = useState([]);
+
     // Entitlement info (FIX-3)
     const [entitlementInfo, setEntitlementInfo] = useState(null);
 
     // Working days info (FIX-4)
     const [workingDaysInfo, setWorkingDaysInfo] = useState(null);
     const [workingDaysLoading, setWorkingDaysLoading] = useState(false);
+
+    // Recent leave history
+    const [recentLeaveHistory, setRecentLeaveHistory] = useState([]);
+
+    // FIFO Preview
+    const [fifoPreview, setFifoPreview] = useState(null);
 
     useEffect(() => {
         if (selectedType !== 'CARDLESS_ENTRY' || !cardlessEntryForm.date) {
@@ -140,6 +149,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setSelectedApproverId(null);
             setEntitlementInfo(null);
             setWorkingDaysInfo(null);
+            setRecentLeaveHistory([]);
+            setFifoPreview(null);
+            setApproverSubstitutes([]);
             // Reset forms
             setOvertimeForm({
                 attendance: null,
@@ -181,6 +193,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         };
         fetchApprovers();
     }, [selectedType]);
+
+    // Secili yoneticinin vekillerini getir
+    useEffect(() => {
+        if (!selectedApproverId) { setApproverSubstitutes([]); return; }
+        api.get(`/substitute-authority/?search=${selectedApproverId}`)
+            .then(res => {
+                const today = new Date().toISOString().split('T')[0];
+                const active = (res.data?.results || res.data || []).filter(s =>
+                    s.principal === selectedApproverId || s.principal_id === selectedApproverId
+                ).filter(s => s.valid_from <= today && s.valid_to >= today);
+                setApproverSubstitutes(active);
+            })
+            .catch(() => setApproverSubstitutes([]));
+    }, [selectedApproverId]);
 
     useEffect(() => {
         if (selectedType === 'OVERTIME') {
@@ -226,6 +252,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         fetchEntitlement();
     }, [selectedType]);
 
+    // Fetch recent leave history
+    useEffect(() => {
+        if (selectedType === 'LEAVE') {
+            api.get('/leave/requests/my_requests/')
+                .then(res => {
+                    const data = res.data?.results || res.data || [];
+                    setRecentLeaveHistory(data.slice(0, 5));
+                })
+                .catch(() => setRecentLeaveHistory([]));
+        } else {
+            setRecentLeaveHistory([]);
+        }
+    }, [selectedType]);
+
     // FIX-4: Fetch working days info (debounced)
     useEffect(() => {
         if (selectedType !== 'LEAVE' || !leaveForm.start_date || !leaveForm.end_date) {
@@ -254,6 +294,38 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
         return () => clearTimeout(timer);
     }, [selectedType, leaveForm.start_date, leaveForm.end_date, leaveForm.request_type, requestTypes]);
+
+    // FIFO Preview fetch
+    useEffect(() => {
+        if (selectedType !== 'LEAVE' || !workingDaysInfo?.working_days) {
+            setFifoPreview(null);
+            return;
+        }
+
+        const typeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+        if (!typeObj || typeObj.code !== 'ANNUAL_LEAVE') {
+            setFifoPreview(null);
+            return;
+        }
+
+        const days = workingDaysInfo.working_days;
+        if (days <= 0) {
+            setFifoPreview(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await api.get(`/leave/requests/fifo-preview/?days=${days}`);
+                setFifoPreview(res.data);
+            } catch (e) {
+                console.error("Failed to fetch FIFO preview", e);
+                setFifoPreview(null);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [selectedType, leaveForm.request_type, workingDaysInfo, requestTypes]);
 
     const fetchUnclaimedOvertime = async () => {
         try {
@@ -425,38 +497,85 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         }
         if (availableApprovers.length === 0) return null;
         if (availableApprovers.length === 1) {
+            const approver = availableApprovers[0];
             return (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2">
-                    <Users size={16} className="text-blue-500 shrink-0" />
-                    <span className="text-sm font-medium text-blue-700">
-                        Onaya gidecek: <strong>{availableApprovers[0].name}</strong>
-                        <span className="text-blue-500 font-normal"> ({getRelationshipLabel(availableApprovers[0].relationship)})</span>
-                        {availableApprovers[0].via && <span className="text-blue-500 font-normal"> — {availableApprovers[0].via}</span>}
-                    </span>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Users size={16} className="text-blue-600" />
+                        <span className="text-sm font-bold text-blue-700">Onaya Gidecek Kisi</span>
+                    </div>
+                    <div className="ml-6">
+                        <div className="text-sm font-bold text-slate-800">{approver.name}</div>
+                        <div className="text-xs text-blue-600 mt-0.5">
+                            {getRelationshipLabel(approver.relationship)}
+                            {approver.department_name && ` · ${approver.department_name}`}
+                            {approver.via && ` — ${approver.via}`}
+                        </div>
+                    </div>
+                    {/* Vekil bilgisi gosterimi */}
+                    {approverSubstitutes.length > 0 && (
+                        <div className="mt-3 ml-6 p-2.5 bg-white/60 rounded-lg border border-blue-100 text-xs text-slate-600">
+                            <span className="font-bold text-blue-600">Aktif Vekil:</span>{' '}
+                            {approverSubstitutes.map((s, i) => (
+                                <span key={i}>
+                                    {s.substitute_name || s.substitute?.full_name}
+                                    <span className="text-slate-400"> ({new Date(s.valid_from).toLocaleDateString('tr-TR')} - {new Date(s.valid_to).toLocaleDateString('tr-TR')})</span>
+                                    {i < approverSubstitutes.length - 1 && ', '}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         }
-        // Multiple approvers - show dropdown
+        // Multiple approvers - radio kartlari
         return (
             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-1.5">
                     <Users size={14} className="text-blue-500" />
-                    Onay Yöneticisi <span className="text-red-500">*</span>
+                    Onay Yoneticisi Secin <span className="text-red-500">*</span>
                 </label>
-                <select
-                    required
-                    value={selectedApproverId || ''}
-                    onChange={e => setSelectedApproverId(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                >
-                    <option value="">Yönetici seçiniz</option>
+                <div className="space-y-2">
                     {availableApprovers.map(a => (
-                        <option key={a.id} value={a.id}>
-                            {a.name} ({getRelationshipLabel(a.relationship)})
-                            {a.via ? ` — ${a.via}` : ''}
-                        </option>
+                        <label
+                            key={a.id}
+                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                                selectedApproverId === a.id
+                                    ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-400/30'
+                                    : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/30'
+                            }`}
+                        >
+                            <input
+                                type="radio"
+                                name="approver_selection"
+                                value={a.id}
+                                checked={selectedApproverId === a.id}
+                                onChange={() => setSelectedApproverId(a.id)}
+                                className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-slate-800">{a.name}</div>
+                                <div className="text-xs text-blue-600">
+                                    {getRelationshipLabel(a.relationship)}
+                                    {a.via && ` — ${a.via}`}
+                                </div>
+                            </div>
+                        </label>
                     ))}
-                </select>
+                </div>
+                {/* Secili yoneticinin vekil bilgisi */}
+                {selectedApproverId && approverSubstitutes.length > 0 && (
+                    <div className="mt-2 p-2.5 bg-blue-50/50 rounded-lg border border-blue-100 text-xs text-slate-600">
+                        <span className="font-bold text-blue-600">Aktif Vekil:</span>{' '}
+                        {approverSubstitutes.map((s, i) => (
+                            <span key={i}>
+                                {s.substitute_name || s.substitute?.full_name}
+                                <span className="text-slate-400"> ({new Date(s.valid_from).toLocaleDateString('tr-TR')} - {new Date(s.valid_to).toLocaleDateString('tr-TR')})</span>
+                                {i < approverSubstitutes.length - 1 && ', '}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         );
     };
@@ -565,7 +684,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-3">
@@ -622,6 +741,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     approverDropdown={approverDropdownElement}
                                     entitlementInfo={entitlementInfo}
                                     workingDaysInfo={workingDaysInfo}
+                                    recentLeaveHistory={recentLeaveHistory}
+                                    fifoPreview={fifoPreview}
                                 />
                             )}
                             {selectedType === 'OVERTIME' && (

@@ -17,6 +17,8 @@ export const LeaveRequestForm = ({
     approverDropdown,
     entitlementInfo,
     workingDaysInfo,
+    recentLeaveHistory,
+    fifoPreview,
 }) => {
     const balance = leaveBalance;
     const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
@@ -72,7 +74,13 @@ export const LeaveRequestForm = ({
                     </div>
                     {/* Kidem ve Hakedis Bilgisi */}
                     {entitlementInfo && (
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                            {entitlementInfo.hired_date && (
+                                <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
+                                    <span className="text-slate-500">Ise Giris:</span>
+                                    <span className="font-bold text-slate-700">{new Date(entitlementInfo.hired_date).toLocaleDateString('tr-TR')}</span>
+                                </div>
+                            )}
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
                                 <span className="text-slate-500">Kidem:</span>
                                 <span className="font-bold text-slate-700">{entitlementInfo.years_of_service} Yil</span>
@@ -82,6 +90,28 @@ export const LeaveRequestForm = ({
                                 <span className="font-bold text-emerald-600">{entitlementInfo.entitlement_tier} Gun</span>
                             </div>
                         </div>
+                    )}
+                    {/* Yil Bazli Detay */}
+                    {entitlementInfo?.entitlements?.length > 0 && (
+                        <details className="mt-3 bg-white/50 rounded-lg border border-blue-100 overflow-hidden">
+                            <summary className="px-3 py-2 text-xs font-bold text-blue-700 cursor-pointer hover:bg-blue-50/50 transition-colors select-none">
+                                Yil Bazli Izin Detayi ({entitlementInfo.entitlements.length} yil)
+                            </summary>
+                            <div className="px-3 pb-3 space-y-1.5">
+                                {entitlementInfo.entitlements.map((ent, i) => (
+                                    <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-100">
+                                        <span className="font-bold text-slate-700">{ent.year}</span>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-slate-500">Hak: <span className="font-bold text-slate-700">{ent.days_entitled}</span></span>
+                                            <span className="text-slate-500">Kullanilan: <span className="font-bold text-amber-600">{ent.days_used}</span></span>
+                                            <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${ent.remaining > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                {ent.remaining} kalan
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </details>
                     )}
                     {entitlementInfo && !entitlementInfo.has_entitlement && (
                         <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 p-2 rounded">
@@ -95,6 +125,45 @@ export const LeaveRequestForm = ({
                             Yetersiz bakiye! Talep oluşturamazsınız. ({duration} gün talep, {balance.available} gün mevcut)
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Gecmis Izin Talepleri */}
+            {recentLeaveHistory && recentLeaveHistory.length > 0 && (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5">
+                        <Clock size={12} />
+                        Son Izin Talepleriniz
+                    </h4>
+                    <div className="space-y-1.5">
+                        {recentLeaveHistory.map((h, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                        h.status === 'APPROVED' ? 'bg-emerald-500' :
+                                        h.status === 'REJECTED' ? 'bg-red-500' :
+                                        h.status === 'PENDING' ? 'bg-amber-500' : 'bg-slate-400'
+                                    }`} />
+                                    <span className="font-medium text-slate-700 truncate">{h.leave_type_name || h.request_type_detail?.name || 'Izin'}</span>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <span className="text-slate-400">
+                                        {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '-'}
+                                    </span>
+                                    <span className="text-slate-500 font-bold">{h.total_days} gun</span>
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                                        h.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                                        h.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
+                                        h.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                        {h.status === 'APPROVED' ? 'Onayli' :
+                                         h.status === 'REJECTED' ? 'Red' :
+                                         h.status === 'PENDING' ? 'Bekliyor' : h.status}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -150,6 +219,27 @@ export const LeaveRequestForm = ({
                         </span>
                     ) : (
                         <span className="font-bold text-slate-700">{duration} Gün</span>
+                    )}
+                </div>
+            )}
+
+            {/* FIFO Preview */}
+            {isAnnualLeave && fifoPreview && fifoPreview.breakdown && Object.keys(fifoPreview.breakdown).length > 0 && (
+                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in duration-300">
+                    <h4 className="text-xs font-bold text-indigo-700 mb-2">Bu Talepte Kesilecek:</h4>
+                    <div className="space-y-1">
+                        {Object.entries(fifoPreview.breakdown).map(([year, days]) => (
+                            <div key={year} className="flex justify-between text-xs bg-white/70 p-2 rounded-lg">
+                                <span className="text-slate-600">{year} yilindan</span>
+                                <span className="font-bold text-indigo-700">{days} gun</span>
+                            </div>
+                        ))}
+                    </div>
+                    {fifoPreview.shortfall > 0 && (
+                        <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1">
+                            <AlertCircle size={12} />
+                            {fifoPreview.shortfall} gun eksik bakiye!
+                        </div>
                     )}
                 </div>
             )}

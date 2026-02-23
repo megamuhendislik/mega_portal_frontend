@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard } from 'lucide-react';
+import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard, Users } from 'lucide-react';
 
 const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming, onViewDetails }) => {
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -88,6 +88,14 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                         <span className="truncate">{request.employee_name}</span>
                     </div>
 
+                    {/* Hedef Onaylayici */}
+                    {request.target_approver_name && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 mt-1">
+                            <Users size={10} className="shrink-0" />
+                            <span className="truncate">Onaya giden: <span className="font-bold">{request.target_approver_name}</span></span>
+                        </div>
+                    )}
+
                     {/* Annual Leave Balance Info (Only for Incoming Leave Requests) */}
                     {isIncoming && type === 'LEAVE' && request.employee_annual_leave_balance && (
                         <div className="bg-blue-50/50 rounded-xl p-2.5 border border-blue-100 text-xs text-slate-600">
@@ -115,6 +123,20 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             {request.employee_annual_leave_balance.last_leave_date && (
                                 <div className="mt-2 text-[10px] text-center text-slate-500 bg-white/40 p-1 rounded">
                                     Son İzin Bitiş: <span className="font-bold text-slate-700">{formatDate(request.employee_annual_leave_balance.last_leave_date)}</span>
+                                </div>
+                            )}
+                            {/* Kidem ve Hakedis */}
+                            {(request.employee_annual_leave_balance.years_of_service !== undefined || request.employee_annual_leave_balance.entitlement_tier !== undefined) && (
+                                <div className="mt-2 flex items-center justify-center gap-3 text-[10px] text-slate-500 bg-white/40 p-1 rounded">
+                                    {request.employee_annual_leave_balance.years_of_service !== undefined && (
+                                        <span>Kidem: <span className="font-bold text-slate-700">{request.employee_annual_leave_balance.years_of_service} Yil</span></span>
+                                    )}
+                                    {request.employee_annual_leave_balance.years_of_service !== undefined && request.employee_annual_leave_balance.entitlement_tier !== undefined && (
+                                        <span className="text-slate-300">|</span>
+                                    )}
+                                    {request.employee_annual_leave_balance.entitlement_tier !== undefined && (
+                                        <span>Yillik Hak: <span className="font-bold text-emerald-600">{request.employee_annual_leave_balance.entitlement_tier} Gun</span></span>
+                                    )}
                                 </div>
                             )}
                         </div>
