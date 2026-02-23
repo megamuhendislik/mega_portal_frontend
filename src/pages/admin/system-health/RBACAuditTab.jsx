@@ -632,7 +632,7 @@ export default function RBACAuditTab() {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get('/system/health-check/rbac_audit/');
+            const res = await api.get('/system/health-check/rbac-audit/');
             setResults(res.data);
             // Auto-expand sections that have failures
             const autoExpand = {};
