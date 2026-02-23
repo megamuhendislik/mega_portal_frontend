@@ -49,6 +49,7 @@ const EmployeeDetail = () => {
         attendance_tolerance_minutes: 0, daily_break_allowance: 0,
         shift_start: '', shift_end: '',
         lunch_start: '12:30', lunch_end: '13:30',
+        uses_service: false, service_tolerance_minutes: 0,
 
         // Permissions
         roles: [], direct_permissions: [],
@@ -132,6 +133,8 @@ const EmployeeDetail = () => {
                 shift_end: emp.shift_end || '',
                 lunch_start: emp.lunch_start || '12:30',
                 lunch_end: emp.lunch_end || '13:30',
+                uses_service: emp.uses_service || false,
+                service_tolerance_minutes: emp.service_tolerance_minutes || 0,
                 weekly_schedule: emp.weekly_schedule || {},
 
                 roles: emp.roles.map(r => r.id),
@@ -623,6 +626,39 @@ const EmployeeDetail = () => {
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Öğle Molası Bitiş</label>
                                             <input type="time" name="lunch_end" value={formData.lunch_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                         </div>
+
+                                        {/* Service Usage */}
+                                        <div className="md:col-span-2 pt-4 border-t border-slate-100 mt-2">
+                                            <div className="flex items-center gap-3">
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.uses_service || false}
+                                                        onChange={e => setFormData(prev => ({ ...prev, uses_service: e.target.checked }))}
+                                                        className="sr-only peer"
+                                                    />
+                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                                <div>
+                                                    <span className="text-sm font-medium text-slate-700">Servis Kullanıyor</span>
+                                                    <p className="text-xs text-slate-400">İşaretlenirse, servis toleransı uygulanır</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {formData.uses_service && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Servis Toleransı (Dk)</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={formData.service_tolerance_minutes || ''}
+                                                    onChange={e => setFormData(prev => ({ ...prev, service_tolerance_minutes: e.target.value ? parseInt(e.target.value) : 0 }))}
+                                                    placeholder="Boş ise takvim ayarı kullanılır"
+                                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                                <p className="text-xs text-slate-400 mt-1">Boş bırakılırsa takvim ayarı kullanılır</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

@@ -618,6 +618,39 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         )}
                     </div>
                 </div>
+
+                {/* Service Usage Toggle */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={formData.uses_service || false}
+                                onChange={e => handleChange('uses_service', e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                        <div>
+                            <span className="text-sm font-medium text-slate-700">Servis Kullanıyor</span>
+                            <p className="text-xs text-slate-400">İşaretlenirse, servis toleransı uygulanır</p>
+                        </div>
+                    </div>
+
+                    {formData.uses_service && (
+                        <div className="pl-14 animate-fade-in">
+                            <InputField
+                                label="Servis Toleransı (Dk)"
+                                type="number"
+                                min="0"
+                                value={formData.service_tolerance_minutes || ''}
+                                onChange={e => handleChange('service_tolerance_minutes', e.target.value ? parseInt(e.target.value) : 0)}
+                                placeholder={defaultServiceTolerance ? `Takvim varsayılanı: ${defaultServiceTolerance} dk` : 'Boş ise takvim ayarı kullanılır'}
+                            />
+                            <p className="text-xs text-slate-400 mt-1 ml-1">Boş bırakılırsa takvim ayarı kullanılır</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
 
@@ -1282,6 +1315,7 @@ const Employees = () => {
                 employment_status: data.employment_status,
                 work_type: data.work_type,
                 uses_service: data.uses_service || false, // [NEW]
+                service_tolerance_minutes: data.service_tolerance_minutes || 0,
                 hired_date: data.hired_date || '',
 
                 // Annual Leave
@@ -1374,7 +1408,7 @@ const Employees = () => {
                 lunch_end: null,
                 daily_break_allowance: null,
                 // attendance_tolerance_minutes: null, // Allow editing/saving
-                service_tolerance_minutes: null,
+                service_tolerance_minutes: cleanPayload.uses_service ? (cleanPayload.service_tolerance_minutes || null) : null,
                 weekly_schedule: null, // Force remove any legacy weekly schedule data
                 // assignments is already in cleanPayload
             };
