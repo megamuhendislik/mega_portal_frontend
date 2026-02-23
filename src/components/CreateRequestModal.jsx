@@ -96,6 +96,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [cardlessSchedule, setCardlessSchedule] = useState(null);
     const [cardlessScheduleLoading, setCardlessScheduleLoading] = useState(false);
 
+    // Entitlement info (FIX-3)
+    const [entitlementInfo, setEntitlementInfo] = useState(null);
+
+    // Working days info (FIX-4)
+    const [workingDaysInfo, setWorkingDaysInfo] = useState(null);
+    const [workingDaysLoading, setWorkingDaysLoading] = useState(false);
+
     useEffect(() => {
         if (selectedType !== 'CARDLESS_ENTRY' || !cardlessEntryForm.date) {
             setCardlessSchedule(null);
@@ -131,6 +138,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setUnclaimedOvertime([]);
             setAvailableApprovers([]);
             setSelectedApproverId(null);
+            setEntitlementInfo(null);
+            setWorkingDaysInfo(null);
             // Reset forms
             setOvertimeForm({
                 attendance: null,
@@ -198,6 +207,53 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         };
         fetchLeaveStats();
     }, [selectedType, leaveForm.request_type, requestTypes]);
+
+    // FIX-3: Fetch entitlement info
+    useEffect(() => {
+        const fetchEntitlement = async () => {
+            if (selectedType === 'LEAVE') {
+                try {
+                    const res = await api.get('/leave/requests/my-entitlement/');
+                    setEntitlementInfo(res.data);
+                } catch (e) {
+                    console.error("Failed to fetch entitlement info", e);
+                    setEntitlementInfo(null);
+                }
+            } else {
+                setEntitlementInfo(null);
+            }
+        };
+        fetchEntitlement();
+    }, [selectedType]);
+
+    // FIX-4: Fetch working days info (debounced)
+    useEffect(() => {
+        if (selectedType !== 'LEAVE' || !leaveForm.start_date || !leaveForm.end_date) {
+            setWorkingDaysInfo(null);
+            return;
+        }
+
+        const typeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+        if (!typeObj || typeObj.code !== 'ANNUAL_LEAVE') {
+            setWorkingDaysInfo(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setWorkingDaysLoading(true);
+            try {
+                const res = await api.get(`/leave/requests/calculate-days/?start_date=${leaveForm.start_date}&end_date=${leaveForm.end_date}`);
+                setWorkingDaysInfo(res.data);
+            } catch (e) {
+                console.error("Failed to calculate working days", e);
+                setWorkingDaysInfo(null);
+            } finally {
+                setWorkingDaysLoading(false);
+            }
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timer);
+    }, [selectedType, leaveForm.start_date, leaveForm.end_date, leaveForm.request_type, requestTypes]);
 
     const fetchUnclaimedOvertime = async () => {
         try {
@@ -327,6 +383,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Helper to calculate duration in days
     const calculateDuration = () => {
         if (!leaveForm.start_date || !leaveForm.end_date) return 0;
+        // FIX-4: Çalışma günü bilgisi varsa onu kullan
+        if (workingDaysInfo && workingDaysInfo.working_days !== undefined) {
+            return workingDaysInfo.working_days;
+        }
         const start = new Date(leaveForm.start_date);
         const end = new Date(leaveForm.end_date);
         if (isNaN(start) || isNaN(end)) return 0;
@@ -560,6 +620,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     duration={calculateDuration()}
                                     isInsufficientBalance={isInsufficientBalance}
                                     approverDropdown={approverDropdownElement}
+                                    entitlementInfo={entitlementInfo}
+                                    workingDaysInfo={workingDaysInfo}
                                 />
                             )}
                             {selectedType === 'OVERTIME' && (

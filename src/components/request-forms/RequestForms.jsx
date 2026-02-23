@@ -15,6 +15,8 @@ export const LeaveRequestForm = ({
     duration,
     isInsufficientBalance,
     approverDropdown,
+    entitlementInfo,
+    workingDaysInfo,
 }) => {
     const balance = leaveBalance;
     const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
@@ -68,6 +70,25 @@ export const LeaveRequestForm = ({
                             <span className={`font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>{balance.available} gün</span>
                         </div>
                     </div>
+                    {/* Kidem ve Hakedis Bilgisi */}
+                    {entitlementInfo && (
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
+                                <span className="text-slate-500">Kidem:</span>
+                                <span className="font-bold text-slate-700">{entitlementInfo.years_of_service} Yil</span>
+                            </div>
+                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
+                                <span className="text-slate-500">Yillik Hak:</span>
+                                <span className="font-bold text-emerald-600">{entitlementInfo.entitlement_tier} Gun</span>
+                            </div>
+                        </div>
+                    )}
+                    {entitlementInfo && !entitlementInfo.has_entitlement && (
+                        <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 p-2 rounded">
+                            <AlertCircle size={12} />
+                            Yillik izin hakedis kaydiniz bulunmamaktadir. Lutfen IK ile iletisime gecin.
+                        </div>
+                    )}
                     {isInsufficient && (
                         <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1">
                             <AlertCircle size={12} />
@@ -86,7 +107,7 @@ export const LeaveRequestForm = ({
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
                 >
                     <option value="">Seçiniz</option>
-                    {requestTypes.map(t => (
+                    {requestTypes.filter(t => t.category !== 'EXTERNAL_DUTY').map(t => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                 </select>
@@ -119,7 +140,14 @@ export const LeaveRequestForm = ({
             {leaveForm.start_date && leaveForm.end_date && (
                 <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
                     <span>Toplam Süre:</span>
-                    <span className="font-bold text-slate-700">{duration} Gün</span>
+                    {workingDaysInfo ? (
+                        <span className="font-bold text-slate-700">
+                            {workingDaysInfo.working_days} Çalışma Günü
+                            <span className="font-normal text-slate-400 ml-1">({workingDaysInfo.calendar_days} takvim günü)</span>
+                        </span>
+                    ) : (
+                        <span className="font-bold text-slate-700">{duration} Gün</span>
+                    )}
                 </div>
             )}
 

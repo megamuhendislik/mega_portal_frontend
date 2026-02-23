@@ -13,6 +13,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [timeLockInfo, setTimeLockInfo] = useState(null);
+  const [downloadLoading, setDownloadLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && request) {
@@ -83,6 +84,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   };
 
   const handleDownloadDocx = async (requestId) => {
+    setDownloadLoading(true);
     try {
       const response = await api.get(`/leave/requests/${requestId}/export-docx/`, {
         responseType: 'blob'
@@ -97,6 +99,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('DOCX indirme hatasi:', err);
+      setError('DOCX dosyası indirilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setDownloadLoading(false);
     }
   };
 
@@ -310,10 +315,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             {requestType === 'LEAVE' && (
               <button
                 onClick={() => handleDownloadDocx(request.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                disabled={downloadLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FileText size={16} />
-                DOCX Indir
+                {downloadLoading ? 'İndiriliyor...' : 'DOCX İndir'}
               </button>
             )}
           </div>
