@@ -6,8 +6,6 @@ import {
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AttendanceLogTable from '../components/AttendanceLogTable';
-import TeamAttendanceOverview from '../components/TeamAttendanceOverview';
-import TeamComparisonChart from '../components/TeamComparisonChart';
 import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
 
 
@@ -32,8 +30,6 @@ const Attendance = () => {
     const [logs, setLogs] = useState([]);
     const [periodSummary, setPeriodSummary] = useState(null);
     const [todaySummary, setTodaySummary] = useState(null);
-    const [teamMembers, setTeamMembers] = useState([]);
-    const [teamComparison, setTeamComparison] = useState([]);
 
     // Filters
     const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
@@ -80,15 +76,6 @@ const Attendance = () => {
     useEffect(() => {
         updateDateRange(viewYear, viewMonth, viewScope);
     }, [viewYear, viewMonth, viewScope]);
-
-    // --- EFFECT: Load Data ---
-    // --- EFFECT: Load Data ---
-    // Team Data fetch logic
-    useEffect(() => {
-        if (activeTab === 'team_attendance') {
-            fetchTeamData();
-        }
-    }, [activeTab]);
 
     // --- HANDLERS ---
     const checkTeamVisibility = () => {
@@ -173,32 +160,6 @@ const Attendance = () => {
             fetchDailyData();
         }
     }, [selectedDate, selectedEmployeeId, viewScope]);
-
-    const fetchTeamData = async () => {
-        if (teamMembers.length) { /* silent refresh */ } else setLoading(true);
-        try {
-            const response = await api.get('/attendance/team_dashboard/');
-            if (response.data) {
-                const mapped = response.data.map(m => ({
-                    ...m,
-                    totalTodayMinutes: Math.floor(m.today_seconds / 60),
-                    monthTarget: (m.month_target_seconds / 3600).toFixed(1),
-                    monthWorkedHours: (m.month_worked_seconds / 3600).toFixed(1),
-                }));
-                setTeamMembers(mapped);
-                setTeamComparison(mapped.map(m => ({
-                    name: m.name,
-                    actual: parseFloat(m.monthWorkedHours),
-                    target: parseFloat(m.monthTarget),
-                    overtime: parseInt((m.month_approved_overtime_seconds || 0) / 60)
-                })));
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleTeamMemberClick = (id) => {
         setSelectedEmployeeId(id);

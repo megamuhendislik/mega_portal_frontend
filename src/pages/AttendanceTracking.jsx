@@ -51,6 +51,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     });
 
     const [initialLoad, setInitialLoad] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
 
     useEffect(() => {
         fetchDepartments();
@@ -68,14 +69,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const fetchAllData = async () => {
         // Only show loading spinner on first load
         if (initialLoad) setLoading(true);
+        setFetchError(null);
         try {
             const params = { year, month };
             if (selectedDept) params.department_id = selectedDept;
             params.include_inactive = 'true';
 
             const [statsRes, hierarchyRes] = await Promise.all([
-                api.get('/dashboard/stats/', { params }),
-                api.get('/dashboard/team_hierarchy/')
+                api.get('/dashboard/stats/', { params, timeout: 60000 }),
+                api.get('/dashboard/team_hierarchy/', { timeout: 60000 })
             ]);
 
             // Process stats
@@ -115,6 +117,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             }
         } catch (error) {
             console.error('Error fetching data:', error);
+            setFetchError(error.code === 'ECONNABORTED' ? 'Zaman aşımı: Veri yüklenemedi. Tekrar deneyin.' : 'Ekip verisi yüklenirken hata oluştu.');
         } finally {
             setLoading(false);
             setInitialLoad(false);
@@ -593,6 +596,11 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <tbody className="divide-y divide-slate-50">
                             {loading ? (
                                 <tr><td colSpan="9" className="p-12 text-center text-slate-400 animate-pulse">Yükleniyor...</td></tr>
+                            ) : fetchError ? (
+                                <tr><td colSpan="9" className="p-12 text-center">
+                                    <div className="text-red-500 font-semibold mb-2">{fetchError}</div>
+                                    <button onClick={handleRefresh} className="text-sm text-indigo-600 hover:text-indigo-800 font-bold">Tekrar Dene</button>
+                                </td></tr>
                             ) : hierarchySort ? (
                                 /* HIERARCHY MODE */
                                 (() => {
