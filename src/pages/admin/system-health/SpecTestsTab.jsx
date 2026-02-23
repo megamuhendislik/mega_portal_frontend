@@ -1,0 +1,229 @@
+import React, { useState } from 'react';
+import api from '../../../services/api';
+import {
+    PlayCircleIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    ArrowPathIcon,
+    ShieldCheckIcon,
+    ClipboardDocumentCheckIcon,
+    ClockIcon,
+} from '@heroicons/react/24/outline';
+
+const STAGES = [
+    { id: 1, name: 'RBAC & Yetkiler', icon: ShieldCheckIcon, color: 'indigo', description: '46 test — Yetki kalıtımı, yönetici hiyerarşisi, IsSystemAdmin, ViewSet koruması' },
+    { id: 2, name: 'Talepler Sistemi', icon: ClipboardDocumentCheckIcon, color: 'emerald', description: '36 test — İzin/mesai/kartsız/yemek talepleri, DOCX export, AUTO_APPROVE' },
+    { id: 3, name: 'Mesai Sistemi', icon: ClockIcon, color: 'amber', description: '63 test — Hesaplama motoru, öğle/mola, tolerans, takvim, Celery görevleri' },
+];
+
+export default function SpecTestsTab() {
+    const [loading, setLoading] = useState(false);
+    const [runningStage, setRunningStage] = useState(null);
+    const [results, setResults] = useState(null);
+    const [error, setError] = useState(null);
+
+    const runTests = async (stage = 'all') => {
+        setLoading(true);
+        setRunningStage(stage);
+        setError(null);
+        try {
+            const res = await api.post('/system/health-check/run-stage-tests/', { stage });
+            setResults(res.data);
+        } catch (e) {
+            setError(e.response?.data?.error || e.message || 'Test çalıştırılamadı');
+        } finally {
+            setLoading(false);
+            setRunningStage(null);
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        3 aşamalı 145 otomatik test — target_spec.md gereksinimlerini doğrular
+                    </p>
+                </div>
+                <button
+                    onClick={() => runTests('all')}
+                    disabled={loading}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-white shadow-sm transition-all ${
+                        loading ? 'bg-gray-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                    }`}
+                >
+                    {loading && runningStage === 'all' ? (
+                        <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <PlayCircleIcon className="w-5 h-5" />
+                    )}
+                    {loading && runningStage === 'all' ? 'Çalışıyor...' : 'Tümünü Çalıştır'}
+                </button>
+            </div>
+
+            {/* Error */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <strong>Hata:</strong> {error}
+                </div>
+            )}
+
+            {/* Overall Result */}
+            {results && (
+                <div className={`mb-6 p-4 rounded-lg border ${
+                    results.success
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-red-50 border-red-200'
+                }`}>
+                    <div className="flex items-center gap-3">
+                        {results.success ? (
+                            <CheckCircleIcon className="w-8 h-8 text-green-600" />
+                        ) : (
+                            <XCircleIcon className="w-8 h-8 text-red-600" />
+                        )}
+                        <div>
+                            <h3 className={`text-lg font-bold ${results.success ? 'text-green-700' : 'text-red-700'}`}>
+                                {results.success ? 'TÜM TESTLER BAŞARILI' : 'BAŞARISIZ TESTLER VAR'}
+                            </h3>
+                            <p className="text-sm opacity-80">
+                                {results.total_passed}/{results.total_tests} test başarılı
+                                {results.total_failed > 0 && ` — ${results.total_failed} başarısız`}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Stage Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                {STAGES.map((stage) => {
+                    const stageResult = results?.stages?.find(s => s.stage === stage.id);
+                    const hasResult = !!stageResult;
+                    const isRunning = loading && (runningStage === stage.id || runningStage === 'all');
+
+                    return (
+                        <div
+                            key={stage.id}
+                            className={`border rounded-xl p-5 transition-all ${
+                                hasResult
+                                    ? stageResult.success
+                                        ? 'border-green-200 bg-green-50/50'
+                                        : 'border-red-200 bg-red-50/50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <stage.icon className={`w-5 h-5 text-${stage.color}-600`} />
+                                    <h3 className="font-bold text-gray-800">Aşama {stage.id}</h3>
+                                </div>
+                                <button
+                                    onClick={() => runTests(stage.id)}
+                                    disabled={loading}
+                                    className={`text-xs px-3 py-1 rounded-md font-medium transition-all ${
+                                        loading
+                                            ? 'bg-gray-100 text-gray-400'
+                                            : `bg-${stage.color}-100 text-${stage.color}-700 hover:bg-${stage.color}-200`
+                                    }`}
+                                >
+                                    {isRunning ? (
+                                        <ArrowPathIcon className="w-4 h-4 animate-spin inline" />
+                                    ) : 'Çalıştır'}
+                                </button>
+                            </div>
+                            <h4 className="font-semibold text-gray-700 text-sm mb-1">{stage.name}</h4>
+                            <p className="text-xs text-gray-500 mb-3">{stage.description}</p>
+
+                            {hasResult && (
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        {stageResult.success ? (
+                                            <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                                        ) : (
+                                            <XCircleIcon className="w-5 h-5 text-red-600" />
+                                        )}
+                                        <span className={`text-sm font-bold ${
+                                            stageResult.success ? 'text-green-700' : 'text-red-700'
+                                        }`}>
+                                            {stageResult.passed}/{stageResult.tests_ran} BAŞARILI
+                                        </span>
+                                    </div>
+                                    {stageResult.failures + stageResult.errors > 0 && (
+                                        <p className="text-xs text-red-600">
+                                            {stageResult.failures} başarısız, {stageResult.errors} hata
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Detailed Test Results */}
+            {results?.stages?.map((stageResult) => {
+                const stage = STAGES.find(s => s.id === stageResult.stage);
+                if (!stageResult.tests?.length) return null;
+
+                return (
+                    <div key={stageResult.stage} className="mb-6">
+                        <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                            {stage && <stage.icon className="w-5 h-5" />}
+                            Aşama {stageResult.stage}: {stageResult.stage_name}
+                        </h3>
+                        <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50 border-b">
+                                    <tr>
+                                        <th className="text-left px-4 py-2 text-gray-600 font-medium">Test</th>
+                                        <th className="text-center px-4 py-2 text-gray-600 font-medium w-24">Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {stageResult.tests.map((test, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="px-4 py-2 text-gray-700 font-mono text-xs">
+                                                {test.name}
+                                            </td>
+                                            <td className="px-4 py-2 text-center">
+                                                {test.status === 'PASS' ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                                                        <CheckCircleIcon className="w-3.5 h-3.5" />
+                                                        PASS
+                                                    </span>
+                                                ) : test.status === 'FAIL' ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">
+                                                        <XCircleIcon className="w-3.5 h-3.5" />
+                                                        FAIL
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
+                                                        {test.status}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Log output (collapsed) */}
+                        {stageResult.log && (
+                            <details className="mt-2">
+                                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                                    Konsol çıktısını göster
+                                </summary>
+                                <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg text-xs overflow-x-auto max-h-64 overflow-y-auto">
+                                    {stageResult.log}
+                                </pre>
+                            </details>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
