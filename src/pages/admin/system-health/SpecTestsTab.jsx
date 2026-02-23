@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../services/api';
 import {
     PlayCircleIcon,
@@ -21,13 +21,32 @@ export default function SpecTestsTab() {
     const [runningStage, setRunningStage] = useState(null);
     const [results, setResults] = useState(null);
     const [error, setError] = useState(null);
+    const [elapsed, setElapsed] = useState(0);
+    const timerRef = useRef(null);
+
+    useEffect(() => {
+        if (loading) {
+            setElapsed(0);
+            timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+        } else {
+            if (timerRef.current) clearInterval(timerRef.current);
+        }
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [loading]);
+
+    const formatTime = (s) => {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return m > 0 ? `${m}dk ${sec}sn` : `${sec}sn`;
+    };
 
     const runTests = async (stage = 'all') => {
         setLoading(true);
         setRunningStage(stage);
         setError(null);
+        setResults(null);
         try {
-            const res = await api.post('/system/health-check/run-stage-tests/', { stage });
+            const res = await api.post('/system/health-check/run-stage-tests/', { stage }, { timeout: 600000 });
             setResults(res.data);
         } catch (e) {
             setError(e.response?.data?.error || e.message || 'Test çalıştırılamadı');
@@ -59,9 +78,24 @@ export default function SpecTestsTab() {
                     ) : (
                         <PlayCircleIcon className="w-5 h-5" />
                     )}
-                    {loading && runningStage === 'all' ? 'Çalışıyor...' : 'Tümünü Çalıştır'}
+                    {loading && runningStage === 'all' ? `Çalışıyor... (${formatTime(elapsed)})` : 'Tümünü Çalıştır'}
                 </button>
             </div>
+
+            {/* Loading indicator */}
+            {loading && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm flex items-center gap-3">
+                    <ArrowPathIcon className="w-5 h-5 animate-spin flex-shrink-0" />
+                    <div>
+                        <strong>Testler çalışıyor...</strong> ({formatTime(elapsed)})
+                        <p className="text-xs opacity-75 mt-0.5">
+                            {runningStage === 'all'
+                                ? 'Tüm aşamalar sırayla çalıştırılıyor. Bu işlem 2-5 dakika sürebilir.'
+                                : `Aşama ${runningStage} çalıştırılıyor. Bu işlem 1-2 dakika sürebilir.`}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Error */}
             {error && (
