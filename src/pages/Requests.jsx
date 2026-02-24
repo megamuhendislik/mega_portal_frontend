@@ -389,7 +389,51 @@ const TeamRequestsSection = ({
 };
 
 // =========== SECTION: Analytics ===========
-const RequestAnalyticsSection = ({ subordinates, loading }) => {
+const CombinedAnalyticsSection = ({ subordinates, loading, isManager }) => {
+    const [analyticsView, setAnalyticsView] = useState('personal');
+
+    return (
+        <div className="space-y-0 animate-in fade-in">
+            {/* Sub-tab bar: Segmented control */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                <button
+                    onClick={() => setAnalyticsView('personal')}
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                        analyticsView === 'personal'
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    <PieChart size={16} />
+                    Kişisel Analiz
+                </button>
+                {isManager && (
+                    <button
+                        onClick={() => setAnalyticsView('team')}
+                        className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                            analyticsView === 'team'
+                                ? 'bg-white text-slate-800 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <BarChart3 size={16} />
+                        Ekip Analizi
+                    </button>
+                )}
+            </div>
+
+            {/* Sub-tab content */}
+            {analyticsView === 'personal' && (
+                <PersonalAnalyticsContent subordinates={subordinates} loading={loading} />
+            )}
+            {analyticsView === 'team' && isManager && (
+                <TeamOvertimeAnalytics />
+            )}
+        </div>
+    );
+};
+
+const PersonalAnalyticsContent = ({ subordinates, loading }) => {
     const [selectedEmployee, setSelectedEmployee] = useState('');
     const [data, setData] = useState(null);
     const [fetching, setFetching] = useState(false);
@@ -1245,13 +1289,7 @@ const Requests = () => {
                     Atanan Mesailer
                 </TabButton>
 
-                {isManager && (
-                    <TabButton active={activeTab === 'team_analytics'} onClick={() => setActiveTab('team_analytics')} icon={<BarChart3 size={18} />}>
-                        Ekip Analizi
-                    </TabButton>
-                )}
-
-                <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<PieChart size={18} />}>Analiz</TabButton>
+                <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<BarChart3 size={18} />}>Analiz</TabButton>
             </div>
 
             {/* Content Area */}
@@ -1308,13 +1346,10 @@ const Requests = () => {
                     />
                 )}
                 {activeTab === 'analytics' && (
-                    <RequestAnalyticsSection subordinates={subordinates} loading={loading} />
+                    <CombinedAnalyticsSection subordinates={subordinates} loading={loading} isManager={isManager} />
                 )}
                 {activeTab === 'assigned_overtime' && (
                     <AssignedOvertimeTab />
-                )}
-                {activeTab === 'team_analytics' && (
-                    <TeamOvertimeAnalytics />
                 )}
             </div>
 
