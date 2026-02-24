@@ -334,8 +334,9 @@ const WorkSchedules = () => {
 
             // Step 3: Queue async recalculation
             const now = new Date();
-            const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-            const endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+            const y = now.getFullYear();
+            const startOfYear = `${y}-01-01`;
+            const endOfYear = `${y}-12-31`;
 
             const res = await api.post(`/attendance/fiscal-calendars/${draftData.id}/recalculate/`, {
                 start_date: startOfYear,
