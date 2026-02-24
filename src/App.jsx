@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -26,6 +26,8 @@ import CompanyDirectory from './pages/CompanyDirectory';
 import DataManagement from './pages/admin/DataManagement';
 import ProgramManagement from './pages/admin/ProgramManagement';
 import Feedback from './pages/Feedback';
+
+const RequestAnalytics = React.lazy(() => import('./pages/RequestAnalytics'));
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -103,6 +105,9 @@ function App() {
 
             {/* Reports - Requires PAGE_REPORTS */}
             <Route path="reports" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Reports /></ProtectedRoute>} />
+
+            {/* Request Analytics - Requires PAGE_REPORTS */}
+            <Route path="request-analytics" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Suspense fallback={<div className="flex items-center justify-center h-full">Yükleniyor...</div>}><RequestAnalytics /></Suspense></ProtectedRoute>} />
 
             {/* Admin Pages */}
             <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="PAGE_SYSTEM_HEALTH"><SystemHealth /></ProtectedRoute>} />
