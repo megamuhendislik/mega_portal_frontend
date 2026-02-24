@@ -24,8 +24,7 @@ import {
     UserCog,
     Package,
     Contact,
-    MessageSquare,
-    BarChart3
+    MessageSquare
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -129,7 +128,6 @@ const MainLayout = () => {
         { path: '/feedback', label: 'Dilek ve Şikayetler', icon: MessageSquare, permission: null },
         { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: null },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS' },
-        { path: '/request-analytics', label: 'Talep Analizleri', icon: BarChart3, permission: 'PAGE_REPORTS' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_ORDERS' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'PAGE_SYSTEM_HEALTH' },
