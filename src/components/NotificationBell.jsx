@@ -1,14 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Trash2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Bell, Check, Trash2, ExternalLink, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 import useSmartPolling from '../hooks/useSmartPolling';
 
+const getRelativeTime = (dateStr) => {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return 'Az önce';
+    if (diffMin < 60) return `${diffMin} dk önce`;
+    if (diffHour < 24) return `${diffHour} saat önce`;
+    if (diffDay < 7) return `${diffDay} gün önce`;
+    return date.toLocaleDateString('tr-TR');
+};
+
 const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
@@ -26,6 +42,7 @@ const NotificationBell = () => {
 
     // 2. Heavy Fetch for List (Only when open or initial)
     const fetchNotifications = async () => {
+        setLoading(true);
         try {
             const response = await api.get('/notifications/');
             const data = response.data.results || response.data;
@@ -34,6 +51,8 @@ const NotificationBell = () => {
             setUnreadCount(data.filter(n => !n.is_read).length);
         } catch (error) {
             console.error('Error fetching notifications:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -47,6 +66,34 @@ const NotificationBell = () => {
         if (isOpen) {
             fetchNotifications();
         }
+    }, [isOpen]);
+
+    // Click-outside handler
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    // Escape key handler
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape' && isOpen) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
     }, [isOpen]);
 
     const markAsRead = async (id) => {
@@ -83,11 +130,36 @@ const NotificationBell = () => {
 
     const getIconColor = (type) => {
         switch (type) {
-            case 'SUCCESS': return 'text-emerald-500 bg-emerald-50';
-            case 'WARNING': return 'text-amber-500 bg-amber-50';
-            case 'ERROR': return 'text-red-500 bg-red-50';
-            default: return 'text-blue-500 bg-blue-50';
+            case 'SUCCESS': return 'bg-emerald-500';
+            case 'WARNING': return 'bg-amber-500';
+            case 'ERROR': return 'bg-red-500';
+            default: return 'bg-blue-500';
         }
+    };
+
+    const getTypeBorderColor = (type) => {
+        switch (type) {
+            case 'SUCCESS': return 'border-l-emerald-500';
+            case 'WARNING': return 'border-l-amber-500';
+            case 'ERROR': return 'border-l-red-500';
+            default: return 'border-l-blue-500';
+        }
+    };
+
+    const renderBadge = () => {
+        if (unreadCount <= 0) return null;
+
+        if (unreadCount > 99) {
+            return (
+                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white leading-none">99+</span>
+                </span>
+            );
+        }
+
+        return (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        );
     };
 
     return (
@@ -97,9 +169,7 @@ const NotificationBell = () => {
                 className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
             >
                 <Bell size={20} />
-                {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                )}
+                {renderBadge()}
             </button>
 
             {isOpen && (
@@ -117,15 +187,20 @@ const NotificationBell = () => {
                     </div>
 
                     <div className="max-h-[60vh] md:max-h-[400px] overflow-y-auto">
-                        {notifications.length > 0 ? (
+                        {loading ? (
+                            <div className="p-8 text-center text-slate-400">
+                                <Loader2 size={24} className="mx-auto mb-2 animate-spin opacity-50" />
+                                <p className="text-sm">Yükleniyor...</p>
+                            </div>
+                        ) : notifications.length > 0 ? (
                             <div className="divide-y divide-slate-50">
                                 {notifications.map(notification => (
                                     <div
                                         key={notification.id}
                                         onClick={() => handleNotificationClick(notification)}
-                                        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${!notification.is_read ? 'bg-blue-50/30' : ''}`}
+                                        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 border-l-[3px] ${getTypeBorderColor(notification.type)} ${!notification.is_read ? 'bg-blue-50/30' : ''}`}
                                     >
-                                        <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${!notification.is_read ? 'bg-blue-500' : 'bg-transparent'}`}></div>
+                                        <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${!notification.is_read ? getIconColor(notification.type) : 'bg-transparent'}`}></div>
                                         <div className="flex-1">
                                             <p className={`text-sm truncate ${!notification.is_read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
                                                 {notification.title}
@@ -134,7 +209,7 @@ const NotificationBell = () => {
                                                 {notification.message}
                                             </p>
                                             <p className="text-[10px] text-slate-400 mt-2">
-                                                {new Date(notification.created_at).toLocaleString('tr-TR')}
+                                                {getRelativeTime(notification.created_at)}
                                             </p>
                                         </div>
                                     </div>
