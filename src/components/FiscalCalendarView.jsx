@@ -37,6 +37,7 @@ const FiscalCalendarView = ({
 
     // Drag-to-paint state (days)
     const isDraggingRef = useRef(false);
+    const dragStartDayRef = useRef(null);
     const dragDaysRef = useRef(new Set());
     const [dragHighlight, setDragHighlight] = useState(new Set());
     const paintStateRef = useRef({});
@@ -68,6 +69,7 @@ const FiscalCalendarView = ({
                 }
 
                 isDraggingRef.current = false;
+                dragStartDayRef.current = null;
                 dragDaysRef.current = new Set();
                 setDragHighlight(new Set());
             }
@@ -93,20 +95,35 @@ const FiscalCalendarView = ({
         return () => window.removeEventListener('mouseup', handleMouseUp);
     }, [paintMode, year]);
 
-    // Day drag handlers
+    // Day drag handlers — fill contiguous range between start day and current day
+    const fillDayRange = useCallback((startStr, endStr) => {
+        const filled = new Set();
+        const a = moment(startStr);
+        const b = moment(endStr);
+        const from = a.isBefore(b) ? a.clone() : b.clone();
+        const to = a.isBefore(b) ? b.clone() : a.clone();
+        while (from.isSameOrBefore(to)) {
+            filled.add(from.format('YYYY-MM-DD'));
+            from.add(1, 'day');
+        }
+        return filled;
+    }, []);
+
     const handleDayMouseDown = useCallback((dateStr, e) => {
         if (!paintMode || (!selectedBrushId && !eraserActive)) return;
         e.preventDefault();
         isDraggingRef.current = true;
+        dragStartDayRef.current = dateStr;
         dragDaysRef.current = new Set([dateStr]);
         setDragHighlight(new Set([dateStr]));
     }, [paintMode, selectedBrushId, eraserActive]);
 
     const handleDayMouseEnter = useCallback((dateStr) => {
-        if (!isDraggingRef.current) return;
-        dragDaysRef.current.add(dateStr);
-        setDragHighlight(new Set(dragDaysRef.current));
-    }, []);
+        if (!isDraggingRef.current || !dragStartDayRef.current) return;
+        const filled = fillDayRange(dragStartDayRef.current, dateStr);
+        dragDaysRef.current = filled;
+        setDragHighlight(new Set(filled));
+    }, [fillDayRange]);
 
     // Month drag handlers
     const handleMonthMouseDown = useCallback((monthIndex, e) => {
