@@ -142,10 +142,10 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             // "if it's not processed as absent... don't show it"
             const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
 
-            // Target
-            // Target: Use 9 hours (32400s) default if missing from DB, as it's not a model field currently.
-            // Ideally should come from Daily Work Schedule, but static fallback is better than 0.
-            const dayTarget = 32400; // 9 Hours default
+            // Target: Use day_target_seconds from attendance records (fiscal calendar based)
+            const dayTarget = dayLogs.length > 0
+                ? Math.max(...dayLogs.map(l => l.day_target_seconds || 0))
+                : 0;
 
             // Calculate Missing
             const isFuture = d > new Date();
