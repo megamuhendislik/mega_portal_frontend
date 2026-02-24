@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info } from 'lucide-react';
+import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info, PenLine, Zap, Eye } from 'lucide-react';
 import api from '../services/api';
 
 const DAY_NAMES = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
@@ -87,41 +87,106 @@ function getStatusConfig(assignment) {
     }
 }
 
+/* ----- Source Type Badge ----- */
+function SourceBadge({ type }) {
+    const configs = {
+        INTENDED: { label: 'Planli', bg: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+        POTENTIAL: { label: 'Algilanan', bg: 'bg-amber-100 text-amber-700 border-amber-200' },
+        MANUAL: { label: 'Manuel', bg: 'bg-blue-100 text-blue-700 border-blue-200' },
+    };
+    const cfg = configs[type] || configs.POTENTIAL;
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${cfg.bg}`}>
+            {cfg.label}
+        </span>
+    );
+}
+
 export default function AssignedOvertimeTab() {
     const [assignments, setAssignments] = useState([]);
+    const [claimableData, setClaimableData] = useState({ intended: [], potential: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [filter, setFilter] = useState('all'); // 'all' | 'past' | 'future'
-    const [claimTarget, setClaimTarget] = useState(null);
-    const [claimForm, setClaimForm] = useState({
-        actual_duration_hours: '',
-        start_time: '18:00',
-        end_time: '',
-        reason: '',
-    });
+
+    // Claim state for INTENDED items
+    const [intendedClaimTarget, setIntendedClaimTarget] = useState(null);
+    const [intendedReason, setIntendedReason] = useState('');
+    const [intendedConfirmOpen, setIntendedConfirmOpen] = useState(false);
+
+    // Claim state for POTENTIAL items
+    const [potentialClaimTarget, setPotentialClaimTarget] = useState(null);
+    const [potentialReason, setPotentialReason] = useState('');
+    const [potentialConfirmOpen, setPotentialConfirmOpen] = useState(false);
+
     const [claimLoading, setClaimLoading] = useState(false);
     const [claimError, setClaimError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
-    const fetchAssignments = async () => {
+    // --- Manual Entry State ---
+    const [manualOpen, setManualOpen] = useState(false);
+    const [manualForm, setManualForm] = useState({
+        work_date: '',
+        start_time: '',
+        end_time: '',
+        reason: '',
+    });
+    const [manualLoading, setManualLoading] = useState(false);
+    const [manualError, setManualError] = useState('');
+
+    // Collapsible sections
+    const [intendedOpen, setIntendedOpen] = useState(true);
+    const [potentialOpen, setPotentialOpen] = useState(true);
+    const [allAssignmentsOpen, setAllAssignmentsOpen] = useState(false);
+
+    const fetchData = async () => {
         try {
             setError('');
-            const res = await api.get('/overtime-assignments/');
-            const data = res.data?.results || res.data || [];
-            setAssignments(Array.isArray(data) ? data : []);
+            const [assignRes, claimableRes] = await Promise.allSettled([
+                api.get('/overtime-assignments/'),
+                api.get('/overtime-assignments/claimable/'),
+            ]);
+
+            // Assignments
+            if (assignRes.status === 'fulfilled') {
+                const data = assignRes.value.data?.results || assignRes.value.data || [];
+                setAssignments(Array.isArray(data) ? data : []);
+            } else {
+                console.error('Assignments fetch error:', assignRes.reason);
+                setAssignments([]);
+            }
+
+            // Claimable
+            if (claimableRes.status === 'fulfilled') {
+                const data = claimableRes.value.data || {};
+                setClaimableData({
+                    intended: Array.isArray(data.intended) ? data.intended : [],
+                    potential: Array.isArray(data.potential) ? data.potential : [],
+                });
+            } else {
+                console.error('Claimable fetch error:', claimableRes.reason);
+                setClaimableData({ intended: [], potential: [] });
+            }
+
+            // Only set error if both failed
+            if (assignRes.status === 'rejected' && claimableRes.status === 'rejected') {
+                setError('Mesai verileri yuklenemedi.');
+            }
         } catch (err) {
             console.error('AssignedOvertimeTab fetch error:', err);
-            setError('Atanan mesailer yuklenemedi.');
+            setError('Mesai verileri yuklenemedi.');
             setAssignments([]);
+            setClaimableData({ intended: [], potential: [] });
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchAssignments();
+        fetchData();
     }, []);
 
+    // --- Filtered assignments for "Tum Atamalar" section ---
     const filtered = useMemo(() => {
         if (filter === 'all') return assignments;
         if (filter === 'past') return assignments.filter(a => isDatePast(a.date) || isDateToday(a.date));
@@ -133,63 +198,167 @@ export default function AssignedOvertimeTab() {
         return [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [filtered]);
 
-    const handleOpenClaim = (assignment) => {
-        setClaimTarget(assignment);
-        setClaimForm({
-            actual_duration_hours: String(assignment.max_duration_hours || ''),
-            start_time: '18:00',
-            end_time: '',
-            reason: '',
-        });
+    // ==================== INTENDED Claim ====================
+    const handleOpenIntendedClaim = (item) => {
+        setIntendedClaimTarget(item);
+        setIntendedReason('');
+        setIntendedConfirmOpen(false);
         setClaimError('');
     };
 
-    const handleCloseClaim = () => {
-        setClaimTarget(null);
-        setClaimForm({ actual_duration_hours: '', start_time: '18:00', end_time: '', reason: '' });
+    const handleCloseIntendedClaim = () => {
+        setIntendedClaimTarget(null);
+        setIntendedReason('');
+        setIntendedConfirmOpen(false);
         setClaimError('');
     };
 
-    const handleClaimSubmit = async (e) => {
-        e.preventDefault();
-        if (!claimTarget) return;
-
-        const duration = parseFloat(claimForm.actual_duration_hours);
-        if (isNaN(duration) || duration <= 0) {
-            setClaimError('Gecerli bir sure giriniz.');
-            return;
-        }
-        if (duration > claimTarget.max_duration_hours) {
-            setClaimError(`Sure maksimum ${claimTarget.max_duration_hours} saat olabilir.`);
-            return;
-        }
-        if (!claimForm.start_time || !claimForm.end_time) {
-            setClaimError('Baslangic ve bitis saati giriniz.');
-            return;
-        }
-        if (!claimForm.reason.trim()) {
+    const handleIntendedClaimSubmit = async () => {
+        if (!intendedClaimTarget) return;
+        if (!intendedReason.trim()) {
             setClaimError('Gerekce giriniz.');
+            setIntendedConfirmOpen(false);
             return;
         }
 
         setClaimLoading(true);
         setClaimError('');
         try {
-            await api.post(`/overtime-assignments/${claimTarget.id}/claim/`, {
-                actual_duration_hours: duration,
-                start_time: claimForm.start_time,
-                end_time: claimForm.end_time,
-                reason: claimForm.reason.trim(),
+            await api.post(`/overtime-assignments/${intendedClaimTarget.assignment_id}/claim/`, {
+                reason: intendedReason.trim(),
             });
-            setSuccessMsg('Mesai talebi basariyla olusturuldu.');
+            setSuccessMsg('Planli mesai talebi basariyla olusturuldu.');
             setTimeout(() => setSuccessMsg(''), 4000);
-            handleCloseClaim();
-            await fetchAssignments();
+            handleCloseIntendedClaim();
+            await fetchData();
         } catch (err) {
             const detail = err.response?.data?.detail || err.response?.data?.error || JSON.stringify(err.response?.data) || 'Talep olusturulamadi.';
             setClaimError(typeof detail === 'string' ? detail : 'Talep olusturulamadi.');
+            setIntendedConfirmOpen(false);
         } finally {
             setClaimLoading(false);
+        }
+    };
+
+    // ==================== POTENTIAL Claim ====================
+    const handleOpenPotentialClaim = (item) => {
+        setPotentialClaimTarget(item);
+        setPotentialReason('');
+        setPotentialConfirmOpen(false);
+        setClaimError('');
+    };
+
+    const handleClosePotentialClaim = () => {
+        setPotentialClaimTarget(null);
+        setPotentialReason('');
+        setPotentialConfirmOpen(false);
+        setClaimError('');
+    };
+
+    const handlePotentialClaimSubmit = async () => {
+        if (!potentialClaimTarget) return;
+        if (!potentialReason.trim()) {
+            setClaimError('Gerekce giriniz.');
+            setPotentialConfirmOpen(false);
+            return;
+        }
+
+        setClaimLoading(true);
+        setClaimError('');
+        try {
+            await api.post('/overtime-requests/claim-potential/', {
+                attendance_id: potentialClaimTarget.attendance_id,
+                reason: potentialReason.trim(),
+            });
+            setSuccessMsg('Algilanan mesai talebi basariyla olusturuldu.');
+            setTimeout(() => setSuccessMsg(''), 4000);
+            handleClosePotentialClaim();
+            await fetchData();
+        } catch (err) {
+            const detail = err.response?.data?.detail || err.response?.data?.error || JSON.stringify(err.response?.data) || 'Talep olusturulamadi.';
+            setClaimError(typeof detail === 'string' ? detail : 'Talep olusturulamadi.');
+            setPotentialConfirmOpen(false);
+        } finally {
+            setClaimLoading(false);
+        }
+    };
+
+    // --- Manual Entry Handlers ---
+    const handleManualReset = () => {
+        setManualForm({ work_date: '', start_time: '', end_time: '', reason: '' });
+        setManualError('');
+    };
+
+    const handleManualSubmit = async (e) => {
+        e.preventDefault();
+        setManualError('');
+
+        // Validation
+        if (!manualForm.work_date) {
+            setManualError('Tarih secimi zorunludur.');
+            return;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selectedDate = new Date(manualForm.work_date + 'T00:00:00');
+        if (selectedDate >= today) {
+            setManualError('Tarih bugun veya gelecekte olamaz. Sadece gecmis tarihler secilabilir.');
+            return;
+        }
+
+        if (!manualForm.start_time || !manualForm.end_time) {
+            setManualError('Baslangic ve bitis saati zorunludur.');
+            return;
+        }
+
+        if (manualForm.start_time >= manualForm.end_time) {
+            setManualError('Bitis saati baslangic saatinden sonra olmalidir.');
+            return;
+        }
+
+        if (!manualForm.reason.trim()) {
+            setManualError('Sebep alani zorunludur.');
+            return;
+        }
+
+        if (manualForm.reason.trim().length > 500) {
+            setManualError('Sebep en fazla 500 karakter olabilir.');
+            return;
+        }
+
+        setManualLoading(true);
+        try {
+            await api.post('/overtime-requests/manual-entry/', {
+                work_date: manualForm.work_date,
+                start_time: manualForm.start_time,
+                end_time: manualForm.end_time,
+                reason: manualForm.reason.trim(),
+            });
+            setSuccessMsg('Manuel mesai girisi basariyla olusturuldu.');
+            setTimeout(() => setSuccessMsg(''), 4000);
+            handleManualReset();
+            setManualOpen(false);
+            await fetchData();
+        } catch (err) {
+            const data = err.response?.data;
+            let msg = 'Manuel giris olusturulamadi.';
+            if (data) {
+                if (typeof data === 'string') msg = data;
+                else if (data.detail) msg = data.detail;
+                else if (data.error) msg = data.error;
+                else if (data.non_field_errors) msg = Array.isArray(data.non_field_errors) ? data.non_field_errors.join(' ') : data.non_field_errors;
+                else {
+                    // Collect field-level errors
+                    const fieldErrors = Object.entries(data)
+                        .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+                        .join(' | ');
+                    if (fieldErrors) msg = fieldErrors;
+                }
+            }
+            setManualError(msg);
+        } finally {
+            setManualLoading(false);
         }
     };
 
@@ -206,7 +375,7 @@ export default function AssignedOvertimeTab() {
     }
 
     // --- Error State ---
-    if (error && assignments.length === 0) {
+    if (error && assignments.length === 0 && claimableData.intended.length === 0 && claimableData.potential.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
@@ -214,12 +383,14 @@ export default function AssignedOvertimeTab() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-700">Hata</h3>
                 <p className="text-sm text-slate-500 mt-1">{error}</p>
-                <button onClick={() => { setLoading(true); fetchAssignments(); }} className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all">
+                <button onClick={() => { setLoading(true); fetchData(); }} className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all">
                     Tekrar Dene
                 </button>
             </div>
         );
     }
+
+    const hasClaimable = claimableData.intended.length > 0 || claimableData.potential.length > 0;
 
     return (
         <div className="space-y-6 animate-in fade-in">
@@ -234,212 +405,623 @@ export default function AssignedOvertimeTab() {
                 </div>
             )}
 
-            {/* Header + Filters */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white">
-                        <CalendarCheck size={22} />
+            {/* ==================== Manual Overtime Entry (Collapsible) ==================== */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <button
+                    onClick={() => { setManualOpen(!manualOpen); if (!manualOpen) setManualError(''); }}
+                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white">
+                            <PenLine size={22} />
+                        </div>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg text-slate-800">Manuel Ek Mesai Girisi</h3>
+                                <SourceBadge type="MANUAL" />
+                            </div>
+                            <p className="text-xs text-slate-500">Kart kaydi olmayan gunler icin mesai girisi yapin</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-lg text-slate-800">Atanan Mesailer</h3>
-                        <p className="text-xs text-slate-500">Size atanan fazla mesai gunlerini goruntuleyip talep edin</p>
+                    <div className={`transition-transform duration-200 ${manualOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown size={20} className="text-slate-400" />
                     </div>
-                </div>
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    {[
-                        { key: 'all', label: 'Tumu' },
-                        { key: 'past', label: 'Gerceklesmis' },
-                        { key: 'future', label: 'Gelecek' },
-                    ].map(f => (
-                        <button
-                            key={f.key}
-                            onClick={() => setFilter(f.key)}
-                            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
-                                filter === f.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
-                </div>
+                </button>
+
+                {manualOpen && (
+                    <div className="border-t border-slate-100 p-5">
+                        <form onSubmit={handleManualSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
+                                    <input
+                                        type="date"
+                                        value={manualForm.work_date}
+                                        max={(() => {
+                                            const yesterday = new Date();
+                                            yesterday.setDate(yesterday.getDate() - 1);
+                                            return yesterday.toISOString().split('T')[0];
+                                        })()}
+                                        onChange={e => setManualForm({ ...manualForm, work_date: e.target.value })}
+                                        className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Baslangic Saati</label>
+                                    <input
+                                        type="time"
+                                        value={manualForm.start_time}
+                                        onChange={e => setManualForm({ ...manualForm, start_time: e.target.value })}
+                                        className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Bitis Saati</label>
+                                    <input
+                                        type="time"
+                                        value={manualForm.end_time}
+                                        onChange={e => setManualForm({ ...manualForm, end_time: e.target.value })}
+                                        className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block">
+                                    Sebep <span className="text-slate-400 font-normal">(zorunlu, maks 500 karakter)</span>
+                                </label>
+                                <textarea
+                                    rows="2"
+                                    value={manualForm.reason}
+                                    onChange={e => setManualForm({ ...manualForm, reason: e.target.value })}
+                                    maxLength={500}
+                                    className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                    placeholder="Ornegin: Acil proje teslimi nedeniyle fazla mesai yapildi..."
+                                    required
+                                />
+                                {manualForm.reason.length > 0 && (
+                                    <p className="text-[11px] text-slate-400 mt-1 text-right">{manualForm.reason.length}/500</p>
+                                )}
+                            </div>
+
+                            {manualError && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                                    <AlertCircle size={14} />
+                                    {manualError}
+                                </div>
+                            )}
+
+                            <div className="flex gap-2 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => { handleManualReset(); setManualOpen(false); }}
+                                    className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
+                                >
+                                    Iptal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={manualLoading}
+                                    className="px-6 py-2.5 bg-orange-600 text-white font-bold rounded-xl text-sm hover:bg-orange-700 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {manualLoading ? <Loader2 size={16} className="animate-spin" /> : <PenLine size={16} />}
+                                    Manuel Giris Gonder
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
 
-            {/* Empty State */}
-            {sorted.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-                        <CalendarCheck size={32} className="text-slate-300" />
+            {/* ==================== Section A: Planli Mesai (INTENDED) ==================== */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <button
+                    onClick={() => setIntendedOpen(!intendedOpen)}
+                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
+                            <CalendarCheck size={22} />
+                        </div>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg text-slate-800">Planli Mesai (Atanan)</h3>
+                                <SourceBadge type="INTENDED" />
+                                {claimableData.intended.length > 0 && (
+                                    <span className="px-2 py-0.5 bg-emerald-600 text-white text-[11px] font-bold rounded-full">
+                                        {claimableData.intended.length}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500">Yoneticiniz tarafindan atanmis ve talep edilebilir mesailer</p>
+                        </div>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-700">Atanan Mesai Bulunamadi</h3>
-                    <p className="text-sm text-slate-500 mt-1 max-w-sm">
-                        {filter === 'all'
-                            ? 'Henuz size atanmis bir fazla mesai bulunmamaktadir.'
-                            : filter === 'past'
-                            ? 'Gerceklesmis atanmis mesai bulunamadi.'
-                            : 'Gelecek tarihli atanmis mesai bulunamadi.'}
-                    </p>
-                </div>
-            )}
+                    <div className={`transition-transform duration-200 ${intendedOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown size={20} className="text-slate-400" />
+                    </div>
+                </button>
 
-            {/* Assignment Cards */}
-            <div className="space-y-3">
-                {sorted.map(assignment => {
-                    const statusCfg = getStatusConfig(assignment);
-                    const isClaiming = claimTarget?.id === assignment.id;
+                {intendedOpen && (
+                    <div className="border-t border-slate-100">
+                        {claimableData.intended.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-3 border border-emerald-100">
+                                    <CalendarCheck size={24} className="text-emerald-300" />
+                                </div>
+                                <p className="text-sm text-slate-500">Talep edilebilir planli mesai bulunamadi.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {claimableData.intended.map((item) => {
+                                    const isClaimingThis = intendedClaimTarget?.assignment_id === item.assignment_id;
 
-                    return (
-                        <div
-                            key={assignment.id}
-                            className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all overflow-hidden"
-                        >
-                            {/* Card Header */}
-                            <div className="p-5">
-                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                    {/* Left Side */}
-                                    <div className="flex items-start gap-4 flex-1">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 ${
-                                            statusCfg.canClaim ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' :
-                                            assignment.status === 'CLAIMED' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
-                                            assignment.status === 'EXPIRED' ? 'bg-gradient-to-br from-red-500 to-red-600' :
-                                            !isDatePast(assignment.date) ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
-                                            'bg-gradient-to-br from-slate-400 to-slate-500'
-                                        }`}>
-                                            <Calendar size={20} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                <h4 className="font-bold text-slate-800 text-base">
-                                                    {formatDateTurkish(assignment.date)}
-                                                </h4>
-                                                <span className="px-2.5 py-0.5 bg-violet-100 text-violet-700 text-[11px] font-bold rounded-full">
-                                                    {assignment.max_duration_hours} saat maks
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-slate-500">
-                                                Atayan: <span className="font-semibold text-slate-700">{assignment.assigned_by_name || '-'}</span>
-                                            </p>
-                                            {assignment.notes && (
-                                                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                                                    <Info size={12} />
-                                                    {assignment.notes}
-                                                </p>
-                                            )}
-                                            {/* Status Badge */}
-                                            <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${statusCfg.color}`}>
-                                                    {statusCfg.icon}
-                                                    {statusCfg.label}
-                                                </span>
-                                                {assignment.overtime_request && assignment.status === 'CLAIMED' && (
-                                                    <span className="text-[11px] text-slate-400 font-medium">
-                                                        Talep #{assignment.overtime_request}
+                                    return (
+                                        <div key={`intended-${item.assignment_id}`} className="p-5 hover:bg-slate-50/30 transition-all">
+                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                                <div className="flex items-start gap-4 flex-1">
+                                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                                        <Calendar size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <h4 className="font-bold text-slate-800 text-base">
+                                                                {formatDateTurkish(item.date)}
+                                                            </h4>
+                                                            {item.is_today && (
+                                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full">Bugun</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 mt-1">
+                                                            <span>Atayan: <span className="font-semibold text-slate-700">{item.manager_name || '-'}</span></span>
+                                                            <span>Maks: <span className="font-semibold text-violet-700">{item.max_duration_hours} saat</span></span>
+                                                            <span>Gerceklesen: <span className="font-semibold text-emerald-700">{item.actual_overtime_hours ?? '-'} saat</span></span>
+                                                        </div>
+                                                        {item.task_description && (
+                                                            <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
+                                                                <Info size={12} className="shrink-0" />
+                                                                {item.task_description}
+                                                            </p>
+                                                        )}
+                                                        <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
+                                                            {item.shift_end_time && <span>Vardiya bitis: {item.shift_end_time}</span>}
+                                                            {item.check_out_time && <span>Cikis: {item.check_out_time}</span>}
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <SourceBadge type="INTENDED" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Claim Button */}
+                                                {!item.already_claimed && !isClaimingThis && (
+                                                    <button
+                                                        onClick={() => handleOpenIntendedClaim(item)}
+                                                        className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                                                    >
+                                                        <Clock size={16} />
+                                                        Talep Et
+                                                    </button>
+                                                )}
+                                                {item.already_claimed && (
+                                                    <span className="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold flex items-center gap-1.5 shrink-0">
+                                                        <CheckCircle2 size={16} />
+                                                        Talep Edildi
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* Inline Claim Form for INTENDED */}
+                                            {isClaimingThis && (
+                                                <div className="mt-4 bg-emerald-50/50 border border-emerald-100 rounded-xl p-4">
+                                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                                        <Clock size={16} className="text-emerald-600" />
+                                                        Planli Mesai Talebi
+                                                    </h4>
+                                                    <div className="bg-white border border-emerald-100 rounded-lg p-3 mb-3">
+                                                        <p className="text-xs text-slate-500">
+                                                            Baslangic/bitis saati ve sure otomatik olarak devam kaydinden doldurulacaktir. Sadece gerekce girmeniz yeterlidir.
+                                                        </p>
+                                                        {item.claimable_hours != null && (
+                                                            <p className="text-xs text-emerald-700 font-semibold mt-1">
+                                                                Talep edilecek sure: {item.claimable_hours} saat
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce</label>
+                                                        <textarea
+                                                            rows="2"
+                                                            value={intendedReason}
+                                                            onChange={e => setIntendedReason(e.target.value)}
+                                                            className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none"
+                                                            placeholder="Mesai gerekce aciklamasi..."
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    {claimError && intendedClaimTarget?.assignment_id === item.assignment_id && (
+                                                        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 mt-3">
+                                                            <AlertCircle size={14} />
+                                                            {claimError}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Confirmation Modal */}
+                                                    {intendedConfirmOpen && (
+                                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
+                                                            <p className="text-xs font-bold text-amber-800 mb-2">
+                                                                Emin misiniz? Bu atama icin bir kez talep edilebilir.
+                                                            </p>
+                                                            <div className="flex gap-2 justify-end">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setIntendedConfirmOpen(false)}
+                                                                    disabled={claimLoading}
+                                                                    className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg text-xs transition-all"
+                                                                >
+                                                                    Vazgec
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleIntendedClaimSubmit}
+                                                                    disabled={claimLoading}
+                                                                    className="px-5 py-2 bg-emerald-600 text-white font-bold rounded-lg text-xs hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                                                >
+                                                                    {claimLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                                                    Onayla
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {!intendedConfirmOpen && (
+                                                        <div className="flex gap-2 justify-end mt-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleCloseIntendedClaim}
+                                                                className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
+                                                            >
+                                                                Iptal
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (!intendedReason.trim()) {
+                                                                        setClaimError('Gerekce giriniz.');
+                                                                        return;
+                                                                    }
+                                                                    setClaimError('');
+                                                                    setIntendedConfirmOpen(true);
+                                                                }}
+                                                                className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
+                                                            >
+                                                                <CheckCircle2 size={16} />
+                                                                Talep Et
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* ==================== Section B: Algilanan Mesai (POTENTIAL) ==================== */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <button
+                    onClick={() => setPotentialOpen(!potentialOpen)}
+                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
+                            <Zap size={22} />
+                        </div>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg text-slate-800">Fazla Mesai (Algilanan)</h3>
+                                <SourceBadge type="POTENTIAL" />
+                                {claimableData.potential.length > 0 && (
+                                    <span className="px-2 py-0.5 bg-amber-600 text-white text-[11px] font-bold rounded-full">
+                                        {claimableData.potential.length}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500">Kart okuyucu verisinden algilanan, atama olmadan yapilan fazla mesailer</p>
+                        </div>
+                    </div>
+                    <div className={`transition-transform duration-200 ${potentialOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown size={20} className="text-slate-400" />
+                    </div>
+                </button>
+
+                {potentialOpen && (
+                    <div className="border-t border-slate-100">
+                        {claimableData.potential.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-3 border border-amber-100">
+                                    <Zap size={24} className="text-amber-300" />
+                                </div>
+                                <p className="text-sm text-slate-500">Talep edilebilir algilanan mesai bulunamadi.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {claimableData.potential.map((item) => {
+                                    const isClaimingThis = potentialClaimTarget?.attendance_id === item.attendance_id;
+
+                                    return (
+                                        <div key={`potential-${item.attendance_id}`} className="p-5 hover:bg-slate-50/30 transition-all">
+                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                                <div className="flex items-start gap-4 flex-1">
+                                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                                        <Zap size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <h4 className="font-bold text-slate-800 text-base">
+                                                                {formatDateTurkish(item.date)}
+                                                            </h4>
+                                                            {item.is_today && (
+                                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full">Bugun</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 mt-1">
+                                                            <span>Fazla mesai: <span className="font-semibold text-amber-700">{item.actual_overtime_hours} saat</span></span>
+                                                            <span>Vardiya bitis: <span className="font-semibold text-slate-700">{item.shift_end_time || '-'}</span></span>
+                                                            <span>Cikis: <span className="font-semibold text-slate-700">{item.check_out_time || '-'}</span></span>
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <SourceBadge type="POTENTIAL" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Claim Button */}
+                                                {!item.already_claimed && !isClaimingThis && (
+                                                    <button
+                                                        onClick={() => handleOpenPotentialClaim(item)}
+                                                        className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold text-sm hover:bg-amber-700 shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                                                    >
+                                                        <Clock size={16} />
+                                                        Talep Et
+                                                    </button>
+                                                )}
+                                                {item.already_claimed && (
+                                                    <span className="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold flex items-center gap-1.5 shrink-0">
+                                                        <CheckCircle2 size={16} />
+                                                        Talep Edildi
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Inline Claim Form for POTENTIAL */}
+                                            {isClaimingThis && (
+                                                <div className="mt-4 bg-amber-50/50 border border-amber-100 rounded-xl p-4">
+                                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                                        <Clock size={16} className="text-amber-600" />
+                                                        Algilanan Mesai Talebi
+                                                    </h4>
+                                                    <div className="bg-white border border-amber-100 rounded-lg p-3 mb-3">
+                                                        <p className="text-xs text-slate-500">
+                                                            Bu gun icin mesai atamaniz bulunmuyor. Kart okuyucu verilerinize gore <span className="font-semibold text-amber-700">{item.actual_overtime_hours} saat</span> fazla mesai algilanmistir.
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce</label>
+                                                        <textarea
+                                                            rows="2"
+                                                            value={potentialReason}
+                                                            onChange={e => setPotentialReason(e.target.value)}
+                                                            className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none"
+                                                            placeholder="Mesai gerekce aciklamasi..."
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    {claimError && potentialClaimTarget?.attendance_id === item.attendance_id && (
+                                                        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 mt-3">
+                                                            <AlertCircle size={14} />
+                                                            {claimError}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Confirmation Modal */}
+                                                    {potentialConfirmOpen && (
+                                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
+                                                            <p className="text-xs font-bold text-amber-800 mb-2">
+                                                                Emin misiniz? Bu atama icin bir kez talep edilebilir.
+                                                            </p>
+                                                            <div className="flex gap-2 justify-end">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setPotentialConfirmOpen(false)}
+                                                                    disabled={claimLoading}
+                                                                    className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg text-xs transition-all"
+                                                                >
+                                                                    Vazgec
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handlePotentialClaimSubmit}
+                                                                    disabled={claimLoading}
+                                                                    className="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg text-xs hover:bg-amber-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                                                >
+                                                                    {claimLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                                                    Onayla
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {!potentialConfirmOpen && (
+                                                        <div className="flex gap-2 justify-end mt-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleClosePotentialClaim}
+                                                                className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
+                                                            >
+                                                                Iptal
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (!potentialReason.trim()) {
+                                                                        setClaimError('Gerekce giriniz.');
+                                                                        return;
+                                                                    }
+                                                                    setClaimError('');
+                                                                    setPotentialConfirmOpen(true);
+                                                                }}
+                                                                className="px-6 py-2.5 bg-amber-600 text-white font-bold rounded-xl text-sm hover:bg-amber-700 shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-2"
+                                                            >
+                                                                <CheckCircle2 size={16} />
+                                                                Talep Et
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* ==================== Tum Atamalar (Full List) ==================== */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <button
+                    onClick={() => setAllAssignmentsOpen(!allAssignmentsOpen)}
+                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white">
+                            <Eye size={22} />
+                        </div>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg text-slate-800">Tum Atamalar</h3>
+                                {assignments.length > 0 && (
+                                    <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[11px] font-bold rounded-full">
+                                        {assignments.length}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500">Tum mesai atamalari ve durumlarini goruntuleyip takip edin</p>
+                        </div>
+                    </div>
+                    <div className={`transition-transform duration-200 ${allAssignmentsOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown size={20} className="text-slate-400" />
+                    </div>
+                </button>
+
+                {allAssignmentsOpen && (
+                    <div className="border-t border-slate-100">
+                        {/* Filters */}
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
+                            <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
+                                {[
+                                    { key: 'all', label: 'Tumu' },
+                                    { key: 'past', label: 'Gerceklesmis' },
+                                    { key: 'future', label: 'Gelecek' },
+                                ].map(f => (
+                                    <button
+                                        key={f.key}
+                                        onClick={() => setFilter(f.key)}
+                                        className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
+                                            filter === f.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                        }`}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Empty State */}
+                        {sorted.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3 border border-slate-100">
+                                    <CalendarCheck size={24} className="text-slate-300" />
+                                </div>
+                                <p className="text-sm text-slate-500">
+                                    {filter === 'all'
+                                        ? 'Henuz size atanmis bir fazla mesai bulunmamaktadir.'
+                                        : filter === 'past'
+                                        ? 'Gerceklesmis atanmis mesai bulunamadi.'
+                                        : 'Gelecek tarihli atanmis mesai bulunamadi.'}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Assignment Cards */}
+                        <div className="divide-y divide-slate-100">
+                            {sorted.map(assignment => {
+                                const statusCfg = getStatusConfig(assignment);
+
+                                return (
+                                    <div key={`all-${assignment.id}`} className="p-5 hover:bg-slate-50/30 transition-all">
+                                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                            <div className="flex items-start gap-4 flex-1">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                                                    statusCfg.canClaim ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' :
+                                                    assignment.status === 'CLAIMED' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                                                    assignment.status === 'EXPIRED' ? 'bg-gradient-to-br from-red-500 to-red-600' :
+                                                    !isDatePast(assignment.date) ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
+                                                    'bg-gradient-to-br from-slate-400 to-slate-500'
+                                                }`}>
+                                                    <Calendar size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                        <h4 className="font-bold text-slate-800 text-sm">
+                                                            {formatDateTurkish(assignment.date)}
+                                                        </h4>
+                                                        <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-full">
+                                                            {assignment.max_duration_hours} saat maks
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500">
+                                                        Atayan: <span className="font-semibold text-slate-700">{assignment.assigned_by_name || '-'}</span>
+                                                    </p>
+                                                    {assignment.notes && (
+                                                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                                            <Info size={11} />
+                                                            {assignment.notes}
+                                                        </p>
+                                                    )}
+                                                    {/* Status Badge */}
+                                                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${statusCfg.color}`}>
+                                                            {statusCfg.icon}
+                                                            {statusCfg.label}
+                                                        </span>
+                                                        {assignment.source_type && (
+                                                            <SourceBadge type={assignment.source_type} />
+                                                        )}
+                                                        {assignment.overtime_request && assignment.status === 'CLAIMED' && (
+                                                            <span className="text-[10px] text-slate-400 font-medium">
+                                                                Talep #{assignment.overtime_request}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    {/* Right: Claim Button */}
-                                    {statusCfg.canClaim && !isClaiming && (
-                                        <button
-                                            onClick={() => handleOpenClaim(assignment)}
-                                            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
-                                        >
-                                            <Clock size={16} />
-                                            Talep Et
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Claim Form (inline) */}
-                            {isClaiming && (
-                                <div className="border-t border-slate-100 bg-slate-50/50 p-5">
-                                    <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                        <Clock size={16} className="text-violet-600" />
-                                        Mesai Talebi
-                                    </h4>
-                                    <form onSubmit={handleClaimSubmit} className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-500 mb-1 block">
-                                                    Gercek Sure (saat) <span className="text-slate-400">(maks: {claimTarget.max_duration_hours})</span>
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.5"
-                                                    min="0.5"
-                                                    max={claimTarget.max_duration_hours}
-                                                    value={claimForm.actual_duration_hours}
-                                                    onChange={e => setClaimForm({ ...claimForm, actual_duration_hours: e.target.value })}
-                                                    className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 outline-none"
-                                                    placeholder="3.5"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-500 mb-1 block">Baslangic</label>
-                                                <input
-                                                    type="time"
-                                                    value={claimForm.start_time}
-                                                    onChange={e => setClaimForm({ ...claimForm, start_time: e.target.value })}
-                                                    className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 outline-none"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-500 mb-1 block">Bitis</label>
-                                                <input
-                                                    type="time"
-                                                    value={claimForm.end_time}
-                                                    onChange={e => setClaimForm({ ...claimForm, end_time: e.target.value })}
-                                                    className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 outline-none"
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce</label>
-                                            <textarea
-                                                rows="2"
-                                                value={claimForm.reason}
-                                                onChange={e => setClaimForm({ ...claimForm, reason: e.target.value })}
-                                                className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 outline-none"
-                                                placeholder="Mesai gerekce aciklamasi..."
-                                                required
-                                            />
-                                        </div>
-
-                                        {claimError && (
-                                            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
-                                                <AlertCircle size={14} />
-                                                {claimError}
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-2 justify-end">
-                                            <button
-                                                type="button"
-                                                onClick={handleCloseClaim}
-                                                className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
-                                            >
-                                                Iptal
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                disabled={claimLoading}
-                                                className="px-6 py-2.5 bg-violet-600 text-white font-bold rounded-xl text-sm hover:bg-violet-700 shadow-lg shadow-violet-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
-                                            >
-                                                {claimLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                                                Talep Et
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            )}
+                                );
+                            })}
                         </div>
-                    );
-                })}
+                    </div>
+                )}
             </div>
         </div>
     );
