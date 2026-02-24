@@ -13,9 +13,9 @@ import {
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
-    { id: 1, name: 'RBAC & Yetkiler', icon: ShieldCheckIcon, color: 'indigo', description: '46 test — Yetki kalıtımı, yönetici hiyerarşisi, IsSystemAdmin, ViewSet koruması' },
-    { id: 2, name: 'Talepler Sistemi', icon: ClipboardDocumentCheckIcon, color: 'emerald', description: '36 test — İzin/mesai/kartsız/yemek talepleri, DOCX export, AUTO_APPROVE' },
-    { id: 3, name: 'Mesai Sistemi', icon: ClockIcon, color: 'amber', description: '63 test — Hesaplama motoru, öğle/mola, tolerans, takvim, Celery görevleri' },
+    { id: 1, name: 'RBAC & Yetkiler', icon: ShieldCheckIcon, color: 'indigo', description: '72 test — Yetki kalıtımı, yönetici hiyerarşisi, IsSystemAdmin, ViewSet koruması, audit fix doğrulamaları' },
+    { id: 2, name: 'Talepler Sistemi', icon: ClipboardDocumentCheckIcon, color: 'emerald', description: '68 test — İzin/mesai/kartsız/yemek talepleri, DOCX export, AUTO_APPROVE, mali kilit, MealRequest statüleri' },
+    { id: 3, name: 'Mesai Sistemi', icon: ClockIcon, color: 'amber', description: '95 test — Hesaplama motoru, öğle/mola, tolerans, takvim, Celery görevleri, race condition, dead zone' },
 ];
 
 export default function SpecTestsTab() {
@@ -98,7 +98,7 @@ export default function SpecTestsTab() {
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        3 aşamalı 145 otomatik test — target_spec.md gereksinimlerini doğrular
+                        3 aşamalı 235 otomatik test — target_spec.md gereksinimlerini doğrular
                     </p>
                 </div>
                 <button
