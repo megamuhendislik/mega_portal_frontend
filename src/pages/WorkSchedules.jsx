@@ -279,19 +279,60 @@ const WorkSchedules = () => {
         }
     };
 
+    // --- Async Recalculation State ---
+    const [recalcProgress, setRecalcProgress] = useState(null); // { progress_id, status, progress_percent, ... }
+    const pollingRef = useRef(null);
+
+    // Cleanup polling on unmount
+    useEffect(() => {
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+        };
+    }, []);
+
+    const startPolling = (calendarId, progressId) => {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+
+        pollingRef.current = setInterval(async () => {
+            try {
+                const res = await api.get(`/attendance/fiscal-calendars/${calendarId}/recalculate_status/?progress_id=${progressId}`);
+                const data = res.data;
+                setRecalcProgress(data);
+
+                if (data.logs && data.logs.length > 0) {
+                    setExecutionLogs(data.logs);
+                }
+
+                if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+                    clearInterval(pollingRef.current);
+                    pollingRef.current = null;
+                    setSaving(false);
+                    fetchCalendarDetails(calendarId);
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+            }
+        }, 2000); // Poll every 2 seconds
+    };
+
     // --- Global Save ---
 
     const handleGlobalSave = async () => {
         if (!draftData) return;
         setSaving(true);
         setExecutionLogs([]);
+        setRecalcProgress(null);
 
         try {
+            // Step 1: Save calendar settings
             await api.patch(`/attendance/fiscal-calendars/${draftData.id}/`, draftData);
+
+            // Step 2: Assign employees
             await api.post(`/attendance/fiscal-calendars/${draftData.id}/assign_employees/`, {
                 employee_ids: assignments
             });
 
+            // Step 3: Queue async recalculation
             const now = new Date();
             const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
             const endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
@@ -301,17 +342,29 @@ const WorkSchedules = () => {
                 end_date: endOfYear
             });
 
-            if (res.data.logs) {
-                setExecutionLogs(res.data.logs);
+            if (res.data.status === 'QUEUED' && res.data.progress_id) {
+                // Start polling for progress
+                setRecalcProgress({
+                    progress_id: res.data.progress_id,
+                    status: 'PENDING',
+                    progress_percent: 0,
+                    total_employees: res.data.employee_count || 0,
+                    processed_employees: 0,
+                });
+                setExecutionLogs([`Hesaplama kuyruğa alındı. ${res.data.employee_count} personel işlenecek...`]);
+                startPolling(draftData.id, res.data.progress_id);
+            } else if (res.data.status === 'NO_EMPLOYEES') {
+                setExecutionLogs(["Bu takvime bağlı aktif personel bulunamadı."]);
+                setSaving(false);
             } else {
-                setExecutionLogs(["Log bilgisi alınamadı."]);
+                // Fallback for unexpected response
+                setExecutionLogs(res.data.logs || ["İşlem tamamlandı."]);
+                setSaving(false);
+                fetchCalendarDetails(draftData.id);
             }
-
-            fetchCalendarDetails(draftData.id);
         } catch (error) {
-            alert("Hata: " + error.message);
-        } finally {
             setSaving(false);
+            alert("Hata: " + error.message);
         }
     };
 
@@ -582,27 +635,73 @@ const WorkSchedules = () => {
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
                         {saving ? (
-                            <div className="p-8 text-center">
-                                <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
-                                <h3 className="text-xl font-bold text-slate-800 mb-2">Ayarlar Kaydediliyor...</h3>
-                                <p className="text-slate-500 text-sm mb-6">
-                                    Personel hedefleri ve devamlılık kayıtları güncelleniyor.
-                                </p>
-                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
-                                    <div className="h-full bg-indigo-500 animate-pulse rounded-full w-2/3"></div>
+                            <div className="p-8">
+                                <div className="text-center mb-6">
+                                    <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
+                                    <h3 className="text-xl font-bold text-slate-800 mb-1">
+                                        {recalcProgress?.status === 'RUNNING' ? 'Hesaplama Devam Ediyor...' : 'Ayarlar Kaydediliyor...'}
+                                    </h3>
+                                    <p className="text-slate-500 text-sm">
+                                        {recalcProgress?.status === 'RUNNING'
+                                            ? `${recalcProgress.processed_employees || 0} / ${recalcProgress.total_employees || '?'} personel`
+                                            : 'Hesaplama kuyruğa alınıyor...'}
+                                    </p>
                                 </div>
+
+                                {/* Progress Bar */}
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                        <span>İlerleme</span>
+                                        <span className="font-mono font-bold text-indigo-600">
+                                            %{recalcProgress?.progress_percent || 0}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.max(recalcProgress?.progress_percent || 0, 2)}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Live Logs */}
+                                {executionLogs.length > 0 && (
+                                    <div className="bg-slate-900 rounded-lg p-3 max-h-48 overflow-y-auto">
+                                        <div className="font-mono text-xs text-slate-400 space-y-0.5">
+                                            {executionLogs.slice(-15).map((log, i) => (
+                                                <div key={i} className={log.includes('HATA') ? 'text-red-400' : ''}>
+                                                    {log}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <p className="text-xs text-slate-400 text-center mt-4">
+                                    Bu pencereyi kapatabilirsiniz. Hesaplama arka planda devam eder.
+                                </p>
                             </div>
                         ) : (
                             <>
                                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
                                     <div className="flex items-center gap-2">
-                                        <CheckCircle className="text-emerald-500" size={24} />
+                                        {recalcProgress?.status === 'FAILED' ? (
+                                            <AlertTriangle className="text-red-500" size={24} />
+                                        ) : (
+                                            <CheckCircle className="text-emerald-500" size={24} />
+                                        )}
                                         <div>
-                                            <h3 className="text-lg font-bold text-slate-800">İşlem Tamamlandı</h3>
-                                            <p className="text-xs text-slate-500">Hesaplama detayları aşağıdadır.</p>
+                                            <h3 className="text-lg font-bold text-slate-800">
+                                                {recalcProgress?.status === 'FAILED' ? 'Hesaplama Başarısız' : 'İşlem Tamamlandı'}
+                                            </h3>
+                                            <p className="text-xs text-slate-500">
+                                                {recalcProgress?.status === 'FAILED'
+                                                    ? 'Hata detayları aşağıdadır.'
+                                                    : `${recalcProgress?.processed_employees || '?'} personel, ${recalcProgress?.processed_days || '?'} gün güncellendi.`}
+                                            </p>
                                         </div>
                                     </div>
-                                    <button onClick={() => setExecutionLogs([])} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                                    <button onClick={() => { setExecutionLogs([]); setRecalcProgress(null); }} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
                                         <X size={20} className="text-slate-500" />
                                     </button>
                                 </div>
@@ -614,7 +713,7 @@ const WorkSchedules = () => {
                                     ))}
                                 </div>
                                 <div className="p-4 border-t border-slate-100 bg-white rounded-b-xl flex justify-end">
-                                    <button onClick={() => setExecutionLogs([])}
+                                    <button onClick={() => { setExecutionLogs([]); setRecalcProgress(null); }}
                                         className="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors">
                                         Kapat
                                     </button>
