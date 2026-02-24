@@ -77,7 +77,14 @@ const AttendanceLogTable = ({ logs }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50/50">
-                        {logs.map((log) => (
+                        {[...logs].sort((a, b) => {
+                            const dateA = a.work_date || '';
+                            const dateB = b.work_date || '';
+                            if (dateA !== dateB) return dateA.localeCompare(dateB);
+                            const timeA = a.check_in || '';
+                            const timeB = b.check_in || '';
+                            return timeA.localeCompare(timeB);
+                        }).map((log) => (
                             <tr key={log.id} className="group hover:bg-slate-50/80 transition-colors duration-200 cursor-default">
                                 <td className="p-2 pl-3 md:p-3 md:pl-5 lg:p-5 lg:pl-8">
                                     <div className="flex items-center gap-3">

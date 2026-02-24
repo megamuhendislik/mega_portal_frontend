@@ -443,7 +443,7 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-slate-800 leading-tight">
-                            Performans Grafiği
+                            Puantaj Tablosu
                         </h3>
                         <p className="text-xs text-slate-400 font-medium">
                             {scope === 'WEEKLY' ? 'Günlük çalışma süreleri' : (scope === 'MONTHLY' ? 'Haftalık ortalama çalışma' : 'Aylık Toplam & Kümülatif')}
