@@ -30,16 +30,20 @@ export const EmployeeAttendanceRow = ({
 }) => {
     const [showOtForm, setShowOtForm] = useState(false);
     const [otDate, setOtDate] = useState(moment().format('YYYY-MM-DD'));
-    const [otStart, setOtStart] = useState('18:00');
-    const [otEnd, setOtEnd] = useState('20:00');
+    const [otMaxHours, setOtMaxHours] = useState('4.5');
     const [otReason, setOtReason] = useState('');
     const [otLoading, setOtLoading] = useState(false);
     const [otSuccess, setOtSuccess] = useState(false);
     const [otError, setOtError] = useState('');
 
     const handleCreateOvertime = async () => {
-        if (!otDate || !otStart || !otEnd) {
-            setOtError('Tarih ve saat alanları zorunludur.');
+        if (!otDate) {
+            setOtError('Tarih seçilmelidir.');
+            return;
+        }
+        const hours = parseFloat(otMaxHours);
+        if (isNaN(hours) || hours <= 0) {
+            setOtError('Geçerli bir maksimum süre giriniz.');
             return;
         }
         setOtLoading(true);
@@ -48,8 +52,7 @@ export const EmployeeAttendanceRow = ({
             await api.post('/overtime-requests/create-for-employee/', {
                 employee_id: s.employee_id,
                 date: otDate,
-                start_time: otStart,
-                end_time: otEnd,
+                max_hours: hours,
                 reason: otReason || 'Yönetici tarafından oluşturuldu'
             });
             setOtSuccess(true);
@@ -57,8 +60,7 @@ export const EmployeeAttendanceRow = ({
                 setShowOtForm(false);
                 setOtSuccess(false);
                 setOtDate(moment().format('YYYY-MM-DD'));
-                setOtStart('18:00');
-                setOtEnd('20:00');
+                setOtMaxHours('4.5');
                 setOtReason('');
             }, 1500);
         } catch (err) {
@@ -236,7 +238,7 @@ export const EmployeeAttendanceRow = ({
                                 </div>
 
                                 {/* Form Grid */}
-                                <div className="grid grid-cols-[1fr_auto_auto_2fr_auto] gap-3 items-end">
+                                <div className="grid grid-cols-[1fr_auto_2fr_auto] gap-3 items-end">
                                     <div>
                                         <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tarih</label>
                                         <input
@@ -248,21 +250,14 @@ export const EmployeeAttendanceRow = ({
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Başlangıç</label>
+                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Maks. Süre <span className="normal-case text-slate-400">(saat)</span></label>
                                         <input
-                                            type="time"
-                                            value={otStart}
-                                            onChange={e => setOtStart(e.target.value)}
-                                            className="w-[7rem] h-9 px-3 rounded-lg border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none bg-slate-50/50 tabular-nums"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Bitiş</label>
-                                        <input
-                                            type="time"
-                                            value={otEnd}
-                                            onChange={e => setOtEnd(e.target.value)}
-                                            className="w-[7rem] h-9 px-3 rounded-lg border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none bg-slate-50/50 tabular-nums"
+                                            type="number"
+                                            value={otMaxHours}
+                                            onChange={e => setOtMaxHours(e.target.value)}
+                                            min="0.5"
+                                            step="0.5"
+                                            className="w-[6rem] h-9 px-3 rounded-lg border border-slate-200 text-sm font-semibold focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none bg-slate-50/50 tabular-nums text-center"
                                         />
                                     </div>
                                     <div>
