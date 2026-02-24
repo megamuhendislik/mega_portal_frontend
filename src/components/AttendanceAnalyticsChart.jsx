@@ -160,7 +160,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 overtime: parseFloat((totalOvertime / 3600).toFixed(1)),
                 missing: parseFloat((calculatedMissing / 3600).toFixed(1)),
                 break: parseFloat((totalBreak / 3600).toFixed(2)),
-                target: parseFloat((dayTarget / 3600).toFixed(1)),
+                target: dayTarget > 0 ? parseFloat((dayTarget / 3600).toFixed(1)) : null,
                 isFuture: isFuture
             });
         }
