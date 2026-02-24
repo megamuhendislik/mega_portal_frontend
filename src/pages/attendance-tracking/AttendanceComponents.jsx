@@ -51,7 +51,48 @@ export const EmployeeAttendanceRow = ({
     onEmployeeClick,
     onDetailClick,
 }) => {
+    const [showOtForm, setShowOtForm] = useState(false);
+    const [otDate, setOtDate] = useState(moment().format('YYYY-MM-DD'));
+    const [otStart, setOtStart] = useState('18:00');
+    const [otEnd, setOtEnd] = useState('20:00');
+    const [otReason, setOtReason] = useState('');
+    const [otLoading, setOtLoading] = useState(false);
+    const [otSuccess, setOtSuccess] = useState(false);
+    const [otError, setOtError] = useState('');
+
+    const handleCreateOvertime = async () => {
+        if (!otDate || !otStart || !otEnd) {
+            setOtError('Tarih ve saat alanları zorunludur.');
+            return;
+        }
+        setOtLoading(true);
+        setOtError('');
+        try {
+            await api.post('/overtime-requests/create-for-employee/', {
+                employee_id: s.employee_id,
+                date: otDate,
+                start_time: otStart,
+                end_time: otEnd,
+                reason: otReason || 'Yönetici tarafından oluşturuldu'
+            });
+            setOtSuccess(true);
+            setTimeout(() => {
+                setShowOtForm(false);
+                setOtSuccess(false);
+                setOtDate(moment().format('YYYY-MM-DD'));
+                setOtStart('18:00');
+                setOtEnd('20:00');
+                setOtReason('');
+            }, 1500);
+        } catch (err) {
+            setOtError(err.response?.data?.error || 'Talep oluşturulamadı.');
+        } finally {
+            setOtLoading(false);
+        }
+    };
+
     return (
+        <>
         <tr className={`hover:bg-slate-50/80 transition-all group border-b border-slate-50 ${isManager ? 'bg-slate-50/50' : ''}`}>
             {/* Personel */}
             <td className="py-3 pl-6 pr-3">
@@ -138,11 +179,87 @@ export const EmployeeAttendanceRow = ({
             </td>
             {/* Actions */}
             <td className="py-3 px-3 text-center">
-                <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => onDetailClick(s)}>
-                    <Activity size={14} />
-                </button>
+                <div className="flex items-center justify-center gap-1">
+                    <button
+                        className={`p-1.5 rounded-md transition-colors ${showOtForm ? 'bg-amber-100 text-amber-600' : 'text-slate-300 hover:text-amber-600 hover:bg-amber-50'}`}
+                        onClick={() => setShowOtForm(!showOtForm)}
+                        title="Fazla Mesai Talebi Oluştur"
+                    >
+                        <Plus size={14} />
+                    </button>
+                    <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => onDetailClick(s)}>
+                        <Activity size={14} />
+                    </button>
+                </div>
             </td>
         </tr>
+        {/* Inline Overtime Request Form */}
+        {showOtForm && (
+            <tr className="border-b border-amber-100 bg-amber-50/30">
+                <td colSpan={9} className="px-6 py-3">
+                    {otSuccess ? (
+                        <div className="flex items-center gap-2 text-emerald-600 font-semibold py-2 justify-center">
+                            <CheckCircle size={18} />
+                            Talep başarıyla oluşturuldu!
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-xs font-bold text-amber-700 flex items-center gap-1.5 shrink-0">
+                                <Clock size={14} />
+                                Fazla Mesai — {name}
+                            </span>
+                            <input
+                                type="date"
+                                value={otDate}
+                                min={moment().format('YYYY-MM-DD')}
+                                onChange={e => setOtDate(e.target.value)}
+                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white"
+                            />
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="time"
+                                    value={otStart}
+                                    onChange={e => setOtStart(e.target.value)}
+                                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white w-24"
+                                />
+                                <span className="text-slate-400 text-xs">-</span>
+                                <input
+                                    type="time"
+                                    value={otEnd}
+                                    onChange={e => setOtEnd(e.target.value)}
+                                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white w-24"
+                                />
+                            </div>
+                            <input
+                                type="text"
+                                value={otReason}
+                                onChange={e => setOtReason(e.target.value)}
+                                placeholder="Gerekçe (opsiyonel)"
+                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white flex-1 min-w-[140px]"
+                            />
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={handleCreateOvertime}
+                                    disabled={otLoading}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-xs font-bold rounded-lg transition-colors"
+                                >
+                                    {otLoading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                                    {otLoading ? 'Gönderiliyor...' : 'Oluştur'}
+                                </button>
+                                <button
+                                    onClick={() => { setShowOtForm(false); setOtError(''); }}
+                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-medium rounded-lg transition-colors"
+                                >
+                                    Vazgeç
+                                </button>
+                            </div>
+                            {otError && <span className="text-xs text-red-600 font-medium w-full">{otError}</span>}
+                        </div>
+                    )}
+                </td>
+            </tr>
+        )}
+        </>
     );
 };
 
@@ -221,47 +338,7 @@ export const HierarchyGroupRow = ({
  *   onClose  - Callback to dismiss the modal
  */
 export const EmployeeDetailModal = ({ employee, onClose }) => {
-    const [showOtForm, setShowOtForm] = useState(false);
-    const [otDate, setOtDate] = useState(moment().format('YYYY-MM-DD'));
-    const [otStart, setOtStart] = useState('18:00');
-    const [otEnd, setOtEnd] = useState('20:00');
-    const [otReason, setOtReason] = useState('');
-    const [otLoading, setOtLoading] = useState(false);
-    const [otSuccess, setOtSuccess] = useState(false);
-    const [otError, setOtError] = useState('');
-
     if (!employee) return null;
-
-    const handleCreateOvertime = async () => {
-        if (!otDate || !otStart || !otEnd) {
-            setOtError('Tarih ve saat alanları zorunludur.');
-            return;
-        }
-        setOtLoading(true);
-        setOtError('');
-        try {
-            await api.post('/overtime-requests/create-for-employee/', {
-                employee_id: employee.employee_id,
-                date: otDate,
-                start_time: otStart,
-                end_time: otEnd,
-                reason: otReason || 'Yönetici tarafından oluşturuldu'
-            });
-            setOtSuccess(true);
-            setTimeout(() => {
-                setShowOtForm(false);
-                setOtSuccess(false);
-                setOtDate(moment().format('YYYY-MM-DD'));
-                setOtStart('18:00');
-                setOtEnd('20:00');
-                setOtReason('');
-            }, 1500);
-        } catch (err) {
-            setOtError(err.response?.data?.error || 'Talep oluşturulamadı.');
-        } finally {
-            setOtLoading(false);
-        }
-    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -372,92 +449,6 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><LogOut size={16} /></div>
                         </div>
                     </div>
-
-                    {/* Fazla Mesai Oluştur */}
-                    {!showOtForm ? (
-                        <button
-                            onClick={() => setShowOtForm(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold rounded-xl border border-amber-200 transition-colors"
-                        >
-                            <Plus size={18} />
-                            Fazla Mesai Talebi Oluştur
-                        </button>
-                    ) : (
-                        <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200 space-y-4">
-                            <h4 className="text-sm font-bold text-amber-800 flex items-center gap-2">
-                                <Clock size={16} />
-                                Fazla Mesai Talebi — {employee.employee_name}
-                            </h4>
-
-                            {otSuccess ? (
-                                <div className="flex items-center gap-2 text-emerald-600 font-semibold py-4 justify-center">
-                                    <CheckCircle size={20} />
-                                    Talep başarıyla oluşturuldu!
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Tarih</label>
-                                            <input
-                                                type="date"
-                                                value={otDate}
-                                                onChange={e => setOtDate(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Başlangıç</label>
-                                            <input
-                                                type="time"
-                                                value={otStart}
-                                                onChange={e => setOtStart(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Bitiş</label>
-                                            <input
-                                                type="time"
-                                                value={otEnd}
-                                                onChange={e => setOtEnd(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1">Gerekçe (opsiyonel)</label>
-                                        <input
-                                            type="text"
-                                            value={otReason}
-                                            onChange={e => setOtReason(e.target.value)}
-                                            placeholder="Fazla mesai gerekçesi..."
-                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none"
-                                        />
-                                    </div>
-                                    {otError && (
-                                        <p className="text-xs text-red-600 font-medium">{otError}</p>
-                                    )}
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleCreateOvertime}
-                                            disabled={otLoading}
-                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-semibold rounded-lg transition-colors text-sm"
-                                        >
-                                            {otLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                                            {otLoading ? 'Oluşturuluyor...' : 'Talebi Oluştur'}
-                                        </button>
-                                        <button
-                                            onClick={() => { setShowOtForm(false); setOtError(''); }}
-                                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-lg transition-colors text-sm"
-                                        >
-                                            Vazgeç
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
 
                 </div>
             </div>
