@@ -30,7 +30,7 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 {/* Header */}
                 <div className="bg-blue-600 p-6 text-white flex justify-between items-start">

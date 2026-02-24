@@ -191,7 +191,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in zoom-in duration-200">
             <div className="bg-white w-full max-w-[calc(100vw-2rem)] md:max-w-5xl h-[70vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white z-10 shrink-0">
