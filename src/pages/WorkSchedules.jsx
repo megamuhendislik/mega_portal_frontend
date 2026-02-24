@@ -210,11 +210,14 @@ const WorkSchedules = () => {
             if (existing?.id) {
                 try {
                     await api.delete(`/attendance/day-assignments/${existing.id}/`);
-                    const updated = { ...dayAssignments };
-                    delete updated[dateStr];
-                    setDayAssignments(updated);
+                    setDayAssignments(prev => {
+                        const updated = { ...prev };
+                        delete updated[dateStr];
+                        return updated;
+                    });
                 } catch (error) {
                     console.error("Delete assignment error:", error);
+                    alert('Silme hatası: ' + (error.response?.data?.detail || error.message));
                 }
             }
         } else {
@@ -234,17 +237,18 @@ const WorkSchedules = () => {
                     });
                 }
                 const tmpl = templates.find(t => t.id === templateId);
-                setDayAssignments({
-                    ...dayAssignments,
+                setDayAssignments(prev => ({
+                    ...prev,
                     [dateStr]: {
                         id: res.data.id,
                         template_id: templateId,
                         template_name: tmpl?.name || '',
                         template_color: tmpl?.color || '#3b82f6',
                     }
-                });
+                }));
             } catch (error) {
                 console.error("Assign error:", error);
+                alert('Atama hatası: ' + (error.response?.data?.detail || error.message));
             }
         }
     };
@@ -269,7 +273,7 @@ const WorkSchedules = () => {
                 });
             }
             // Refresh assignments
-            fetchDayAssignments(selectedCalendarId, calendarYear);
+            await fetchDayAssignments(selectedCalendarId, calendarYear);
         } catch (error) {
             alert('Toplu atama hatası: ' + (error.response?.data?.detail || error.message));
         }

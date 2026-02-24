@@ -91,8 +91,21 @@ const FiscalCalendarView = ({
                 setDragMonthHighlight(new Set());
             }
         };
+        const handleBlur = () => {
+            isDraggingRef.current = false;
+            dragStartDayRef.current = null;
+            dragDaysRef.current = new Set();
+            setDragHighlight(new Set());
+            isDraggingMonthRef.current = false;
+            dragMonthsRef.current = new Set();
+            setDragMonthHighlight(new Set());
+        };
         window.addEventListener('mouseup', handleMouseUp);
-        return () => window.removeEventListener('mouseup', handleMouseUp);
+        window.addEventListener('blur', handleBlur);
+        return () => {
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('blur', handleBlur);
+        };
     }, [paintMode, year]);
 
     // Day drag handlers — fill contiguous range between start day and current day
@@ -243,6 +256,10 @@ const FiscalCalendarView = ({
 
     const handleBulkAssign = () => {
         if (!bulkStart || !bulkEnd) return;
+        if (bulkStart > bulkEnd) {
+            alert('Başlangıç tarihi bitiş tarihinden büyük olamaz.');
+            return;
+        }
         if (eraserActive) {
             onBulkPaint && onBulkPaint(bulkStart, bulkEnd, null);
         } else if (selectedBrushId) {
@@ -444,7 +461,7 @@ const FiscalCalendarView = ({
                         <input type="date" value={bulkEnd} onChange={e => setBulkEnd(e.target.value)}
                             className="px-2 py-1 border rounded text-xs focus:ring-1 ring-indigo-500 outline-none" />
                         <button onClick={handleBulkAssign}
-                            disabled={!bulkStart || !bulkEnd || (!selectedBrushId && !eraserActive)}
+                            disabled={!bulkStart || !bulkEnd || bulkStart > bulkEnd || (!selectedBrushId && !eraserActive)}
                             className="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700 disabled:opacity-40 transition-colors">
                             Uygula
                         </button>
