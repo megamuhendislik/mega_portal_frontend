@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import {
     MessageSquare, Plus, Send, Search, Filter, Clock, CheckCircle2, AlertCircle,
     ThumbsUp, AlertTriangle, Lightbulb, Paperclip, X, ChevronDown, ChevronRight,
@@ -130,7 +131,8 @@ const CreateFeedbackModal = ({ open, onClose, onSuccess }) => {
             handleClose();
             onSuccess();
         } catch (err) {
-            setError(err.response?.data?.error || 'Bir hata oluştu.');
+            const errData = err.response?.data?.error;
+            setError(typeof errData === 'string' ? errData : (errData ? JSON.stringify(errData) : 'Bir hata oluştu.'));
         } finally {
             setLoading(false);
         }
@@ -138,7 +140,7 @@ const CreateFeedbackModal = ({ open, onClose, onSuccess }) => {
 
     if (!open) return null;
 
-    return (
+    return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={handleClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-slate-200/80">
@@ -259,7 +261,8 @@ const CreateFeedbackModal = ({ open, onClose, onSuccess }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -269,6 +272,7 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     const [responseText, setResponseText] = useState('');
     const [responding, setResponding] = useState(false);
     const [newStatus, setNewStatus] = useState('');
+    const [statusLoading, setStatusLoading] = useState(false);
 
     useEffect(() => {
         if (feedback) {
@@ -296,22 +300,40 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     };
 
     const handleStatusChange = async (st) => {
+        const prevStatus = newStatus;
         setNewStatus(st);
-        await onStatusChange(feedback.id, st);
+        setStatusLoading(true);
+        try {
+            await onStatusChange(feedback.id, st);
+        } catch {
+            setNewStatus(prevStatus);
+            alert('Durum güncellenirken bir hata oluştu.');
+        } finally {
+            setStatusLoading(false);
+        }
     };
 
-    const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000';
+    const getFileUrl = (fileUrl) => {
+        if (!fileUrl) return '#';
+        if (fileUrl.startsWith('http')) return fileUrl;
+        try {
+            const origin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000').origin;
+            return `${origin}${fileUrl}`;
+        } catch {
+            return fileUrl;
+        }
+    };
 
-    return (
+    return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200/80">
                 {/* Header */}
                 <div className="sticky top-0 bg-white/95 backdrop-blur-sm px-6 py-4 border-b border-slate-100 flex items-start justify-between rounded-t-2xl z-10">
                     <div className="flex-1 min-w-0 pr-4">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <CategoryBadge category={feedback.category} />
-                            <StatusBadge status={feedback.status} />
+                            <StatusBadge status={newStatus || feedback.status} />
                         </div>
                         <h2 className="text-lg font-bold text-slate-800 truncate">{feedback.title}</h2>
                         {isAdmin && feedback.employee_name && (
@@ -340,7 +362,7 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                                 {feedback.attachments.map(att => (
                                     <a
                                         key={att.id}
-                                        href={att.file?.startsWith('http') ? att.file : `${apiBase}${att.file}`}
+                                        href={getFileUrl(att.file)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 text-sm transition-colors group"
@@ -355,8 +377,8 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                         </div>
                     )}
 
-                    {/* Admin Response (visible to employee too) */}
-                    {feedback.admin_response && !isAdmin && (
+                    {/* Admin Response (visible to both admin and employee) */}
+                    {feedback.admin_response && (
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Admin Cevabı</p>
                             <div className="bg-emerald-50 rounded-xl p-4 text-sm text-emerald-800 leading-relaxed whitespace-pre-wrap border border-emerald-100">
@@ -383,13 +405,14 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                                         <button
                                             key={key}
                                             onClick={() => handleStatusChange(key)}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                                            disabled={statusLoading}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-50
                                                 ${active
                                                     ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
                                                 }`}
                                         >
-                                            <Icon size={12} />
+                                            {statusLoading && active ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
                                             {st.label}
                                         </button>
                                     );
@@ -431,7 +454,8 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -500,14 +524,19 @@ const Feedback = () => {
     const handleStatusChange = async (id, st) => {
         await api.post(`/feedback/${id}/update_status/`, { status: st });
         fetchAdminFeedbacks();
+        fetchMyFeedbacks();
     };
 
     const openDetail = (fb) => {
         setSelectedFeedback(fb);
         setShowDetail(true);
-        // Mark response as read for employee
+        // Mark response as read for employee — optimistic update
         if (!isAdmin && fb.admin_response && !fb.is_response_read) {
-            api.post(`/feedback/${fb.id}/mark_response_read/`).catch(() => {});
+            setFeedbacks(prev => prev.map(f => f.id === fb.id ? { ...f, is_response_read: true } : f));
+            api.post(`/feedback/${fb.id}/mark_response_read/`).catch(() => {
+                // Revert on failure
+                setFeedbacks(prev => prev.map(f => f.id === fb.id ? { ...f, is_response_read: false } : f));
+            });
         }
     };
 
@@ -536,6 +565,7 @@ const Feedback = () => {
         pending: adminFeedbacks.filter(f => f.status === 'PENDING').length,
         inReview: adminFeedbacks.filter(f => f.status === 'IN_REVIEW').length,
         resolved: adminFeedbacks.filter(f => f.status === 'RESOLVED').length,
+        unread: adminFeedbacks.filter(f => !f.is_read_by_admin).length,
     }), [adminFeedbacks]);
 
     return (
@@ -567,8 +597,8 @@ const Feedback = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <StatMini label="Toplam" value={adminStats.total} icon={<MessageSquare size={16} />} color="blue" />
                     <StatMini label="Beklemede" value={adminStats.pending} icon={<Clock size={16} />} color="amber" />
-                    <StatMini label="İnceleniyor" value={adminStats.inReview} icon={<Eye size={16} />} color="violet" />
                     <StatMini label="Cevaplanan" value={adminStats.resolved} icon={<CheckCircle2 size={16} />} color="emerald" />
+                    <StatMini label="Okunmamış" value={adminStats.unread} icon={<AlertCircle size={16} />} color="rose" />
                 </div>
             )}
 
@@ -580,7 +610,7 @@ const Feedback = () => {
                         Geri Bildirimlerim
                     </TabBtn>
                     {isAdmin && (
-                        <TabBtn active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} badge={adminStats.pending}>
+                        <TabBtn active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} badge={adminStats.unread}>
                             Tüm Geri Bildirimler
                         </TabBtn>
                     )}
@@ -637,8 +667,12 @@ const Feedback = () => {
                     ) : filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                             <MessageSquare size={40} className="mb-3 text-slate-200" />
-                            <p className="text-sm font-semibold text-slate-500">Henüz geri bildirim yok</p>
-                            <p className="text-xs text-slate-400 mt-1">İlk geri bildiriminizi gönderin</p>
+                            <p className="text-sm font-semibold text-slate-500">
+                                {activeTab === 'admin' ? 'Geri bildirim bulunamadı' : 'Henüz geri bildirim yok'}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                                {activeTab === 'admin' ? 'Filtreleri değiştirin veya yeni bildirim bekleyin' : 'İlk geri bildiriminizi gönderin'}
+                            </p>
                         </div>
                     ) : (
                         filtered.map(fb => (
@@ -675,20 +709,23 @@ const Feedback = () => {
 
 const FeedbackRow = ({ feedback, isAdmin, onClick }) => {
     const hasUnreadResponse = !isAdmin && feedback.admin_response && !feedback.is_response_read;
+    const isNewForAdmin = isAdmin && !feedback.is_read_by_admin;
+    const cat = CATEGORIES[feedback.category] || CATEGORIES.COMPLAINT;
+    const CatIcon = cat.icon;
 
     return (
         <button
             onClick={onClick}
             className={`w-full text-left px-5 py-4 hover:bg-slate-50/80 transition-colors flex items-start gap-4 group
-                ${hasUnreadResponse ? 'bg-blue-50/30' : ''}`}
+                ${hasUnreadResponse ? 'bg-blue-50/30' : ''}
+                ${isNewForAdmin ? 'bg-amber-50/30' : ''}`}
         >
-            {/* Category icon */}
-            <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center mt-0.5
-                ${CATEGORIES[feedback.category]?.bg || 'bg-slate-100'}`}>
-                {React.createElement(CATEGORIES[feedback.category]?.icon || MessageSquare, {
-                    size: 16,
-                    className: CATEGORIES[feedback.category]?.text || 'text-slate-500'
-                })}
+            {/* Category icon + label */}
+            <div className="shrink-0 flex flex-col items-center gap-1 mt-0.5">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${cat.bg}`}>
+                    <CatIcon size={16} className={cat.text} />
+                </div>
+                <span className={`text-[10px] font-bold ${cat.text}`}>{cat.label}</span>
             </div>
 
             {/* Content */}
@@ -697,6 +734,9 @@ const FeedbackRow = ({ feedback, isAdmin, onClick }) => {
                     <span className="font-semibold text-sm text-slate-800 truncate">{feedback.title}</span>
                     {hasUnreadResponse && (
                         <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">YENİ CEVAP</span>
+                    )}
+                    {isNewForAdmin && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">YENİ</span>
                     )}
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{feedback.description}</p>
