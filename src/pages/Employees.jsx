@@ -1243,7 +1243,17 @@ const Employees = () => {
         window.scrollTo(0, 0);
     };
 
-    const goToStep = (step) => {
+    const goToStep = (step, fromError = false) => {
+        // Allow: going back, staying on current, or error-driven navigation
+        // Block: skipping ahead past current step unless validation passes
+        if (step > currentStep && !fromError) {
+            for (let s = currentStep; s < step; s++) {
+                if (!validateStep(s)) {
+                    toast.error(`Lütfen önce "${STEPS[s - 1].title}" adımını tamamlayınız.`);
+                    return;
+                }
+            }
+        }
         setCurrentStep(step);
         setFormErrors(prev => {
             const next = { ...prev };
@@ -1473,7 +1483,7 @@ const Employees = () => {
             // Navigate to first errored step
             const errorSteps = Object.keys(stepErrors).map(Number).sort((a, b) => a - b);
             if (errorSteps.length > 0) {
-                setCurrentStep(errorSteps[0]);
+                goToStep(errorSteps[0], true);
                 toast.error(`${errorSteps.length} adımda hata bulundu. İlk hatalı adıma yönlendirildiniz.`);
             } else if (errorMessages.length > 0) {
                 toast.error("Hata: " + errorMessages[0]);
@@ -1837,10 +1847,10 @@ const Employees = () => {
                                         <div
                                             key={s.number}
                                             className="relative z-10 flex items-center gap-4 py-4 group cursor-pointer"
-                                            onClick={() => goToStep(s.number)}
+                                            onClick={() => goToStep(s.number, hasError)}
                                             role="button"
                                             tabIndex={0}
-                                            onKeyDown={e => e.key === 'Enter' && goToStep(s.number)}
+                                            onKeyDown={e => e.key === 'Enter' && goToStep(s.number, hasError)}
                                         >
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0 relative ${
                                                 hasError
@@ -1964,7 +1974,7 @@ const Employees = () => {
                                                         <span className="text-red-400">&#x2022;</span>
                                                         <span className="text-red-700 flex-1">{err.message}</span>
                                                         <button
-                                                            onClick={() => goToStep(Number(step))}
+                                                            onClick={() => goToStep(Number(step), true)}
                                                             className="text-blue-600 hover:text-blue-800 underline shrink-0 text-[11px]"
                                                         >
                                                             {STEPS.find(s => s.number === Number(step))?.title || `Adım ${step}`}
