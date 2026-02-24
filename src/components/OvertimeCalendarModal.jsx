@@ -12,13 +12,13 @@ const MONTHS_TR = [
 ];
 
 const MONTHS_TR_DISPLAY = [
-    'Ocak', '\u015Eubat', 'Mart', 'Nisan', 'May\u0131s', 'Haziran',
-    'Temmuz', 'A\u011Fustos', 'Eyl\u00FCl', 'Ekim', 'Kas\u0131m', 'Aral\u0131k'
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
 ];
 
-const DAYS_TR = ['Pt', 'Sa', '\u00C7a', 'Pe', 'Cu', 'Ct', 'Pa'];
+const DAYS_TR = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 
-const DAY_NAMES_TR = ['Pazartesi', 'Sal\u0131', '\u00C7ar\u015Famba', 'Per\u015Fembe', 'Cuma', 'Cumartesi', 'Pazar'];
+const DAY_NAMES_TR = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
 function generateMonthDays(year, month) {
     const firstDay = new Date(year, month, 1);
@@ -72,7 +72,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
             setCalendarData(res.data);
         } catch (err) {
             console.error('Calendar fetch error:', err);
-            setError(err.response?.data?.error || 'Takvim verileri y\u00FCklenemedi.');
+            setError(err.response?.data?.error || 'Takvim verileri yüklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -155,7 +155,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
 
     const handleSave = async () => {
         if (selectedDays.length === 0) {
-            setError('L\u00FCtfen en az bir g\u00FCn se\u00E7in.');
+            setError('Lütfen en az bir gün seçin.');
             return;
         }
         setSaving(true);
@@ -217,7 +217,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                                 <CalendarPlus size={16} className="text-violet-600" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Ek Mesai Atamas\u0131</h2>
+                                <h2 className="text-sm font-bold text-slate-800">Ek Mesai Ataması</h2>
                                 <p className="text-[11px] text-slate-400">{employee?.name || ''}</p>
                             </div>
                         </div>
@@ -248,15 +248,15 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
                             <Loader2 size={28} className="animate-spin text-violet-500" />
-                            <span className="ml-3 text-sm text-slate-500">Takvim y\u00FCkleniyor...</span>
+                            <span className="ml-3 text-sm text-slate-500">Takvim yükleniyor...</span>
                         </div>
                     ) : success ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3">
                             <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
                                 <Save size={24} className="text-emerald-600" />
                             </div>
-                            <p className="text-base font-bold text-emerald-700">Mesai atamalar\u0131 ba\u015Far\u0131yla kaydedildi!</p>
-                            <p className="text-sm text-slate-400">{selectedDays.length} g\u00FCn atand\u0131</p>
+                            <p className="text-base font-bold text-emerald-700">Mesai atamaları başarıyla kaydedildi!</p>
+                            <p className="text-sm text-slate-400">{selectedDays.length} gün atandı</p>
                         </div>
                     ) : (
                         <>
@@ -283,7 +283,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                                     {/* Selected Days List */}
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <h3 className="text-sm font-bold text-slate-700">Se\u00E7ili G\u00FCnler</h3>
+                                            <h3 className="text-sm font-bold text-slate-700">Seçili Günler</h3>
                                             {selectedDays.length > 0 && (
                                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-bold tabular-nums">
                                                     {selectedDays.length}
@@ -293,7 +293,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
 
                                         {sortedSelected.length === 0 ? (
                                             <div className="text-sm text-slate-400 py-4 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                                Takvimden g\u00FCn se\u00E7mek i\u00E7in t\u0131klay\u0131n
+                                                Takvimden gün seçmek için tıklayın
                                             </div>
                                         ) : (
                                             <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
@@ -389,22 +389,22 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                             onClick={onClose}
                             className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                         >
-                            \u0130ptal
+                            İptal
                         </button>
 
                         {/* Legend */}
                         <div className="hidden sm:flex items-center gap-4 text-[10px] text-slate-400">
                             <span className="flex items-center gap-1.5">
                                 <span className="w-3 h-3 rounded-sm bg-violet-500" />
-                                Se\u00E7ili
+                                Seçili
                             </span>
                             <span className="flex items-center gap-1.5">
                                 <span className="w-3 h-3 rounded-sm bg-blue-50 ring-1 ring-blue-400" />
-                                Atanm\u0131\u015F
+                                Atanmış
                             </span>
                             <span className="flex items-center gap-1.5">
                                 <span className="w-3 h-3 rounded-sm bg-slate-100" />
-                                Ge\u00E7mi\u015F
+                                Geçmiş
                             </span>
                         </div>
 
@@ -418,7 +418,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                             ) : (
                                 <Save size={14} />
                             )}
-                            {saving ? 'Kaydediliyor...' : `Kaydet (${selectedDays.length} g\u00FCn)`}
+                            {saving ? 'Kaydediliyor...' : `Kaydet (${selectedDays.length} gün)`}
                         </button>
                     </div>
                 )}
@@ -493,8 +493,8 @@ const MiniMonth = ({
                             onClick={() => onToggleDate(date)}
                             disabled={past}
                             title={
-                                past ? 'Ge\u00E7mi\u015F tarih'
-                                : assigned ? `Atanm\u0131\u015F (${assignmentMap[formatDateKey(date)]?.max_duration_hours || '?'}h)`
+                                past ? 'Geçmiş tarih'
+                                : assigned ? `Atanmış (${assignmentMap[formatDateKey(date)]?.max_duration_hours || '?'}h)`
                                 : `${date.getDate()} ${MONTHS_TR_DISPLAY[date.getMonth()]}`
                             }
                         >
