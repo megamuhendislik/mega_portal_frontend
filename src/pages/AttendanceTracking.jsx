@@ -13,6 +13,7 @@ import {
     HierarchyGroupRow,
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
+import OvertimeCalendarModal from '../components/OvertimeCalendarModal';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -37,6 +38,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [sortMode, setSortMode] = useState('NAME');
     const [hierarchySort, setHierarchySort] = useState(true);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [calendarTarget, setCalendarTarget] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
 
     // Summary State
@@ -341,6 +343,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         hierarchySort={hierarchySort}
                         onEmployeeClick={handleEmployeeClick}
                         onDetailClick={setSelectedEmployee}
+                        onAssignOvertime={emp => setCalendarTarget(emp)}
                     />
                     {hasChildren && isExpanded && renderHierarchyRows(node.children, depth + 1)}
                 </React.Fragment>
@@ -615,6 +618,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             hierarchySort={hierarchySort}
                                             onEmployeeClick={handleEmployeeClick}
                                             onDetailClick={setSelectedEmployee}
+                                            onAssignOvertime={emp => setCalendarTarget(emp)}
                                         />
                                     ))
                                 )
@@ -628,6 +632,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             <EmployeeDetailModal
                 employee={selectedEmployee}
                 onClose={() => setSelectedEmployee(null)}
+            />
+
+            {/* OVERTIME CALENDAR MODAL */}
+            <OvertimeCalendarModal
+                visible={!!calendarTarget}
+                onClose={() => setCalendarTarget(null)}
+                employee={calendarTarget}
+                onSuccess={() => { setCalendarTarget(null); }}
             />
         </div >
     );

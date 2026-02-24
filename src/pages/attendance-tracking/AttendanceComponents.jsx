@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
     Clock, Activity, Loader2, CheckCircle, AlertCircle, Send,
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
-    ChevronDown, ChevronRight as ChevronRightIcon
+    ChevronDown, ChevronRight as ChevronRightIcon,
+    CalendarPlus
 } from 'lucide-react';
 import moment from 'moment';
 import api from '../../services/api';
@@ -27,6 +28,7 @@ export const EmployeeAttendanceRow = ({
     hierarchySort = false,
     onEmployeeClick,
     onDetailClick,
+    onAssignOvertime,
 }) => {
     const [showOtForm, setShowOtForm] = useState(false);
     const [otDate, setOtDate] = useState(moment().format('YYYY-MM-DD'));
@@ -195,6 +197,16 @@ export const EmployeeAttendanceRow = ({
                         <Clock size={12} />
                         Ek Mesai İsteği
                     </button>
+                    {onAssignOvertime && (
+                        <button
+                            onClick={() => onAssignOvertime({ id: s.employee_id, name: s.employee_name || name, department: s.department || title })}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 transition-all whitespace-nowrap"
+                            title="Ek Mesai Ata"
+                        >
+                            <CalendarPlus size={12} />
+                            <span className="hidden xl:inline">Mesai Ata</span>
+                        </button>
+                    )}
                     <button
                         className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         onClick={() => onDetailClick(s)}

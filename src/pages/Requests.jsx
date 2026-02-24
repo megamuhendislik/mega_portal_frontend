@@ -4,13 +4,15 @@ import {
     Plus, Filter, Search, SlidersHorizontal, ArrowUpRight, ArrowDownLeft, Clock, Calendar, Utensils,
     CheckCircle2, XCircle, AlertCircle, Users, CreditCard, ChevronRight, ChevronDown, User,
     BarChart3, PieChart, TrendingUp, FileText, Briefcase, ArrowRight, Layers, GitBranch, MoreHorizontal,
-    ArrowRightLeft, Shield
+    ArrowRightLeft, Shield, CalendarCheck
 } from 'lucide-react';
 import api from '../services/api';
 import RequestCard from '../components/RequestCard';
 import RequestListTable from '../components/RequestListTable';
 import CreateRequestModal from '../components/CreateRequestModal';
 import RequestDetailModal from '../components/RequestDetailModal';
+import AssignedOvertimeTab from '../components/AssignedOvertimeTab';
+import TeamOvertimeAnalytics from '../components/TeamOvertimeAnalytics';
 
 import useSmartPolling from '../hooks/useSmartPolling';
 import { useAuth } from '../context/AuthContext';
@@ -1239,6 +1241,16 @@ const Requests = () => {
                     </TabButton>
                 )}
 
+                <TabButton active={activeTab === 'assigned_overtime'} onClick={() => setActiveTab('assigned_overtime')} icon={<CalendarCheck size={18} />}>
+                    Atanan Mesailer
+                </TabButton>
+
+                {isManager && (
+                    <TabButton active={activeTab === 'team_analytics'} onClick={() => setActiveTab('team_analytics')} icon={<BarChart3 size={18} />}>
+                        Ekip Analizi
+                    </TabButton>
+                )}
+
                 <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<PieChart size={18} />}>Analiz</TabButton>
             </div>
 
@@ -1297,6 +1309,12 @@ const Requests = () => {
                 )}
                 {activeTab === 'analytics' && (
                     <RequestAnalyticsSection subordinates={subordinates} loading={loading} />
+                )}
+                {activeTab === 'assigned_overtime' && (
+                    <AssignedOvertimeTab />
+                )}
+                {activeTab === 'team_analytics' && (
+                    <TeamOvertimeAnalytics />
                 )}
             </div>
 
