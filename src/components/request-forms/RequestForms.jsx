@@ -62,10 +62,14 @@ export const LeaveRequestForm = ({
                         </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                         <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
                             <span className="text-slate-500">Avans Limiti:</span>
                             <span className="font-bold text-slate-700">{balance.limit} gün</span>
+                        </div>
+                        <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
+                            <span className="text-slate-500">Avans Kullanılan:</span>
+                            <span className="font-bold text-amber-600">{balance.advanceUsed || 0} gün</span>
                         </div>
                         <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
                             <span className="text-slate-500">Max Talep:</span>
@@ -73,7 +77,7 @@ export const LeaveRequestForm = ({
                         </div>
                     </div>
                     {/* Avans İzin Uyarısı */}
-                    {balance && duration > 0 && (balance.effective || balance.balance || 0) < duration && (balance.limit || 0) > 0 && (balance.available || 0) >= duration && (
+                    {balance && duration > 0 && (balance.effective || balance.balance || 0) < duration && (balance.advanceRemaining || balance.limit || 0) > 0 && (balance.available || 0) >= duration && (
                         <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
                             <div className="flex items-start gap-2">
                                 <span className="text-amber-500 text-base leading-none mt-0.5">&#9888;</span>
@@ -81,6 +85,7 @@ export const LeaveRequestForm = ({
                                     <p className="text-xs font-bold text-amber-800">Avans İzin Kullanılacak</p>
                                     <p className="text-[11px] text-amber-700 mt-0.5">
                                         Bu talep mevcut bakiyenizi aşıyor. Gelecek yılınızdan <strong>{Math.ceil(duration - Math.max(0, balance.effective || balance.balance || 0))}</strong> gün avans olarak kullanılacaktır.
+                                        {(balance.advanceUsed || 0) > 0 && <span className="block mt-0.5 text-[10px]">(Mevcut avans borcu: {balance.advanceUsed} gün)</span>}
                                     </p>
                                 </div>
                             </div>

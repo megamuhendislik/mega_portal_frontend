@@ -645,25 +645,43 @@ const StepLeave = ({ formData, handleChange }) => {
     const calculatedTotal = (formData.leave_entitlements || []).reduce((sum, item) => sum + (parseFloat(item.days_entitled) - (item.days_used || 0)), 0);
 
     const addYearRow = () => {
-        const currentYears = (formData.leave_entitlements || []).map(x => x.year);
+        const currentYears = (formData.leave_entitlements || []).map(x => parseInt(x.year));
         const nextYear = currentYears.length > 0 ? Math.max(...currentYears) + 1 : new Date().getFullYear();
+
+        if (currentYears.includes(nextYear)) {
+            toast.error(`${nextYear} yılı zaten mevcut.`);
+            return;
+        }
 
         const newRow = {
             year: nextYear,
             days_entitled: formData.auto_calculated_rate || formData.annual_leave_accrual_rate || 14,
-            days_used: 0,
-            is_transferred: false
+            days_used: 0
         };
         handleChange('leave_entitlements', [...(formData.leave_entitlements || []), newRow]);
     };
 
     const updateRow = (index, field, value) => {
         const newRows = [...(formData.leave_entitlements || [])];
+
+        if (field === 'year') {
+            const otherYears = newRows.filter((_, i) => i !== index).map(r => parseInt(r.year));
+            if (otherYears.includes(parseInt(value))) {
+                toast.error(`${value} yılı zaten mevcut.`);
+                return;
+            }
+        }
+
         newRows[index] = { ...newRows[index], [field]: value };
         handleChange('leave_entitlements', newRows);
     };
 
     const removeRow = (index) => {
+        const row = (formData.leave_entitlements || [])[index];
+        if (row && parseFloat(row.days_used || 0) > 0) {
+            toast.error(`${row.year} yılı kullanım kaydı olan izin hakkı silinemez.`);
+            return;
+        }
         const newRows = (formData.leave_entitlements || []).filter((_, i) => i !== index);
         handleChange('leave_entitlements', newRows);
     };
@@ -764,13 +782,12 @@ const StepLeave = ({ formData, handleChange }) => {
                                 <th className="px-4 py-3 w-32">Hak Edilen</th>
                                 <th className="px-4 py-3 w-32">Kullanılan</th>
                                 <th className="px-4 py-3 w-32">Kalan</th>
-                                <th className="px-4 py-3">Not / Durum</th>
                                 <th className="px-4 py-3 w-10"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {(formData.leave_entitlements || []).length === 0 && (
-                                <tr><td colSpan="6" className="p-4 text-center text-slate-400 italic text-xs">Henüz veri girişi yapılmamış. Yeni yıl ekleyerek başlayın.</td></tr>
+                                <tr><td colSpan="5" className="p-4 text-center text-slate-400 italic text-xs">Henüz veri girişi yapılmamış. Yeni yıl ekleyerek başlayın.</td></tr>
                             )}
                             {(formData.leave_entitlements || []).sort((a, b) => a.year - b.year).map((ent, idx) => {
                                 const remaining = (parseFloat(ent.days_entitled) || 0) - (parseFloat(ent.days_used) || 0);
@@ -790,14 +807,14 @@ const StepLeave = ({ formData, handleChange }) => {
                                                 {remaining}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={ent.is_transferred} onChange={e => updateRow(idx, 'is_transferred', e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
-                                                <span className="text-xs text-slate-500">Devir</span>
-                                            </label>
-                                        </td>
                                         <td className="px-4 py-2 text-right">
-                                            <button type="button" onClick={() => removeRow(idx)} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"><Trash2 size={16} /></button>
+                                            {parseFloat(ent.days_used || 0) > 0 ? (
+                                                <span className="p-1.5 text-slate-300 cursor-not-allowed" title="Kullanım kaydı olan izin silinemez">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                                </span>
+                                            ) : (
+                                                <button type="button" onClick={() => removeRow(idx)} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"><Trash2 size={16} /></button>
+                                            )}
                                         </td>
                                     </tr>
                                 )

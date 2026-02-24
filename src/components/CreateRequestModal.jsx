@@ -488,9 +488,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const nextLeave = user.next_leave_request;
         const usedThisYear = user.annual_leave_used_this_year || 0;
 
-        const available = effective + limit;
+        const advanceUsed = user.annual_leave_advance_used || 0;
+        const advanceRemaining = Math.max(0, limit - advanceUsed);
+        const available = effective + advanceRemaining;
         const lastLeave = user.last_annual_leave_date || null;
-        return { balance, held, limit, available, lastLeave, entitlement, used, reserved, effective, daysToAccrual, nextLeave, usedThisYear };
+        return { balance, held, limit, available, lastLeave, entitlement, used, reserved, effective, daysToAccrual, nextLeave, usedThisYear, advanceUsed, advanceRemaining };
     };
 
     // Helper to calculate duration in days
