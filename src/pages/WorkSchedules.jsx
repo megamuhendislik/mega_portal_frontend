@@ -759,27 +759,85 @@ const GeneralSettingsForm = ({ data, onChange }) => {
 };
 
 const PeriodsSettingsForm = ({ data, refresh }) => {
+    const [editedPeriods, setEditedPeriods] = useState({});
+    const [saving, setSaving] = useState(false);
+
     const handleGenerate = async () => {
         if (!confirm('Mevcut dönemler silinip yeniden oluşturulacak (26-25 kuralı). Onaylıyor musunuz?')) return;
         try {
             await api.post(`/attendance/fiscal-calendars/${data.id}/generate_periods/`, { clear_existing: true });
+            setEditedPeriods({});
             refresh();
         } catch (e) { alert(e.message); }
     };
 
-    const periods = data.periods || [];
-    periods.sort((a, b) => (a.year - b.year) || (a.month - b.month));
+    const handleDateChange = (periodId, field, value) => {
+        setEditedPeriods(prev => ({
+            ...prev,
+            [periodId]: {
+                ...prev[periodId],
+                [field]: value
+            }
+        }));
+    };
+
+    const handleSavePeriods = async () => {
+        const changedIds = Object.keys(editedPeriods);
+        if (changedIds.length === 0) return;
+
+        const periodsPayload = changedIds.map(id => {
+            const original = periods.find(p => p.id === Number(id));
+            const edits = editedPeriods[id];
+            return {
+                id: Number(id),
+                start_date: edits.start_date ?? original.start_date,
+                end_date: edits.end_date ?? original.end_date,
+            };
+        });
+
+        setSaving(true);
+        try {
+            const res = await api.post(`/attendance/fiscal-calendars/${data.id}/update-periods/`, { periods: periodsPayload });
+            const result = res.data;
+            if (result.errors?.length > 0) {
+                alert(`${result.updated} dönem güncellendi.\nHatalar:\n${result.errors.join('\n')}`);
+            }
+            setEditedPeriods({});
+            refresh();
+        } catch (e) {
+            alert('Dönem güncelleme hatası: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const periods = (data.periods || []).slice().sort((a, b) => (a.year - b.year) || (a.month - b.month));
+    const hasChanges = Object.keys(editedPeriods).length > 0;
+
+    const MONTH_NAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
     return (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h4 className="font-bold text-slate-700">Dönem Listesi ({data.year})</h4>
-                    <p className="text-xs text-slate-500">Maaş ve hakediş hesaplamaları için kullanılan tarih aralıkları.</p>
+                    <p className="text-xs text-slate-500">Her ayın başlangıç ve bitiş tarihlerini düzenleyebilirsiniz.</p>
                 </div>
-                <button onClick={handleGenerate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors">
-                    <RefreshCw size={16} /> Varsayılanları Oluştur (26-25)
-                </button>
+                <div className="flex items-center gap-2">
+                    {hasChanges && (
+                        <button
+                            onClick={handleSavePeriods}
+                            disabled={saving}
+                            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                            {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                            {saving ? 'Kaydediliyor...' : `Dönemleri Kaydet (${Object.keys(editedPeriods).length})`}
+                        </button>
+                    )}
+                    <button onClick={handleGenerate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors">
+                        <RefreshCw size={16} /> Varsayılanları Oluştur (26-25)
+                    </button>
+                </div>
             </div>
 
             {periods.length === 0 ? (
@@ -792,20 +850,43 @@ const PeriodsSettingsForm = ({ data, refresh }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {periods.map(p => {
                         const isCurrentMonth = new Date().getMonth() + 1 === p.month && new Date().getFullYear() === p.year;
+                        const edits = editedPeriods[p.id] || {};
+                        const isEdited = !!editedPeriods[p.id];
+                        const currentStart = edits.start_date ?? p.start_date;
+                        const currentEnd = edits.end_date ?? p.end_date;
+
                         return (
-                            <div key={p.id} className={`bg-white border rounded-lg p-4 relative group ${isCurrentMonth ? 'ring-2 ring-indigo-500 border-transparent shadow-md' : 'hover:border-indigo-200'}`}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="font-bold text-lg text-slate-800">{p.year} / {p.month}</div>
-                                    {p.is_locked ? <div className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Kilitli</div> : <div className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Aktif</div>}
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500">Başlangıç:</span>
-                                        <span className="font-mono text-slate-700">{p.start_date}</span>
+                            <div key={p.id} className={`bg-white border rounded-lg p-4 relative ${isCurrentMonth ? 'ring-2 ring-indigo-500 border-transparent shadow-md' : isEdited ? 'ring-2 ring-amber-400 border-transparent' : 'hover:border-indigo-200'}`}>
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <div className="font-bold text-lg text-slate-800">{MONTH_NAMES[p.month]}</div>
+                                        <div className="text-xs text-slate-400">{p.year} / {p.month}</div>
                                     </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500">Bitiş:</span>
-                                        <span className="font-mono text-slate-700">{p.end_date}</span>
+                                    <div className="flex items-center gap-1">
+                                        {isEdited && <div className="text-xs bg-amber-50 text-amber-600 px-2 py-1 rounded">Düzenlendi</div>}
+                                        {p.is_locked ? <div className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Kilitli</div> : <div className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Aktif</div>}
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div>
+                                        <label className="text-xs text-slate-500 block mb-1">Başlangıç</label>
+                                        <input
+                                            type="date"
+                                            value={currentStart}
+                                            onChange={e => handleDateChange(p.id, 'start_date', e.target.value)}
+                                            disabled={p.is_locked}
+                                            className="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 font-mono text-slate-700 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-slate-500 block mb-1">Bitiş</label>
+                                        <input
+                                            type="date"
+                                            value={currentEnd}
+                                            onChange={e => handleDateChange(p.id, 'end_date', e.target.value)}
+                                            disabled={p.is_locked}
+                                            className="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 font-mono text-slate-700 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-400"
+                                        />
                                     </div>
                                 </div>
                             </div>
