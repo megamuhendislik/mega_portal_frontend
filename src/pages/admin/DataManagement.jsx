@@ -36,7 +36,7 @@ function YearlyStatsMatrix({ employee, initialYear }) {
 
     // Prepare matrix data: columns are months 1-12
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
-    const monthNames = ["Ocak", "\u015eubat", "Mart", "Nisan", "May\u0131s", "Haziran", "Temmuz", "A\u011fustos", "Eyl\u00fcl", "Ekim", "Kas\u0131m", "Aral\u0131k"];
+    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
     const getVal = (m, field) => {
         const found = stats.find(s => s.month === m);
@@ -47,7 +47,7 @@ function YearlyStatsMatrix({ employee, initialYear }) {
         <div className="bg-white rounded-lg border shadow-sm p-4 overflow-hidden">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-4">
-                    <h4 className="text-sm font-bold text-slate-800">Y\u0131ll\u0131k \u00d6zet Tablosu</h4>
+                    <h4 className="text-sm font-bold text-slate-800">Yıllık Özet Tablosu</h4>
 
                     <div className="flex items-center bg-slate-100 rounded-lg p-1">
                         <button
@@ -65,7 +65,7 @@ function YearlyStatsMatrix({ employee, initialYear }) {
                         </button>
                     </div>
                 </div>
-                {loading && <span className="text-xs text-slate-400 animate-pulse">Y\u00fckleniyor...</span>}
+                {loading && <span className="text-xs text-slate-400 animate-pulse">Yükleniyor...</span>}
             </div>
 
             <div className="overflow-x-auto pb-2">
@@ -229,7 +229,7 @@ export default function DataManagement() {
     };
 
     const handleAutoFill = async () => {
-        if (!window.confirm(`${format(currentMonth, 'MMMM', { locale: tr })} ay\u0131 i\u00e7in eksik g\u00fcnleri otomatik tamamlamak istiyor musunuz?`)) return;
+        if (!window.confirm(`${format(currentMonth, 'MMMM', { locale: tr })} ayı için eksik günleri otomatik tamamlamak istiyor musunuz?`)) return;
 
         try {
             const res = await api.post('/system-data/auto_fill_month/', {
@@ -237,7 +237,7 @@ export default function DataManagement() {
                 year: currentMonth.getFullYear(),
                 month: currentMonth.getMonth() + 1
             });
-            alert(`${res.data.filled_days} g\u00fcn otomatik tamamland\u0131.`);
+            alert(`${res.data.filled_days} gün otomatik tamamlandı.`);
             fetchMonthlyData(); // Refresh calendar
         } catch (e) {
             alert('Hata: ' + e.message);
@@ -281,7 +281,7 @@ export default function DataManagement() {
 
     const handleExport = async (fmt) => {
         try {
-            setMessage({ type: 'info', text: 'Yedek haz\u0131rlan\u0131yor, l\u00fctfen bekleyin...' });
+            setMessage({ type: 'info', text: 'Yedek hazırlanıyor, lütfen bekleyin...' });
             const response = await api.get(`/system-data/export_backup/?format=${fmt}`, {
                 responseType: 'blob'
             });
@@ -308,10 +308,10 @@ export default function DataManagement() {
             link.click();
             link.remove();
 
-            setMessage({ type: 'success', text: 'Yedek ba\u015far\u0131yla indirildi.' });
+            setMessage({ type: 'success', text: 'Yedek başarıyla indirildi.' });
         } catch (err) {
             console.error(err);
-            setMessage({ type: 'error', text: '\u0130ndirme ba\u015far\u0131s\u0131z: ' + (err.response?.data?.error || err.message) });
+            setMessage({ type: 'error', text: 'İndirme başarısız: ' + (err.response?.data?.error || err.message) });
         }
     };
 
@@ -319,8 +319,8 @@ export default function DataManagement() {
         const file = e.target.files[0];
         if (!file) return;
 
-        let msg = 'D\u0130KKAT: Veriler g\u00fcncellenecektir. Devam?';
-        if (dryRun) msg = 'S\u0130M\u00dcLASYON MODU: Veriler taranacak fakat veritaban\u0131 DE\u011e\u0130\u015eT\u0130R\u0130LMEYECEKT\u0130R. Devam?';
+        let msg = 'DİKKAT: Veriler güncellenecektir. Devam?';
+        if (dryRun) msg = 'SİMÜLASYON MODU: Veriler taranacak fakat veritabanı DEĞİŞTİRİLMEYECEKTİR. Devam?';
 
         if (!window.confirm(msg)) {
             e.target.value = null; // Reset input
@@ -337,9 +337,9 @@ export default function DataManagement() {
 
             if (res.data.summary) {
                 setSimulationReport(res.data.summary);
-                setMessage({ type: 'success', text: 'Sim\u00fclasyon Tamamland\u0131. Raporu inceleyin.' });
+                setMessage({ type: 'success', text: 'Simülasyon Tamamlandı. Raporu inceleyin.' });
             } else {
-                setMessage({ type: 'success', text: res.data.message || 'Geri y\u00fckleme ba\u015far\u0131l\u0131.' });
+                setMessage({ type: 'success', text: res.data.message || 'Geri yükleme başarılı.' });
             }
         } catch (err) {
             setMessage({ type: 'error', text: 'Hata: ' + (err.response?.data?.error || err.message) });
@@ -351,14 +351,14 @@ export default function DataManagement() {
 
     // Matrix Helper
     const monthCols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-    const monthNamesShort = ["Oca", "\u015eub", "Mar", "Nis", "May", "Haz", "Tem", "A\u011fu", "Eyl", "Eki", "Kas", "Ara"];
+    const monthNamesShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
     // Permission Check
     if (!hasPermission('PAGE_DATA_MANAGEMENT') && !hasPermission('SYSTEM_FULL_ACCESS')) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
-                <h2 className="text-xl font-bold text-red-500 mb-2">Eri\u015fim Reddedildi</h2>
-                <p className="text-slate-600">Bu sayfay\u0131 g\u00f6r\u00fcnt\u00fclemek i\u00e7in yeterli yetkiniz bulunmamaktad\u0131r.</p>
+                <h2 className="text-xl font-bold text-red-500 mb-2">Erişim Reddedildi</h2>
+                <p className="text-slate-600">Bu sayfayı görüntülemek için yeterli yetkiniz bulunmamaktadır.</p>
             </div>
         );
     }
@@ -368,7 +368,7 @@ export default function DataManagement() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
                 <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Database className="text-blue-600" />
-                    Sistem Veri Y\u00f6netimi (Y\u0131ll\u0131k Matris)
+                    Sistem Veri Yönetimi (Yıllık Matris)
                 </h1>
 
                 <div className="flex bg-white rounded-lg shadow-sm p-1 border">
@@ -376,7 +376,7 @@ export default function DataManagement() {
                         onClick={() => setActiveTab('browse_users')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'browse_users' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-gray-50'}`}
                     >
-                        Y\u0131ll\u0131k Matris
+                        Yıllık Matris
                     </button>
                     <button
                         onClick={() => setActiveTab('backup')}
@@ -390,7 +390,7 @@ export default function DataManagement() {
             {message && (
                 <div className={`p-4 mb-6 rounded-lg flex justify-between items-center ${message.type === 'error' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100'}`}>
                     <span>{message.text}</span>
-                    <button onClick={() => setMessage(null)} className="font-bold hover:opacity-75">{'\u00d7'}</button>
+                    <button onClick={() => setMessage(null)} className="font-bold hover:opacity-75">{'×'}</button>
                 </div>
             )}
 
@@ -403,25 +403,25 @@ export default function DataManagement() {
                                 <Download className="text-blue-600" size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800">Veri D\u0131\u015fa Aktar</h2>
-                                <p className="text-sm text-slate-500">Sistem yede\u011fini indir</p>
+                                <h2 className="text-lg font-bold text-slate-800">Veri Dışa Aktar</h2>
+                                <p className="text-sm text-slate-500">Sistem yedeğini indir</p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <button onClick={() => handleExport('json')} className="w-full flex items-center justify-between p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group">
                                 <span className="font-medium text-slate-700 group-hover:text-blue-700">JSON (Tam Yedek)</span>
-                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-blue-200 group-hover:text-blue-800">Restore \u0130\u00e7in</span>
+                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-blue-200 group-hover:text-blue-800">Restore İçin</span>
                             </button>
                             {/* SQL Export Disabled
                             <button onClick={() => handleExport('sql')} className="w-full flex items-center justify-between p-4 border rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group">
                                 <span className="font-medium text-slate-700 group-hover:text-purple-700">SQL Dump (PostgreSQL)</span>
-                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-purple-200 group-hover:text-purple-800">DB Y\u00f6neticisi \u0130\u00e7in</span>
+                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-purple-200 group-hover:text-purple-800">DB Yöneticisi İçin</span>
                             </button>
                             */}
                             <button onClick={() => handleExport('csv')} className="w-full flex items-center justify-between p-4 border rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group">
                                 <span className="font-medium text-slate-700 group-hover:text-green-700">CSV (Excel)</span>
-                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-green-200 group-hover:text-green-800">Raporlama \u0130\u00e7in</span>
+                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 group-hover:bg-green-200 group-hover:text-green-800">Raporlama İçin</span>
                             </button>
                         </div>
                     </div>
@@ -433,8 +433,8 @@ export default function DataManagement() {
                                 <Upload className="text-orange-600" size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800">Geri Y\u00fckle</h2>
-                                <p className="text-sm text-slate-500">JSON yede\u011finden geri d\u00f6n</p>
+                                <h2 className="text-lg font-bold text-slate-800">Geri Yükle</h2>
+                                <p className="text-sm text-slate-500">JSON yedeğinden geri dön</p>
                             </div>
                         </div>
 
@@ -450,9 +450,9 @@ export default function DataManagement() {
                             <label htmlFor="backup-upload" className="cursor-pointer block">
                                 <Database size={48} className="mx-auto text-slate-300 mb-4" />
                                 <span className="block font-medium text-slate-700 mb-1">
-                                    {importing ? 'Y\u00fckleniyor...' : 'Dosya Se\u00e7 veya S\u00fcr\u00fckle'}
+                                    {importing ? 'Yükleniyor...' : 'Dosya Seç veya Sürükle'}
                                 </span>
-                                <span className="text-xs text-slate-400">Sadece .json dosyalar\u0131</span>
+                                <span className="text-xs text-slate-400">Sadece .json dosyaları</span>
                             </label>
 
                             <div className="mt-6 pt-4 border-t border-slate-100">
@@ -464,8 +464,8 @@ export default function DataManagement() {
                                         className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-slate-300 transition-colors"
                                     />
                                     <div className="text-left">
-                                        <div className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Sadece Do\u011frula (Sim\u00fclasyon Modu)</div>
-                                        <div className="text-xs text-slate-500">\u0130\u015faretlerseniz veritaban\u0131nda de\u011fi\u015fiklik yap\u0131lmaz.</div>
+                                        <div className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Sadece Doğrula (Simülasyon Modu)</div>
+                                        <div className="text-xs text-slate-500">İşaretlerseniz veritabanında değişiklik yapılmaz.</div>
                                     </div>
                                 </label>
                             </div>
@@ -479,7 +479,7 @@ export default function DataManagement() {
                     {viewMode === 'list' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="p-3 md:p-4 border-b flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-50/50 gap-3">
-                                <h2 className="font-bold text-slate-700">Y\u0131ll\u0131k Personel \u00d6zeti</h2>
+                                <h2 className="font-bold text-slate-700">Yıllık Personel Özeti</h2>
 
                                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full md:w-auto">
                                     <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
@@ -515,7 +515,7 @@ export default function DataManagement() {
                                             {monthNamesShort.map((m, i) => (
                                                 <th key={m} className={`px-2 py-3 text-center border-b min-w-[70px] ${i % 2 === 0 ? 'bg-slate-50/95' : 'bg-white/95'}`}>{m}</th>
                                             ))}
-                                            <th className="px-4 py-3 border-b text-right min-w-[100px]">\u0130\u015flem</th>
+                                            <th className="px-4 py-3 border-b text-right min-w-[100px]">İşlem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -565,9 +565,9 @@ export default function DataManagement() {
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); openSettlement(emp, m, stat); }}
                                                                         className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 rounded"
-                                                                        title="Mahsupla\u015f / S\u0131f\u0131rla"
+                                                                        title="Mahsuplaş / Sıfırla"
                                                                     >
-                                                                        S\u0131f\u0131rla
+                                                                        Sıfırla
                                                                     </button>
                                                                 )}
                                                             </td>
@@ -578,7 +578,7 @@ export default function DataManagement() {
                                                         <button
                                                             onClick={() => handleSelectUser(emp)}
                                                             className="text-slate-400 hover:text-blue-600 transition-colors"
-                                                            title="Takvimi A\u00e7"
+                                                            title="Takvimi Aç"
                                                         >
                                                             <CalendarIcon size={18} />
                                                         </button>
@@ -589,7 +589,7 @@ export default function DataManagement() {
                                     </tbody>
                                 </table>
                                 {filteredEmployees.length === 0 && (
-                                    <div className="p-8 text-center text-slate-500">Sonu\u00e7 bulunamad\u0131.</div>
+                                    <div className="p-8 text-center text-slate-500">Sonuç bulunamadı.</div>
                                 )}
                             </div>
                         </div>
@@ -602,7 +602,7 @@ export default function DataManagement() {
                                     className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors"
                                 >
                                     <ArrowLeft size={20} />
-                                    <span className="font-medium">Listeye D\u00f6n</span>
+                                    <span className="font-medium">Listeye Dön</span>
                                 </button>
 
                                 <div className="flex flex-col items-center gap-2">
@@ -621,7 +621,7 @@ export default function DataManagement() {
                                         onClick={handleAutoFill}
                                         className="text-xs text-blue-600 hover:underline font-bold"
                                     >
-                                        Ay\u0131 Otomatik Tamamla (Eksikleri Doldur)
+                                        Ayı Otomatik Tamamla (Eksikleri Doldur)
                                     </button>
                                 </div>
 
@@ -638,7 +638,7 @@ export default function DataManagement() {
 
                             {/* Calendar Grid */}
                             {loadingCalendar ? (
-                                <div className="h-[250px] md:h-[400px] flex items-center justify-center text-slate-400">Y\u00fckleniyor...</div>
+                                <div className="h-[250px] md:h-[400px] flex items-center justify-center text-slate-400">Yükleniyor...</div>
                             ) : (
                                 <CalendarGrid
                                     currentMonth={currentMonth}
@@ -677,7 +677,7 @@ export default function DataManagement() {
                         <div className="p-6 border-b flex justify-between items-center bg-slate-50">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                Sim\u00fclasyon Raporu
+                                Simülasyon Raporu
                             </h3>
                             <button onClick={() => setSimulationReport(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
                                 <X size={24} />
@@ -686,12 +686,12 @@ export default function DataManagement() {
 
                         <div className="p-6 max-h-[60vh] overflow-y-auto">
                             <div className="mb-4 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
-                                <p className="font-bold mb-1">Do\u011frulama Ba\u015far\u0131l\u0131!</p>
-                                <p>A\u015fa\u011f\u0131daki veriler veritaban\u0131na aktar\u0131lmak \u00fczere ba\u015far\u0131yla tarand\u0131. (\u015eu an hi\u00e7bir de\u011fi\u015fiklik yap\u0131lmad\u0131)</p>
+                                <p className="font-bold mb-1">Doğrulama Başarılı!</p>
+                                <p>Aşağıdaki veriler veritabanına aktarılmak üzere başarıyla tarandı. (Şu an hiçbir değişiklik yapılmadı)</p>
                             </div>
 
                             <div className="space-y-2">
-                                <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider mb-3">Bulunan Kay\u0131tlar</h4>
+                                <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider mb-3">Bulunan Kayıtlar</h4>
                                 {Object.entries(simulationReport).map(([model, count]) => (
                                     <div key={model} className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-100">
                                         <span className="font-mono text-sm text-slate-600">{model}</span>
@@ -699,7 +699,7 @@ export default function DataManagement() {
                                     </div>
                                 ))}
                                 {Object.keys(simulationReport).length === 0 && (
-                                    <div className="text-slate-500 italic text-center py-4">\u00d6zet olu\u015fturulamad\u0131 veya dosya bo\u015f.</div>
+                                    <div className="text-slate-500 italic text-center py-4">Özet oluşturulamadı veya dosya boş.</div>
                                 )}
                             </div>
                         </div>
@@ -735,7 +735,7 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
     return (
         <div>
             <div className="grid grid-cols-7 mb-4 border-b pb-2">
-                {['Pzt', 'Sal', '\u00c7ar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
+                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
                     <div key={d} className="text-center text-xs font-bold text-slate-400 uppercase tracking-wider">{d}</div>
                 ))}
             </div>
@@ -769,7 +769,7 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
                                 <div className="flex gap-0.5">
                                     {hasLeave && (
                                         <span className={`text-[8px] px-1 py-0.5 rounded font-bold ${hasLeave.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                            \u0130Z\u0130N
+                                            İZİN
                                         </span>
                                     )}
                                     {hasOtReq && (
@@ -807,7 +807,7 @@ function CalendarGrid({ currentMonth, onDayClick, monthlyData }) {
                                 </div>
                             ) : !hasLeave ? (
                                 <div className="flex justify-center items-center h-full pb-4 text-xs text-slate-300 group-hover:text-blue-500 font-medium mt-2">
-                                    Kay\u0131t Yok
+                                    Kayıt Yok
                                 </div>
                             ) : null}
                         </div>
@@ -823,7 +823,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState('');
 
-    const monthNames = ['', 'Ocak', '\u015eubat', 'Mart', 'Nisan', 'May\u0131s', 'Haziran', 'Temmuz', 'A\u011fustos', 'Eyl\u00fcl', 'Ekim', 'Kas\u0131m', 'Aral\u0131k'];
+    const monthNames = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
     useEffect(() => {
         if (isOpen) {
@@ -835,7 +835,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
 
     const handleAction = async () => {
         if (mode === 'real_reset' && confirmText !== 'ONAYLA') {
-            alert('Onaylamak i\u00e7in "ONAYLA" yaz\u0131n.');
+            alert('Onaylamak için "ONAYLA" yazın.');
             return;
         }
         setLoading(true);
@@ -848,7 +848,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                 year: data.year,
                 month: data.month,
             });
-            alert(res.data.message || '\u0130\u015flem ba\u015far\u0131l\u0131.');
+            alert(res.data.message || 'İşlem başarılı.');
             onSaveSuccess();
             onClose();
         } catch (e) {
@@ -871,18 +871,18 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                {/* Header \u2014 \u00c7al\u0131\u015fan + D\u00f6nem bilgisi */}
+                {/* Header — Çalışan + Dönem bilgisi */}
                 <div className="px-6 py-5 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
                     <div className="flex justify-between items-start">
                         <div>
-                            <div className="text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Bakiye \u0130\u015flemi</div>
+                            <div className="text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Bakiye İşlemi</div>
                             <h3 className="text-xl font-bold">{empName}</h3>
                             <div className="flex items-center gap-3 mt-1.5">
                                 {empDept && <span className="text-xs bg-white/10 px-2 py-0.5 rounded">{empDept}</span>}
                                 <span className="text-sm font-semibold text-blue-300">{periodLabel}</span>
                             </div>
                         </div>
-                        <button onClick={onClose} className="text-white/50 hover:text-white text-2xl font-bold leading-none mt-1">{'\u00d7'}</button>
+                        <button onClick={onClose} className="text-white/50 hover:text-white text-2xl font-bold leading-none mt-1">{'×'}</button>
                     </div>
                 </div>
 
@@ -907,18 +907,18 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                         <div className="flex items-start gap-3">
                             <input type="radio" name="smode" checked={mode === 'settle'} readOnly className="mt-1 w-4 h-4 text-blue-600" />
                             <div>
-                                <div className="font-bold text-slate-900">Mutabakat (S\u0131f\u0131rla)</div>
+                                <div className="font-bold text-slate-900">Mutabakat (Sıfırla)</div>
                                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Bakiyeyi s\u0131f\u0131rlar ve bir sonraki aya devretmesini engeller.
-                                    {isSurplus && ' Art\u0131 bakiye i\u00e7in \u00f6deme yap\u0131ld\u0131\u011f\u0131n\u0131,'}
-                                    {isDeficit && ' Eksi bakiye i\u00e7in maa\u015ftan d\u00fc\u015f\u00fcld\u00fc\u011f\u00fcn\u00fc,'}
-                                    {' '}muhasebe elle takip eder. Mesai kay\u0131tlar\u0131 de\u011fi\u015fmez.
+                                    Bakiyeyi sıfırlar ve bir sonraki aya devretmesini engeller.
+                                    {isSurplus && ' Artı bakiye için ödeme yapıldığını,'}
+                                    {isDeficit && ' Eksi bakiye için maaştan düşüldüğünü,'}
+                                    {' '}muhasebe elle takip eder. Mesai kayıtları değişmez.
                                 </p>
                             </div>
                         </div>
                     </label>
 
-                    {/* Option 2: Ger\u00e7ek S\u0131f\u0131rla */}
+                    {/* Option 2: Gerçek Sıfırla */}
                     <label
                         className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${mode === 'real_reset' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300'}`}
                         onClick={() => setMode('real_reset')}
@@ -926,10 +926,10 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                         <div className="flex items-start gap-3">
                             <input type="radio" name="smode" checked={mode === 'real_reset'} readOnly className="mt-1 w-4 h-4 text-red-600" />
                             <div>
-                                <div className="font-bold text-slate-900">Ger\u00e7ek S\u0131f\u0131rla</div>
+                                <div className="font-bold text-slate-900">Gerçek Sıfırla</div>
                                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Eksik saatleri mesai kayd\u0131 olarak doldurur. \u00c7al\u0131\u015fan o saatleri \u00e7al\u0131\u015fm\u0131\u015f gibi
-                                    g\u00f6r\u00fcn\u00fcr ve normal mesai tam olur. <strong className="text-red-600">Bu i\u015flem geri al\u0131namaz.</strong>
+                                    Eksik saatleri mesai kaydı olarak doldurur. Çalışan o saatleri çalışmış gibi
+                                    görünür ve normal mesai tam olur. <strong className="text-red-600">Bu işlem geri alınamaz.</strong>
                                 </p>
                             </div>
                         </div>
@@ -938,7 +938,7 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                     {/* Confirm input for real reset */}
                     {mode === 'real_reset' && (
                         <div className="ml-7 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-xs text-red-700 mb-2 font-semibold">Onaylamak i\u00e7in "ONAYLA" yaz\u0131n:</p>
+                            <p className="text-xs text-red-700 mb-2 font-semibold">Onaylamak için "ONAYLA" yazın:</p>
                             <input
                                 type="text"
                                 value={confirmText}
@@ -953,14 +953,14 @@ function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
                 {/* Actions */}
                 <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2.5 text-sm text-slate-600 font-semibold hover:bg-slate-200 rounded-lg">
-                        \u0130ptal
+                        İptal
                     </button>
                     <button
                         onClick={handleAction}
                         disabled={loading || (mode === 'real_reset' && confirmText !== 'ONAYLA')}
                         className={`px-6 py-2.5 text-sm text-white font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'real_reset' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        {loading ? '\u0130\u015fleniyor...' : mode === 'real_reset' ? 'Ger\u00e7ek S\u0131f\u0131rla' : 'Mutabakat Yap'}
+                        {loading ? 'İşleniyor...' : mode === 'real_reset' ? 'Gerçek Sıfırla' : 'Mutabakat Yap'}
                     </button>
                 </div>
             </div>
