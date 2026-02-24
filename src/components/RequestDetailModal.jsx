@@ -79,10 +79,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
     try {
       const endpoint = requestType === 'LEAVE'
-        ? `/api/leave/requests/${request.id}/override_decision/`
+        ? `/leave/requests/${request.id}/override_decision/`
         : requestType === 'OVERTIME'
-          ? `/api/overtime-requests/${request.id}/override_decision/`
-          : `/api/cardless-entry-requests/${request.id}/override_decision/`;
+          ? `/overtime-requests/${request.id}/override_decision/`
+          : `/cardless-entry-requests/${request.id}/override_decision/`;
 
       await api.post(endpoint, {
         action: overrideAction,
@@ -102,7 +102,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
   const handleManagerCancel = async () => {
     if (!cancelReason.trim()) {
-      setError('Iptal gerekcesi zorunludur');
+      setError('İptal gerekçesi zorunludur');
       return;
     }
     setCancelLoading(true);
@@ -116,7 +116,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       if (onUpdate) onUpdate();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Iptal islemi basarisiz oldu');
+      setError(err.response?.data?.error || 'İptal işlemi başarısız oldu');
     } finally {
       setCancelLoading(false);
     }
