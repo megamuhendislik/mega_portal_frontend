@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertCircle, Clock, Briefcase, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine } from 'lucide-react';
 
 // ============================================================
 // LeaveRequestForm
@@ -297,159 +297,365 @@ export const LeaveRequestForm = ({
 };
 
 // ============================================================
-// OvertimeRequestForm
+// OvertimeRequestForm (Yeni: 3 yollu mesai talep sistemi)
 // Props:
-//   overtimeForm, setOvertimeForm, unclaimedOvertime, approverDropdown
+//   overtimeForm, setOvertimeForm, claimableData, claimableLoading,
+//   onClaimIntended, onClaimPotential, claimingId,
+//   manualOpen, setManualOpen, approverDropdown
 // ============================================================
 export const OvertimeRequestForm = ({
     overtimeForm,
     setOvertimeForm,
-    unclaimedOvertime,
+    claimableData,
+    claimableLoading,
+    onClaimIntended,
+    onClaimPotential,
+    claimingId,
+    manualOpen,
+    setManualOpen,
     approverDropdown,
-}) => (
-    <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
-        {/* Overtime Selection (Radio Buttons) */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
-            <label className="block text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <Clock size={16} className="text-amber-500" />
-                Mesai Seçimi
-            </label>
-            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                {/* Manual Entry Option */}
-                <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${!overtimeForm.potentialId ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'bg-transparent border-slate-200 hover:bg-white hover:border-slate-300'}`}>
-                    <div className="pt-0.5">
-                        <input
-                            type="radio"
-                            name="overtime_selection"
-                            value=""
-                            checked={!overtimeForm.potentialId}
-                            onChange={() => {
-                                setOvertimeForm(prev => ({
-                                    ...prev,
-                                    potentialId: null,
-                                    date: new Date().toISOString().split('T')[0],
-                                    start_time: '',
-                                    end_time: '',
-                                    reason: ''
-                                }));
-                            }}
-                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                        />
-                    </div>
-                    <div>
-                        <span className="block text-sm font-bold text-slate-700">Manuel Giriş</span>
-                        <span className="block text-xs text-slate-500 mt-0.5">Kendi belirlediğiniz tarih ve saat için talep oluşturun.</span>
-                    </div>
-                </label>
+}) => {
+    const [claimConfirm, setClaimConfirm] = useState(null); // { type: 'INTENDED'|'POTENTIAL', id, ... }
+    const [claimReason, setClaimReason] = useState('');
 
-                {/* Unclaimed Options */}
-                {unclaimedOvertime.map(u => {
-                    const isSelected = overtimeForm.potentialId === u.id;
-                    return (
-                        <label key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-amber-50 border-amber-500 shadow-sm ring-1 ring-amber-500/20' : 'bg-white border-slate-200 hover:border-amber-300'}`}>
-                            <div className="pt-0.5">
+    const intended = claimableData?.intended || [];
+    const potential = claimableData?.potential || [];
+    const hasClaimable = intended.length > 0 || potential.length > 0;
+
+    const formatDate = (dateStr) => {
+        return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' });
+    };
+
+    const formatDuration = (seconds) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.round((seconds % 3600) / 60);
+        if (hours > 0 && minutes > 0) return `${hours} sa ${minutes} dk`;
+        if (hours > 0) return `${hours} saat`;
+        return `${minutes} dk`;
+    };
+
+    const handleClaimClick = (type, item) => {
+        setClaimConfirm({ type, ...item });
+        setClaimReason('');
+    };
+
+    const handleConfirmClaim = () => {
+        if (!claimConfirm) return;
+        if (claimConfirm.type === 'INTENDED') {
+            onClaimIntended(claimConfirm.assignment_id, claimReason);
+        } else {
+            onClaimPotential(claimConfirm.attendance_id, claimReason);
+        }
+        setClaimConfirm(null);
+        setClaimReason('');
+    };
+
+    return (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            {/* ===== SECTION 1: Claimable Overtime (INTENDED + POTENTIAL) ===== */}
+            <div>
+                <div className="flex items-center gap-2 mb-3">
+                    <Zap size={18} className="text-amber-500" />
+                    <h3 className="text-sm font-bold text-slate-800">Talep Edilebilir Ek Mesailer</h3>
+                </div>
+
+                {claimableLoading && (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500 animate-pulse flex items-center gap-2">
+                        <Clock size={16} className="animate-spin" />
+                        Mesai bilgileri yükleniyor...
+                    </div>
+                )}
+
+                {!claimableLoading && !hasClaimable && (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500 flex items-center gap-2">
+                        <CalendarDays size={16} />
+                        Talep edilebilir ek mesai bulunamadı. Manuel giriş yapabilirsiniz.
+                    </div>
+                )}
+
+                {!claimableLoading && hasClaimable && (
+                    <div className="space-y-2 max-h-[340px] overflow-y-auto custom-scrollbar pr-1">
+                        {/* INTENDED items (green) */}
+                        {intended.map(item => (
+                            <div
+                                key={`intended-${item.assignment_id}`}
+                                className="p-4 bg-white border border-emerald-200 rounded-xl hover:border-emerald-400 transition-all"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                                Planlı
+                                            </span>
+                                            <span className="text-sm font-bold text-slate-700">
+                                                {formatDate(item.date)}
+                                            </span>
+                                            {item.is_today && (
+                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">Bugün</span>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1 text-xs text-slate-600">
+                                            <div className="flex items-center gap-1.5">
+                                                <User size={12} className="text-slate-400" />
+                                                <span>Yönetici: <strong>{item.manager_name}</strong></span>
+                                                <span className="text-slate-300">|</span>
+                                                <span>Maks: <strong>{item.max_duration_hours} saat</strong></span>
+                                            </div>
+                                            {item.task_description && (
+                                                <div className="flex items-start gap-1.5">
+                                                    <Briefcase size={12} className="text-slate-400 mt-0.5 shrink-0" />
+                                                    <span>Görev: {item.task_description}</span>
+                                                </div>
+                                            )}
+                                            {item.actual_overtime_seconds > 0 ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <Clock size={12} className="text-emerald-500" />
+                                                    <span>Gerçekleşen: <strong className="text-emerald-700">{formatDuration(item.actual_overtime_seconds)}</strong></span>
+                                                    {item.shift_end_time && item.check_out_time && (
+                                                        <span className="text-slate-400">({item.shift_end_time} - {item.check_out_time})</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5 text-slate-400">
+                                                    <Clock size={12} />
+                                                    <span>Henüz gerçekleşen mesai yok</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleClaimClick('INTENDED', item)}
+                                        disabled={item.actual_overtime_seconds <= 0 || claimingId === item.assignment_id}
+                                        className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                            item.actual_overtime_seconds <= 0
+                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                : claimingId === item.assignment_id
+                                                    ? 'bg-emerald-100 text-emerald-600 cursor-wait'
+                                                    : 'bg-emerald-500 text-white hover:bg-emerald-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-emerald-500/20'
+                                        }`}
+                                    >
+                                        {claimingId === item.assignment_id ? (
+                                            <>
+                                                <Clock size={13} className="animate-spin" />
+                                                Gönderiliyor...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check size={13} />
+                                                Talep Et
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* POTENTIAL items (amber) */}
+                        {potential.map(item => (
+                            <div
+                                key={`potential-${item.attendance_id}`}
+                                className="p-4 bg-white border border-amber-200 rounded-xl hover:border-amber-400 transition-all"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                                Planlanmamış
+                                            </span>
+                                            <span className="text-sm font-bold text-slate-700">
+                                                {formatDate(item.date)}
+                                            </span>
+                                            {item.is_today && (
+                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">Bugün</span>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1 text-xs text-slate-600">
+                                            <div className="flex items-center gap-1.5">
+                                                <Clock size={12} className="text-amber-500" />
+                                                <span>Gerçekleşen: <strong className="text-amber-700">{formatDuration(item.actual_overtime_seconds)}</strong></span>
+                                                {item.shift_end_time && item.check_out_time && (
+                                                    <span className="text-slate-400">({item.shift_end_time} - {item.check_out_time})</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleClaimClick('POTENTIAL', item)}
+                                        disabled={claimingId === item.attendance_id}
+                                        className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                            claimingId === item.attendance_id
+                                                ? 'bg-amber-100 text-amber-600 cursor-wait'
+                                                : 'bg-amber-500 text-white hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-amber-500/20'
+                                        }`}
+                                    >
+                                        {claimingId === item.attendance_id ? (
+                                            <>
+                                                <Clock size={13} className="animate-spin" />
+                                                Gönderiliyor...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check size={13} />
+                                                Talep Et
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* ===== Claim Confirmation Dialog ===== */}
+            {claimConfirm && (
+                <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-xl animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-start gap-2 mb-3">
+                        <AlertCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-800">Talep Onayı</h4>
+                            <p className="text-xs text-blue-700 mt-1">
+                                <strong>{formatDate(claimConfirm.date)}</strong> tarihli ek mesaiyi talep etmek istediğinize emin misiniz?
+                                Bu gün için tekrar talep oluşturamazsınız.
+                            </p>
+                        </div>
+                    </div>
+                    <textarea
+                        rows="2"
+                        value={claimReason}
+                        onChange={e => setClaimReason(e.target.value)}
+                        className="w-full p-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none font-medium text-slate-700 text-sm mb-3"
+                        placeholder="Açıklama (isteğe bağlı)..."
+                    />
+                    <div className="flex items-center gap-2 justify-end">
+                        <button
+                            type="button"
+                            onClick={() => { setClaimConfirm(null); setClaimReason(''); }}
+                            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
+                        >
+                            Vazgeç
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleConfirmClaim}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5"
+                        >
+                            <Check size={14} />
+                            Onayla ve Talep Et
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== Divider ===== */}
+            <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center">
+                    <span className="bg-white px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">veya</span>
+                </div>
+            </div>
+
+            {/* ===== SECTION 2: Manual Entry (Collapsible) ===== */}
+            <div className={`border-2 rounded-xl transition-all ${manualOpen ? 'border-red-300 bg-red-50/30' : 'border-slate-200 hover:border-red-200'}`}>
+                <button
+                    type="button"
+                    onClick={() => setManualOpen(!manualOpen)}
+                    className="w-full p-4 flex items-center justify-between text-left"
+                >
+                    <div className="flex items-center gap-2.5">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${manualOpen ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
+                            <PenLine size={18} />
+                        </div>
+                        <div>
+                            <span className="block text-sm font-bold text-slate-800">Manuel Giriş</span>
+                            <span className="block text-xs text-slate-500">Kart kaydı olmadan saat girişi yapın</span>
+                        </div>
+                    </div>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${manualOpen ? 'bg-red-100 text-red-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}>
+                        <ChevronDown size={16} />
+                    </div>
+                </button>
+
+                {manualOpen && (
+                    <div className="px-4 pb-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                        {/* Warning */}
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+                            <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                            <p className="text-xs text-red-700">
+                                Manuel giriş sadece kart kaydı olmayan durumlar için kullanılmalıdır. Vardiya saatleriyle çakışan girişler reddedilecektir.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
+                            <input
+                                required={manualOpen}
+                                type="date"
+                                value={overtimeForm.date}
+                                onChange={e => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
+                                className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition-all font-medium text-slate-700"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç <span className="text-red-500">*</span></label>
                                 <input
-                                    type="radio"
-                                    name="overtime_selection"
-                                    value={u.id}
-                                    checked={isSelected}
-                                    onChange={() => {
-                                        // u is now OvertimeRequest object
-                                        setOvertimeForm({
-                                            potentialId: u.id,
-                                            date: u.date, // field is 'date' in OvertimeRequest
-                                            start_time: u.start_time ? u.start_time.substring(0, 5) : '',
-                                            end_time: u.end_time ? u.end_time.substring(0, 5) : '',
-                                            reason: u.reason || '',
-                                            send_to_substitute: false
-                                        });
-                                    }}
-                                    className="w-4 h-4 text-amber-600 border-slate-300 focus:ring-amber-500"
+                                    required={manualOpen}
+                                    type="time"
+                                    value={overtimeForm.start_time}
+                                    onChange={e => setOvertimeForm({ ...overtimeForm, start_time: e.target.value })}
+                                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition-all font-medium text-slate-700"
                                 />
                             </div>
-                            <div className="flex-1">
-                                <div className="flex justify-between items-center mb-0.5">
-                                    <span className="text-sm font-bold text-slate-700">
-                                        {new Date(u.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                    </span>
-                                    <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                                        {Math.round(u.duration_seconds / 60)} dk
-                                    </span>
-                                </div>
-                                <div className="text-xs text-slate-500 flex items-center gap-1.5">
-                                    <Clock size={12} />
-                                    {u.start_time?.substring(0, 5)} - {u.end_time?.substring(0, 5)}
-                                </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş <span className="text-red-500">*</span></label>
+                                <input
+                                    required={manualOpen}
+                                    type="time"
+                                    value={overtimeForm.end_time}
+                                    onChange={e => setOvertimeForm({ ...overtimeForm, end_time: e.target.value })}
+                                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition-all font-medium text-slate-700"
+                                />
                             </div>
-                        </label>
-                    );
-                })}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama (zorunlu) <span className="text-red-500">*</span></label>
+                            <textarea
+                                required={manualOpen}
+                                rows="3"
+                                value={overtimeForm.reason}
+                                onChange={e => setOvertimeForm({ ...overtimeForm, reason: e.target.value })}
+                                className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition-all resize-none font-medium text-slate-700"
+                                placeholder="Manuel ek mesai gerekçenizi ayrıntılı belirtiniz..."
+                            />
+                        </div>
+
+                        {approverDropdown}
+
+                        <div className="flex items-center gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-100 transition-all hover:bg-amber-50">
+                            <input
+                                type="checkbox"
+                                id="send_to_sub_ot"
+                                checked={overtimeForm.send_to_substitute}
+                                onChange={e => setOvertimeForm({ ...overtimeForm, send_to_substitute: e.target.checked })}
+                                className="w-5 h-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                            />
+                            <label htmlFor="send_to_sub_ot" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                                Vekil yöneticiye de gönder
+                            </label>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
-
-        <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-            <input
-                required
-                type="date"
-                value={overtimeForm.date}
-                onChange={e => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
-                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all font-medium text-slate-700"
-            />
-        </div>
-
-        <div className="grid grid-cols-2 gap-5">
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="time"
-                    value={overtimeForm.start_time}
-                    onChange={e => setOvertimeForm({ ...overtimeForm, start_time: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all font-medium text-slate-700"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="time"
-                    value={overtimeForm.end_time}
-                    onChange={e => setOvertimeForm({ ...overtimeForm, end_time: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all font-medium text-slate-700"
-                />
-            </div>
-        </div>
-
-        <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
-            <textarea
-                required
-                rows="3"
-                value={overtimeForm.reason}
-                onChange={e => setOvertimeForm({ ...overtimeForm, reason: e.target.value })}
-                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all resize-none font-medium text-slate-700"
-                placeholder="Fazla mesai gerekçenizi belirtiniz..."
-            ></textarea>
-        </div>
-
-
-        {approverDropdown}
-
-        <div className="flex items-center gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-100 transition-all hover:bg-amber-50">
-            <input
-                type="checkbox"
-                id="send_to_sub_ot"
-                checked={overtimeForm.send_to_substitute}
-                onChange={e => setOvertimeForm({ ...overtimeForm, send_to_substitute: e.target.checked })}
-                className="w-5 h-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
-            />
-            <label htmlFor="send_to_sub_ot" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
-                Vekil yöneticiye de gönder
-            </label>
-        </div>
-    </div >
-);
+    );
+};
 
 // ============================================================
 // MealRequestForm

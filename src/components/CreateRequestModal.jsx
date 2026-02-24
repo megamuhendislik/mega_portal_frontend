@@ -22,7 +22,6 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         if (isOpen && initialData) {
             if (initialData.type === 'OVERTIME') {
                 handleTypeSelect('OVERTIME');
-                // Wait a tick for state update if strictly needed, but here we can set form directly
                 setOvertimeForm(prev => ({
                     ...prev,
                     date: initialData.data.date,
@@ -31,13 +30,21 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     reason: initialData.data.reason || '',
                     attendance: initialData.data.attendance || null
                 }));
+                setOvertimeManualOpen(true);
             }
         }
     }, [isOpen, initialData]);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [unclaimedOvertime, setUnclaimedOvertime] = useState([]);
+
+    // Claimable overtime data (INTENDED + POTENTIAL)
+    const [claimableData, setClaimableData] = useState(null);
+    const [claimableLoading, setClaimableLoading] = useState(false);
+    const [claimingId, setClaimingId] = useState(null);
+
+    // Track manual section open state for footer visibility
+    const [overtimeManualOpen, setOvertimeManualOpen] = useState(false);
 
     // Form States
     const [leaveForm, setLeaveForm] = useState({
@@ -51,11 +58,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
-        potentialId: null, // Was 'attendance'
         date: new Date().toISOString().split('T')[0],
         start_time: '',
         end_time: '',
-
         reason: '',
         send_to_substitute: false
     });
@@ -144,7 +149,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setStep(1);
             setSelectedType(null);
             setError(null);
-            setUnclaimedOvertime([]);
+            setClaimableData(null);
+            setClaimingId(null);
+            setOvertimeManualOpen(false);
             setAvailableApprovers([]);
             setSelectedApproverId(null);
             setEntitlementInfo(null);
@@ -154,11 +161,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setApproverSubstitutes([]);
             // Reset forms
             setOvertimeForm({
-                attendance: null,
                 date: new Date().toISOString().split('T')[0],
                 start_time: '',
                 end_time: '',
-
                 reason: '',
                 send_to_substitute: false
             });
@@ -208,9 +213,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             .catch(() => setApproverSubstitutes([]));
     }, [selectedApproverId]);
 
+    // Fetch claimable overtime when OVERTIME is selected
     useEffect(() => {
         if (selectedType === 'OVERTIME') {
-            fetchUnclaimedOvertime();
+            fetchClaimableOvertime();
         }
     }, [selectedType]);
 
@@ -327,12 +333,60 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return () => clearTimeout(timer);
     }, [selectedType, leaveForm.request_type, workingDaysInfo, requestTypes]);
 
-    const fetchUnclaimedOvertime = async () => {
+    const fetchClaimableOvertime = async () => {
+        setClaimableLoading(true);
         try {
-            const res = await api.get('/attendance/overtime_requests/unclaimed/'); // Note: ensure URL matches backend ViewSet path
-            setUnclaimedOvertime(res.data);
+            const res = await api.get('/overtime-assignments/claimable/');
+            setClaimableData(res.data);
         } catch (error) {
-            console.error('Error fetching unclaimed overtime:', error);
+            console.error('Error fetching claimable overtime:', error);
+            setClaimableData({ intended: [], potential: [] });
+        } finally {
+            setClaimableLoading(false);
+        }
+    };
+
+    // Handler: Claim INTENDED overtime (assignment)
+    const handleClaimIntended = async (assignmentId, reason) => {
+        setClaimingId(assignmentId);
+        setError(null);
+        try {
+            await api.post(`/overtime-assignments/${assignmentId}/claim/`, { reason });
+            // Remove the claimed item from the list
+            setClaimableData(prev => ({
+                ...prev,
+                intended: (prev?.intended || []).filter(i => i.assignment_id !== assignmentId),
+            }));
+            onSuccess(null); // Trigger parent refresh (no specific approver name)
+        } catch (err) {
+            console.error('Error claiming intended overtime:', err);
+            const data = err.response?.data;
+            const errorMsg = data?.detail || data?.error || 'Talep oluşturulurken bir hata oluştu.';
+            setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+        } finally {
+            setClaimingId(null);
+        }
+    };
+
+    // Handler: Claim POTENTIAL overtime (from attendance)
+    const handleClaimPotential = async (attendanceId, reason) => {
+        setClaimingId(attendanceId);
+        setError(null);
+        try {
+            await api.post('/overtime-requests/create_from_attendance/', { attendance_id: attendanceId, reason });
+            // Remove the claimed item from the list
+            setClaimableData(prev => ({
+                ...prev,
+                potential: (prev?.potential || []).filter(p => p.attendance_id !== attendanceId),
+            }));
+            onSuccess(null); // Trigger parent refresh
+        } catch (err) {
+            console.error('Error claiming potential overtime:', err);
+            const data = err.response?.data;
+            const errorMsg = data?.detail || data?.error || 'Talep oluşturulurken bir hata oluştu.';
+            setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+        } finally {
+            setClaimingId(null);
         }
     };
 
@@ -357,27 +411,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             if (selectedType === 'LEAVE') {
                 response = await api.post('/leave/requests/', { ...leaveForm, ...approverPayload });
             } else if (selectedType === 'OVERTIME') {
-                if (overtimeForm.potentialId) {
-                    // Mevcut POTENTIAL talebi PENDING'e dönüştür (submit endpoint)
-                    response = await api.post(`/overtime-requests/${overtimeForm.potentialId}/submit/`, {
-                        start_time: overtimeForm.start_time,
-                        end_time: overtimeForm.end_time,
-                        reason: overtimeForm.reason,
-                        send_to_substitute: overtimeForm.send_to_substitute,
-                        ...approverPayload
-                    });
-                } else {
-                    // Manuel yeni talep oluştur (PENDING olarak)
-                    response = await api.post('/overtime-requests/', {
-                        date: overtimeForm.date,
-                        start_time: overtimeForm.start_time,
-                        end_time: overtimeForm.end_time,
-                        reason: overtimeForm.reason,
-                        is_manual: true,
-                        send_to_substitute: overtimeForm.send_to_substitute,
-                        ...approverPayload
-                    });
-                }
+                // Only manual entry uses the form submit
+                response = await api.post('/overtime-requests/manual-entry/', {
+                    date: overtimeForm.date,
+                    start_time: overtimeForm.start_time,
+                    end_time: overtimeForm.end_time,
+                    reason: overtimeForm.reason,
+                    ...approverPayload
+                });
             } else if (selectedType === 'MEAL') {
                 response = await api.post('/meal-requests/', mealForm);
             } else if (selectedType === 'EXTERNAL_DUTY') {
@@ -502,7 +543,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                         <Users size={16} className="text-blue-600" />
-                        <span className="text-sm font-bold text-blue-700">Onaya Gidecek Kisi</span>
+                        <span className="text-sm font-bold text-blue-700">Onaya Gidecek Kişi</span>
                     </div>
                     <div className="ml-6">
                         <div className="text-sm font-bold text-slate-800">{approver.name}</div>
@@ -533,7 +574,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-1.5">
                     <Users size={14} className="text-blue-500" />
-                    Onay Yoneticisi Secin <span className="text-red-500">*</span>
+                    Onay Yöneticisi Seçin <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-2">
                     {availableApprovers.map(a => (
@@ -679,6 +720,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     })();
 
+    // For overtime: only show footer submit when manual section is open
+    const showOvertimeSubmit = selectedType === 'OVERTIME' && overtimeManualOpen;
+
     // Shared approver dropdown element (passed as prop to form components)
     const approverDropdownElement = renderApproverDropdown();
 
@@ -705,7 +749,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                                 selectedType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' : 'Şirket Dışı Görev'}
                             </h2>
                             <p className="text-slate-500 text-xs mt-0.5 font-medium">
-                                {step === 1 ? 'Talep türünü seçiniz' : 'Bilgileri doldurunuz'}
+                                {step === 1 ? 'Talep türünü seçiniz' :
+                                    selectedType === 'OVERTIME' ? 'Mevcut mesaileri talep edin veya manuel giriş yapın' :
+                                        'Bilgileri doldurunuz'}
                             </p>
                         </div>
                     </div>
@@ -749,7 +795,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 <OvertimeRequestForm
                                     overtimeForm={overtimeForm}
                                     setOvertimeForm={setOvertimeForm}
-                                    unclaimedOvertime={unclaimedOvertime}
+                                    claimableData={claimableData}
+                                    claimableLoading={claimableLoading}
+                                    onClaimIntended={handleClaimIntended}
+                                    onClaimPotential={handleClaimPotential}
+                                    claimingId={claimingId}
+                                    manualOpen={overtimeManualOpen}
+                                    setManualOpen={setOvertimeManualOpen}
                                     approverDropdown={approverDropdownElement}
                                 />
                             )}
@@ -783,8 +835,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     )}
                 </div>
 
-                {/* Footer */}
-                {step === 2 && (
+                {/* Footer - Show for all types except OVERTIME without manual open */}
+                {step === 2 && (selectedType !== 'OVERTIME' || showOvertimeSubmit) && (
                     <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
                         <button
                             type="button"
@@ -799,7 +851,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL')}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
-                                    selectedType === 'OVERTIME' ? 'bg-amber-500 hover:bg-amber-600' :
+                                    selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
                                         selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
                                             selectedType === 'CARDLESS_ENTRY' ? 'bg-purple-600 hover:bg-purple-700' :
                                                 'bg-emerald-600 hover:bg-emerald-700'}
@@ -809,9 +861,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             {loading ? 'Gönderiliyor...' : (
                                 <>
                                     <Check size={18} />
-                                    Talep Oluştur
+                                    {selectedType === 'OVERTIME' ? 'Manuel Talep Gönder' : 'Talep Oluştur'}
                                 </>
                             )}
+                        </button>
+                    </div>
+                )}
+
+                {/* Footer for OVERTIME when manual is NOT open - just close button */}
+                {step === 2 && selectedType === 'OVERTIME' && !showOvertimeSubmit && (
+                    <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-all text-sm"
+                        >
+                            Kapat
                         </button>
                     </div>
                 )}

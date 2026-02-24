@@ -6,15 +6,15 @@ import api from '../services/api';
 const DAY_NAMES_SHORT = ['Pt', 'Sa', 'Ca', 'Pe', 'Cu', 'Ct', 'Pa'];
 
 const PIE_COLORS = {
-    intended: '#8b5cf6',   // violet-500
-    manual: '#f59e0b',     // amber-500
-    potential: '#6366f1',  // indigo-500
+    intended: '#10b981',   // emerald-500 (Planlı)
+    manual: '#ef4444',     // red-500 (Manuel Giriş)
+    potential: '#f59e0b',  // amber-500 (Planlanmamış)
 };
 
 const PIE_LABELS = {
-    intended: 'Atanan',
-    manual: 'Manuel',
-    potential: 'Potansiyel',
+    intended: 'Planlı',
+    manual: 'Manuel Giriş',
+    potential: 'Planlanmamış',
 };
 
 const BAR_COLORS = {

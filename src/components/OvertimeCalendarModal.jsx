@@ -54,6 +54,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [selectedDays, setSelectedDays] = useState([]); // [{date: Date, hours: number}]
     const [notes, setNotes] = useState('');
+    const [taskDescription, setTaskDescription] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -83,6 +84,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
             fetchCalendarData();
             setSelectedDays([]);
             setNotes('');
+            setTaskDescription('');
             setSuccess(false);
             setError('');
         }
@@ -167,9 +169,11 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                     date: formatDateKey(d.date),
                     max_duration_hours: d.hours
                 })),
-                notes: notes || undefined
+                notes: notes || undefined,
+                task_description: taskDescription || undefined
             });
             setSuccess(true);
+            setTaskDescription('');
             setTimeout(() => {
                 if (onSuccess) onSuccess();
             }, 1200);
@@ -369,6 +373,28 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                                         />
                                     </div>
                                 </div>
+
+                                {/* Task Description */}
+                                <div className="mt-3">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        Görev Açıklaması <span className="normal-case text-slate-400 font-normal">(opsiyonel)</span>
+                                    </label>
+                                    <textarea
+                                        value={taskDescription}
+                                        onChange={(e) => {
+                                            if (e.target.value.length <= 500) {
+                                                setTaskDescription(e.target.value);
+                                            }
+                                        }}
+                                        placeholder="Görev açıklaması (opsiyonel)..."
+                                        rows={3}
+                                        maxLength={500}
+                                        className="w-full px-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-200 focus:border-violet-400 outline-none resize-y placeholder:text-slate-300"
+                                    />
+                                    <div className="text-right text-[10px] text-slate-400 mt-0.5 tabular-nums">
+                                        {taskDescription.length}/500
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Error */}
@@ -494,7 +520,7 @@ const MiniMonth = ({
                             disabled={past}
                             title={
                                 past ? 'Geçmiş tarih'
-                                : assigned ? `Atanmış (${assignmentMap[formatDateKey(date)]?.max_duration_hours || '?'}h)`
+                                : assigned ? `Atanmış (${assignmentMap[formatDateKey(date)]?.max_duration_hours || '?'}h)${assignmentMap[formatDateKey(date)]?.task_description ? ' — ' + assignmentMap[formatDateKey(date)].task_description : ''}`
                                 : `${date.getDate()} ${MONTHS_TR_DISPLAY[date.getMonth()]}`
                             }
                         >

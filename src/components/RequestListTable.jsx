@@ -257,6 +257,21 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                                 {calculateDuration(req.start_time, req.end_time)}
                                                             </span>
                                                         )}
+                                                        {req.source_type === 'INTENDED' && (
+                                                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded">
+                                                                Planlı
+                                                            </span>
+                                                        )}
+                                                        {req.source_type === 'POTENTIAL' && (
+                                                            <span className="px-2 py-0.5 bg-yellow-50 text-yellow-700 text-[10px] font-bold rounded">
+                                                                Planlanmamış
+                                                            </span>
+                                                        )}
+                                                        {req.source_type === 'MANUAL' && (
+                                                            <span className="px-2 py-0.5 bg-red-50 text-red-700 text-[10px] font-bold rounded">
+                                                                Manuel Giriş
+                                                            </span>
+                                                        )}
                                                     </>
                                                 )}
                                                 {req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time && (
