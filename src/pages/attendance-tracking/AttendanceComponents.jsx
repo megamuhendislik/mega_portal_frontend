@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Clock, Activity, Plus, Loader2, CheckCircle,
+    Clock, Activity, Loader2, CheckCircle, AlertCircle,
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon
 } from 'lucide-react';
@@ -177,83 +177,109 @@ export const EmployeeAttendanceRow = ({
                     return <span className="text-slate-300 text-xs">{'\u2014'}</span>;
                 })()}
             </td>
-            {/* Actions */}
-            <td className="py-3 px-3 text-center">
-                <div className="flex items-center justify-center gap-1">
+            {/* İşlemler */}
+            <td className="py-3 px-3">
+                <div className="flex items-center justify-end gap-1.5">
                     <button
-                        className={`p-1.5 rounded-md transition-colors ${showOtForm ? 'bg-amber-100 text-amber-600' : 'text-slate-300 hover:text-amber-600 hover:bg-amber-50'}`}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-colors whitespace-nowrap ${showOtForm ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100'}`}
                         onClick={() => setShowOtForm(!showOtForm)}
-                        title="Fazla Mesai Talebi Oluştur"
                     >
-                        <Plus size={14} />
+                        <Clock size={11} />
+                        Ek Mesai İsteği
                     </button>
-                    <button className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-colors" onClick={() => onDetailClick(s)}>
+                    <button
+                        className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                        onClick={() => onDetailClick(s)}
+                        title="Detay"
+                    >
                         <Activity size={14} />
                     </button>
                 </div>
             </td>
         </tr>
-        {/* Inline Overtime Request Form */}
+        {/* Ek Mesai İsteği — Inline Form */}
         {showOtForm && (
-            <tr className="border-b border-amber-100 bg-amber-50/30">
-                <td colSpan={9} className="px-6 py-3">
+            <tr className="bg-gradient-to-r from-amber-50/60 to-orange-50/40 border-b border-amber-200/60">
+                <td colSpan={9} className="px-6 py-4">
                     {otSuccess ? (
-                        <div className="flex items-center gap-2 text-emerald-600 font-semibold py-2 justify-center">
-                            <CheckCircle size={18} />
-                            Talep başarıyla oluşturuldu!
+                        <div className="flex items-center gap-2.5 text-emerald-600 font-bold py-3 justify-center text-sm">
+                            <CheckCircle size={20} />
+                            Ek mesai isteği başarıyla oluşturuldu!
                         </div>
                     ) : (
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-xs font-bold text-amber-700 flex items-center gap-1.5 shrink-0">
-                                <Clock size={14} />
-                                Fazla Mesai — {name}
-                            </span>
-                            <input
-                                type="date"
-                                value={otDate}
-                                min={moment().format('YYYY-MM-DD')}
-                                onChange={e => setOtDate(e.target.value)}
-                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white"
-                            />
-                            <div className="flex items-center gap-1">
-                                <input
-                                    type="time"
-                                    value={otStart}
-                                    onChange={e => setOtStart(e.target.value)}
-                                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white w-24"
-                                />
-                                <span className="text-slate-400 text-xs">-</span>
-                                <input
-                                    type="time"
-                                    value={otEnd}
-                                    onChange={e => setOtEnd(e.target.value)}
-                                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white w-24"
-                                />
+                        <div className="space-y-3">
+                            {/* Form Başlığı */}
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-bold text-amber-800 flex items-center gap-2">
+                                    <Clock size={15} className="text-amber-500" />
+                                    Ek Mesai İsteği Oluştur
+                                    <span className="text-xs font-medium text-amber-600/70">— {name}</span>
+                                </h4>
+                                <button
+                                    onClick={() => { setShowOtForm(false); setOtError(''); }}
+                                    className="p-1 text-slate-400 hover:text-slate-600 hover:bg-white rounded transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
                             </div>
-                            <input
-                                type="text"
-                                value={otReason}
-                                onChange={e => setOtReason(e.target.value)}
-                                placeholder="Gerekçe (opsiyonel)"
-                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white flex-1 min-w-[140px]"
-                            />
-                            <div className="flex items-center gap-1.5">
+
+                            {/* Form Alanları */}
+                            <div className="flex items-end gap-3 flex-wrap">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tarih</label>
+                                    <input
+                                        type="date"
+                                        value={otDate}
+                                        min={moment().format('YYYY-MM-DD')}
+                                        onChange={e => setOtDate(e.target.value)}
+                                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white shadow-sm"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Başlangıç</label>
+                                    <input
+                                        type="time"
+                                        value={otStart}
+                                        onChange={e => setOtStart(e.target.value)}
+                                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white shadow-sm w-28"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bitiş</label>
+                                    <input
+                                        type="time"
+                                        value={otEnd}
+                                        onChange={e => setOtEnd(e.target.value)}
+                                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white shadow-sm w-28"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gerekçe (opsiyonel)</label>
+                                    <input
+                                        type="text"
+                                        value={otReason}
+                                        onChange={e => setOtReason(e.target.value)}
+                                        placeholder="Ek mesai gerekçesini yazın..."
+                                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none bg-white shadow-sm"
+                                    />
+                                </div>
                                 <button
                                     onClick={handleCreateOvertime}
                                     disabled={otLoading}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-xs font-bold rounded-lg transition-colors"
+                                    className="inline-flex items-center gap-2 px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-sm font-bold rounded-lg transition-colors shadow-sm"
                                 >
-                                    {otLoading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                                    {otLoading ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
                                     {otLoading ? 'Gönderiliyor...' : 'Oluştur'}
                                 </button>
-                                <button
-                                    onClick={() => { setShowOtForm(false); setOtError(''); }}
-                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-medium rounded-lg transition-colors"
-                                >
-                                    Vazgeç
-                                </button>
                             </div>
-                            {otError && <span className="text-xs text-red-600 font-medium w-full">{otError}</span>}
+
+                            {/* Hata Mesajı */}
+                            {otError && (
+                                <div className="flex items-center gap-2 text-red-600 text-xs font-medium bg-red-50 px-3 py-2 rounded-lg border border-red-100">
+                                    <AlertCircle size={14} />
+                                    {otError}
+                                </div>
+                            )}
                         </div>
                     )}
                 </td>

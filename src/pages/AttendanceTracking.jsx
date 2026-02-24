@@ -578,7 +578,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <th colSpan="3" className="p-2 text-center">
                                     <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest bg-violet-50 px-3 py-1 rounded-full border border-violet-100">Aylık Birikimli</span>
                                 </th>
-                                <th className="p-2"></th>
+                                <th className="p-2 text-right pr-6"></th>
                             </tr>
                             {/* Column headers */}
                             <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -590,7 +590,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <th className="py-3 px-3 text-center w-24">Çalışma</th>
                                 <th className="py-3 px-3 text-center w-24">F. Mesai</th>
                                 <th className="py-3 px-3 text-center w-32">Net Durum</th>
-                                <th className="py-3 px-3 w-10"></th>
+                                <th className="py-3 px-3 text-right w-44">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
