@@ -26,6 +26,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
     });
 
     const [fetchedLogs, setFetchedLogs] = useState([]);
+    const [dailyTargets, setDailyTargets] = useState({});
     const [loading, setLoading] = useState(false);
 
     // Update weekStart if logs change drastically (e.g. month change from parent)
@@ -120,6 +121,26 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
         checkAndFetch();
     }, [weekStart, employeeId]); // logs dependency removed to prevent loops, we rely on weekStart change
 
+    // Fetch daily targets from fiscal calendar (covers future days without attendance records)
+    useEffect(() => {
+        const fetchTargets = async () => {
+            if (!employeeId) return;
+            const startStr = format(weekStart, 'yyyy-MM-dd');
+            const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
+            try {
+                const res = await api.get(`/attendance/daily-targets/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}`);
+                const targetMap = {};
+                (res.data || []).forEach(item => {
+                    targetMap[item.date] = item.target_seconds;
+                });
+                setDailyTargets(prev => ({ ...prev, ...targetMap }));
+            } catch (err) {
+                console.error("Daily targets fetch failed", err);
+            }
+        };
+        fetchTargets();
+    }, [weekStart, employeeId]);
+
     // Compute Data for the selected Week from Logs
     const data = useMemo(() => {
         const start = weekStart;
@@ -142,10 +163,10 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             // "if it's not processed as absent... don't show it"
             const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
 
-            // Target: Use day_target_seconds from attendance records (fiscal calendar based)
+            // Target: Use day_target_seconds from attendance records, fallback to daily-targets API
             const dayTarget = dayLogs.length > 0
                 ? Math.max(...dayLogs.map(l => l.day_target_seconds || 0))
-                : 0;
+                : (dailyTargets[dateStr] || 0);
 
             // Calculate Missing
             const isFuture = d > new Date();
@@ -166,7 +187,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
         }
 
         return days;
-    }, [allLogs, weekStart]);
+    }, [allLogs, weekStart, dailyTargets]);
 
     return (
         <div className="h-full flex flex-col relative">
