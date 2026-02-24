@@ -914,7 +914,7 @@ const OrganizationChart = () => {
 `}
                     >
                         <MousePointer size={16} />
-                        {showDebug ? 'Debug Kapat' : 'Debug Aç'}
+                        <span className="hidden sm:inline">{showDebug ? 'Debug Kapat' : 'Debug Aç'}</span>
                     </button>
 
                     <button
@@ -928,7 +928,7 @@ const OrganizationChart = () => {
                         `}
                     >
                         <Building size={16} />
-                        {showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}
+                        <span className="hidden sm:inline">{showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}</span>
                     </button>
 
                     {hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN') && (
@@ -937,7 +937,7 @@ const OrganizationChart = () => {
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap ${isEditMode ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
                         >
                             <Edit size={16} />
-                            {isEditMode ? 'Düzenlemeyi Bitir' : 'Düzenle'}
+                            <span className="hidden sm:inline">{isEditMode ? 'Düzenlemeyi Bitir' : 'Düzenle'}</span>
                         </button>
                     )}
 
@@ -956,14 +956,14 @@ const OrganizationChart = () => {
             )}
 
             {isEditMode && canReassign && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700 flex items-center gap-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-xs sm:text-sm text-blue-700 flex items-center gap-2">
                     <span className="font-bold">Sürükle & Bırak:</span>
                     Personel kartlarını sürükleyerek yönetici veya departman ataması yapabilirsiniz.
                 </div>
             )}
 
             <div
-                className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
+                className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -1017,7 +1017,7 @@ const OrganizationChart = () => {
         transition: all 0.5s;
         display: flex;
         justify-content: center;
-        gap: 60px; /* IMPORTANT: Increased gap to prevent overlap */
+        gap: 40px; /* Reduced for mobile friendliness */
         /* Ensure the container can grow wide enough */
         width: max-content;
         min-width: 100%;
@@ -1044,8 +1044,8 @@ const OrganizationChart = () => {
         top: 0;
         right: 50%;
         border-top: 2px solid #cbd5e1;
-        /* CRITICAL FIX: Bridge the 60px gap. 50% + half-gap (30px) */
-        width: calc(50% + 30px);
+        /* CRITICAL FIX: Bridge the 40px gap. 50% + half-gap (20px) */
+        width: calc(50% + 20px);
         height: 40px; /* Match padding-top */
         z-index: -1;
     }

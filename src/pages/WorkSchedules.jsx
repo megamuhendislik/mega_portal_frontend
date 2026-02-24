@@ -393,13 +393,13 @@ const WorkSchedules = () => {
                     {draftData ? (
                         <>
                             {/* Header */}
-                            <div className="flex justify-between items-center bg-indigo-50 p-4 border-b border-indigo-100">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 bg-indigo-50 p-4 border-b border-indigo-100">
                                 <div>
                                     <h2 className="text-lg font-bold text-indigo-900">{draftData.name} ({draftData.year})</h2>
                                     <p className="text-sm text-indigo-700">Şablonlar, takvim boyama ve personel atamalarını yönetin.</p>
                                 </div>
                                 <button onClick={handleGlobalSave} disabled={saving}
-                                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-all disabled:opacity-50">
+                                    className="bg-indigo-600 text-white px-3 md:px-6 py-2 md:py-3 rounded-lg font-bold text-xs md:text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-all disabled:opacity-50">
                                     <Save size={20} />
                                     {saving ? 'Kaydediliyor...' : 'Kaydet & Hesapla'}
                                 </button>
@@ -413,7 +413,7 @@ const WorkSchedules = () => {
                                         <button
                                             key={tab.key}
                                             onClick={() => setActiveTab(tab.key)}
-                                            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                                            className={`flex items-center gap-1.5 px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${
                                                 activeTab === tab.key
                                                     ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-lg'
                                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -767,7 +767,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                                     </div>
                                 </div>
                                 <button onClick={() => handleAssign(e.id, false)}
-                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm">
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-all font-medium text-sm">
                                     Çıkar
                                 </button>
                             </div>
@@ -790,7 +790,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                                     </div>
                                 </div>
                                 <button onClick={() => handleAssign(e.id, true)}
-                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all font-medium text-sm">
+                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-all font-medium text-sm">
                                     Ekle
                                 </button>
                             </div>

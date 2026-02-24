@@ -1035,20 +1035,20 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-1/3 text-slate-500 font-medium">Ad Soyad</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Ad Soyad</div>
                     <div className="font-bold text-slate-800">{formData.first_name} {formData.last_name}</div>
                 </div>
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-1/3 text-slate-500 font-medium">TC Kimlik No</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">TC Kimlik No</div>
                     <div className="font-bold text-slate-800">{formData.tc_number}</div>
                 </div>
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                    <div className="w-1/3 text-slate-500 font-medium">Ana Departman</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Ana Departman</div>
                     <div className="font-bold text-blue-700">{dept}</div>
                 </div>
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                    <div className="w-1/3 text-slate-500 font-medium">Birincil Yönetici</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Birincil Yönetici</div>
                     <div className="font-bold text-blue-700">{mgr ? mgr.first_name + ' ' + mgr.last_name : '-'}</div>
                 </div>
                 {/* REMOVED FUNCTIONAL UNIT DISPLAY */}
@@ -1056,8 +1056,8 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     <div className="w-1/3 text-slate-500 font-medium">Fonksiyonel</div>
                     <div className="font-bold text-slate-800">{func}</div>
                 </div> */}
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-1/3 text-slate-500 font-medium">Pozisyon</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Pozisyon</div>
                     <div className="font-bold text-slate-800">
                         {pos}
                         {formData.secondary_job_positions?.length > 0 && <span className="text-xs text-slate-500 block">+ {formData.secondary_job_positions.length} Ek Pozisyon</span>}
@@ -1065,22 +1065,22 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                 </div>
 
                 {(formData.substitutes?.length > 0) && (
-                    <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors bg-indigo-50/30">
-                        <div className="w-1/3 text-slate-500 font-medium">Vekiller</div>
+                    <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors bg-indigo-50/30">
+                        <div className="w-full md:w-1/3 text-slate-500 font-medium">Vekiller</div>
                         <div className="font-bold text-indigo-700">{formData.substitutes.length} Kişi Seçildi</div>
                     </div>
                 )}
 
 
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-1/3 text-slate-500 font-medium">Yetkiler</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Yetkiler</div>
                     <div className="font-bold text-slate-800 flex items-center gap-2">
                         <Key size={16} className="text-blue-500" />
                         <span>{(formData.roles?.length || 0)} Rol + {(formData.direct_permissions?.length || 0)} Ek Yetki</span>
                     </div>
                 </div>
-                <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-1/3 text-slate-500 font-medium">Kullanıcı Adı</div>
+                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Kullanıcı Adı</div>
                     <div className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-sm">{formData.username}</div>
                 </div>
             </div>
@@ -1617,10 +1617,10 @@ const Employees = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
-                                        <th className="px-6 py-4">Personel</th>
-                                        <th className="px-6 py-4">Pozisyon & İletişim</th>
-                                        <th className="px-6 py-4">Takvim & Saatler</th>
-                                        <th className="px-6 py-4 text-right">Durum & İşlemler</th>
+                                        <th className="px-3 md:px-6 py-2 md:py-4">Personel</th>
+                                        <th className="px-3 md:px-6 py-2 md:py-4">Pozisyon & İletişim</th>
+                                        <th className="px-3 md:px-6 py-2 md:py-4">Takvim & Saatler</th>
+                                        <th className="px-3 md:px-6 py-2 md:py-4 text-right">Durum & İşlemler</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -1643,7 +1643,7 @@ const Employees = () => {
                                             {/* Employees */}
                                             {groupedEmployees[deptName].map(emp => (
                                                 <tr key={emp.id} className="group hover:bg-blue-50/30 transition-colors">
-                                                    <td className="px-6 py-4 align-top">
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top">
                                                         <div className="flex items-center gap-4">
                                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                                                                 {emp.first_name[0]}{emp.last_name[0]}
@@ -1654,7 +1654,7 @@ const Employees = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 align-top">
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top">
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                                                 <Briefcase size={14} className="text-slate-400" />
@@ -1672,7 +1672,7 @@ const Employees = () => {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 align-top">
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top">
                                                         <div className="flex flex-col gap-1.5">
                                                             <div className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 w-fit">
                                                                 {emp.fiscal_calendar_name || 'Takvim Yok'}
@@ -1684,7 +1684,7 @@ const Employees = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 align-top text-right">
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top text-right">
                                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {showSettings && (
                                                                 <>
@@ -1831,7 +1831,7 @@ const Employees = () => {
                     <div className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar scroll-smooth">
                         {viewMode === 'edit' ? (
                             /* EDIT MODE: SINGLE PAGE SCROLL */
-                            <div className="max-w-full md:max-w-4xl mx-auto space-y-12 pb-20">
+                            <div className="max-w-full md:max-w-4xl mx-auto space-y-6 md:space-y-12 pb-20">
                                 {/* Section 1: Personal */}
                                 <section id="sec-personal" className="scroll-mt-24">
                                     {/* Re-using Step Components directly */}

@@ -286,22 +286,22 @@ const MainLayout = () => {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden relative w-full bg-[#F8FAFC]">
                 {/* Modern Header */}
-                <header className="h-20 px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 transition-all duration-300 backdrop-blur-xl bg-white/80 border-b border-slate-200/50 supports-[backdrop-filter]:bg-white/60">
-                    <div className="flex items-center gap-4">
+                <header className="h-16 md:h-20 px-3 md:px-8 flex items-center justify-between sticky top-0 z-30 transition-all duration-300 backdrop-blur-xl bg-white/80 border-b border-slate-200/50 supports-[backdrop-filter]:bg-white/60">
+                    <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                         {isMobile && (
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
-                                className="p-2.5 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors active:scale-95"
+                                className="p-2 -ml-1 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors active:scale-95 shrink-0"
                             >
-                                <Menu size={24} />
+                                <Menu size={22} />
                             </button>
                         )}
-                        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
+                        <h1 className="text-lg md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight truncate">
                             {navItems.find(i => i.path === location.pathname)?.label || 'Mega Portal'}
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-3 md:gap-6">
+                    <div className="flex items-center gap-2 md:gap-6 shrink-0">
                         {/* Search (Desktop) */}
                         <div className="hidden md:flex items-center bg-slate-100/50 hover:bg-white border border-slate-200/60 focus-within:border-blue-400/50 rounded-full px-4 py-2.5 w-64 transition-all duration-300 focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:shadow-md">
                             <Search size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -318,15 +318,15 @@ const MainLayout = () => {
                                 onClick={handleShiftToggle}
                                 disabled={shiftLoading}
                                 className={clsx(
-                                    "flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 shadow-sm border transform hover:scale-105 active:scale-95",
+                                    "flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-full font-semibold text-xs md:text-sm transition-all duration-300 shadow-sm border transform hover:scale-105 active:scale-95",
                                     isShiftActive
                                         ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 hover:border-rose-200 hover:shadow-rose-100"
                                         : "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 hover:shadow-emerald-100",
                                     shiftLoading && "opacity-70 cursor-wait"
                                 )}
                             >
-                                <Clock size={18} className={clsx(shiftLoading && "animate-spin")} />
-                                {shiftLoading ? 'İşleniyor...' : (isShiftActive ? 'Mesaiyi Bitir' : 'Mesai Başlat')}
+                                <Clock size={16} className={clsx("shrink-0", shiftLoading && "animate-spin")} />
+                                <span className="hidden sm:inline whitespace-nowrap">{shiftLoading ? 'İşleniyor...' : (isShiftActive ? 'Mesaiyi Bitir' : 'Mesai Başlat')}</span>
                             </button>
                         )}
 
@@ -335,21 +335,21 @@ const MainLayout = () => {
                         <div className="h-8 w-px bg-slate-200 hidden md:block" />
 
                         {/* Profile Dropdown Trigger */}
-                        <Link to="/profile" className="flex items-center gap-3 pl-2 group">
+                        <Link to="/profile" className="flex items-center gap-3 pl-1 md:pl-2 group shrink-0">
                             <div className="text-right hidden md:block">
                                 <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
                                     {user?.first_name ? `${user.first_name} ${user.last_name}` : (user?.username || 'Kullanıcı')}
                                 </div>
                             </div>
                             <div className="relative">
-                                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all duration-300">
+                                <div className="w-9 h-9 md:w-11 md:h-11 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all duration-300">
                                     <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                        <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-indigo-600 font-black text-lg">
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-indigo-600 font-black text-base md:text-lg">
                                             {user?.first_name?.[0] || user?.username?.[0]?.toUpperCase() || 'U'}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
+                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
                             </div>
                         </Link>
                     </div>
