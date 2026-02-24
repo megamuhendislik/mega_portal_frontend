@@ -121,7 +121,12 @@ const MyRequestsSection = ({
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
             if (typeFilter !== 'ALL' && r._type !== typeFilter) return false;
-            if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+            if (statusFilter !== 'ALL') {
+                // Group MealRequest statuses: ORDERED → APPROVED filter, CANCELLED → REJECTED filter
+                const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELLED': 'REJECTED' };
+                const effectiveStatus = statusGroup[r.status] || r.status;
+                if (effectiveStatus !== statusFilter) return false;
+            }
             if (!showPotential && r.status === 'POTENTIAL') return false;
             return true;
         });
@@ -137,8 +142,8 @@ const MyRequestsSection = ({
             meal: actual.filter(r => r._type === 'MEAL').length,
             cardless: actual.filter(r => r._type === 'CARDLESS_ENTRY').length,
             pending: actual.filter(r => r.status === 'PENDING').length,
-            approved: actual.filter(r => r.status === 'APPROVED').length,
-            rejected: actual.filter(r => r.status === 'REJECTED').length,
+            approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
+            rejected: actual.filter(r => ['REJECTED', 'CANCELLED'].includes(r.status)).length,
         };
     }, [allMyRequests]);
 
@@ -292,8 +297,11 @@ const TeamRequestsSection = ({
                 if (req.status === 'POTENTIAL') return false; // Hide potential by default
             } else if (statusFilter === 'POTENTIAL') {
                 if (req.status !== 'POTENTIAL') return false;
-            } else if (statusFilter !== 'ALL' && req.status !== statusFilter) {
-                return false;
+            } else if (statusFilter !== 'ALL') {
+                // Group MealRequest statuses: ORDERED → APPROVED filter, CANCELLED → REJECTED filter
+                const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELLED': 'REJECTED' };
+                const effectiveStatus = statusGroup[req.status] || req.status;
+                if (effectiveStatus !== statusFilter) return false;
             }
 
             return true;
@@ -304,8 +312,8 @@ const TeamRequestsSection = ({
         all: allRequests.length,
         pending: allRequests.filter(r => r.status === 'PENDING').length,
         potential: allRequests.filter(r => r.status === 'POTENTIAL').length,
-        approved: allRequests.filter(r => r.status === 'APPROVED').length,
-        rejected: allRequests.filter(r => r.status === 'REJECTED').length,
+        approved: allRequests.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
+        rejected: allRequests.filter(r => ['REJECTED', 'CANCELLED'].includes(r.status)).length,
     }), [allRequests]);
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
@@ -423,7 +431,7 @@ const RequestAnalyticsSection = ({ subordinates, loading }) => {
 
     const maxTrendTotal = Math.max(...data.monthly_trend.map(x => x.total), 1);
     const maxTrendOtHours = Math.max(...data.monthly_trend.map(x => x.overtime_hours || 0), 1);
-    const statusLabels = { APPROVED: 'Onaylandı', REJECTED: 'Reddedildi', PENDING: 'Bekliyor' };
+    const statusLabels = { APPROVED: 'Onaylandı', REJECTED: 'Reddedildi', PENDING: 'Bekliyor', ORDERED: 'Sipariş Edildi', CANCELLED: 'İptal', DELIVERED: 'Teslim Edildi' };
 
     return (
         <div className="space-y-6 animate-in fade-in">
@@ -694,9 +702,9 @@ const RequestAnalyticsSection = ({ subordinates, loading }) => {
                                 </div>
                                 <div className="text-right shrink-0">
                                     <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1
-                                        ${req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}
+                                        ${['APPROVED', 'ORDERED'].includes(req.status) ? 'bg-emerald-100 text-emerald-700' : ['REJECTED', 'CANCELLED'].includes(req.status) ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}
                                     `}>
-                                        {req.status === 'APPROVED' ? <CheckCircle2 size={10} /> : req.status === 'REJECTED' ? <XCircle size={10} /> : <Clock size={10} />}
+                                        {['APPROVED', 'ORDERED'].includes(req.status) ? <CheckCircle2 size={10} /> : ['REJECTED', 'CANCELLED'].includes(req.status) ? <XCircle size={10} /> : <Clock size={10} />}
                                         {statusLabels[req.status] || req.status}
                                     </div>
                                     <p className="text-[10px] text-slate-400 mt-1 font-medium">{new Date(req.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
@@ -1135,8 +1143,11 @@ const Requests = () => {
     const getStatusBadge = (status) => {
         switch (status) {
             case 'APPROVED': return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700 gap-1"><CheckCircle2 size={12} /> Onay</span>;
+            case 'ORDERED': return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700 gap-1"><CheckCircle2 size={12} /> Sipariş</span>;
             case 'REJECTED': return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 gap-1"><XCircle size={12} /> Red</span>;
+            case 'CANCELLED': return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 gap-1"><XCircle size={12} /> İptal</span>;
             case 'PENDING': return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700 gap-1"><Clock size={12} /> Bekliyor</span>;
+            case 'DELIVERED': return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-700 gap-1"><CheckCircle2 size={12} /> Teslim</span>;
             default: return <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-md font-bold">{status}</span>;
         }
     };

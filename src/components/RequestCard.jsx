@@ -40,16 +40,17 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'APPROVED': return 'bg-emerald-500';
-            case 'REJECTED': return 'bg-red-500';
+            case 'APPROVED': case 'ORDERED': return 'bg-emerald-500';
+            case 'REJECTED': case 'CANCELLED': return 'bg-red-500';
             case 'PENDING': return 'bg-amber-500';
+            case 'DELIVERED': return 'bg-blue-500';
             default: return 'bg-slate-400';
         }
     };
 
     const statusColor = {
-        bg: request.status === 'APPROVED' ? 'bg-emerald-50' : request.status === 'REJECTED' ? 'bg-red-50' : 'bg-amber-50',
-        text: request.status === 'APPROVED' ? 'text-emerald-600' : request.status === 'REJECTED' ? 'text-red-600' : 'text-amber-600'
+        bg: ['APPROVED', 'ORDERED'].includes(request.status) ? 'bg-emerald-50' : ['REJECTED', 'CANCELLED'].includes(request.status) ? 'bg-red-50' : 'bg-amber-50',
+        text: ['APPROVED', 'ORDERED'].includes(request.status) ? 'text-emerald-600' : ['REJECTED', 'CANCELLED'].includes(request.status) ? 'text-red-600' : 'text-amber-600'
     };
 
     // Allow action if it's incoming AND (Pending OR Rejected)
@@ -60,8 +61,8 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
             onClick={() => onViewDetails && onViewDetails(request, type)}
             className={`group bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 relative overflow-hidden flex flex-col h-full cursor-pointer
                 ${request.status === 'PENDING' ? 'border-l-4 border-l-amber-400' :
-                    request.status === 'APPROVED' ? 'border-l-4 border-l-emerald-400' :
-                        request.status === 'REJECTED' ? 'border-l-4 border-l-red-400' : 'border-l-4 border-l-slate-200'}
+                    ['APPROVED', 'ORDERED'].includes(request.status) ? 'border-l-4 border-l-emerald-400' :
+                        ['REJECTED', 'CANCELLED'].includes(request.status) ? 'border-l-4 border-l-red-400' : 'border-l-4 border-l-slate-200'}
             `}
         >
 

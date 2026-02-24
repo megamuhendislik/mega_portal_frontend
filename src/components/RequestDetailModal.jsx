@@ -170,8 +170,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     const badges = {
       'PENDING': { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Bekliyor' },
       'APPROVED': { bg: 'bg-green-100', text: 'text-green-700', label: 'Onaylandı' },
+      'ORDERED': { bg: 'bg-green-100', text: 'text-green-700', label: 'Sipariş Edildi' },
       'REJECTED': { bg: 'bg-red-100', text: 'text-red-700', label: 'Reddedildi' },
-      'CANCELLED': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'İptal Edildi' }
+      'CANCELLED': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'İptal Edildi' },
+      'DELIVERED': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Teslim Edildi' }
     };
     const badge = badges[status] || badges['PENDING'];
     return (

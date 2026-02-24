@@ -57,22 +57,28 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
     const getStatusBadge = (status) => {
         const styles = {
             'APPROVED': 'bg-emerald-100 text-emerald-700',
+            'ORDERED': 'bg-emerald-100 text-emerald-700',
             'REJECTED': 'bg-red-100 text-red-700',
+            'CANCELLED': 'bg-slate-100 text-slate-700',
             'PENDING': 'bg-amber-100 text-amber-700',
             'POTENTIAL': 'bg-purple-100 text-purple-700',
             'CANCELED': 'bg-slate-100 text-slate-700',
+            'DELIVERED': 'bg-blue-100 text-blue-700',
         };
         const labels = {
             'APPROVED': 'Onaylandı',
+            'ORDERED': 'Sipariş Edildi',
             'REJECTED': 'Reddedildi',
+            'CANCELLED': 'İptal',
             'PENDING': 'Bekliyor',
             'POTENTIAL': 'Potansiyel',
             'CANCELED': 'İptal',
+            'DELIVERED': 'Teslim Edildi',
         };
         return (
             <span className={`px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${styles[status] || styles['PENDING']}`}>
-                {status === 'APPROVED' && <CheckCircle2 size={12} />}
-                {status === 'REJECTED' && <XCircle size={12} />}
+                {['APPROVED', 'ORDERED'].includes(status) && <CheckCircle2 size={12} />}
+                {['REJECTED', 'CANCELLED'].includes(status) && <XCircle size={12} />}
                 {status === 'PENDING' && <Clock size={12} />}
                 {status === 'POTENTIAL' && <AlertCircle size={12} />}
                 {labels[status] || status}

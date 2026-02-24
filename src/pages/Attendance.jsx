@@ -39,8 +39,11 @@ const Attendance = () => {
     // Logic: If today >= 26, we are in Next Month's cycle (Start 26th this month, End 25th next month)
     // If today < 26, we are in This Month's cycle (Start 26th prev month, End 25th this month)
     const initialMonth = today.getDate() >= 26 ? today.getMonth() + 1 : today.getMonth();
+    // Year boundary: if today >= 26 AND we are in December (month 11), initialMonth becomes 12
+    // which means we crossed into next year's January period, so increment the year.
     const initialYear = today.getDate() >= 26 && today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear();
-    // Handle wrap around 
+    // Wrap month index: if initialMonth overflowed to 12, reset to 0 (January).
+    // This pairs with the year increment above to correctly handle Dec 26+ -> Jan period.
     const safeInitialMonth = initialMonth > 11 ? 0 : initialMonth;
 
     const [viewYear, setViewYear] = useState(initialYear);
@@ -97,7 +100,9 @@ const Attendance = () => {
         // Target End Date: 25th of selected month
         end = new Date(year, month, 25);
 
-        // Target Start Date: 26th of previous month
+        // Target Start Date: 26th of previous month.
+        // JS Date handles month underflow: new Date(2025, -1, 26) -> Dec 26, 2024.
+        // So January (month=0) correctly produces start=Dec 26 of prev year.
         start = new Date(year, month - 1, 26);
 
         setStartDate(format(start, 'yyyy-MM-dd'));
@@ -354,6 +359,9 @@ const Attendance = () => {
                                         let targetMonth = d.getDate() >= 26 ? d.getMonth() + 1 : d.getMonth();
                                         let targetYear = d.getFullYear();
 
+                                        // Year boundary: Dec 26+ -> month becomes 12, wrap to Jan (0) of next year.
+                                        // Reverse boundary (Jan->Dec) is not possible here because
+                                        // getMonth() returns 0 for Jan and getDate() < 26 keeps it at 0.
                                         if (targetMonth > 11) {
                                             targetMonth = 0;
                                             targetYear += 1;
