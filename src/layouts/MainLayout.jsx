@@ -23,7 +23,8 @@ import {
     Utensils,
     UserCog,
     Package,
-    Contact
+    Contact,
+    MessageSquare
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -124,6 +125,7 @@ const MainLayout = () => {
 
 
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
+        { path: '/feedback', label: 'Dilek ve Şikayetler', icon: MessageSquare, permission: null },
         { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: null },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'PAGE_SYSTEM_HEALTH' },

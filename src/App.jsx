@@ -25,6 +25,7 @@ import SubstituteManagement from './pages/SubstituteManagement';
 import CompanyDirectory from './pages/CompanyDirectory';
 import DataManagement from './pages/admin/DataManagement';
 import ProgramManagement from './pages/admin/ProgramManagement';
+import Feedback from './pages/Feedback';
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -96,6 +97,9 @@ function App() {
 
             {/* Substitute Management - Free for everyone now */}
             <Route path="substitute-management" element={<ProtectedRoute><SubstituteManagement /></ProtectedRoute>} />
+
+            {/* Feedback & Complaints - No permission required (everyone can access) */}
+            <Route path="feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
 
             {/* Reports - Requires PAGE_REPORTS */}
             <Route path="reports" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Reports /></ProtectedRoute>} />
