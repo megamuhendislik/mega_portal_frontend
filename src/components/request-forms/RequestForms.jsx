@@ -72,6 +72,20 @@ export const LeaveRequestForm = ({
                             <span className={`font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>{balance.available} gün</span>
                         </div>
                     </div>
+                    {/* Avans İzin Uyarısı */}
+                    {balance && duration > 0 && (balance.effective || balance.balance || 0) < duration && (balance.limit || 0) > 0 && (balance.available || 0) >= duration && (
+                        <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                                <span className="text-amber-500 text-base leading-none mt-0.5">&#9888;</span>
+                                <div>
+                                    <p className="text-xs font-bold text-amber-800">Avans İzin Kullanılacak</p>
+                                    <p className="text-[11px] text-amber-700 mt-0.5">
+                                        Bu talep mevcut bakiyenizi aşıyor. Gelecek yılınızdan <strong>{Math.ceil(duration - Math.max(0, balance.effective || balance.balance || 0))}</strong> gün avans olarak kullanılacaktır.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {/* Kidem ve Hakedis Bilgisi */}
                     {entitlementInfo && (
                         <div className="mt-2 grid grid-cols-3 gap-2 text-xs">

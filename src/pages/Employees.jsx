@@ -18,6 +18,20 @@ const STEPS = [
     { number: 7, title: 'Önizleme & Onay', icon: FileText }
 ];
 
+const FIELD_TO_STEP = {
+    first_name: 1, last_name: 1, email: 1, username: 1, tc_number: 1,
+    password: 1, birth_date: 1, user: 1,
+    primary_managers: 2, secondary_managers: 2, department: 2,
+    job_position: 2, tags: 2, assignments: 2, employee_code: 2,
+    phone: 3, secondary_phone: 3, emergency_contact_name: 3,
+    emergency_contact_phone: 3, address: 3, insurance_number: 3,
+    work_type: 4, fiscal_calendar: 4, uses_service: 4,
+    service_tolerance_minutes: 4, technical_skills: 4,
+    leave_entitlements: 5, annual_leave_balance: 5,
+    annual_leave_advance_limit: 5, annual_leave_accrual_rate: 5, hired_date: 5,
+    roles: 6, direct_permissions: 6, excluded_permissions: 6, substitutes: 6,
+};
+
 // Add Shield Icon for Sensitive Data Indicator
 const Shield = ({ size, className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -177,27 +191,13 @@ const StepPersonal = ({ formData, handleChange, canEditSensitive = true, canChan
 );
 
 const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees, availableTags, showManagerValidation }) => {
-    // const isDeptManager = jobPositions.find(p => p.id == formData.job_position)?.name === 'Departman Müdürü'; // Removed logic
-    const rootDepartments = departments.filter(d => !d.parent);
-    const functionalDepts = departments.filter(d => d.is_chart_visible === false || d.code?.startsWith('FONKS'));
     const potentialManagers = employees || [];
 
-    // Board muafiyet kontrolü
-    const selectedDept = departments.find(d => String(d.id) === String(formData.department));
-    const selectedPos = jobPositions.find(p => String(p.id) === String(formData.job_position));
+    // Board muafiyet kontrolü - first primary manager's dept+pos'dan türetilir
+    const firstPm = (formData.primary_managers || []).find(m => m.department_id && m.job_position_id);
+    const selectedDept = firstPm ? departments.find(d => String(d.id) === String(firstPm.department_id)) : null;
+    const selectedPos = firstPm ? jobPositions.find(p => String(p.id) === String(firstPm.job_position_id)) : null;
     const isBoardMember = selectedDept?.code?.startsWith('BOARD') || selectedPos?.key?.startsWith('BOARD_') || false;
-
-    const renderDepartmentOptions = (depts, level = 0) => {
-        return depts.map(dept => {
-            const children = departments.filter(d => d.parent === dept.id);
-            return (
-                <React.Fragment key={dept.id}>
-                    <option value={dept.id}>{'\u00A0'.repeat(level * 4)}{level > 0 ? '└ ' : ''}{dept.name}</option>
-                    {children.length > 0 && renderDepartmentOptions(children, level + 1)}
-                </React.Fragment>
-            );
-        });
-    };
 
     return (
         <div className="animate-fade-in-up space-y-6">
@@ -225,7 +225,32 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     <ManagerAssignmentSection
                         type="primary"
                         managers={formData.primary_managers || []}
-                        onChange={mgrs => handleChange('primary_managers', mgrs)}
+                        onChange={mgrs => {
+                            handleChange('primary_managers', mgrs);
+
+                            // Auto-sync: first primary manager's dept+pos -> employee
+                            const firstComplete = mgrs.find(m => m.manager_id && m.department_id && m.job_position_id);
+                            if (firstComplete) {
+                                handleChange('department', firstComplete.department_id);
+                                handleChange('job_position', firstComplete.job_position_id);
+                            }
+
+                            // Role union from all positions (primary + secondary)
+                            const allPosIds = new Set(mgrs.filter(m => m.job_position_id).map(m => Number(m.job_position_id)));
+                            const sm = formData.secondary_managers || [];
+                            sm.filter(m => m.job_position_id).forEach(m => allPosIds.add(Number(m.job_position_id)));
+
+                            const unionRoles = new Set();
+                            allPosIds.forEach(posId => {
+                                const pos = jobPositions.find(p => Number(p.id) === posId);
+                                if (pos?.default_roles) {
+                                    pos.default_roles.forEach(r => unionRoles.add(r.id));
+                                }
+                            });
+                            if (unionRoles.size > 0) {
+                                handleChange('roles', [...unionRoles]);
+                            }
+                        }}
                         employeeList={employees}
                         departments={departments}
                         jobPositions={jobPositions}
@@ -247,23 +272,6 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                         excludeEmployeeId={null}
                         isBoardMember={isBoardMember}
                         showValidation={showManagerValidation}
-                    />
-                </div>
-
-                {/* 2. DEPARTMENT (Editable) */}
-                <div>
-                    <SelectField
-                        label="Ana Departman"
-                        value={formData.department}
-                        onChange={e => handleChange('department', e.target.value)}
-                        required
-                        icon={Building}
-                        options={
-                            <>
-                                <option value="">Bir Departman Seçiniz...</option>
-                                {renderDepartmentOptions(rootDepartments)}
-                            </>
-                        }
                     />
                 </div>
 
@@ -300,33 +308,6 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                         )}
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1 ml-1">Personelin teknik uzmanlık veya çalışma grubunu belirtmek için etiket seçiniz.</p>
-                </div>
-
-                {/* 4. JOB POSITION */}
-                <div>
-                    <SelectField
-                        label="Unvan (Pozisyon)"
-                        value={formData.job_position}
-                        onChange={e => {
-                            const val = e.target.value;
-                            handleChange('job_position', val);
-
-                            // Auto-select Default Roles based on mapping
-                            const selectedPos = jobPositions.find(p => Number(p.id) === Number(val));
-                            if (selectedPos && selectedPos.default_roles) {
-                                const newRoleIds = selectedPos.default_roles.map(r => r.id);
-                                handleChange('roles', newRoleIds);
-                            }
-                        }}
-                        required
-                        icon={Briefcase}
-                        options={
-                            <>
-                                <option value="">Seçiniz...</option>
-                                {jobPositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
-                            </>
-                        }
-                    />
                 </div>
 
                 {/* 5. MATRIX ASSIGNMENTS (Dynamic List) */}
@@ -715,8 +696,18 @@ const StepLeave = ({ formData, handleChange }) => {
                         <div className="text-2xl font-bold text-slate-800 mt-1">{formData.completed_annual_leave_this_year} <span className="text-sm font-normal text-slate-400">Gün</span></div>
                     </div>
                     <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
-                        <div className="text-xs text-emerald-600 font-bold uppercase">Avans Limiti</div>
-                        <div className="text-2xl font-bold text-slate-800 mt-1">{formData.annual_leave_advance_limit} <span className="text-sm font-normal text-slate-400">Gün</span></div>
+                        <div className="text-xs text-emerald-600 font-bold uppercase mb-1">Avans Limiti</div>
+                        <div className="flex items-baseline gap-2">
+                            <input
+                                type="number"
+                                min="0"
+                                value={formData.annual_leave_advance_limit || 0}
+                                onChange={e => handleChange('annual_leave_advance_limit', parseInt(e.target.value) || 0)}
+                                className="w-20 text-2xl font-bold text-slate-800 bg-transparent border-b-2 border-emerald-200 focus:border-emerald-500 outline-none text-center"
+                            />
+                            <span className="text-sm font-normal text-slate-400">Gün</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">Bakiye yetersiz olduğunda kullanılabilecek avans gün sayısı.</p>
                     </div>
                     <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
                         <div className="text-xs text-emerald-600 font-bold uppercase">Bu Yıl Hakediş</div>
@@ -1018,11 +1009,7 @@ const StepPermissions = ({ formData, handleChange, permissions, roles, canManage
 };
 
 const StepPreview = ({ formData, departments, jobPositions, employees }) => {
-    const firstPrimaryMgrId = formData.primary_managers?.[0]?.manager_id;
-    const mgr = firstPrimaryMgrId ? employees.find(e => e.id == firstPrimaryMgrId) : null;
-    const dept = departments.find(d => d.id == formData.department)?.name;
-    // const func = departments.find(d => d.id == formData.functional_department)?.name || '-'; // REMOVED
-    const pos = jobPositions.find(p => p.id == formData.job_position)?.name;
+    const primaryManagers = formData.primary_managers || [];
 
     return (
         <div className="animate-fade-in-up">
@@ -1044,23 +1031,26 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     <div className="font-bold text-slate-800">{formData.tc_number}</div>
                 </div>
                 <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Ana Departman</div>
-                    <div className="font-bold text-blue-700">{dept}</div>
-                </div>
-                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors bg-blue-50/30">
-                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Birincil Yönetici</div>
-                    <div className="font-bold text-blue-700">{mgr ? mgr.first_name + ' ' + mgr.last_name : '-'}</div>
-                </div>
-                {/* REMOVED FUNCTIONAL UNIT DISPLAY */}
-                {/* <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-1/3 text-slate-500 font-medium">Fonksiyonel</div>
-                    <div className="font-bold text-slate-800">{func}</div>
-                </div> */}
-                <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Pozisyon</div>
-                    <div className="font-bold text-slate-800">
-                        {pos}
-                        {formData.secondary_job_positions?.length > 0 && <span className="text-xs text-slate-500 block">+ {formData.secondary_job_positions.length} Ek Pozisyon</span>}
+                    <div className="w-full md:w-1/3 text-slate-500 font-medium">Birincil Yöneticiler</div>
+                    <div className="font-bold text-blue-700">
+                        {primaryManagers.length > 0 ? (
+                            <div className="space-y-1">
+                                {primaryManagers.map((pm, idx) => {
+                                    const mgrEmp = pm.manager_id ? employees.find(e => e.id == pm.manager_id) : null;
+                                    const deptName = pm.department_id ? departments.find(d => d.id == pm.department_id)?.name : '-';
+                                    const posName = pm.job_position_id ? jobPositions.find(p => p.id == pm.job_position_id)?.name : '-';
+                                    return (
+                                        <div key={idx} className="text-sm">
+                                            <span className="font-bold">{mgrEmp ? `${mgrEmp.first_name} ${mgrEmp.last_name}` : '-'}</span>
+                                            <span className="text-blue-500 mx-1">|</span>
+                                            <span className="text-slate-600">{deptName}</span>
+                                            <span className="text-blue-500 mx-1">|</span>
+                                            <span className="text-slate-600">{posName}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : '-'}
                     </div>
                 </div>
 
@@ -1106,6 +1096,7 @@ const Employees = () => {
     const [formData, setFormData] = useState(INITIAL_FORM_STATE);
     const [completedSteps, setCompletedSteps] = useState([]);
     const [showManagerValidation, setShowManagerValidation] = useState(false);
+    const [formErrors, setFormErrors] = useState({});
 
     // Filters & Search
     const [searchTerm, setSearchTerm] = useState('');
@@ -1189,23 +1180,23 @@ const Employees = () => {
 
     // --- Wizard Navigation ---
     const validateStep = (step) => {
-        const { first_name, last_name, tc_number, email, department, job_position, employee_code } = formData;
+        const { first_name, last_name, tc_number, email } = formData;
         switch (step) {
             case 1: // Personal
                 return first_name && last_name && tc_number && email && formData.username && formData.password;
             case 2: {
-                // Department and Position are MUST.
-                let valid = department && job_position && employee_code;
+                let valid = !!formData.employee_code;
                 if (!valid) return false;
 
-                // Board muafiyet kontrolü
-                const selDept = departments.find(d => String(d.id) === String(department));
-                const selPos = jobPositions.find(p => String(p.id) === String(job_position));
+                // Board muafiyet kontrolü (first primary manager's dept+pos)
+                const pm = formData.primary_managers || [];
+                const firstPm = pm.find(m => m.department_id && m.job_position_id);
+                const selDept = firstPm ? departments.find(d => String(d.id) === String(firstPm.department_id)) : null;
+                const selPos = firstPm ? jobPositions.find(p => String(p.id) === String(firstPm.job_position_id)) : null;
                 const boardExempt = selDept?.code?.startsWith('BOARD') || selPos?.key?.startsWith('BOARD_') || false;
 
                 // Birincil yönetici zorunlu (board hariç)
                 if (!boardExempt) {
-                    const pm = formData.primary_managers || [];
                     if (pm.length === 0 || pm.some(e => !e.manager_id || !e.department_id || !e.job_position_id)) {
                         return false;
                     }
@@ -1249,6 +1240,16 @@ const Employees = () => {
 
     const handleBack = () => {
         setCurrentStep(prev => Math.max(prev - 1, 1));
+        window.scrollTo(0, 0);
+    };
+
+    const goToStep = (step) => {
+        setCurrentStep(step);
+        setFormErrors(prev => {
+            const next = { ...prev };
+            delete next[step];
+            return next;
+        });
         window.scrollTo(0, 0);
     };
 
@@ -1440,11 +1441,48 @@ const Employees = () => {
         } catch (error) {
             console.error("Submit Error:", error);
             const errData = error.response?.data;
-            if (errData?.primary_managers) {
-                setShowManagerValidation(true);
-                toast.error(typeof errData.primary_managers === 'string' ? errData.primary_managers : 'Birincil yönetici bilgilerini kontrol ediniz.');
+
+            if (!errData) {
+                toast.error("Bağlantı hatası. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            // Parse field-level errors and map to steps
+            const stepErrors = {};
+            const errorMessages = [];
+
+            if (typeof errData === 'string') {
+                errorMessages.push(errData);
+            } else if (errData.detail) {
+                errorMessages.push(typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail));
+            } else if (errData.non_field_errors) {
+                const nfe = Array.isArray(errData.non_field_errors) ? errData.non_field_errors : [errData.non_field_errors];
+                errorMessages.push(...nfe.map(e => typeof e === 'string' ? e : JSON.stringify(e)));
             } else {
-                toast.error("Hata: " + (errData?.detail || errData?.non_field_errors?.[0] || "İşlem başarısız."));
+                Object.entries(errData).forEach(([field, msgs]) => {
+                    const step = FIELD_TO_STEP[field] || 1;
+                    if (!stepErrors[step]) stepErrors[step] = [];
+                    const msgText = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+                    stepErrors[step].push({ field, message: msgText });
+                    errorMessages.push(msgText);
+                });
+            }
+
+            setFormErrors(stepErrors);
+
+            // Navigate to first errored step
+            const errorSteps = Object.keys(stepErrors).map(Number).sort((a, b) => a - b);
+            if (errorSteps.length > 0) {
+                setCurrentStep(errorSteps[0]);
+                toast.error(`${errorSteps.length} adımda hata bulundu. İlk hatalı adıma yönlendirildiniz.`);
+            } else if (errorMessages.length > 0) {
+                toast.error("Hata: " + errorMessages[0]);
+            } else {
+                toast.error("İşlem başarısız. Lütfen bilgileri kontrol ediniz.");
+            }
+
+            if (errData.primary_managers) {
+                setShowManagerValidation(true);
             }
         } finally {
             setSubmitting(false);
@@ -1789,18 +1827,53 @@ const Employees = () => {
                             {/* Vertical Steps */}
                             <div className="space-y-1 relative">
                                 <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-slate-700/50 z-0"></div>
-                                {STEPS.map((s, idx) => {
+                                {STEPS.map((s) => {
                                     const isActive = currentStep === s.number;
                                     const isCompleted = currentStep > s.number;
-                                    const Icon = s.icon;
+                                    const hasError = formErrors[s.number] && formErrors[s.number].length > 0;
+                                    const errorCount = hasError ? formErrors[s.number].length : 0;
+
                                     return (
-                                        <div key={s.number} className="relative z-10 flex items-center gap-4 py-4 group">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0 ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110' : isCompleted ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-600'}`}>
-                                                {isCompleted ? <Check size={16} /> : <span className="text-sm font-bold">{s.number}</span>}
+                                        <div
+                                            key={s.number}
+                                            className="relative z-10 flex items-center gap-4 py-4 group cursor-pointer"
+                                            onClick={() => goToStep(s.number)}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={e => e.key === 'Enter' && goToStep(s.number)}
+                                        >
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2 shrink-0 relative ${
+                                                hasError
+                                                    ? 'bg-red-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                                                    : isActive
+                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110'
+                                                        : isCompleted
+                                                            ? 'bg-green-500/20 border-green-500 text-green-400'
+                                                            : 'bg-slate-800 border-slate-700 text-slate-500 group-hover:border-slate-500'
+                                            }`}>
+                                                {hasError ? (
+                                                    <span className="text-sm font-bold">!</span>
+                                                ) : isCompleted ? (
+                                                    <Check size={16} />
+                                                ) : (
+                                                    <span className="text-sm font-bold">{s.number}</span>
+                                                )}
+                                                {hasError && (
+                                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                                                        {errorCount}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div>
-                                                <h4 className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400'}`}>{s.title}</h4>
-                                                {isActive && <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>}
+                                                <h4 className={`text-sm font-bold transition-colors ${
+                                                    hasError ? 'text-red-400' : isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-slate-400 group-hover:text-slate-300'
+                                                }`}>{s.title}</h4>
+                                                {isActive && !hasError && <p className="text-[10px] text-blue-200 mt-0.5 animate-fade-in">Mevcut Adım</p>}
+                                                {hasError && (
+                                                    <p className="text-[10px] text-red-300 mt-0.5 truncate max-w-[160px]">
+                                                        {formErrors[s.number].map(e => e.message).join(' · ')}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1874,6 +1947,34 @@ const Employees = () => {
                         ) : (
                             /* CREATE WIZARD MODE */
                             <div className="h-full">
+                                {/* Error Summary Banner */}
+                                {Object.keys(formErrors).length > 0 && (
+                                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl animate-fade-in-up">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="text-sm font-bold text-red-800 flex items-center gap-2">
+                                                <span className="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">!</span>
+                                                Kayıt Hataları
+                                            </h4>
+                                            <button onClick={() => setFormErrors({})} className="text-xs text-red-400 hover:text-red-600 font-medium">Kapat</button>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {Object.entries(formErrors).sort(([a], [b]) => Number(a) - Number(b)).map(([step, errors]) => (
+                                                errors.map((err, i) => (
+                                                    <div key={`${step}-${i}`} className="flex items-center gap-2 text-xs">
+                                                        <span className="text-red-400">&#x2022;</span>
+                                                        <span className="text-red-700 flex-1">{err.message}</span>
+                                                        <button
+                                                            onClick={() => goToStep(Number(step))}
+                                                            className="text-blue-600 hover:text-blue-800 underline shrink-0 text-[11px]"
+                                                        >
+                                                            {STEPS.find(s => s.number === Number(step))?.title || `Adım ${step}`}
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={true} canChangePassword={true} />}
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} showManagerValidation={showManagerValidation} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
