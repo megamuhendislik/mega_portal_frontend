@@ -574,7 +574,7 @@ export default function AssignedOvertimeTab() {
                         </div>
                         <div className="text-left">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-lg text-slate-800">Planli Mesai (Atanan)</h3>
+                                <h3 className="font-bold text-lg text-slate-800">Planli Mesai Istekleri</h3>
                                 <SourceBadge type="INTENDED" />
                                 {claimableData.intended.length > 0 && (
                                     <span className="px-2 py-0.5 bg-emerald-600 text-white text-[11px] font-bold rounded-full">
@@ -597,7 +597,7 @@ export default function AssignedOvertimeTab() {
                                 <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-3 border border-emerald-100">
                                     <CalendarCheck size={24} className="text-emerald-300" />
                                 </div>
-                                <p className="text-sm text-slate-500">Talep edilebilir planli mesai bulunamadi.</p>
+                                <p className="text-sm text-slate-500">Talep edilebilir planli mesai istegi bulunamadi.</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-100">
@@ -795,7 +795,7 @@ export default function AssignedOvertimeTab() {
                         </div>
                         <div className="text-left">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-lg text-slate-800">Fazla Mesai (Algilanan)</h3>
+                                <h3 className="font-bold text-lg text-slate-800">Algilanan Fazla Mesai</h3>
                                 <SourceBadge type="POTENTIAL" />
                                 {claimableData.potential.length > 0 && (
                                     <span className="px-2 py-0.5 bg-amber-600 text-white text-[11px] font-bold rounded-full">
@@ -997,14 +997,14 @@ export default function AssignedOvertimeTab() {
                         </div>
                         <div className="text-left">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-lg text-slate-800">Tum Atamalar</h3>
+                                <h3 className="font-bold text-lg text-slate-800">Tum Istekler</h3>
                                 {assignments.length > 0 && (
                                     <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[11px] font-bold rounded-full">
                                         {assignments.length}
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-slate-500">Tum mesai atamalari ve durumlarini goruntuleyip takip edin</p>
+                            <p className="text-xs text-slate-500">Tum mesai istekleri ve durumlarini goruntuleyip takip edin</p>
                         </div>
                     </div>
                     <div className={`transition-transform duration-200 ${allAssignmentsOpen ? 'rotate-180' : ''}`}>
@@ -1043,10 +1043,10 @@ export default function AssignedOvertimeTab() {
                                 </div>
                                 <p className="text-sm text-slate-500">
                                     {filter === 'all'
-                                        ? 'Henuz size atanmis bir fazla mesai bulunmamaktadir.'
+                                        ? 'Henuz size gonderilmis bir ek mesai istegi bulunmamaktadir.'
                                         : filter === 'past'
-                                        ? 'Gerceklesmis atanmis mesai bulunamadi.'
-                                        : 'Gelecek tarihli atanmis mesai bulunamadi.'}
+                                        ? 'Gerceklesmis mesai istegi bulunamadi.'
+                                        : 'Gelecek tarihli mesai istegi bulunamadi.'}
                                 </p>
                             </div>
                         )}

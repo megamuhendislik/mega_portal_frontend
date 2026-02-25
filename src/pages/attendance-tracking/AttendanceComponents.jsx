@@ -201,10 +201,10 @@ export const EmployeeAttendanceRow = ({
                         <button
                             onClick={() => onAssignOvertime({ id: s.employee_id, name: s.employee_name || name, department: s.department || title })}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 transition-all whitespace-nowrap"
-                            title="Ek Mesai Ata"
+                            title="Ek Mesai İsteği Gönder"
                         >
                             <CalendarPlus size={12} />
-                            <span className="hidden xl:inline">Mesai Ata</span>
+                            <span className="hidden xl:inline">Mesai İsteği</span>
                         </button>
                     )}
                     <button

@@ -40,39 +40,58 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
     const saveStartDate = async () => {
         if (!startDateInput) return;
-        if (!window.confirm(`Sistem başlangıç tarihi "${startDateInput}" olarak ayarlanacak.\n\nBu tarihten önceki tüm puantaj verileri hesaplamalarda dikkate alınmayacaktır.\n\nOnaylıyor musunuz?`)) return;
+        const oldDate = systemSettings?.attendance_start_date || 'YOK';
+        if (!window.confirm(
+            `Sistem başlangıç tarihi "${startDateInput}" olarak ayarlanacak.\n\n` +
+            `Mevcut: ${oldDate}\nYeni: ${startDateInput}\n\n` +
+            `Bu tarihten önceki tüm puantaj verileri arşivlenecek ve hesaplamalardan çıkarılacaktır.\n\nOnaylıyor musunuz?`
+        )) return;
+
         setStartDateSaving(true);
+        setRecalcConsoleOpen(true);
+        setRecalcLogs([`> Başlangıç tarihi değiştiriliyor: ${oldDate} → ${startDateInput}`, '> İşleniyor...']);
+        setRecalcLoading(true);
+
         try {
-            const settingsId = systemSettings?.id;
-            if (settingsId) {
-                await api.patch(`/settings/${settingsId}/`, { attendance_start_date: startDateInput });
-            } else {
-                await api.post('/settings/', { attendance_start_date: startDateInput });
+            let settingsId = systemSettings?.id;
+            if (!settingsId) {
+                const createRes = await api.post('/settings/', { attendance_start_date: startDateInput });
+                settingsId = createRes.data.id;
+                setSystemSettings(prev => ({ ...prev, id: settingsId }));
             }
+            const res = await api.post(`/settings/${settingsId}/apply-start-date/`, { new_date: startDateInput });
+            setRecalcLogs(res.data.logs || ['> Tamamlandı']);
             setSystemSettings(prev => ({ ...prev, attendance_start_date: startDateInput }));
-            alert('Sistem başlangıç tarihi kaydedildi.');
+            refresh();
         } catch (e) {
-            alert('Hata: ' + (e.response?.data?.error || e.message));
+            setRecalcLogs(prev => [...prev, `> HATA: ${e.response?.data?.error || e.message}`]);
         } finally {
             setStartDateSaving(false);
+            setRecalcLoading(false);
         }
     };
 
     const clearStartDate = async () => {
-        if (!window.confirm('Sistem başlangıç tarihi kaldırılacak. Onaylıyor musunuz?')) return;
+        if (!window.confirm('Sistem başlangıç tarihi kaldırılacak.\n\nTüm arşivlenmiş kayıtlar geri alınacaktır.\n\nOnaylıyor musunuz?')) return;
         setStartDateSaving(true);
+        setRecalcConsoleOpen(true);
+        setRecalcLogs(['> Başlangıç tarihi kaldırılıyor...', '> Arşivli kayıtlar geri alınacak...']);
+        setRecalcLoading(true);
+
         try {
             const settingsId = systemSettings?.id;
             if (settingsId) {
-                await api.patch(`/settings/${settingsId}/`, { attendance_start_date: null });
+                const res = await api.post(`/settings/${settingsId}/apply-start-date/`, { new_date: null });
+                setRecalcLogs(res.data.logs || ['> Tamamlandı']);
             }
             setSystemSettings(prev => ({ ...prev, attendance_start_date: null }));
             setStartDateInput('');
-            alert('Sistem başlangıç tarihi kaldırıldı.');
+            refresh();
         } catch (e) {
-            alert('Hata: ' + (e.response?.data?.error || e.message));
+            setRecalcLogs(prev => [...prev, `> HATA: ${e.response?.data?.error || e.message}`]);
         } finally {
             setStartDateSaving(false);
+            setRecalcLoading(false);
         }
     };
 

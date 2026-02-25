@@ -221,7 +221,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                                 <CalendarPlus size={16} className="text-violet-600" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Ek Mesai Ataması</h2>
+                                <h2 className="text-sm font-bold text-slate-800">Ek Mesai İsteği Gönder</h2>
                                 <p className="text-[11px] text-slate-400">{employee?.name || ''}</p>
                             </div>
                         </div>
@@ -259,8 +259,8 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                             <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
                                 <Save size={24} className="text-emerald-600" />
                             </div>
-                            <p className="text-base font-bold text-emerald-700">Mesai atamaları başarıyla kaydedildi!</p>
-                            <p className="text-sm text-slate-400">{selectedDays.length} gün atandı</p>
+                            <p className="text-base font-bold text-emerald-700">Ek mesai istekleri başarıyla gönderildi!</p>
+                            <p className="text-sm text-slate-400">{selectedDays.length} gün için istek gönderildi</p>
                         </div>
                     ) : (
                         <>
@@ -367,7 +367,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                                         <textarea
                                             value={notes}
                                             onChange={(e) => setNotes(e.target.value)}
-                                            placeholder="Atama ile ilgili not..."
+                                            placeholder="İstek ile ilgili not..."
                                             rows={4}
                                             className="w-full px-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-200 focus:border-violet-400 outline-none resize-none placeholder:text-slate-300"
                                         />
@@ -426,7 +426,7 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                             </span>
                             <span className="flex items-center gap-1.5">
                                 <span className="w-3 h-3 rounded-sm bg-blue-50 ring-1 ring-blue-400" />
-                                Atanmış
+                                İstek Gönderilmiş
                             </span>
                             <span className="flex items-center gap-1.5">
                                 <span className="w-3 h-3 rounded-sm bg-slate-100" />
@@ -520,7 +520,7 @@ const MiniMonth = ({
                             disabled={past}
                             title={
                                 past ? 'Geçmiş tarih'
-                                : assigned ? `Atanmış (${assignmentMap[formatDateKey(date)]?.max_duration_hours || '?'}h)${assignmentMap[formatDateKey(date)]?.task_description ? ' — ' + assignmentMap[formatDateKey(date)].task_description : ''}`
+                                : assigned ? `İstek gönderilmiş (${assignmentMap[formatDateKey(date)]?.max_duration_hours || '?'}h)${assignmentMap[formatDateKey(date)]?.task_description ? ' — ' + assignmentMap[formatDateKey(date)].task_description : ''}`
                                 : `${date.getDate()} ${MONTHS_TR_DISPLAY[date.getMonth()]}`
                             }
                         >
