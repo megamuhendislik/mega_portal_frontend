@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../services/api';
 import {
   BuildingOffice2Icon,
@@ -12,6 +12,9 @@ import {
   XCircleIcon,
   EyeSlashIcon,
   InformationCircleIcon,
+  TrashIcon,
+  CommandLineIcon,
+  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 
 const SEVERITY_STYLES = {
@@ -38,15 +41,34 @@ function StatCard({ label, value, color, icon: Icon }) {
   );
 }
 
-function DeptNode({ node, depth = 0 }) {
+// Collect all dept nodes from tree recursively
+function flattenTree(nodes, depth = 0) {
+  let result = [];
+  for (const node of nodes) {
+    result.push({ ...node, depth });
+    if (node.children?.length) {
+      result = result.concat(flattenTree(node.children, depth + 1));
+    }
+  }
+  return result;
+}
+
+function DeptNode({ node, depth = 0, selectedIds, onToggleSelect }) {
   const [open, setOpen] = useState(depth < 2);
   const [showEmps, setShowEmps] = useState(false);
   const hasChildren = node.children && node.children.length > 0;
   const hasEmps = node.employees && node.employees.length > 0;
+  const isSelected = selectedIds?.has(node.id);
 
   return (
     <div className={depth > 0 ? 'ml-5 border-l border-slate-200 pl-3' : ''}>
       <div className="flex items-center gap-2 py-1.5 group">
+        {onToggleSelect && (
+          <input type="checkbox" checked={isSelected || false}
+            onChange={() => onToggleSelect(node.id)}
+            className="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" />
+        )}
+
         {(hasChildren || hasEmps) ? (
           <button onClick={() => { setOpen(!open); if (!open) setShowEmps(true); else setShowEmps(false); }}
             className="p-0.5 rounded hover:bg-slate-100">
@@ -118,7 +140,7 @@ function DeptNode({ node, depth = 0 }) {
             </div>
           )}
           {hasChildren && node.children.map((child) => (
-            <DeptNode key={child.id} node={child} depth={depth + 1} />
+            <DeptNode key={child.id} node={child} depth={depth + 1} selectedIds={selectedIds} onToggleSelect={onToggleSelect} />
           ))}
         </>
       )}
@@ -163,11 +185,47 @@ function PositionRow({ item }) {
   );
 }
 
+// CMD-style terminal log component
+function CmdTerminal({ logs, title, running }) {
+  const endRef = useRef(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
+
+  return (
+    <div className="rounded-lg border border-slate-700 bg-slate-900 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border-b border-slate-700">
+        <CommandLineIcon className="w-4 h-4 text-green-400" />
+        <span className="text-xs font-mono text-slate-300">{title}</span>
+        {running && <ArrowPathIcon className="w-3.5 h-3.5 text-amber-400 animate-spin ml-auto" />}
+      </div>
+      <div className="p-3 max-h-[300px] overflow-y-auto font-mono text-xs leading-relaxed">
+        {logs.map((line, i) => (
+          <div key={i} className={`${
+            line.startsWith('[DELETE]') ? 'text-red-400' :
+            line.startsWith('[SKIP]') ? 'text-amber-400' :
+            line.startsWith('[WARN]') ? 'text-yellow-300' :
+            line.startsWith('[ERROR]') ? 'text-red-500 font-bold' :
+            line.startsWith('[OK]') ? 'text-green-400' :
+            line.startsWith('[DONE]') ? 'text-green-300 font-bold mt-1' :
+            'text-slate-400'
+          }`}>
+            <span className="text-slate-600 select-none">$ </span>{line}
+          </div>
+        ))}
+        {running && <div className="text-green-400 animate-pulse">▌</div>}
+        <div ref={endRef} />
+      </div>
+    </div>
+  );
+}
+
 export default function OrgAuditTab() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [section, setSection] = useState('departments');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [cmdLogs, setCmdLogs] = useState([]);
+  const [cmdRunning, setCmdRunning] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -184,7 +242,76 @@ export default function OrgAuditTab() {
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) {
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllEmpty = () => {
+    if (!data) return;
+    const flat = flattenTree(data.departments.tree);
+    const emptyIds = flat.filter(d => d.employee_count === 0 && d.total_employee_count === 0).map(d => d.id);
+    setSelectedIds(new Set(emptyIds));
+  };
+
+  const runDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`${selectedIds.size} departman silinecek. Emin misiniz?`)) return;
+
+    setCmdRunning(true);
+    setCmdLogs(prev => [...prev, `\n--- Seçili ${selectedIds.size} departman siliniyor ---`]);
+
+    try {
+      const res = await api.post('/system/health-check/org_delete_departments/', {
+        department_ids: Array.from(selectedIds),
+      });
+      setCmdLogs(prev => [...prev, ...res.data.logs]);
+      setSelectedIds(new Set());
+      await fetchData();
+    } catch (e) {
+      setCmdLogs(prev => [...prev, `[ERROR] ${e.response?.data?.error || e.message}`]);
+    } finally {
+      setCmdRunning(false);
+    }
+  };
+
+  const runEnforceArchitecture = async () => {
+    setCmdRunning(true);
+    setCmdLogs(prev => [...prev, '\n--- enforce_architecture_consistency çalıştırılıyor ---']);
+
+    try {
+      const res = await api.post('/system/health-check/org_enforce_architecture/');
+      setCmdLogs(prev => [...prev, ...res.data.logs]);
+      await fetchData();
+    } catch (e) {
+      setCmdLogs(prev => [...prev, `[ERROR] ${e.response?.data?.error || e.message}`]);
+    } finally {
+      setCmdRunning(false);
+    }
+  };
+
+  const runCleanupEmpty = async () => {
+    if (!confirm('Tüm boş pasif departmanlar otomatik silinecek. Emin misiniz?')) return;
+
+    setCmdRunning(true);
+    setCmdLogs(prev => [...prev, '\n--- Boş pasif departmanlar temizleniyor ---']);
+
+    try {
+      const res = await api.post('/system/health-check/org_cleanup_empty/');
+      setCmdLogs(prev => [...prev, ...res.data.logs]);
+      await fetchData();
+    } catch (e) {
+      setCmdLogs(prev => [...prev, `[ERROR] ${e.response?.data?.error || e.message}`]);
+    } finally {
+      setCmdRunning(false);
+    }
+  };
+
+  if (loading && !data) {
     return (
       <div className="bg-white p-8 rounded-xl shadow-sm border flex items-center justify-center gap-3">
         <ArrowPathIcon className="w-6 h-6 text-indigo-500 animate-spin" />
@@ -193,7 +320,7 @@ export default function OrgAuditTab() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="bg-white p-6 rounded-xl shadow-sm border border-red-100">
         <p className="text-red-600">{error}</p>
@@ -211,6 +338,7 @@ export default function OrgAuditTab() {
     { id: 'departments', label: 'Departmanlar', icon: BuildingOffice2Icon, count: departments.summary.total },
     { id: 'positions', label: 'Pozisyonlar', icon: BriefcaseIcon, count: positions.summary.total },
     { id: 'issues', label: 'Sorunlar', icon: ExclamationTriangleIcon, count: issueCount },
+    { id: 'actions', label: 'Aksiyonlar', icon: WrenchScrewdriverIcon, count: null },
   ];
 
   return (
@@ -237,27 +365,51 @@ export default function OrgAuditTab() {
               }`}>
               <tab.icon className="w-4.5 h-4.5" />
               {tab.label}
-              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                tab.id === 'issues' && tab.count > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'
-              }`}>{tab.count}</span>
+              {tab.count !== null && (
+                <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                  tab.id === 'issues' && tab.count > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'
+                }`}>{tab.count}</span>
+              )}
             </button>
           ))}
 
           <button onClick={fetchData} className="ml-auto mr-3 p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Yenile">
-            <ArrowPathIcon className="w-4.5 h-4.5" />
+            <ArrowPathIcon className={`w-4.5 h-4.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
         <div className="p-4 max-h-[600px] overflow-y-auto">
           {/* Departments */}
           {section === 'departments' && (
-            <div className="space-y-1">
-              {departments.tree.map((root) => (
-                <DeptNode key={root.id} node={root} depth={0} />
-              ))}
-              {departments.tree.length === 0 && (
-                <p className="text-slate-400 text-sm text-center py-8">Departman bulunamadı</p>
-              )}
+            <div>
+              {/* Selection toolbar */}
+              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-100">
+                <button onClick={selectAllEmpty}
+                  className="px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition">
+                  Boşları Seç
+                </button>
+                <button onClick={() => setSelectedIds(new Set())}
+                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition">
+                  Seçimi Temizle
+                </button>
+                {selectedIds.size > 0 && (
+                  <button onClick={runDeleteSelected} disabled={cmdRunning}
+                    className="px-3 py-1.5 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-1.5 disabled:opacity-50">
+                    <TrashIcon className="w-3.5 h-3.5" />
+                    Seçili {selectedIds.size} Departmanı Sil
+                  </button>
+                )}
+                <span className="ml-auto text-xs text-slate-400">Checkbox ile seçip silebilirsiniz</span>
+              </div>
+
+              <div className="space-y-1">
+                {departments.tree.map((root) => (
+                  <DeptNode key={root.id} node={root} depth={0} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
+                ))}
+                {departments.tree.length === 0 && (
+                  <p className="text-slate-400 text-sm text-center py-8">Departman bulunamadı</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -276,7 +428,6 @@ export default function OrgAuditTab() {
           {/* Issues */}
           {section === 'issues' && (
             <div className="space-y-4">
-              {/* Unassigned employees */}
               {assignments.unassigned_employees && assignments.unassigned_employees.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -297,7 +448,6 @@ export default function OrgAuditTab() {
                 </div>
               )}
 
-              {/* All issues */}
               {assignments.issues && assignments.issues.length > 0 ? (
                 <div>
                   <h4 className="text-sm font-semibold text-slate-700 mb-2">Tüm Sorunlar ({assignments.issues.length})</h4>
@@ -319,7 +469,6 @@ export default function OrgAuditTab() {
                 </div>
               )}
 
-              {/* Summary */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
                 <div className="bg-slate-50 rounded-lg p-3 text-center">
                   <div className="text-lg font-bold text-slate-700">{assignments.summary.total}</div>
@@ -338,6 +487,53 @@ export default function OrgAuditTab() {
                   <div className={`text-xs ${assignments.summary.unassigned > 0 ? 'text-red-600' : 'text-emerald-600'}`}>Atamasız</div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          {section === 'actions' && (
+            <div className="space-y-4">
+              {/* Action buttons */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button onClick={runEnforceArchitecture} disabled={cmdRunning}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition text-left disabled:opacity-50">
+                  <WrenchScrewdriverIcon className="w-8 h-8 text-indigo-600 shrink-0" />
+                  <div>
+                    <div className="text-sm font-bold text-indigo-800">Yapıyı Düzelt</div>
+                    <div className="text-xs text-indigo-600">enforce_architecture_consistency komutunu çalıştır</div>
+                  </div>
+                </button>
+
+                <button onClick={runCleanupEmpty} disabled={cmdRunning}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition text-left disabled:opacity-50">
+                  <TrashIcon className="w-8 h-8 text-amber-600 shrink-0" />
+                  <div>
+                    <div className="text-sm font-bold text-amber-800">Boş Pasif Sil</div>
+                    <div className="text-xs text-amber-600">Çalışanı olmayan tüm pasif departmanları sil</div>
+                  </div>
+                </button>
+
+                <button onClick={() => { setSection('departments'); }}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition text-left">
+                  <BuildingOffice2Icon className="w-8 h-8 text-red-600 shrink-0" />
+                  <div>
+                    <div className="text-sm font-bold text-red-800">Manuel Seçip Sil</div>
+                    <div className="text-xs text-red-600">Departmanlar sekmesinden checkbox ile seçip silin</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* CMD Terminal */}
+              {cmdLogs.length > 0 && (
+                <CmdTerminal logs={cmdLogs} title="org-audit-terminal" running={cmdRunning} />
+              )}
+
+              {cmdLogs.length > 0 && (
+                <button onClick={() => setCmdLogs([])}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition">
+                  Logları temizle
+                </button>
+              )}
             </div>
           )}
         </div>
