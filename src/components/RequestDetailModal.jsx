@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Clock, Calendar, FileText, AlertCircle, Shield, Lock, CheckCircle, XCircle, Briefcase } from 'lucide-react';
+// CardlessEntry fixes: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
