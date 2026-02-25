@@ -13,6 +13,7 @@ import {
     DocumentChartBarIcon,
     TrashIcon,
     MagnifyingGlassIcon,
+    WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -22,6 +23,7 @@ const STAGES = [
     { id: 4, name: 'Ek Mesai Atama', icon: CalendarDaysIcon, color: 'rose', description: '66 test — OvertimeAssignment CRUD, bulk_create, cancel, claim (auto-fill), claimable API, claim-potential, manual_entry, source_type, calendar, team_analytics, expire task (7 gün), yetki kontrolü' },
     { id: 5, name: 'İzin Sistemi', icon: CalendarIcon, color: 'violet', description: '37 test — FIFO sıralı düşüm, avans izin takibi, hak koruma, iade mantığı, legacy bakiye senkronizasyonu' },
     { id: 6, name: 'Rapor Bug Fix', icon: DocumentChartBarIcon, color: 'cyan', description: '29 test — rules_cache date key, çoklu attendance aggregation, takvim tatil filtresi, Celery mutabakat, izin duty get_day_rules, tüm izin türleri sayımı' },
+    { id: 7, name: 'Sistem & Kritik Fix', icon: WrenchScrewdriverIcon, color: 'slate', description: '15 test — Şifre sıfırlama endpoint (XLSX, yetki), dept/pozisyon otomatik türetme, avans izin kısıtlama kaldırma, advance tracking' },
 ];
 
 export default function SpecTestsTab() {
