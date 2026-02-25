@@ -10,6 +10,7 @@ import {
     ClockIcon,
     CalendarDaysIcon,
     CalendarIcon,
+    DocumentChartBarIcon,
     TrashIcon,
     MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
@@ -20,6 +21,7 @@ const STAGES = [
     { id: 3, name: 'Mesai Sistemi', icon: ClockIcon, color: 'amber', description: '95 test — Hesaplama motoru, öğle/mola, tolerans, takvim, Celery görevleri, race condition, dead zone' },
     { id: 4, name: 'Ek Mesai Atama', icon: CalendarDaysIcon, color: 'rose', description: '66 test — OvertimeAssignment CRUD, bulk_create, cancel, claim (auto-fill), claimable API, claim-potential, manual_entry, source_type, calendar, team_analytics, expire task (7 gün), yetki kontrolü' },
     { id: 5, name: 'İzin Sistemi', icon: CalendarIcon, color: 'violet', description: '37 test — FIFO sıralı düşüm, avans izin takibi, hak koruma, iade mantığı, legacy bakiye senkronizasyonu' },
+    { id: 6, name: 'Rapor Bug Fix', icon: DocumentChartBarIcon, color: 'cyan', description: '29 test — rules_cache date key, çoklu attendance aggregation, takvim tatil filtresi, Celery mutabakat, izin duty get_day_rules, tüm izin türleri sayımı' },
 ];
 
 export default function SpecTestsTab() {
@@ -102,7 +104,7 @@ export default function SpecTestsTab() {
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        5 aşamalı 338 otomatik test — target_spec.md gereksinimlerini doğrular
+                        6 aşamalı 367 otomatik test — target_spec.md gereksinimlerini doğrular
                     </p>
                 </div>
                 <button
