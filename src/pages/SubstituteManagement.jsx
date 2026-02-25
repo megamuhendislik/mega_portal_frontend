@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Calendar, UserPlus, Edit2, Trash2, Check, X, AlertCircle, Users, Shield,
   ChevronDown, ChevronUp, Search, Clock, ArrowRightLeft, ToggleLeft, ToggleRight,
-  Plus, CheckCircle2, XCircle, CalendarDays, UserCheck, Briefcase
+  Plus, CheckCircle2, XCircle, CalendarDays, UserCheck, Briefcase, Loader2
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -20,6 +20,8 @@ const SubstituteManagement = () => {
   const [activeTab, setActiveTab] = useState('given');
   const [searchText, setSearchText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmToggle, setConfirmToggle] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     principal: '',
@@ -135,7 +137,9 @@ const SubstituteManagement = () => {
     setSuccess('');
 
     if (!validateForm()) return;
+    if (submitting) return;
 
+    setSubmitting(true);
     try {
       if (editingId) {
         await api.put(`/substitute-authority/${editingId}/`, formData);
@@ -156,6 +160,8 @@ const SubstituteManagement = () => {
       } else {
         setError('İşlem başarısız oldu');
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -190,10 +196,12 @@ const SubstituteManagement = () => {
         is_active: !delegation.is_active
       });
       setSuccess(`Vekalet kaydı ${!delegation.is_active ? 'aktif' : 'pasif'} edildi`);
+      setConfirmToggle(null);
       fetchDelegations();
       setTimeout(() => setSuccess(''), 4000);
     } catch (err) {
       setError('Durum değiştirilemedi');
+      setConfirmToggle(null);
     }
   };
 
@@ -283,6 +291,7 @@ const SubstituteManagement = () => {
         <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 animate-in slide-in-from-top-2">
           <CheckCircle2 size={20} className="shrink-0" />
           <span className="font-medium">{success}</span>
+          <button onClick={() => setSuccess('')} className="ml-auto text-emerald-400 hover:text-emerald-600"><X size={16} /></button>
         </div>
       )}
 
@@ -465,9 +474,11 @@ const SubstituteManagement = () => {
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                disabled={submitting}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {editingId ? 'Güncelle' : 'Oluştur'}
+                {submitting && <Loader2 size={16} className="animate-spin" />}
+                {submitting ? 'Kaydediliyor...' : (editingId ? 'Güncelle' : 'Oluştur')}
               </button>
               <button
                 type="button"
@@ -598,7 +609,7 @@ const SubstituteManagement = () => {
                               <Edit2 size={16} />
                             </button>
                             <button
-                              onClick={() => handleToggleActive(d)}
+                              onClick={() => setConfirmToggle(d)}
                               className={`p-2 rounded-lg transition ${d.is_active
                                 ? 'text-slate-500 hover:text-amber-600 hover:bg-amber-50'
                                 : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50'
@@ -651,6 +662,48 @@ const SubstituteManagement = () => {
                 className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-500/20 transition active:scale-95"
               >
                 Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Active/Passive Confirmation */}
+      {confirmToggle && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${confirmToggle.is_active ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                {confirmToggle.is_active
+                  ? <ToggleLeft size={24} className="text-amber-600" />
+                  : <ToggleRight size={24} className="text-emerald-600" />
+                }
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {confirmToggle.is_active ? 'Vekalet Pasif Yap' : 'Vekalet Aktif Yap'}
+                </h3>
+                <p className="text-sm text-slate-500">
+                  {confirmToggle.principal_name} → {confirmToggle.substitute_name}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setConfirmToggle(null)}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition"
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => handleToggleActive(confirmToggle)}
+                className={`flex-1 py-2.5 text-white font-bold rounded-xl shadow-lg transition active:scale-95 ${
+                  confirmToggle.is_active
+                    ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
+                }`}
+              >
+                {confirmToggle.is_active ? 'Pasif Yap' : 'Aktif Yap'}
               </button>
             </div>
           </div>

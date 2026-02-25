@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
     Clock, AlertCircle, Users, Activity,
-    Search, ArrowUpRight, ArrowDownRight, RefreshCw
+    Search, ArrowUpRight, ArrowDownRight, RefreshCw,
+    BarChart3, List
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +14,7 @@ import {
     HierarchyGroupRow,
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
+import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
 import OvertimeCalendarModal from '../components/OvertimeCalendarModal';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
@@ -40,6 +42,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [calendarTarget, setCalendarTarget] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
+    const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics'
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -532,8 +535,41 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
+            {/* View Toggle: Liste / Analiz */}
+            {stats.length > 0 && (
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 w-fit">
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                            viewMode === 'list'
+                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <List size={14} />
+                        Liste
+                    </button>
+                    <button
+                        onClick={() => setViewMode('analytics')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                            viewMode === 'analytics'
+                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <BarChart3 size={14} />
+                        Analiz
+                    </button>
+                </div>
+            )}
+
+            {/* Analytics View */}
+            {viewMode === 'analytics' && stats.length > 0 && (
+                <TeamAnalyticsDashboard stats={stats} />
+            )}
+
             {/* Main Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            {viewMode === 'list' && <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                 {/* Toolbar */}
                 <div className="flex flex-wrap items-center gap-3 md:gap-4 px-4 md:px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -626,7 +662,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div>}
 
             {/* DETAIL MODAL */}
             <EmployeeDetailModal
