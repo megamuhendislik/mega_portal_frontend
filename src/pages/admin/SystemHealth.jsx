@@ -18,7 +18,8 @@ import {
     WrenchScrewdriverIcon,
     ChartBarIcon,
     MagnifyingGlassCircleIcon,
-    UsersIcon
+    UsersIcon,
+    BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -33,6 +34,7 @@ import RBACAuditTab from './system-health/RBACAuditTab';
 import AttendanceAuditTab from './system-health/AttendanceAuditTab';
 import SpecTestsTab from './system-health/SpecTestsTab';
 import PasswordResetTab from './system-health/PasswordResetTab';
+import OrgAuditTab from './system-health/OrgAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -99,6 +101,7 @@ export default function SystemHealth() {
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'maintenance', name: 'Bakım & Onarım', icon: WrenchScrewdriverIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
+                        { id: 'org_audit', name: 'Org Röntgen', icon: BuildingOfficeIcon },
                         { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
                     ].map((tab) => (
                         <button
@@ -138,6 +141,7 @@ export default function SystemHealth() {
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'maintenance' && <MaintenanceTab />}
                 {activeTab === 'system_reset' && <SystemResetTab />}
+                {activeTab === 'org_audit' && <OrgAuditTab />}
                 {activeTab === 'password_reset' && <PasswordResetTab />}
             </div>
 
