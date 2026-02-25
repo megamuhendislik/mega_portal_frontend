@@ -102,6 +102,49 @@ function SourceBadge({ type }) {
     );
 }
 
+/* ----- Reusable Popup Modal ----- */
+function ClaimModal({ open, onClose, title, icon, children }) {
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (open) {
+            document.body.style.overflow = 'hidden';
+            return () => { document.body.style.overflow = ''; };
+        }
+    }, [open]);
+
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            {/* Modal */}
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ animation: 'claimModalIn 0.2s ease-out' }}>
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                        {icon}
+                        <h3 className="font-bold text-lg text-slate-800">{title}</h3>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
+                        <XCircle size={20} className="text-slate-400" />
+                    </button>
+                </div>
+                {/* Body */}
+                <div className="p-5">
+                    {children}
+                </div>
+            </div>
+            <style>{`
+                @keyframes claimModalIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+            `}</style>
+        </div>
+    );
+}
+
 export default function AssignedOvertimeTab() {
     const [assignments, setAssignments] = useState([]);
     const [claimableData, setClaimableData] = useState({ intended: [], potential: [] });
@@ -405,115 +448,119 @@ export default function AssignedOvertimeTab() {
                 </div>
             )}
 
-            {/* ==================== Manual Overtime Entry (Collapsible) ==================== */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <button
-                    onClick={() => { setManualOpen(!manualOpen); if (!manualOpen) setManualError(''); }}
-                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white">
-                            <PenLine size={22} />
+            {/* ==================== Manual Overtime Entry Button ==================== */}
+            <button
+                onClick={() => { setManualOpen(true); setManualError(''); }}
+                className="w-full flex items-center gap-3 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50/50 transition-all active:scale-[0.99]"
+            >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shrink-0">
+                    <PenLine size={22} />
+                </div>
+                <div className="text-left flex-1">
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg text-slate-800">Manuel Ek Mesai Girisi</h3>
+                        <SourceBadge type="MANUAL" />
+                    </div>
+                    <p className="text-xs text-slate-500">Kart kaydi olmayan gunler icin mesai girisi yapin</p>
+                </div>
+                <PenLine size={20} className="text-slate-400 shrink-0" />
+            </button>
+
+            {/* Manual Entry Modal */}
+            <ClaimModal
+                open={manualOpen}
+                onClose={() => { handleManualReset(); setManualOpen(false); }}
+                title="Manuel Ek Mesai Girisi"
+                icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white"><PenLine size={18} /></div>}
+            >
+                <form onSubmit={handleManualSubmit} className="space-y-4">
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-1">
+                        <p className="text-xs text-slate-600 flex items-center gap-2">
+                            <Info size={14} className="text-orange-500 shrink-0" />
+                            Kart okuyucu kaydi olmayan gunler icin mesai bilgilerinizi girebilirsiniz.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
+                            <input
+                                type="date"
+                                value={manualForm.work_date}
+                                max={(() => {
+                                    const yesterday = new Date();
+                                    yesterday.setDate(yesterday.getDate() - 1);
+                                    return yesterday.toISOString().split('T')[0];
+                                })()}
+                                onChange={e => setManualForm({ ...manualForm, work_date: e.target.value })}
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                required
+                            />
                         </div>
-                        <div className="text-left">
-                            <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-lg text-slate-800">Manuel Ek Mesai Girisi</h3>
-                                <SourceBadge type="MANUAL" />
-                            </div>
-                            <p className="text-xs text-slate-500">Kart kaydi olmayan gunler icin mesai girisi yapin</p>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Baslangic Saati</label>
+                            <input
+                                type="time"
+                                value={manualForm.start_time}
+                                onChange={e => setManualForm({ ...manualForm, start_time: e.target.value })}
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Bitis Saati</label>
+                            <input
+                                type="time"
+                                value={manualForm.end_time}
+                                onChange={e => setManualForm({ ...manualForm, end_time: e.target.value })}
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                required
+                            />
                         </div>
                     </div>
-                    <div className={`transition-transform duration-200 ${manualOpen ? 'rotate-180' : ''}`}>
-                        <ChevronDown size={20} className="text-slate-400" />
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 mb-1 block">
+                            Sebep <span className="text-slate-400 font-normal">(zorunlu, maks 500 karakter)</span>
+                        </label>
+                        <textarea
+                            rows="3"
+                            value={manualForm.reason}
+                            onChange={e => setManualForm({ ...manualForm, reason: e.target.value })}
+                            maxLength={500}
+                            className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                            placeholder="Ornegin: Acil proje teslimi nedeniyle fazla mesai yapildi..."
+                            required
+                        />
+                        {manualForm.reason.length > 0 && (
+                            <p className="text-[11px] text-slate-400 mt-1 text-right">{manualForm.reason.length}/500</p>
+                        )}
                     </div>
-                </button>
 
-                {manualOpen && (
-                    <div className="border-t border-slate-100 p-5">
-                        <form onSubmit={handleManualSubmit} className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
-                                    <input
-                                        type="date"
-                                        value={manualForm.work_date}
-                                        max={(() => {
-                                            const yesterday = new Date();
-                                            yesterday.setDate(yesterday.getDate() - 1);
-                                            return yesterday.toISOString().split('T')[0];
-                                        })()}
-                                        onChange={e => setManualForm({ ...manualForm, work_date: e.target.value })}
-                                        className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Baslangic Saati</label>
-                                    <input
-                                        type="time"
-                                        value={manualForm.start_time}
-                                        onChange={e => setManualForm({ ...manualForm, start_time: e.target.value })}
-                                        className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Bitis Saati</label>
-                                    <input
-                                        type="time"
-                                        value={manualForm.end_time}
-                                        onChange={e => setManualForm({ ...manualForm, end_time: e.target.value })}
-                                        className="w-full p-3 bg-white rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 mb-1 block">
-                                    Sebep <span className="text-slate-400 font-normal">(zorunlu, maks 500 karakter)</span>
-                                </label>
-                                <textarea
-                                    rows="2"
-                                    value={manualForm.reason}
-                                    onChange={e => setManualForm({ ...manualForm, reason: e.target.value })}
-                                    maxLength={500}
-                                    className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
-                                    placeholder="Ornegin: Acil proje teslimi nedeniyle fazla mesai yapildi..."
-                                    required
-                                />
-                                {manualForm.reason.length > 0 && (
-                                    <p className="text-[11px] text-slate-400 mt-1 text-right">{manualForm.reason.length}/500</p>
-                                )}
-                            </div>
+                    {manualError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                            <AlertCircle size={14} />
+                            {manualError}
+                        </div>
+                    )}
 
-                            {manualError && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
-                                    <AlertCircle size={14} />
-                                    {manualError}
-                                </div>
-                            )}
-
-                            <div className="flex gap-2 justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => { handleManualReset(); setManualOpen(false); }}
-                                    className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
-                                >
-                                    Iptal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={manualLoading}
-                                    className="px-6 py-2.5 bg-orange-600 text-white font-bold rounded-xl text-sm hover:bg-orange-700 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {manualLoading ? <Loader2 size={16} className="animate-spin" /> : <PenLine size={16} />}
-                                    Manuel Giris Gonder
-                                </button>
-                            </div>
-                        </form>
+                    <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+                        <button
+                            type="button"
+                            onClick={() => { handleManualReset(); setManualOpen(false); }}
+                            className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
+                        >
+                            Iptal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={manualLoading}
+                            className="px-6 py-2.5 bg-orange-600 text-white font-bold rounded-xl text-sm hover:bg-orange-700 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {manualLoading ? <Loader2 size={16} className="animate-spin" /> : <PenLine size={16} />}
+                            Manuel Giris Gonder
+                        </button>
                     </div>
-                )}
-            </div>
+                </form>
+            </ClaimModal>
 
             {/* ==================== Section A: Planli Mesai (INTENDED) ==================== */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -555,8 +602,6 @@ export default function AssignedOvertimeTab() {
                         ) : (
                             <div className="divide-y divide-slate-100">
                                 {claimableData.intended.map((item) => {
-                                    const isClaimingThis = intendedClaimTarget?.assignment_id === item.assignment_id;
-
                                     return (
                                         <div key={`intended-${item.assignment_id}`} className="p-5 hover:bg-slate-50/30 transition-all">
                                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -595,7 +640,7 @@ export default function AssignedOvertimeTab() {
                                                 </div>
 
                                                 {/* Claim Button */}
-                                                {!item.already_claimed && !isClaimingThis && (
+                                                {!item.already_claimed && (
                                                     <button
                                                         onClick={() => handleOpenIntendedClaim(item)}
                                                         className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
@@ -611,99 +656,6 @@ export default function AssignedOvertimeTab() {
                                                     </span>
                                                 )}
                                             </div>
-
-                                            {/* Inline Claim Form for INTENDED */}
-                                            {isClaimingThis && (
-                                                <div className="mt-4 bg-emerald-50/50 border border-emerald-100 rounded-xl p-4">
-                                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                                                        <Clock size={16} className="text-emerald-600" />
-                                                        Planli Mesai Talebi
-                                                    </h4>
-                                                    <div className="bg-white border border-emerald-100 rounded-lg p-3 mb-3">
-                                                        <p className="text-xs text-slate-500">
-                                                            Baslangic/bitis saati ve sure otomatik olarak devam kaydinden doldurulacaktir. Sadece gerekce girmeniz yeterlidir.
-                                                        </p>
-                                                        {item.claimable_hours != null && (
-                                                            <p className="text-xs text-emerald-700 font-semibold mt-1">
-                                                                Talep edilecek sure: {item.claimable_hours} saat
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce</label>
-                                                        <textarea
-                                                            rows="2"
-                                                            value={intendedReason}
-                                                            onChange={e => setIntendedReason(e.target.value)}
-                                                            className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none"
-                                                            placeholder="Mesai gerekce aciklamasi..."
-                                                            required
-                                                        />
-                                                    </div>
-
-                                                    {claimError && intendedClaimTarget?.assignment_id === item.assignment_id && (
-                                                        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 mt-3">
-                                                            <AlertCircle size={14} />
-                                                            {claimError}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Confirmation Modal */}
-                                                    {intendedConfirmOpen && (
-                                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
-                                                            <p className="text-xs font-bold text-amber-800 mb-2">
-                                                                Emin misiniz? Bu atama icin bir kez talep edilebilir.
-                                                            </p>
-                                                            <div className="flex gap-2 justify-end">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setIntendedConfirmOpen(false)}
-                                                                    disabled={claimLoading}
-                                                                    className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg text-xs transition-all"
-                                                                >
-                                                                    Vazgec
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleIntendedClaimSubmit}
-                                                                    disabled={claimLoading}
-                                                                    className="px-5 py-2 bg-emerald-600 text-white font-bold rounded-lg text-xs hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
-                                                                >
-                                                                    {claimLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                                                    Onayla
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {!intendedConfirmOpen && (
-                                                        <div className="flex gap-2 justify-end mt-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleCloseIntendedClaim}
-                                                                className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
-                                                            >
-                                                                Iptal
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    if (!intendedReason.trim()) {
-                                                                        setClaimError('Gerekce giriniz.');
-                                                                        return;
-                                                                    }
-                                                                    setClaimError('');
-                                                                    setIntendedConfirmOpen(true);
-                                                                }}
-                                                                className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
-                                                            >
-                                                                <CheckCircle2 size={16} />
-                                                                Talep Et
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
                                     );
                                 })}
@@ -712,6 +664,124 @@ export default function AssignedOvertimeTab() {
                     </div>
                 )}
             </div>
+
+            {/* INTENDED Claim Modal */}
+            <ClaimModal
+                open={intendedClaimTarget !== null}
+                onClose={handleCloseIntendedClaim}
+                title="Planli Mesai Talebi"
+                icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white"><CalendarCheck size={18} /></div>}
+            >
+                {intendedClaimTarget && (
+                    <div className="space-y-4">
+                        {/* Item details */}
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar size={16} className="text-emerald-600" />
+                                <span className="font-bold text-slate-800">{formatDateTurkish(intendedClaimTarget.date)}</span>
+                                {intendedClaimTarget.is_today && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full">Bugun</span>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="text-slate-500">Atayan: <span className="font-semibold text-slate-700">{intendedClaimTarget.manager_name || '-'}</span></div>
+                                <div className="text-slate-500">Maks sure: <span className="font-semibold text-violet-700">{intendedClaimTarget.max_duration_hours} saat</span></div>
+                                <div className="text-slate-500">Gerceklesen: <span className="font-semibold text-emerald-700">{intendedClaimTarget.actual_overtime_hours ?? '-'} saat</span></div>
+                                {intendedClaimTarget.claimable_hours != null && (
+                                    <div className="text-slate-500">Talep edilecek: <span className="font-semibold text-emerald-700">{intendedClaimTarget.claimable_hours} saat</span></div>
+                                )}
+                            </div>
+                            {intendedClaimTarget.task_description && (
+                                <p className="text-xs text-slate-500 flex items-center gap-1 pt-1 border-t border-emerald-100">
+                                    <Info size={12} className="shrink-0 text-emerald-500" />
+                                    {intendedClaimTarget.task_description}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Auto-fill info */}
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                            <p className="text-xs text-slate-600 flex items-center gap-2">
+                                <Info size={14} className="text-blue-500 shrink-0" />
+                                Baslangic/bitis saati ve sure otomatik olarak devam kaydinden doldurulacaktir.
+                            </p>
+                        </div>
+
+                        {/* Reason textarea */}
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce <span className="text-red-400">*</span></label>
+                            <textarea
+                                rows="3"
+                                value={intendedReason}
+                                onChange={e => setIntendedReason(e.target.value)}
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none"
+                                placeholder="Mesai gerekce aciklamasi..."
+                            />
+                        </div>
+
+                        {/* Error */}
+                        {claimError && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                                <AlertCircle size={14} />
+                                {claimError}
+                            </div>
+                        )}
+
+                        {/* Confirmation step INSIDE modal */}
+                        {intendedConfirmOpen ? (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                <p className="text-sm font-bold text-amber-800 mb-3">
+                                    Emin misiniz? Bu atama icin bir kez talep edilebilir.
+                                </p>
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIntendedConfirmOpen(false)}
+                                        disabled={claimLoading}
+                                        className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg text-sm transition-all"
+                                    >
+                                        Vazgec
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleIntendedClaimSubmit}
+                                        disabled={claimLoading}
+                                        className="px-5 py-2 bg-emerald-600 text-white font-bold rounded-lg text-sm hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                    >
+                                        {claimLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                        Onayla
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseIntendedClaim}
+                                    className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
+                                >
+                                    Iptal
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!intendedReason.trim()) {
+                                            setClaimError('Gerekce giriniz.');
+                                            return;
+                                        }
+                                        setClaimError('');
+                                        setIntendedConfirmOpen(true);
+                                    }}
+                                    className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
+                                >
+                                    <CheckCircle2 size={16} />
+                                    Talep Et
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </ClaimModal>
 
             {/* ==================== Section B: Algilanan Mesai (POTENTIAL) ==================== */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -753,8 +823,6 @@ export default function AssignedOvertimeTab() {
                         ) : (
                             <div className="divide-y divide-slate-100">
                                 {claimableData.potential.map((item) => {
-                                    const isClaimingThis = potentialClaimTarget?.attendance_id === item.attendance_id;
-
                                     return (
                                         <div key={`potential-${item.attendance_id}`} className="p-5 hover:bg-slate-50/30 transition-all">
                                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -783,7 +851,7 @@ export default function AssignedOvertimeTab() {
                                                 </div>
 
                                                 {/* Claim Button */}
-                                                {!item.already_claimed && !isClaimingThis && (
+                                                {!item.already_claimed && (
                                                     <button
                                                         onClick={() => handleOpenPotentialClaim(item)}
                                                         className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold text-sm hover:bg-amber-700 shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
@@ -799,94 +867,6 @@ export default function AssignedOvertimeTab() {
                                                     </span>
                                                 )}
                                             </div>
-
-                                            {/* Inline Claim Form for POTENTIAL */}
-                                            {isClaimingThis && (
-                                                <div className="mt-4 bg-amber-50/50 border border-amber-100 rounded-xl p-4">
-                                                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                                                        <Clock size={16} className="text-amber-600" />
-                                                        Algilanan Mesai Talebi
-                                                    </h4>
-                                                    <div className="bg-white border border-amber-100 rounded-lg p-3 mb-3">
-                                                        <p className="text-xs text-slate-500">
-                                                            Bu gun icin mesai atamaniz bulunmuyor. Kart okuyucu verilerinize gore <span className="font-semibold text-amber-700">{item.actual_overtime_hours} saat</span> fazla mesai algilanmistir.
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce</label>
-                                                        <textarea
-                                                            rows="2"
-                                                            value={potentialReason}
-                                                            onChange={e => setPotentialReason(e.target.value)}
-                                                            className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none"
-                                                            placeholder="Mesai gerekce aciklamasi..."
-                                                            required
-                                                        />
-                                                    </div>
-
-                                                    {claimError && potentialClaimTarget?.attendance_id === item.attendance_id && (
-                                                        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 mt-3">
-                                                            <AlertCircle size={14} />
-                                                            {claimError}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Confirmation Modal */}
-                                                    {potentialConfirmOpen && (
-                                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
-                                                            <p className="text-xs font-bold text-amber-800 mb-2">
-                                                                Emin misiniz? Bu atama icin bir kez talep edilebilir.
-                                                            </p>
-                                                            <div className="flex gap-2 justify-end">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setPotentialConfirmOpen(false)}
-                                                                    disabled={claimLoading}
-                                                                    className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg text-xs transition-all"
-                                                                >
-                                                                    Vazgec
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handlePotentialClaimSubmit}
-                                                                    disabled={claimLoading}
-                                                                    className="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg text-xs hover:bg-amber-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
-                                                                >
-                                                                    {claimLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                                                    Onayla
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {!potentialConfirmOpen && (
-                                                        <div className="flex gap-2 justify-end mt-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleClosePotentialClaim}
-                                                                className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
-                                                            >
-                                                                Iptal
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    if (!potentialReason.trim()) {
-                                                                        setClaimError('Gerekce giriniz.');
-                                                                        return;
-                                                                    }
-                                                                    setClaimError('');
-                                                                    setPotentialConfirmOpen(true);
-                                                                }}
-                                                                className="px-6 py-2.5 bg-amber-600 text-white font-bold rounded-xl text-sm hover:bg-amber-700 shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-2"
-                                                            >
-                                                                <CheckCircle2 size={16} />
-                                                                Talep Et
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
                                     );
                                 })}
@@ -895,6 +875,115 @@ export default function AssignedOvertimeTab() {
                     </div>
                 )}
             </div>
+
+            {/* POTENTIAL Claim Modal */}
+            <ClaimModal
+                open={potentialClaimTarget !== null}
+                onClose={handleClosePotentialClaim}
+                title="Algilanan Mesai Talebi"
+                icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white"><Zap size={18} /></div>}
+            >
+                {potentialClaimTarget && (
+                    <div className="space-y-4">
+                        {/* Item details */}
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar size={16} className="text-amber-600" />
+                                <span className="font-bold text-slate-800">{formatDateTurkish(potentialClaimTarget.date)}</span>
+                                {potentialClaimTarget.is_today && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full">Bugun</span>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="text-slate-500">Fazla mesai: <span className="font-semibold text-amber-700">{potentialClaimTarget.actual_overtime_hours} saat</span></div>
+                                <div className="text-slate-500">Vardiya bitis: <span className="font-semibold text-slate-700">{potentialClaimTarget.shift_end_time || '-'}</span></div>
+                                <div className="text-slate-500">Cikis: <span className="font-semibold text-slate-700">{potentialClaimTarget.check_out_time || '-'}</span></div>
+                            </div>
+                        </div>
+
+                        {/* Info */}
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                            <p className="text-xs text-slate-600 flex items-center gap-2">
+                                <Info size={14} className="text-blue-500 shrink-0" />
+                                Bu gun icin mesai atamaniz bulunmuyor. Kart okuyucu verilerinize gore fazla mesai algilanmistir.
+                            </p>
+                        </div>
+
+                        {/* Reason textarea */}
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Gerekce <span className="text-red-400">*</span></label>
+                            <textarea
+                                rows="3"
+                                value={potentialReason}
+                                onChange={e => setPotentialReason(e.target.value)}
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none"
+                                placeholder="Mesai gerekce aciklamasi..."
+                            />
+                        </div>
+
+                        {/* Error */}
+                        {claimError && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                                <AlertCircle size={14} />
+                                {claimError}
+                            </div>
+                        )}
+
+                        {/* Confirmation step INSIDE modal */}
+                        {potentialConfirmOpen ? (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                <p className="text-sm font-bold text-amber-800 mb-3">
+                                    Emin misiniz? Bu mesai icin bir kez talep edilebilir.
+                                </p>
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPotentialConfirmOpen(false)}
+                                        disabled={claimLoading}
+                                        className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg text-sm transition-all"
+                                    >
+                                        Vazgec
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handlePotentialClaimSubmit}
+                                        disabled={claimLoading}
+                                        className="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg text-sm hover:bg-amber-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                    >
+                                        {claimLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                        Onayla
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={handleClosePotentialClaim}
+                                    className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-sm transition-all"
+                                >
+                                    Iptal
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!potentialReason.trim()) {
+                                            setClaimError('Gerekce giriniz.');
+                                            return;
+                                        }
+                                        setClaimError('');
+                                        setPotentialConfirmOpen(true);
+                                    }}
+                                    className="px-6 py-2.5 bg-amber-600 text-white font-bold rounded-xl text-sm hover:bg-amber-700 shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-2"
+                                >
+                                    <CheckCircle2 size={16} />
+                                    Talep Et
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </ClaimModal>
 
             {/* ==================== Tum Atamalar (Full List) ==================== */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
