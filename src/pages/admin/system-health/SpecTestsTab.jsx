@@ -36,7 +36,9 @@ export default function SpecTestsTab() {
     const [results, setResults] = useState(null);
     const [error, setError] = useState(null);
     const [elapsed, setElapsed] = useState(0);
+    const [currentStageInfo, setCurrentStageInfo] = useState(null);
     const timerRef = useRef(null);
+    const pollRef = useRef(null);
 
     useEffect(() => {
         if (loading) {
@@ -47,6 +49,11 @@ export default function SpecTestsTab() {
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [loading]);
+
+    // Cleanup polling on unmount
+    useEffect(() => {
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, []);
 
     const formatTime = (s) => {
         const m = Math.floor(s / 60);
@@ -62,6 +69,7 @@ export default function SpecTestsTab() {
     const scanTestData = async () => {
         setScanning(true);
         setPurgeResult(null);
+        setError(null);
         try {
             const res = await api.get('/system/health-check/scan-test-data/');
             setScanResult(res.data);
@@ -76,6 +84,7 @@ export default function SpecTestsTab() {
         if (!confirm('TÜM test verilerini (SEC_, PRT_, STR_, TST_, TRBAC_ prefix\'li) silmek istediğinize emin misiniz?')) return;
         setPurging(true);
         setPurgeResult(null);
+        setError(null);
         try {
             const res = await api.post('/system/health-check/purge-all-test-data/');
             setPurgeResult(res.data);
@@ -87,17 +96,79 @@ export default function SpecTestsTab() {
         }
     };
 
+    const pollTaskStatus = (taskId) => {
+        if (pollRef.current) clearInterval(pollRef.current);
+
+        pollRef.current = setInterval(async () => {
+            try {
+                const res = await api.get(`/system/health-check/get-test-status/?task_id=${taskId}`);
+                const data = res.data;
+
+                if (data.state === 'PROGRESS') {
+                    setCurrentStageInfo({
+                        current: data.current_stage,
+                        name: data.current_stage_name,
+                        completed: data.completed_stages || [],
+                        total: data.total_stages,
+                    });
+                    // Show intermediate results as they complete
+                    if (data.completed_stages?.length > 0) {
+                        setResults(prev => {
+                            const totalRan = data.completed_stages.reduce((s, r) => s + (r.tests_ran || 0), 0);
+                            const totalPassed = data.completed_stages.reduce((s, r) => s + (r.passed || 0), 0);
+                            const totalFailed = data.completed_stages.reduce((s, r) => s + (r.failures || 0) + (r.errors || 0), 0);
+                            return {
+                                success: data.completed_stages.every(r => r.success),
+                                total_tests: totalRan,
+                                total_passed: totalPassed,
+                                total_failed: totalFailed,
+                                stages: data.completed_stages,
+                                _partial: true,
+                            };
+                        });
+                    }
+                } else if (data.state === 'SUCCESS') {
+                    clearInterval(pollRef.current);
+                    pollRef.current = null;
+                    setResults(data.result);
+                    setCurrentStageInfo(null);
+                    setLoading(false);
+                    setRunningStage(null);
+                } else if (data.state === 'FAILURE') {
+                    clearInterval(pollRef.current);
+                    pollRef.current = null;
+                    setError(data.error || 'Task failed');
+                    setCurrentStageInfo(null);
+                    setLoading(false);
+                    setRunningStage(null);
+                }
+                // PENDING state = task not started yet, keep polling
+            } catch (e) {
+                // Don't stop polling on transient network errors, but show a warning
+                console.warn('Polling error:', e.message);
+            }
+        }, 3000);
+    };
+
     const runTests = async (stage = 'all') => {
         setLoading(true);
         setRunningStage(stage);
         setError(null);
         setResults(null);
+        setCurrentStageInfo(null);
         try {
-            const res = await api.post('/system/health-check/run-stage-tests/', { stage }, { timeout: 600000 });
-            setResults(res.data);
+            const res = await api.post('/system/health-check/run-stage-tests/', { stage });
+            const taskId = res.data.task_id;
+            if (taskId) {
+                pollTaskStatus(taskId);
+            } else {
+                // Fallback: if response has direct results (shouldn't happen with new API)
+                setResults(res.data);
+                setLoading(false);
+                setRunningStage(null);
+            }
         } catch (e) {
-            setError(e.response?.data?.error || e.message || 'Test çalıştırılamadı');
-        } finally {
+            setError(e.response?.data?.error || e.message || 'Test başlatılamadı');
             setLoading(false);
             setRunningStage(null);
         }
@@ -110,7 +181,7 @@ export default function SpecTestsTab() {
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        6 aşamalı 367 otomatik test — target_spec.md gereksinimlerini doğrular
+                        9 aşamalı otomatik test — target_spec.md gereksinimlerini doğrular
                     </p>
                 </div>
                 <button
@@ -211,18 +282,33 @@ export default function SpecTestsTab() {
                 )}
             </div>
 
-            {/* Loading indicator */}
+            {/* Loading indicator with progress */}
             {loading && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm flex items-center gap-3">
-                    <ArrowPathIcon className="w-5 h-5 animate-spin flex-shrink-0" />
-                    <div>
-                        <strong>Testler çalışıyor...</strong> ({formatTime(elapsed)})
-                        <p className="text-xs opacity-75 mt-0.5">
-                            {runningStage === 'all'
-                                ? 'Tüm aşamalar sırayla çalıştırılıyor. Bu işlem 2-5 dakika sürebilir.'
-                                : `Aşama ${runningStage} çalıştırılıyor. Bu işlem 1-2 dakika sürebilir.`}
-                        </p>
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+                    <div className="flex items-center gap-3">
+                        <ArrowPathIcon className="w-5 h-5 animate-spin flex-shrink-0" />
+                        <div className="flex-1">
+                            <strong>Testler çalışıyor...</strong> ({formatTime(elapsed)})
+                            <p className="text-xs opacity-75 mt-0.5">
+                                {currentStageInfo ? (
+                                    <>Aşama {currentStageInfo.current}: {currentStageInfo.name} çalışıyor ({currentStageInfo.completed?.length || 0}/{currentStageInfo.total} tamamlandı)</>
+                                ) : runningStage === 'all' ? (
+                                    'Celery task başlatılıyor...'
+                                ) : (
+                                    `Aşama ${runningStage} başlatılıyor...`
+                                )}
+                            </p>
+                        </div>
                     </div>
+                    {/* Progress bar */}
+                    {currentStageInfo && currentStageInfo.total > 1 && (
+                        <div className="mt-3 w-full bg-blue-200 rounded-full h-2">
+                            <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                                style={{ width: `${((currentStageInfo.completed?.length || 0) / currentStageInfo.total) * 100}%` }}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -234,7 +320,7 @@ export default function SpecTestsTab() {
             )}
 
             {/* Overall Result */}
-            {results && (
+            {results && !results._partial && (
                 <div className={`mb-6 p-4 rounded-lg border ${
                     results.success
                         ? 'bg-green-50 border-green-200'
@@ -264,17 +350,19 @@ export default function SpecTestsTab() {
                 {STAGES.map((stage) => {
                     const stageResult = results?.stages?.find(s => s.stage === stage.id);
                     const hasResult = !!stageResult;
-                    const isRunning = loading && (runningStage === stage.id || runningStage === 'all');
+                    const isRunning = loading && (runningStage === stage.id || (runningStage === 'all' && currentStageInfo?.current === stage.id));
 
                     return (
                         <div
                             key={stage.id}
                             className={`border rounded-xl p-5 transition-all ${
-                                hasResult
-                                    ? stageResult.success
-                                        ? 'border-green-200 bg-green-50/50'
-                                        : 'border-red-200 bg-red-50/50'
-                                    : 'border-gray-200 hover:border-gray-300'
+                                isRunning
+                                    ? 'border-blue-300 bg-blue-50/50 ring-2 ring-blue-200'
+                                    : hasResult
+                                        ? stageResult.success
+                                            ? 'border-green-200 bg-green-50/50'
+                                            : 'border-red-200 bg-red-50/50'
+                                        : 'border-gray-200 hover:border-gray-300'
                             }`}
                         >
                             <div className="flex items-center justify-between mb-3">
