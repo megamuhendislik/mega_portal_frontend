@@ -565,7 +565,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             {/* Analytics View */}
             {viewMode === 'analytics' && stats.length > 0 && (
-                <TeamAnalyticsDashboard stats={stats} />
+                <TeamAnalyticsDashboard stats={stats} year={year} month={month} departmentId={selectedDept} />
             )}
 
             {/* Main Table */}

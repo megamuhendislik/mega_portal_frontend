@@ -15,6 +15,7 @@ import {
     MagnifyingGlassIcon,
     WrenchScrewdriverIcon,
     PauseCircleIcon,
+    CloudArrowDownIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -26,6 +27,7 @@ const STAGES = [
     { id: 6, name: 'Rapor Bug Fix', icon: DocumentChartBarIcon, color: 'cyan', description: '29 test — rules_cache date key, çoklu attendance aggregation, takvim tatil filtresi, Celery mutabakat, izin duty get_day_rules, tüm izin türleri sayımı' },
     { id: 7, name: 'Sistem & Kritik Fix', icon: WrenchScrewdriverIcon, color: 'slate', description: '15 test — Şifre sıfırlama endpoint (XLSX, yetki), dept/pozisyon otomatik türetme, avans izin kısıtlama kaldırma, advance tracking' },
     { id: 8, name: 'Potansiyel Mola', icon: PauseCircleIcon, color: 'teal', description: '16 test — potential_break_seconds model alanı, tek/çoklu mola hesaplama, hak aşımı, break vs potential farkı, live-status endpoint mola bilgileri' },
+    { id: 9, name: 'Yedekleme & Geri Yükleme', icon: CloudArrowDownIcon, color: 'sky', description: '32 test — JSON/CSV export, import yetki kontrolleri, dry-run simülasyon, UPSERT davranışı, round-trip veri bütünlüğü, validasyon kuralları' },
 ];
 
 export default function SpecTestsTab() {

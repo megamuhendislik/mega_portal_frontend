@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend
+    PieChart, Pie, Cell, Legend,
+    AreaChart, Area, LineChart, Line
 } from 'recharts';
+import api from '../../services/api';
 import {
     TrendingUp, TrendingDown, Award, Clock, AlertTriangle, Users,
     Target, Zap, Minus,
@@ -88,8 +90,31 @@ const KpiCard = ({ label, value, subValue, icon: Icon, color, trend }) => {
 /* ═══════════════════════════════════════════════════
    MAIN DASHBOARD COMPONENT
    ═══════════════════════════════════════════════════ */
-const TeamAnalyticsDashboard = ({ stats = [] }) => {
+const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
     const [expandedSection, setExpandedSection] = useState(null);
+    const [dailyTrend, setDailyTrend] = useState([]);
+    const [trendLoading, setTrendLoading] = useState(false);
+
+    // Fetch daily trend data from dedicated team_analytics endpoint
+    useEffect(() => {
+        if (!stats || stats.length === 0) return;
+        const fetchTrend = async () => {
+            setTrendLoading(true);
+            try {
+                const params = {};
+                if (year) params.year = year;
+                if (month) params.month = month;
+                if (departmentId) params.department_id = departmentId;
+                const res = await api.get('/dashboard/team_analytics/', { params });
+                setDailyTrend(res.data?.daily_trend || []);
+            } catch (err) {
+                console.error('Daily trend fetch error:', err);
+            } finally {
+                setTrendLoading(false);
+            }
+        };
+        fetchTrend();
+    }, [year, month, departmentId, stats.length]);
 
     // ── COMPUTED ANALYTICS DATA ──
     const analytics = useMemo(() => {
@@ -276,6 +301,87 @@ const TeamAnalyticsDashboard = ({ stats = [] }) => {
                     color="emerald"
                 />
             </div>
+
+            {/* ═══════ SECTION 1.5: Daily Trend Chart ═══════ */}
+            {dailyTrend.length > 0 && (
+                <AnalyticsCard
+                    title="Günlük Trend"
+                    subtitle="Gün bazlı ortalama çalışma ve fazla mesai (dakika)"
+                    icon={Activity}
+                >
+                    <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart
+                                data={dailyTrend}
+                                margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+                            >
+                                <defs>
+                                    <linearGradient id="gradWorked" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="gradOT" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis
+                                    dataKey="day"
+                                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                                    axisLine={{ stroke: '#e2e8f0' }}
+                                    tickLine={false}
+                                />
+                                <YAxis
+                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tickFormatter={(v) => `${Math.round(v / 60)}s`}
+                                />
+                                <Tooltip content={<CustomTooltip formatter={(v) => formatMinutes(v)} />} />
+                                <Legend
+                                    wrapperStyle={{ fontSize: 11, fontWeight: 600 }}
+                                    iconType="circle"
+                                    iconSize={8}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="avg_worked"
+                                    name="Ort. Çalışma"
+                                    stroke="#6366f1"
+                                    strokeWidth={2}
+                                    fill="url(#gradWorked)"
+                                    dot={{ r: 3, fill: '#6366f1', strokeWidth: 0 }}
+                                    activeDot={{ r: 5 }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="avg_overtime"
+                                    name="Ort. Fazla Mesai"
+                                    stroke="#f59e0b"
+                                    strokeWidth={2}
+                                    fill="url(#gradOT)"
+                                    dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
+                                    activeDot={{ r: 5 }}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                    {/* Absent count mini row */}
+                    {dailyTrend.some(d => d.absent > 0) && (
+                        <div className="flex items-center gap-2 mt-2 px-1">
+                            <span className="text-[10px] font-semibold text-slate-400">Devamsızlık:</span>
+                            <div className="flex gap-1 flex-wrap">
+                                {dailyTrend.filter(d => d.absent > 0).map(d => (
+                                    <span key={d.day} className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 font-bold tabular-nums">
+                                        {d.day}. gün: {d.absent}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </AnalyticsCard>
+            )}
 
             {/* ═══════ SECTION 2: Performance Comparison + Distribution ═══════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
