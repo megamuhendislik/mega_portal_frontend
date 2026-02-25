@@ -66,11 +66,24 @@ function DeptNode({ node, depth = 0 }) {
           <EyeSlashIcon className="w-3.5 h-3.5 text-slate-400" title="Şemada gizli" />
         )}
 
-        <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
-          node.employee_count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
-        }`}>
-          {node.employee_count} kişi
-        </span>
+        {node.total_employee_count > node.employee_count ? (
+          <span className="ml-auto flex items-center gap-1.5">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              node.employee_count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+            }`}>
+              {node.employee_count} direkt
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+              {node.total_employee_count} toplam
+            </span>
+          </span>
+        ) : (
+          <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
+            node.employee_count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+          }`}>
+            {node.employee_count} kişi
+          </span>
+        )}
 
         {node.manager_name && (
           <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
