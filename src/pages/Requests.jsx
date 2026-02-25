@@ -1286,7 +1286,7 @@ const Requests = () => {
                 )}
 
                 <TabButton active={activeTab === 'assigned_overtime'} onClick={() => setActiveTab('assigned_overtime')} icon={<CalendarCheck size={18} />}>
-                    Atanan Mesailer
+                    Ek Mesai
                 </TabButton>
 
                 <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<BarChart3 size={18} />}>Analiz</TabButton>
