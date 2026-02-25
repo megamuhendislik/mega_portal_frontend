@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
 import {
   Calendar, UserPlus, Edit2, Trash2, Check, X, AlertCircle, Users, Shield,
   ChevronDown, ChevronUp, Search, Clock, ArrowRightLeft, ToggleLeft, ToggleRight,
@@ -8,7 +7,6 @@ import {
 import api from '../services/api';
 
 const SubstituteManagement = () => {
-  const { hasPermission } = useAuth();
   const [delegations, setDelegations] = useState([]);
   const [myDelegations, setMyDelegations] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -366,16 +364,14 @@ const SubstituteManagement = () => {
                     value={principalSearch}
                     onChange={(e) => setPrincipalSearch(e.target.value)}
                     className="w-full px-3 py-2 mb-1 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-slate-50"
-                    disabled={!hasPermission('SYSTEM_FULL_ACCESS') && !hasPermission('MANAGE_SUBSTITUTE')}
                   />
                   <select
                     value={formData.principal}
                     onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
                     required
-                    disabled={!hasPermission('SYSTEM_FULL_ACCESS') && !hasPermission('MANAGE_SUBSTITUTE')}
                     className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition ${
                       formErrors.principal ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-                    } ${(!hasPermission('SYSTEM_FULL_ACCESS') && !hasPermission('MANAGE_SUBSTITUTE')) ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                    }`}
                   >
                     <option value="">Seçiniz...</option>
                     {filteredPrincipalEmployees.map(emp => (

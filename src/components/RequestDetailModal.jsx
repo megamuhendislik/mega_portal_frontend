@@ -151,10 +151,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     request.status !== 'PENDING';
 
   const getContentTypeId = () => {
-    if (requestType === 'LEAVE') return 31; // LeaveRequest content type ID
-    if (requestType === 'OVERTIME') return 32; // OvertimeRequest content type ID
-    if (requestType === 'CARDLESS_ENTRY') return 33; // CardlessEntryRequest content type ID
-    return null;
+    return request?.content_type_id || null;
   };
 
   const formatDate = (dateString) => {

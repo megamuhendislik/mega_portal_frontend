@@ -447,9 +447,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
             // Hedef onaylayıcı bilgisini al
             const data = response?.data;
-            const approverName = data?.target_approver_detail?.full_name
-                || data?.target_approver_name
-                || null;
+            const approverName = data?.target_approver_name || null;
 
             onSuccess(approverName);
             onClose();

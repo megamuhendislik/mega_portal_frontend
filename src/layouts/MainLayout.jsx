@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -24,10 +24,14 @@ import {
     UserCog,
     Package,
     Contact,
-    MessageSquare
+    MessageSquare,
+    Coffee,
+    AlertTriangle
 } from 'lucide-react';
 import clsx from 'clsx';
 
+import api from '../services/api';
+import useSmartPolling from '../hooks/useSmartPolling';
 import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
 
@@ -46,6 +50,9 @@ const MainLayout = () => {
     // Overtime Modal State
     const [isOvertimeModalOpen, setIsOvertimeModalOpen] = useState(false);
     const [lastAttendanceData, setLastAttendanceData] = useState(null);
+
+    // Live Status for break indicator
+    const [liveStatus, setLiveStatus] = useState(null);
 
     // Handle Resize
     useEffect(() => {
@@ -77,9 +84,24 @@ const MainLayout = () => {
         }
     }, [location.pathname, isMobile]);
 
+    // Poll live-status for break indicator
+    const employeeId = user?.employee?.id || user?.id;
+
+    const fetchLiveStatus = useCallback(async () => {
+        if (!employeeId) return;
+        try {
+            const res = await api.get(`/attendance/live-status/${employeeId}/status/`);
+            setLiveStatus(res.data);
+        } catch (e) {
+            // Silently ignore - non-critical UI feature
+        }
+    }, [employeeId]);
+
+    useEffect(() => { fetchLiveStatus(); }, [fetchLiveStatus]);
+    useSmartPolling(fetchLiveStatus, 30000, !!employeeId);
+
     const checkShiftStatus = async () => {
         try {
-            const api = (await import('../services/api')).default;
             const response = await api.get('/attendance/current_status/');
             setIsShiftActive(response.data.is_active);
         } catch (error) {
@@ -90,7 +112,6 @@ const MainLayout = () => {
     const handleShiftToggle = async () => {
         setShiftLoading(true);
         try {
-            const api = (await import('../services/api')).default;
             const response = await api.post('/attendance/toggle_shift/');
 
             if (response.data.status === 'STARTED') {
@@ -329,6 +350,28 @@ const MainLayout = () => {
                                 <span className="hidden sm:inline whitespace-nowrap">{shiftLoading ? 'İşleniyor...' : (isShiftActive ? 'Mesaiyi Bitir' : 'Mesai Başlat')}</span>
                             </button>
                         )}
+
+                        {/* Mola Göstergesi — aktif vardiyası olan herkes */}
+                        {liveStatus?.status === 'INSIDE' && (() => {
+                            const used = Math.round((liveStatus.potential_break_seconds || 0) / 60);
+                            const allowed = Math.round((liveStatus.daily_break_allowance_seconds || 1800) / 60);
+                            const isOver = used > allowed;
+                            const isFull = used === allowed;
+                            return (
+                                <div className={clsx(
+                                    "flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold border transition-all duration-300",
+                                    isOver
+                                        ? "bg-red-50 text-red-600 border-red-200"
+                                        : isFull
+                                            ? "bg-amber-50 text-amber-600 border-amber-200"
+                                            : "bg-blue-50 text-blue-600 border-blue-200"
+                                )}>
+                                    <Coffee size={14} className="shrink-0" />
+                                    <span>Mola: {used}/{allowed} dk</span>
+                                    {isOver && <AlertTriangle size={14} className="shrink-0" />}
+                                </div>
+                            );
+                        })()}
 
                         <NotificationBell />
 
