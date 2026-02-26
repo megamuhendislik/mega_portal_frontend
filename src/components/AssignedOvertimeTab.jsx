@@ -582,7 +582,7 @@ export default function AssignedOvertimeTab() {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-slate-500">Yoneticiniz tarafindan atanmis ve talep edilebilir mesailer</p>
+                            <p className="text-xs text-slate-500">Yoneticiniz tarafindan atanmis mesailer. Gecmise yonelik 2 mali ay icinde talep edilebilir.</p>
                         </div>
                     </div>
                     <div className={`transition-transform duration-200 ${intendedOpen ? 'rotate-180' : ''}`}>
@@ -803,7 +803,7 @@ export default function AssignedOvertimeTab() {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-slate-500">Kart okuyucu verisinden algilanan, atama olmadan yapilan fazla mesailer</p>
+                            <p className="text-xs text-slate-500">Kart okuyucu verisinden algilanan fazla mesailer. Gecmise yonelik 2 mali ay icinde talep edilebilir.</p>
                         </div>
                     </div>
                     <div className={`transition-transform duration-200 ${potentialOpen ? 'rotate-180' : ''}`}>
