@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import {
     MessageSquare, Plus, Send, Search, Filter, Clock, CheckCircle2, AlertCircle,
     ThumbsUp, AlertTriangle, Lightbulb, Paperclip, X, ChevronDown, ChevronRight,
-    Eye, FileText, Image, File, Download, Loader2, MessageCircle, XCircle
+    Eye, FileText, Image, File, Download, Loader2, MessageCircle, XCircle,
+    Trash2, ShieldAlert, Ban
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -20,8 +21,16 @@ const STATUSES = {
     PENDING: { label: 'Beklemede', color: 'slate', icon: Clock },
     IN_REVIEW: { label: 'İnceleniyor', color: 'blue', icon: Eye },
     RESOLVED: { label: 'Cevaplandı', color: 'emerald', icon: CheckCircle2 },
+    REJECTED: { label: 'Reddedildi', color: 'rose', icon: Ban },
     CLOSED: { label: 'Kapatıldı', color: 'slate', icon: XCircle },
 };
+
+const ADMIN_SUB_TABS = [
+    { key: 'all', label: 'Tümü', icon: MessageSquare },
+    { key: 'unanswered', label: 'Cevaplanmamışlar', icon: Clock },
+    { key: 'resolved', label: 'Onaylananlar', icon: CheckCircle2 },
+    { key: 'rejected', label: 'Reddedilenler', icon: Ban },
+];
 
 // =================== SMALL COMPONENTS ===================
 
@@ -43,6 +52,7 @@ const StatusBadge = ({ status }) => {
         slate: 'bg-slate-50 text-slate-600 ring-slate-200',
         blue: 'bg-blue-50 text-blue-700 ring-blue-200',
         emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+        rose: 'bg-rose-50 text-rose-700 ring-rose-200',
     };
     return (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${colors[st.color] || colors.slate}`}>
@@ -69,6 +79,49 @@ const formatDateTime = (d) => {
     if (!d) return '';
     const date = new Date(d);
     return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+// =================== DELETE CONFIRM MODAL ===================
+
+const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, feedbackTitle }) => {
+    if (!open) return null;
+    return ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200/80">
+                <div className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-4">
+                        <Trash2 size={24} className="text-rose-500" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">Geri Bildirimi Sil</h3>
+                    <p className="text-sm text-slate-500 mb-1">
+                        <span className="font-semibold text-slate-700">"{feedbackTitle}"</span>
+                    </p>
+                    <p className="text-sm text-slate-500">
+                        Bu geri bildirim kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                    </p>
+                </div>
+                <div className="px-6 pb-6 flex items-center gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={loading}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                    >
+                        İptal
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-sm hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        Sil
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
 };
 
 // =================== CREATE MODAL ===================
@@ -268,7 +321,7 @@ const CreateFeedbackModal = ({ open, onClose, onSuccess }) => {
 
 // =================== DETAIL MODAL ===================
 
-const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onStatusChange }) => {
+const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onStatusChange, onDelete }) => {
     const [responseText, setResponseText] = useState('');
     const [responding, setResponding] = useState(false);
     const [newStatus, setNewStatus] = useState('');
@@ -284,7 +337,6 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     if (!open || !feedback) return null;
 
     const cat = CATEGORIES[feedback.category] || CATEGORIES.COMPLAINT;
-    const CatIcon = cat.icon;
 
     const handleRespond = async () => {
         if (!responseText.trim()) return;
@@ -340,9 +392,20 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                             <p className="text-xs text-slate-400 mt-1">Gönderen: <span className="font-semibold text-slate-600">{feedback.employee_name}</span></p>
                         )}
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0 mt-1">
-                        <X size={18} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0 mt-1">
+                        {isAdmin && (
+                            <button
+                                onClick={() => onDelete(feedback)}
+                                className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
+                                title="Sil"
+                            >
+                                <Trash2 size={18} />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-6 space-y-6">
@@ -467,38 +530,39 @@ const Feedback = () => {
 
     // State
     const [activeTab, setActiveTab] = useState('my'); // 'my' | 'admin'
+    const [adminSubTab, setAdminSubTab] = useState('all'); // 'all' | 'unanswered' | 'resolved' | 'rejected'
     const [feedbacks, setFeedbacks] = useState([]);
     const [adminFeedbacks, setAdminFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const [selectedFeedback, setSelectedFeedback] = useState(null);
     const [showDetail, setShowDetail] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     // Fetch
-    const fetchMyFeedbacks = async () => {
+    const fetchMyFeedbacks = useCallback(async () => {
         try {
             const res = await api.get('/feedback/');
             setFeedbacks(res.data);
         } catch (err) {
             console.error('Feedback fetch error:', err);
         }
-    };
+    }, []);
 
-    const fetchAdminFeedbacks = async () => {
+    const fetchAdminFeedbacks = useCallback(async () => {
         if (!isAdmin) return;
         try {
             const params = {};
             if (categoryFilter) params.category = categoryFilter;
-            if (statusFilter) params.status = statusFilter;
             const res = await api.get('/feedback/admin_list/', { params });
             setAdminFeedbacks(res.data);
         } catch (err) {
             console.error('Admin feedback fetch error:', err);
         }
-    };
+    }, [isAdmin, categoryFilter]);
 
     useEffect(() => {
         const load = async () => {
@@ -513,7 +577,7 @@ const Feedback = () => {
         if (activeTab === 'admin') {
             fetchAdminFeedbacks();
         }
-    }, [categoryFilter, statusFilter]);
+    }, [categoryFilter]);
 
     const handleRespond = async (id, text) => {
         await api.post(`/feedback/${id}/respond/`, { response: text });
@@ -527,6 +591,24 @@ const Feedback = () => {
         fetchMyFeedbacks();
     };
 
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleteLoading(true);
+        try {
+            await api.delete(`/feedback/${deleteTarget.id}/admin_delete/`);
+            setDeleteTarget(null);
+            setShowDetail(false);
+            setSelectedFeedback(null);
+            fetchAdminFeedbacks();
+            fetchMyFeedbacks();
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert('Silme işlemi başarısız oldu.');
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
     const openDetail = (fb) => {
         setSelectedFeedback(fb);
         setShowDetail(true);
@@ -534,14 +616,32 @@ const Feedback = () => {
         if (!isAdmin && fb.admin_response && !fb.is_response_read) {
             setFeedbacks(prev => prev.map(f => f.id === fb.id ? { ...f, is_response_read: true } : f));
             api.post(`/feedback/${fb.id}/mark_response_read/`).catch(() => {
-                // Revert on failure
                 setFeedbacks(prev => prev.map(f => f.id === fb.id ? { ...f, is_response_read: false } : f));
             });
         }
     };
 
+    const openDeleteFromDetail = (fb) => {
+        setShowDetail(false);
+        setDeleteTarget(fb);
+    };
+
+    // Filter admin feedbacks by sub-tab
+    const adminFilteredBySubTab = useMemo(() => {
+        switch (adminSubTab) {
+            case 'unanswered':
+                return adminFeedbacks.filter(f => f.status === 'PENDING' || f.status === 'IN_REVIEW');
+            case 'resolved':
+                return adminFeedbacks.filter(f => f.status === 'RESOLVED');
+            case 'rejected':
+                return adminFeedbacks.filter(f => f.status === 'REJECTED' || f.status === 'CLOSED');
+            default:
+                return adminFeedbacks;
+        }
+    }, [adminFeedbacks, adminSubTab]);
+
     // Filter for search
-    const currentList = activeTab === 'admin' ? adminFeedbacks : feedbacks;
+    const currentList = activeTab === 'admin' ? adminFilteredBySubTab : feedbacks;
     const filtered = useMemo(() => {
         if (!search.trim()) return currentList;
         const q = search.toLowerCase();
@@ -562,9 +662,9 @@ const Feedback = () => {
 
     const adminStats = useMemo(() => ({
         total: adminFeedbacks.length,
-        pending: adminFeedbacks.filter(f => f.status === 'PENDING').length,
-        inReview: adminFeedbacks.filter(f => f.status === 'IN_REVIEW').length,
+        unanswered: adminFeedbacks.filter(f => f.status === 'PENDING' || f.status === 'IN_REVIEW').length,
         resolved: adminFeedbacks.filter(f => f.status === 'RESOLVED').length,
+        rejected: adminFeedbacks.filter(f => f.status === 'REJECTED' || f.status === 'CLOSED').length,
         unread: adminFeedbacks.filter(f => !f.is_read_by_admin).length,
     }), [adminFeedbacks]);
 
@@ -574,7 +674,9 @@ const Feedback = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Dilek ve Şikayetler</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Geri bildirimlerinizi gönderin, takip edin</p>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                        {isAdmin && activeTab === 'admin' ? 'Geri bildirimleri yönetin, cevaplayın' : 'Geri bildirimlerinizi gönderin, takip edin'}
+                    </p>
                 </div>
                 <button
                     onClick={() => setShowCreate(true)}
@@ -596,25 +698,56 @@ const Feedback = () => {
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <StatMini label="Toplam" value={adminStats.total} icon={<MessageSquare size={16} />} color="blue" />
-                    <StatMini label="Beklemede" value={adminStats.pending} icon={<Clock size={16} />} color="amber" />
-                    <StatMini label="Cevaplanan" value={adminStats.resolved} icon={<CheckCircle2 size={16} />} color="emerald" />
-                    <StatMini label="Okunmamış" value={adminStats.unread} icon={<AlertCircle size={16} />} color="rose" />
+                    <StatMini label="Cevaplanmamış" value={adminStats.unanswered} icon={<Clock size={16} />} color="amber" />
+                    <StatMini label="Onaylanan" value={adminStats.resolved} icon={<CheckCircle2 size={16} />} color="emerald" />
+                    <StatMini label="Reddedilen" value={adminStats.rejected} icon={<Ban size={16} />} color="rose" />
                 </div>
             )}
 
-            {/* Tabs + Toolbar */}
+            {/* Main Card */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
-                {/* Tabs */}
+                {/* Primary Tabs */}
                 <div className="px-4 pt-3 flex items-center gap-1 border-b border-slate-100">
                     <TabBtn active={activeTab === 'my'} onClick={() => setActiveTab('my')} badge={myStats.unread}>
                         Geri Bildirimlerim
                     </TabBtn>
                     {isAdmin && (
-                        <TabBtn active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} badge={adminStats.unread}>
-                            Tüm Geri Bildirimler
+                        <TabBtn active={activeTab === 'admin'} onClick={() => { setActiveTab('admin'); fetchAdminFeedbacks(); }} badge={adminStats.unread}>
+                            Yönetim
                         </TabBtn>
                     )}
                 </div>
+
+                {/* Admin Sub-Tabs */}
+                {activeTab === 'admin' && (
+                    <div className="px-4 pt-2 pb-0 flex items-center gap-1 border-b border-slate-50 bg-slate-50/50">
+                        {ADMIN_SUB_TABS.map(tab => {
+                            const Icon = tab.icon;
+                            const count = tab.key === 'all' ? adminStats.total
+                                : tab.key === 'unanswered' ? adminStats.unanswered
+                                : tab.key === 'resolved' ? adminStats.resolved
+                                : adminStats.rejected;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setAdminSubTab(tab.key)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-t-lg transition-all
+                                        ${adminSubTab === tab.key
+                                            ? 'bg-white text-blue-600 border border-b-0 border-slate-200 shadow-sm -mb-px'
+                                            : 'text-slate-400 hover:text-slate-600'
+                                        }`}
+                                >
+                                    <Icon size={13} />
+                                    {tab.label}
+                                    <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold
+                                        ${adminSubTab === tab.key ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Toolbar */}
                 <div className="px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 border-b border-slate-50">
@@ -625,12 +758,12 @@ const Feedback = () => {
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Ara..."
+                            placeholder={activeTab === 'admin' ? 'Başlık, açıklama veya çalışan ara...' : 'Ara...'}
                             className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 text-sm text-slate-700 placeholder-slate-400 outline-none transition-all"
                         />
                     </div>
 
-                    {/* Filters (admin tab only) */}
+                    {/* Category Filter (admin tab only) */}
                     {activeTab === 'admin' && (
                         <div className="flex items-center gap-2 flex-wrap">
                             <select
@@ -640,16 +773,6 @@ const Feedback = () => {
                             >
                                 <option value="">Tüm Kategoriler</option>
                                 {Object.entries(CATEGORIES).map(([k, v]) => (
-                                    <option key={k} value={k}>{v.label}</option>
-                                ))}
-                            </select>
-                            <select
-                                value={statusFilter}
-                                onChange={e => setStatusFilter(e.target.value)}
-                                className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 outline-none focus:border-blue-400 bg-white"
-                            >
-                                <option value="">Tüm Durumlar</option>
-                                {Object.entries(STATUSES).map(([k, v]) => (
                                     <option key={k} value={k}>{v.label}</option>
                                 ))}
                             </select>
@@ -681,6 +804,7 @@ const Feedback = () => {
                                 feedback={fb}
                                 isAdmin={activeTab === 'admin'}
                                 onClick={() => openDetail(fb)}
+                                onDelete={activeTab === 'admin' ? () => setDeleteTarget(fb) : null}
                             />
                         ))
                     )}
@@ -700,6 +824,14 @@ const Feedback = () => {
                 isAdmin={activeTab === 'admin'}
                 onRespond={handleRespond}
                 onStatusChange={handleStatusChange}
+                onDelete={openDeleteFromDetail}
+            />
+            <DeleteConfirmModal
+                open={!!deleteTarget}
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={handleDelete}
+                loading={deleteLoading}
+                feedbackTitle={deleteTarget?.title}
             />
         </div>
     );
@@ -707,18 +839,18 @@ const Feedback = () => {
 
 // =================== ROW COMPONENT ===================
 
-const FeedbackRow = ({ feedback, isAdmin, onClick }) => {
+const FeedbackRow = ({ feedback, isAdmin, onClick, onDelete }) => {
     const hasUnreadResponse = !isAdmin && feedback.admin_response && !feedback.is_response_read;
     const isNewForAdmin = isAdmin && !feedback.is_read_by_admin;
     const cat = CATEGORIES[feedback.category] || CATEGORIES.COMPLAINT;
     const CatIcon = cat.icon;
 
     return (
-        <button
-            onClick={onClick}
-            className={`w-full text-left px-5 py-4 hover:bg-slate-50/80 transition-colors flex items-start gap-4 group
+        <div
+            className={`w-full text-left px-5 py-4 hover:bg-slate-50/80 transition-colors flex items-start gap-4 group cursor-pointer
                 ${hasUnreadResponse ? 'bg-blue-50/30' : ''}
                 ${isNewForAdmin ? 'bg-amber-50/30' : ''}`}
+            onClick={onClick}
         >
             {/* Category icon + label */}
             <div className="shrink-0 flex flex-col items-center gap-1 mt-0.5">
@@ -755,8 +887,20 @@ const FeedbackRow = ({ feedback, isAdmin, onClick }) => {
                 </div>
             </div>
 
-            <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 mt-2.5 shrink-0 transition-colors" />
-        </button>
+            {/* Actions */}
+            <div className="flex items-center gap-1 shrink-0 mt-2.5">
+                {onDelete && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all"
+                        title="Sil"
+                    >
+                        <Trash2 size={15} />
+                    </button>
+                )}
+                <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+            </div>
+        </div>
     );
 };
 
