@@ -289,25 +289,54 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return agg;
     };
 
+    // Check if any node in the subtree matches the current search/filter
+    const hasMatchingDescendant = (node) => {
+        if (!node) return false;
+        // Check this node itself (only non-GROUP employee nodes)
+        if (node.type !== 'GROUP') {
+            const s = node.stats || {};
+            const nameMatch = searchTerm === '' ||
+                (node.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (node.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+            let statusMatch = true;
+            if (filterStatus === 'ONLINE') statusMatch = s.is_online;
+            else if (filterStatus === 'OVERTIME') statusMatch = (s.total_overtime || 0) > 0;
+            else if (filterStatus === 'MISSING') statusMatch = (s.total_missing || 0) > 0;
+            if (nameMatch && statusMatch && (s.employee_id || stats.length === 0)) return true;
+        }
+        // Check children recursively
+        if (node.children) {
+            return node.children.some(child => hasMatchingDescendant(child));
+        }
+        return false;
+    };
+
+    const isSearchActive = searchTerm !== '' || (filterStatus !== 'ALL');
+
     const renderHierarchyRows = (nodes, depth = 0) => {
         if (!nodes) return null;
 
         return nodes.map(node => {
             // GROUP node (role group header)
             if (node.type === 'GROUP') {
+                // When searching, hide groups with no matching descendants
+                if (isSearchActive && !hasMatchingDescendant(node)) return null;
+
                 const isExpanded = expandedDepts[node.id];
                 const nodeStats = calculateNodeStats(node);
+                // Auto-expand when searching
+                const showChildren = isSearchActive ? true : isExpanded;
 
                 return (
                     <React.Fragment key={node.id}>
                         <HierarchyGroupRow
                             node={node}
                             depth={depth}
-                            isExpanded={isExpanded}
+                            isExpanded={showChildren}
                             onToggle={() => toggleDept(node.id)}
                             nodeStats={nodeStats}
                         />
-                        {isExpanded && renderHierarchyRows(node.children, depth + 1)}
+                        {showChildren && renderHierarchyRows(node.children, depth + 1)}
                     </React.Fragment>
                 );
             }
@@ -326,10 +355,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             else if (filterStatus === 'OVERTIME') matchesStatus = (s.total_overtime || 0) > 0;
             else if (filterStatus === 'MISSING') matchesStatus = (s.total_missing || 0) > 0;
 
-            if (!matchesSearch || !matchesStatus) return null;
-            if (!s.employee_id && stats.length > 0) return null;
+            // For managers: show if they match OR have matching descendants
+            const selfMatches = matchesSearch && matchesStatus && (s.employee_id || stats.length === 0);
+            const childrenMatch = hasChildren && isSearchActive && hasMatchingDescendant({ children: node.children });
+
+            if (!selfMatches && !childrenMatch) return null;
+            if (!s.employee_id && stats.length > 0 && !childrenMatch) return null;
 
             const nodeStats = hasChildren ? calculateNodeStats(node) : null;
+            // Auto-expand managers when searching and children match
+            const showChildren = isSearchActive ? true : isExpanded;
 
             return (
                 <React.Fragment key={(hasChildren ? 'mgr-' : 'emp-') + node.id}>
@@ -341,14 +376,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         depth={depth}
                         isManager={hasChildren}
                         nodeStats={nodeStats}
-                        isExpanded={isExpanded}
+                        isExpanded={showChildren}
                         onToggle={hasChildren ? () => toggleDept(node.id) : null}
                         hierarchySort={hierarchySort}
                         onEmployeeClick={handleEmployeeClick}
                         onDetailClick={setSelectedEmployee}
                         onAssignOvertime={emp => setCalendarTarget(emp)}
                     />
-                    {hasChildren && isExpanded && renderHierarchyRows(node.children, depth + 1)}
+                    {hasChildren && showChildren && renderHierarchyRows(node.children, depth + 1)}
                 </React.Fragment>
             );
         });
