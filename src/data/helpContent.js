@@ -18,7 +18,7 @@ const helpContent = [
             },
             {
                 title: 'Canlı Durum Takibi',
-                description: 'Ana sayfadaki 3 widget\'ta (Çalışma Süresi, Kalan Mola, Fazla Mesai) anlık durumunuzu görebilirsiniz. Veriler 30 saniyede bir güncellenir.'
+                description: 'Ana sayfadaki 3 bilgi kutusunda (Çalışma Süresi, Kalan Mola, Fazla Mesai) anlık durumunuzu görebilirsiniz. Veriler 30 saniyede bir güncellenir.'
             },
             {
                 title: 'Çıkış Yapma',
@@ -26,7 +26,7 @@ const helpContent = [
             },
             {
                 title: 'Mola Takibi',
-                description: 'Üst menüdeki kahve ikonunda mola sürenizi görebilirsiniz. Mavi = normal, turuncu = %80 doldu, kırmızı = limit aşıldı. Çıkış yapıp tekrar giriş yaptığınızda aradaki süre mola sayılır.'
+                description: 'Üst menüdeki kahve simgesinde mola sürenizi görebilirsiniz. Mavi = normal, turuncu = %80 doldu, kırmızı = süre aşıldı. Çıkış yapıp tekrar giriş yaptığınızda aradaki süre mola sayılır.'
             }
         ],
         tips: [
@@ -54,8 +54,8 @@ const helpContent = [
                 description: 'Talepler sayfasında izin bakiyenizi görebilirsiniz. Yıllık hak edişiniz, kullanılan ve kalan gün sayınız görüntülenir.'
             },
             {
-                title: 'Yeni İzin Talebi',
-                description: 'Talepler sayfasında "Yeni İzin Talebi" butonuna tıklayın. İzin türünü, başlangıç ve bitiş tarihlerini seçin. Gerekirse açıklama ekleyin.'
+                title: 'Yeni İzin Talebi Oluşturma',
+                description: 'Talepler sayfasında "Yeni İzin Talebi" düğmesine tıklayın. İzin türünü, başlangıç ve bitiş tarihlerini seçin. Gerekirse açıklama ekleyin.'
             },
             {
                 title: 'Onay Süreci',
@@ -67,7 +67,7 @@ const helpContent = [
             }
         ],
         tips: [
-            { type: 'info', text: 'İzinler FIFO (ilk giren ilk çıkar) yöntemiyle düşülür — en eski hak edişten başlar.' },
+            { type: 'info', text: 'İzinler "ilk hak edilen ilk düşülür" yöntemiyle hesaplanır — en eski hak edişten başlayarak düşülür.' },
             { type: 'warning', text: 'Avans izin kullanıyorsanız, bakiyeniz negatife düşebilir. Bu durum gelecek hak edişlerinden düşülür.' },
             { type: 'success', text: 'Geçmiş 2 mali ay içindeki tarihler için geriye dönük izin talebi oluşturabilirsiniz.' }
         ],
@@ -87,19 +87,19 @@ const helpContent = [
         steps: [
             {
                 title: 'Mesai Türlerini Anlama',
-                description: 'Sistem 3 tür ek mesai tanır: Planlı Mesai (yönetici ataması), Algılanan Mesai (otomatik tespit), Manuel Mesai (sizin girişiniz).'
+                description: 'Sistem 3 tür ek mesai tanır: Planlı Mesai (yönetici ataması), Algılanan Mesai (otomatik tespit), Elle Giriş (sizin bildirdiğiniz).'
             },
             {
                 title: 'Planlı Mesai (Atama)',
-                description: 'Yöneticiniz size mesai ataması yapar. Talepler sayfasında "Atanan Mesailer" bölümünde görünür. "Talep Et" butonuna tıklayarak onay sürecini başlatın.'
+                description: 'Yöneticiniz size mesai ataması yapar. Talepler sayfasında "Atanan Mesailer" bölümünde görünür. "Talep Et" düğmesine tıklayarak onay sürecini başlatın.'
             },
             {
                 title: 'Algılanan Mesai (Potansiyel)',
                 description: 'Vardiya saatinizi aştığınızda sistem otomatik "Potansiyel Mesai" oluşturur. Talepler sayfasında bu mesaileri görebilir ve talep edebilirsiniz.'
             },
             {
-                title: 'Manuel Mesai Girişi',
-                description: 'Geçmiş bir tarih için mesai talebi oluşturmak isterseniz "Manuel Giriş" formunu kullanın. Tarih, saat ve açıklama girin.'
+                title: 'Elle Mesai Girişi',
+                description: 'Geçmiş bir tarih için mesai talebi oluşturmak isterseniz "Elle Giriş" formunu kullanın. Tarih, saat ve açıklama girin.'
             },
             {
                 title: 'Onay Süreci',
@@ -112,7 +112,7 @@ const helpContent = [
             { type: 'success', text: 'Hafta sonu ve resmi tatillerde yapılan çalışmalar otomatik olarak mesai olarak algılanır.' }
         ],
         faq: [
-            { q: 'Potansiyel mesai ile bekleyen mesai arasındaki fark nedir?', a: 'Potansiyel mesai henüz taslak halindedir — sistem otomatik algılamıştır ama siz henüz talep etmediniz. "Talep Et" butonuna bastığınızda "Bekleyen" durumuna geçer ve yönetici onayına gider.' },
+            { q: 'Potansiyel mesai ile bekleyen mesai arasındaki fark nedir?', a: 'Potansiyel mesai henüz taslak halindedir — sistem otomatik algılamıştır ama siz henüz talep etmediniz. "Talep Et" düğmesine bastığınızda "Bekleyen" durumuna geçer ve yönetici onayına gider.' },
             { q: 'Mesaim neden otomatik algılanmadı?', a: 'Mesainin algılanması için vardiya bitiş saatinizi belirli bir eşik süresinden fazla aşmanız gerekir. Bu eşik genellikle 15-30 dakikadır.' },
             { q: 'Onaylanan mesai puantajıma nasıl yansır?', a: 'Onaylanan mesai, o gün için oluşturulan kayda "Fazla Mesai" olarak eklenir ve aylık çalışma özetinizde gösterilir.' }
         ]
@@ -127,7 +127,7 @@ const helpContent = [
         steps: [
             {
                 title: 'Sipariş Verme',
-                description: 'Yemek Siparişi sayfasında bugünün menüsünü görüntüleyin. İstediğiniz öğünü seçin ve "Sipariş Ver" butonuna tıklayın.'
+                description: 'Yemek Siparişi sayfasında bugünün menüsünü görüntüleyin. İstediğiniz öğünü seçin ve "Sipariş Ver" düğmesine tıklayın.'
             },
             {
                 title: 'Sipariş Saatleri',
@@ -140,11 +140,11 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Sipariş kapanış saatinden önce siparişinizi vermeyi unutmayın. Kapandıktan sonra değişiklik yapılamaz.' },
-            { type: 'info', text: 'Yemek siparişi vermek için özel yetki gerekir. Bu bölümü göremiyorsanız yöneticinize başvurun.' }
+            { type: 'info', text: 'Yemek siparişi vermek için özel yetki gerekir. Bu sayfayı göremiyorsanız yöneticinize başvurun.' }
         ],
         faq: [
             { q: 'Sipariş verdikten sonra değiştirebilir miyim?', a: 'Sipariş kapanış saatine kadar siparişinizi değiştirebilir veya iptal edebilirsiniz.' },
-            { q: 'Yemek siparişi sayfasını göremiyorum', a: 'Yemek siparişi sayfası için PAGE_MEAL_ORDERS yetkisi gereklidir. Sistem yöneticinize başvurun.' }
+            { q: 'Yemek siparişi sayfasını göremiyorum', a: 'Bu sayfa için özel yetki gereklidir. Sistem yöneticinize veya İK birimine başvurun.' }
         ]
     },
     {
@@ -174,7 +174,7 @@ const helpContent = [
         ],
         faq: [
             { q: 'Takvimde kırmızı gün ne anlama geliyor?', a: 'Kırmızı renk devamsızlık anlamına gelir. O gün için kayıt girilmemiş veya çalışma yapılmamıştır.' },
-            { q: 'Geçmiş ayları görebilir miyim?', a: 'Evet, takvimde ileri-geri ok butonlarıyla istediğiniz aya geçebilirsiniz.' }
+            { q: 'Geçmiş ayları görebilir miyim?', a: 'Evet, takvimde ileri-geri ok düğmeleriyle istediğiniz aya geçebilirsiniz.' }
         ]
     },
     {
@@ -199,7 +199,7 @@ const helpContent = [
             }
         ],
         tips: [
-            { type: 'info', text: 'Grid ve liste görünümü arasında geçiş yapabilirsiniz. Grid görünümünde fotoğraflar daha büyük gösterilir.' }
+            { type: 'info', text: 'Kart ve liste görünümü arasında geçiş yapabilirsiniz. Kart görünümünde fotoğraflar daha büyük gösterilir.' }
         ],
         faq: [
             { q: 'Çalışanın telefon numarasını göremiyorum', a: 'İletişim bilgileri çalışanın profil ayarlarına bağlıdır. Bilgi girilmemişse görünmez.' }
@@ -223,7 +223,7 @@ const helpContent = [
             },
             {
                 title: 'Onay / Red',
-                description: '"Onayla" veya "Reddet" butonlarına tıklayın. Reddetme durumunda gerekçe yazmanız istenir. İşlem sonrası çalışana bildirim gider.'
+                description: '"Onayla" veya "Reddet" düğmelerine tıklayın. Reddetme durumunda gerekçe yazmanız istenir. İşlem sonrası çalışana bildirim gider.'
             },
             {
                 title: 'Toplu Onay',
@@ -236,7 +236,7 @@ const helpContent = [
             { type: 'success', text: 'Bildirimlerden doğrudan talep detayına gidebilirsiniz — ayrıca Talepler sayfasına girmenize gerek yok.' }
         ],
         faq: [
-            { q: 'Bekleyen onayım var ama göremiyorum', a: 'Onay yetkinizin doğru tanımlandığından emin olun. APPROVAL_OVERTIME, APPROVAL_LEAVE veya APPROVAL_CARDLESS_ENTRY yetkilerinden birine sahip olmanız gerekir.' },
+            { q: 'Bekleyen onayım var ama göremiyorum', a: 'Onay yetkinizin doğru tanımlandığından emin olun. Mesai onaylama, izin onaylama veya kartsız giriş onaylama yetkilerinden birine sahip olmanız gerekir.' },
             { q: 'Yanlışlıkla onay verdim, geri alabilir miyim?', a: 'Onaylanan talepler doğrudan geri alınamaz. Sistem yöneticinize başvurmanız gerekir.' }
         ]
     },
@@ -244,7 +244,7 @@ const helpContent = [
         id: 'raporlar',
         title: 'Raporlar',
         icon: BarChart3,
-        description: 'Puantaj raporları, analitik ve veri dışa aktarma',
+        description: 'Puantaj raporları, çözümleme ve veri dışa aktarma',
         permission: 'PAGE_REPORTS',
         link: '/reports',
         steps: [
@@ -258,11 +258,11 @@ const helpContent = [
             },
             {
                 title: 'Dışa Aktarma',
-                description: 'Raporları Excel veya PDF formatında indirebilirsiniz. İndirme butonu rapor tablosunun üst kısmında bulunur.'
+                description: 'Raporları Excel veya PDF olarak indirebilirsiniz. İndirme düğmesi rapor tablosunun üst kısmında bulunur.'
             },
             {
-                title: 'Talep Analizleri',
-                description: 'Talep Analizleri sayfasında KPI kartları, aylık trendler, departman bazlı dağılımlar ve korelasyon grafikleri mevcuttur.'
+                title: 'Talep Çözümlemeleri',
+                description: 'Talep Analizleri sayfasında özet göstergeler, aylık eğilimler, departman bazlı dağılımlar ve ilişki grafikleri mevcuttur.'
             }
         ],
         tips: [
@@ -270,8 +270,8 @@ const helpContent = [
             { type: 'success', text: 'Grafikler üzerinde fare ile gezinerek detaylı verileri görebilirsiniz.' }
         ],
         faq: [
-            { q: 'Rapor sayfasını göremiyorum', a: 'Rapor sayfası PAGE_REPORTS yetkisi gerektirir. Sistem yöneticinize başvurun.' },
-            { q: 'Raporlardaki veriler gerçek zamanlı mı?', a: 'Raporlar sayfa yüklendiğinde güncel veriyi çeker. Canlı güncelleme yoktur, sayfayı yenileyerek son verileri alabilirsiniz.' }
+            { q: 'Rapor sayfasını göremiyorum', a: 'Bu sayfa için rapor görüntüleme yetkisi gereklidir. Sistem yöneticinize başvurun.' },
+            { q: 'Raporlardaki veriler anlık mı?', a: 'Raporlar sayfa yüklendiğinde güncel veriyi çeker. Otomatik güncelleme yoktur, sayfayı yenileyerek son verileri alabilirsiniz.' }
         ]
     },
     {
@@ -301,10 +301,10 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Çalışma programı değişiklikleri tüm ilişkili puantaj kayıtlarının yeniden hesaplanmasını tetikler. Bu işlem büyük kadrolarda zaman alabilir.' },
-            { type: 'info', text: 'Program hiyerarşisi: Mali Takvim > Şablon > Gün Ataması > Günlük Değişiklik. En spesifik tanım geçerlidir.' }
+            { type: 'info', text: 'Program öncelik sırası: Mali Takvim > Şablon > Gün Ataması > Günlük Değişiklik. En özel tanım geçerlidir.' }
         ],
         faq: [
-            { q: 'Yeni vardiya şablonu nasıl oluştururum?', a: 'Çalışma Programları sayfasında "Yeni Şablon" butonuna tıklayın. Her gün için başlangıç-bitiş saatleri, mola süresi ve tatil durumunu tanımlayın.' },
+            { q: 'Yeni vardiya şablonu nasıl oluştururum?', a: 'Çalışma Programları sayfasında "Yeni Şablon" düğmesine tıklayın. Her gün için başlangıç-bitiş saatleri, mola süresi ve tatil durumunu tanımlayın.' },
             { q: 'Bir çalışanın programını değiştirince eski kayıtlar etkilenir mi?', a: 'Değişiklik ileriye dönük uygulanır. Geçmiş kayıtlar etkilenmez. Geçmişi düzeltmek için yeniden hesaplama gerekir.' }
         ]
     },
@@ -312,16 +312,16 @@ const helpContent = [
         id: 'sistem-yonetimi',
         title: 'Sistem Yönetimi',
         icon: Shield,
-        description: 'Admin araçları, sağlık kontrolleri ve veri yönetimi',
+        description: 'Yönetici araçları, sağlık kontrolleri ve veri yönetimi',
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/admin/system-health',
         steps: [
             {
                 title: 'Sistem Sağlığı',
-                description: 'Sistem Sağlığı sayfasında Dashboard, RBAC Denetimi, Puantaj Denetimi ve Spec Testleri sekmelerini bulabilirsiniz.'
+                description: 'Sistem Sağlığı sayfasında Gösterge Paneli, Yetki Denetimi, Puantaj Denetimi ve Uyumluluk Testleri sekmelerini bulabilirsiniz.'
             },
             {
-                title: 'RBAC Denetimi',
+                title: 'Yetki Denetimi',
                 description: 'Rol ve yetki yapısını kontrol edin. Çalışanların yetkileri, rol atamaları ve yetki çakışmalarını görüntüleyin.'
             },
             {
@@ -330,17 +330,17 @@ const helpContent = [
             },
             {
                 title: 'Veri Yönetimi',
-                description: 'Veri Yönetimi sayfasında dışa aktarma (JSON/CSV) ve içe aktarma işlemleri yapabilirsiniz. Dry-run modu ile önce simülasyon çalıştırabilirsiniz.'
+                description: 'Veri Yönetimi sayfasında dışa aktarma (JSON/CSV) ve içe aktarma işlemleri yapabilirsiniz. Deneme modu ile önce simülasyon çalıştırabilirsiniz.'
             }
         ],
         tips: [
-            { type: 'warning', text: 'Sistem yönetimi araçları kritik işlemler içerir. İçe aktarma işlemlerinden önce mutlaka dry-run yapın.' },
-            { type: 'info', text: 'Spec testleri 9 aşamada 443 testi otomatik çalıştırır. Tüm testler geçmelidir.' },
-            { type: 'success', text: 'Dashboard\'da canlı sistem metrikleri gösterilir: çalışan sayısı, aktif mesai, devamsızlık oranı.' }
+            { type: 'warning', text: 'Sistem yönetimi araçları kritik işlemler içerir. İçe aktarma işlemlerinden önce mutlaka deneme modunu çalıştırın.' },
+            { type: 'info', text: 'Uyumluluk testleri 9 aşamada 443 testi otomatik çalıştırır. Tüm testler geçmelidir.' },
+            { type: 'success', text: 'Gösterge panelinde canlı sistem ölçümleri gösterilir: çalışan sayısı, aktif mesai, devamsızlık oranı.' }
         ],
         faq: [
-            { q: 'Sistem sağlığı sayfasını göremiyorum', a: 'Bu sayfa PAGE_SYSTEM_HEALTH yetkisi gerektirir. Sadece sistem yöneticileri erişebilir.' },
-            { q: 'Test başarısız olursa ne yapmalıyım?', a: 'Başarısız testlerin detayına tıklayarak sorunun açıklamasını görün. Genellikle eksik konfigürasyon veya veri tutarsızlığından kaynaklanır.' }
+            { q: 'Sistem sağlığı sayfasını göremiyorum', a: 'Bu sayfa için sistem yönetimi yetkisi gereklidir. Sadece sistem yöneticileri erişebilir.' },
+            { q: 'Test başarısız olursa ne yapmalıyım?', a: 'Başarısız testlerin detayına tıklayarak sorunun açıklamasını görün. Genellikle eksik ayar veya veri tutarsızlığından kaynaklanır.' }
         ]
     }
 ];
