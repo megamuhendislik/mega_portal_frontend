@@ -749,11 +749,41 @@ const OrganizationChart = () => {
         fetchHierarchy();
     }, []);
 
+    // Fit-to-screen: measure content via scrollWidth/scrollHeight (unaffected by CSS transforms)
+    const fitToScreen = useCallback(() => {
+        const container = containerRef.current;
+        const content = contentRef.current;
+        if (!container || !content) return;
+
+        const tree = content.querySelector('.tree');
+        if (!tree || tree.scrollWidth === 0 || tree.scrollHeight === 0) return;
+
+        // scrollWidth/scrollHeight give natural (unscaled) layout dimensions
+        const treeW = tree.scrollWidth;
+        const treeH = tree.scrollHeight;
+
+        const containerW = container.clientWidth;
+        const containerH = container.clientHeight;
+
+        const padding = 40;
+        const availableW = containerW - padding * 2;
+        const availableH = containerH - padding * 2;
+
+        const newScale = Math.min(availableW / treeW, availableH / treeH, 1);
+        const clampedScale = Math.max(newScale, 0.15);
+
+        // Center the content within the container
+        const offsetX = (containerW - treeW * clampedScale) / 2;
+        const offsetY = Math.max((containerH - treeH * clampedScale) / 2, 20);
+
+        setScale(clampedScale);
+        setPosition({ x: offsetX, y: offsetY });
+    }, []);
+
     // Auto fit-to-screen after tree data loads
     useEffect(() => {
         if (treeData.length > 0 && !hasFittedRef.current) {
             hasFittedRef.current = true;
-            // Wait for DOM to render the tree nodes
             const timer = setTimeout(() => fitToScreen(), 150);
             return () => clearTimeout(timer);
         }
@@ -790,37 +820,6 @@ const OrganizationChart = () => {
             toast.error(err.response?.data?.error || "Silinemedi (Personel atanmış olabilir).");
         }
     };
-
-    // Fit-to-screen: measure content via scrollWidth/scrollHeight (unaffected by CSS transforms)
-    const fitToScreen = useCallback(() => {
-        const container = containerRef.current;
-        const content = contentRef.current;
-        if (!container || !content) return;
-
-        const tree = content.querySelector('.tree');
-        if (!tree || tree.scrollWidth === 0 || tree.scrollHeight === 0) return;
-
-        // scrollWidth/scrollHeight give natural (unscaled) layout dimensions
-        const treeW = tree.scrollWidth;
-        const treeH = tree.scrollHeight;
-
-        const containerW = container.clientWidth;
-        const containerH = container.clientHeight;
-
-        const padding = 40;
-        const availableW = containerW - padding * 2;
-        const availableH = containerH - padding * 2;
-
-        const newScale = Math.min(availableW / treeW, availableH / treeH, 1);
-        const clampedScale = Math.max(newScale, 0.15);
-
-        // Center the content within the container
-        const offsetX = (containerW - treeW * clampedScale) / 2;
-        const offsetY = Math.max((containerH - treeH * clampedScale) / 2, 20);
-
-        setScale(clampedScale);
-        setPosition({ x: offsetX, y: offsetY });
-    }, []);
 
     // Zoom Handlers
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
