@@ -1,6 +1,7 @@
 import {
     Clock, CalendarDays, Timer, Utensils, Calendar,
-    Contact, CheckSquare, BarChart3, CalendarRange, Shield
+    Contact, CheckSquare, BarChart3, CalendarRange, Shield,
+    Users, Network, Server, Database, Package
 } from 'lucide-react';
 
 const helpContent = [
@@ -372,6 +373,196 @@ const helpContent = [
         faq: [
             { q: 'Sistem sağlığı sayfasını göremiyorum', a: 'Bu sayfa için sistem yönetimi yetkisi gereklidir. Sadece sistem yöneticileri erişebilir.' },
             { q: 'Test başarısız olursa ne yapmalıyım?', a: 'Başarısız testlerin detayına tıklayarak sorunun açıklamasını görün. Genellikle eksik ayar veya veri tutarsızlığından kaynaklanır.' }
+        ]
+    },
+    {
+        id: 'calisanlar',
+        title: 'Çalışan Yönetimi',
+        icon: Users,
+        description: 'Çalışan listesi, profil düzenleme, rol ve yetki atamaları',
+        permission: 'PAGE_EMPLOYEES',
+        link: '/employees',
+        images: [
+            { src: '/help-images/admin-calisanlar.png', caption: 'Çalışanlar — personel listesi, departman filtresi ve durum göstergeleri' }
+        ],
+        steps: [
+            {
+                title: 'Çalışan Listesi',
+                description: 'Çalışanlar sayfasında tüm personeli listeleyebilirsiniz. İsim, departman, unvan ve duruma göre arama ve filtreleme yapabilirsiniz.'
+            },
+            {
+                title: 'Çalışan Detayı',
+                description: 'Herhangi bir çalışana tıklayarak detay sayfasını açın. Kişisel bilgiler, iletişim, departman, pozisyon ve çalışma programı bilgilerini görüntüleyip düzenleyebilirsiniz.'
+            },
+            {
+                title: 'Rol ve Yetki Atama',
+                description: 'Çalışan detay sayfasında "Roller" bölümünden çalışana rol atayabilirsiniz. Roller yetki paketleri içerir ve çalışanın sistemde neler yapabileceğini belirler.'
+            },
+            {
+                title: 'Yönetici Atama',
+                description: 'Çalışanın birincil (doğrudan) ve çapraz (fonksiyonel) yöneticilerini atayabilirsiniz. Bu atamalar onay süreçlerinde kimin onay vereceğini belirler.'
+            },
+            {
+                title: 'Çalışma Programı Atama',
+                description: 'Çalışana mali takvim ve vardiya şablonu atayarak çalışma saatlerini tanımlayın. Bu tanım puantaj hesaplamalarının temelini oluşturur.'
+            }
+        ],
+        tips: [
+            { type: 'warning', text: 'Çalışan silme işlemi geri alınamaz. Ayrılan personeli "Pasif" durumuna geçirmeniz önerilir.' },
+            { type: 'info', text: 'Çalışanın departman veya pozisyon değişikliği, mali takvim atamasından otomatik türetilebilir.' },
+            { type: 'success', text: 'Çalışan listesini Excel olarak dışa aktarabilirsiniz.' }
+        ],
+        faq: [
+            { q: 'Yeni çalışan nasıl eklenir?', a: '"Yeni Çalışan" düğmesine tıklayın. İsim, e-posta, departman ve pozisyon bilgilerini girin. Kayıt sonrası çalışana otomatik kullanıcı hesabı oluşturulur.' },
+            { q: 'Çalışanın yetkilerini nasıl kontrol ederim?', a: 'Çalışan detay sayfasında "Roller" bölümünde atanmış rolleri ve bu rollerin verdiği yetkileri görebilirsiniz.' },
+            { q: 'Bir çalışanın birden fazla yöneticisi olabilir mi?', a: 'Evet. Birincil yönetici (doğrudan amiri) ve çapraz yönetici (proje bazlı) atanabilir. Onay süreçlerinde her ikisi de yetkilidir.' }
+        ]
+    },
+    {
+        id: 'organizasyon-semasi',
+        title: 'Organizasyon Şeması',
+        icon: Network,
+        description: 'Şirket hiyerarşisi, departman yapısı ve raporlama zincirleri',
+        permission: 'PAGE_ORG_CHART',
+        link: '/organization-chart',
+        images: [
+            { src: '/help-images/admin-organizasyon.png', caption: 'Organizasyon Şeması — departman hiyerarşisi ve çalışan ağacı görünümü' }
+        ],
+        steps: [
+            {
+                title: 'Organizasyon Görünümü',
+                description: 'Organizasyon Şeması sayfasında şirketin departman yapısını ağaç görünümünde inceleyebilirsiniz. Her düğüm bir departmanı veya çalışanı temsil eder.'
+            },
+            {
+                title: 'Departman Detayı',
+                description: 'Bir departmana tıklayarak o departmandaki çalışanları, yöneticileri ve alt departmanları görebilirsiniz.'
+            },
+            {
+                title: 'Raporlama Zinciri',
+                description: 'Her çalışanın üstünde birincil yöneticisi gösterilir. Bu hiyerarşi onay süreçlerinde, izin ve mesai taleplerinde kullanılır.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Organizasyon şeması çalışan ve departman verilerinden otomatik oluşturulur. Güncellemek için çalışan profillerini düzenleyin.' },
+            { type: 'success', text: 'Şemayı yakınlaştırıp uzaklaştırabilir ve sürükleyerek gezebilirsiniz.' }
+        ],
+        faq: [
+            { q: 'Organizasyon şeması nasıl güncellenir?', a: 'Şema otomatik olarak çalışan profillerinden ve departman atamalarından üretilir. Bir çalışanın departmanını veya yöneticisini değiştirdiğinizde şema da güncellenir.' },
+            { q: 'Bir departmanın altına yeni birim nasıl eklenir?', a: 'Veri Yönetimi veya Django admin panelinden yeni departman oluşturun ve üst departmanını belirtin.' }
+        ]
+    },
+    {
+        id: 'servis-yonetimi',
+        title: 'Servis Yönetimi',
+        icon: Server,
+        description: 'Puantaj hesaplama servisi, günlük tetikleme ve canlı loglar',
+        permission: 'PAGE_SYSTEM_HEALTH',
+        link: '/admin/service-control',
+        images: [
+            { src: '/help-images/admin-servis-yonetimi.png', caption: 'Servis Yönetimi — günlük hesaplama tetikleme, sistem durumu ve canlı loglar' }
+        ],
+        steps: [
+            {
+                title: 'Günlük Hesaplama Tetikleme',
+                description: 'Hedef tarih seçerek o gün için tüm çalışanların giriş/çıkış, mola ve fazla mesai hesaplamalarını yeniden başlatabilirsiniz. Manuel düzeltmelerden sonra kullanışlıdır.'
+            },
+            {
+                title: 'Sistem Durumu',
+                description: 'Sağ panelde servis durumunu görebilirsiniz. Canlı güncelleme 30 saniyede bir, gece görevleri 00:01\'de otomatik çalışır.'
+            },
+            {
+                title: 'Canlı Servis Logları',
+                description: 'Sayfanın alt kısmında son 100 servis işleminin detaylı loglarını izleyebilirsiniz. Her log satırında zaman, seviye, modül ve mesaj bilgileri yer alır.'
+            },
+            {
+                title: 'Hızlı Bağlantılar',
+                description: 'Sistem Kontrol Merkezi ve Canlı Durum Paneli sayfalarına doğrudan erişim bağlantıları mevcuttur.'
+            }
+        ],
+        tips: [
+            { type: 'warning', text: 'Hesaplama tetikleme çalışan sayısına bağlı olarak birkaç saniye sürebilir. İşlem sırasında sistem yavaşlayabilir.' },
+            { type: 'info', text: 'Otomatik hesaplama zaten her 30 saniyede bir çalışır. Manuel tetiklemeye yalnızca düzeltme sonrası ihtiyaç duyulur.' },
+            { type: 'success', text: 'Loglar otomatik olarak yenilenir. Sayfada kaldığınız sürece canlı güncellemeleri takip edebilirsiniz.' }
+        ],
+        faq: [
+            { q: 'Hesaplama tetikledim ama kayıtlar değişmedi', a: 'Hesaplama mevcut giriş/çıkış verilerine göre yapılır. Veri yoksa veya hatalıysa önce kayıtları düzeltin, sonra yeniden tetikleyin.' },
+            { q: 'Gece görevi (00:01) ne yapar?', a: 'Gece görevi açık kalan mesaileri kapatır, gece yarısını geçen kayıtları böler ve devamsızlık kayıtlarını oluşturur.' }
+        ]
+    },
+    {
+        id: 'veri-yonetimi',
+        title: 'Veri Yönetimi',
+        icon: Database,
+        description: 'Yıllık matris, veri yedekleme, dışa/içe aktarma işlemleri',
+        permission: 'PAGE_DATA_MANAGEMENT',
+        link: '/system-data-management',
+        images: [
+            { src: '/help-images/admin-veri-yonetimi.png', caption: 'Veri Yönetimi — yıllık personel matrisi ve aylık çalışma bakiyeleri' }
+        ],
+        steps: [
+            {
+                title: 'Yıllık Personel Matrisi',
+                description: 'Tüm çalışanların aylık çalışma bakiyelerini tek tabloda görüntüleyin. Her hücrede o ay için net bakiye (fazla/eksik saat) gösterilir.'
+            },
+            {
+                title: 'Yıl ve Arama Filtresi',
+                description: 'Yıl seçiciyle farklı yılları görebilirsiniz. Arama kutusuyla belirli bir çalışanı filtreleyin.'
+            },
+            {
+                title: 'Yedekleme',
+                description: '"Yedekleme" sekmesinde veritabanı dışa aktarma (JSON/CSV) ve içe aktarma işlemleri yapabilirsiniz.'
+            },
+            {
+                title: 'Deneme Modu (Dry Run)',
+                description: 'İçe aktarma yapmadan önce "Deneme Modu" ile simülasyon çalıştırın. Bu mod veritabanını değiştirmeden kaç kaydın ekleneceğini/güncelleneceğini gösterir.'
+            }
+        ],
+        tips: [
+            { type: 'warning', text: 'İçe aktarma işlemleri geri alınamaz. Mutlaka önce deneme modunu kullanın ve sonuçları kontrol edin.' },
+            { type: 'info', text: 'Yıllık matristeki negatif değerler (kırmızı) o ay için hedefin altında kalındığını, pozitif değerler hedef aşıldığını gösterir.' },
+            { type: 'success', text: 'Dışa aktarma ile tüm puantaj verilerini yedekleyebilirsiniz. JSON formatı tam veri, CSV formatı tablo uyumlu çıktı verir.' }
+        ],
+        faq: [
+            { q: 'Yıllık matriste "-6s" ne anlama geliyor?', a: 'O çalışanın o ay için 6 saat eksik çalıştığı anlamına gelir. Hedef çalışma süresinin altında kalmıştır.' },
+            { q: 'Yedekleme dosyasını nasıl geri yüklerim?', a: '"Yedekleme" sekmesinde "İçe Aktar" bölümünden dosyanızı yükleyin. Önce deneme modunda test edin, sonra gerçek içe aktarmayı yapın.' },
+            { q: 'Dışa aktarmada hangi veriler dahil edilir?', a: 'Çalışan bilgileri, puantaj kayıtları, talep geçmişleri, rol/yetki atamaları ve mali takvim verileri dahildir.' }
+        ]
+    },
+    {
+        id: 'program-yonetimi',
+        title: 'Program Yönetimi',
+        icon: Package,
+        description: 'Harici yazılımlar, versiyon takibi ve cihaz erişim yönetimi',
+        permission: 'PAGE_PROGRAM_MANAGEMENT',
+        link: '/program-management',
+        images: [
+            { src: '/help-images/admin-program-yonetimi.png', caption: 'Program Yönetimi — yazılım envanteri, versiyon bilgileri ve cihaz kayıtları' }
+        ],
+        steps: [
+            {
+                title: 'Program Listesi',
+                description: 'Şirkette kullanılan harici yazılımları listeleyebilirsiniz. Her program için isim, versiyon ve durum bilgileri gösterilir.'
+            },
+            {
+                title: 'Yeni Program Ekleme',
+                description: '"Yeni Program" düğmesine tıklayarak yeni bir yazılım kaydı oluşturun. Program adı, versiyon, lisans bilgisi ve açıklama girin.'
+            },
+            {
+                title: 'Cihaz Erişimi',
+                description: 'Her program için hangi cihazlarda kurulu olduğunu takip edebilirsiniz. Cihaz ekleme/çıkarma işlemleri program detay sayfasından yapılır.'
+            },
+            {
+                title: 'Versiyon Yönetimi',
+                description: 'Yazılım güncellemelerini takip edin. Yeni versiyon çıktığında kaydı güncelleyerek kurulum durumunu izleyebilirsiniz.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Özet kartlarında toplam program, aktif program ve kayıtlı cihaz sayıları görünür.' },
+            { type: 'success', text: 'Program detayını görüntülemek için sol listeden bir program seçin. Sağ panelde tüm detaylar gösterilir.' }
+        ],
+        faq: [
+            { q: 'Program yönetimi sayfasını göremiyorum', a: 'Bu sayfa için program yönetimi yetkisi gereklidir. Sistem yöneticinize başvurun.' },
+            { q: 'Bir programı silersen kurulu cihaz kayıtları da silinir mi?', a: 'Evet. Program silindiğinde ilişkili tüm cihaz erişim kayıtları da kaldırılır.' }
         ]
     }
 ];
