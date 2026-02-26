@@ -1,7 +1,8 @@
 import {
     Clock, CalendarDays, Timer, Utensils, Calendar,
     Contact, CheckSquare, BarChart3, CalendarRange, Shield,
-    Users, Network, Server, Database, Package
+    Users, Network, Server, Database, Package,
+    MessageSquare, UserCheck
 } from 'lucide-react';
 
 const helpContent = [
@@ -14,7 +15,8 @@ const helpContent = [
         link: '/',
         images: [
             { src: '/help-images/anasayfa.png', caption: 'Ana sayfa — çalışma süresi, kalan mola ve fazla mesai bilgi kutuları' },
-            { src: '/help-images/mesai-takibi.png', caption: 'Mesai Takibi — günlük giriş/çıkış kayıtları ve detaylar' }
+            { src: '/help-images/mesai-takibi.png', caption: 'Mesai Takibi — günlük giriş/çıkış kayıtları ve detaylar' },
+            { src: '/help-images/admin-anasayfa.png', caption: 'Yönetici Ana Sayfası — puantaj grafikleri ve aylık performans özeti' }
         ],
         steps: [
             {
@@ -54,7 +56,7 @@ const helpContent = [
         permission: null,
         link: '/requests',
         images: [
-            { src: '/help-images/talepler.png', caption: 'Talepler sayfası — izin, mesai, yemek ve kartsız giriş talepleri tek ekranda' }
+            { src: '/help-images/talepler-izin.png', caption: 'Taleplerim sekmesi — izin, mesai, yemek ve kartsız giriş talepleri tek ekranda' }
         ],
         steps: [
             {
@@ -93,7 +95,7 @@ const helpContent = [
         permission: null,
         link: '/requests',
         images: [
-            { src: '/help-images/talepler.png', caption: 'Talepler sayfası — Ek Mesai sekmesinden mesai durumunu takip edin' }
+            { src: '/help-images/talepler-ek-mesai.png', caption: 'Ek Mesai sekmesi — planlı, algılanan ve manuel mesai girişleri' }
         ],
         steps: [
             {
@@ -226,6 +228,81 @@ const helpContent = [
         ]
     },
     {
+        id: 'dilek-sikayetler',
+        title: 'Dilek ve Şikayetler',
+        icon: MessageSquare,
+        description: 'Geri bildirim gönderme, takip etme ve yönetim paneli',
+        permission: null,
+        link: '/feedback',
+        images: [
+            { src: '/help-images/dilek-sikayetler.png', caption: 'Dilek ve Şikayetler — geri bildirim formu, durum takibi ve yönetim sekmesi' }
+        ],
+        steps: [
+            {
+                title: 'Yeni Geri Bildirim Oluşturma',
+                description: '"Yeni Geri Bildirim" düğmesine tıklayarak dilek, şikayet veya önerinizi yazın. Konu başlığı ve detaylı açıklama girin.'
+            },
+            {
+                title: 'Durum Takibi',
+                description: 'Gönderdiğiniz geri bildirimlerin durumunu "Geri Bildirimlerim" sekmesinde takip edebilirsiniz. Toplam, beklemede, cevaplanan ve okunmamış cevap sayıları üst kartlarda görünür.'
+            },
+            {
+                title: 'Cevap Okuma',
+                description: 'Yöneticiniz veya İK birimi geri bildiriminize cevap verdiğinde bildirim alırsınız. "Okunmamış Cevap" sayacından yeni cevapları görebilirsiniz.'
+            },
+            {
+                title: 'Yönetim Paneli',
+                description: 'Yönetici yetkisi olanlar "Yönetim" sekmesinden tüm çalışan geri bildirimlerini görebilir ve yanıtlayabilir.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Geri bildirimleriniz yalnızca yetkili yöneticiler tarafından görüntülenebilir. Diğer çalışanlar göremez.' },
+            { type: 'success', text: 'Arama kutusunu kullanarak eski geri bildirimlerinizi hızlıca bulabilirsiniz.' }
+        ],
+        faq: [
+            { q: 'Geri bildirimim kim tarafından görülüyor?', a: 'Geri bildirimleriniz sistem yöneticileri ve İK yetkililileri tarafından görüntülenir. Diğer çalışanlar erişemez.' },
+            { q: 'Gönderdiğim geri bildirimi silebilir miyim?', a: 'Beklemede olan geri bildirimleri düzenleyebilirsiniz. Yanıtlanmış olanlar değiştirilemez.' }
+        ]
+    },
+    {
+        id: 'vekalet-yonetimi',
+        title: 'Vekalet Yönetimi',
+        icon: UserCheck,
+        description: 'Yönetici vekalet tanımlama, vekil olma ve süre takibi',
+        permission: null,
+        link: '/substitute-management',
+        images: [
+            { src: '/help-images/vekalet-yonetimi.png', caption: 'Vekalet Yönetimi — aktif/gelecek/süresi dolmuş vekaletler ve vekil atama' }
+        ],
+        steps: [
+            {
+                title: 'Yeni Vekalet Tanımlama',
+                description: '"Yeni Vekalet" düğmesine tıklayarak bir vekil belirleyin. Başlangıç ve bitiş tarihlerini, vekalet kapsamını (izin onayı, mesai onayı vb.) seçin.'
+            },
+            {
+                title: 'Vekalet Durumu',
+                description: 'Özet kartlarında aktif, gelecek, süresi dolmuş ve toplam vekalet sayılarını görebilirsiniz.'
+            },
+            {
+                title: 'Verdiğim Vekaletler',
+                description: '"Verdiğim / Tüm Vekaletler" sekmesinde oluşturduğunuz vekaletleri listeleyin ve yönetin.'
+            },
+            {
+                title: 'Vekil Olduğum',
+                description: '"Vekil Olduğum" sekmesinde size verilen vekalet yetkilerini görüntüleyin. Vekalet süresi boyunca atanan kişi adına onay işlemleri yapabilirsiniz.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Vekalet süresi dolduğunda yetkiler otomatik olarak geri alınır. Manuel işlem gerekmez.' },
+            { type: 'warning', text: 'Vekalet verdiğiniz kişi, sizin adınıza onay/red işlemi yapabilir. Güvendiğiniz kişileri seçin.' },
+            { type: 'success', text: 'İzne çıkmadan önce vekalet tanımlayarak ekibinizin talep onay süreçlerinin aksamasını önleyin.' }
+        ],
+        faq: [
+            { q: 'Vekalet süresini uzatabilir miyim?', a: 'Mevcut vekaleti düzenleyerek bitiş tarihini değiştirebilirsiniz.' },
+            { q: 'Birden fazla kişiye vekalet verebilir miyim?', a: 'Evet, farklı kapsamlarda birden fazla vekalet tanımlayabilirsiniz.' }
+        ]
+    },
+    {
         id: 'onay-surecleri',
         title: 'Onay Süreçleri',
         icon: CheckSquare,
@@ -233,7 +310,7 @@ const helpContent = [
         permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'APPROVAL_CARDLESS_ENTRY'],
         link: '/requests',
         images: [
-            { src: '/help-images/talepler.png', caption: 'Talepler sayfası — Doğrudan Talepler ve Ekip Talepleri sekmeleri ile onay yönetimi' }
+            { src: '/help-images/talepler-ekip.png', caption: 'Ekip Talepleri sekmesi — çalışan filtresi, tür ve durum bazlı onay yönetimi' }
         ],
         steps: [
             {
