@@ -156,7 +156,7 @@ const MainLayout = () => {
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },
         { path: '/program-management', label: 'Program Yönetimi', icon: Package, permission: 'PAGE_PROGRAM_MANAGEMENT' },
-        { path: '/help', label: 'Yardim', icon: BookOpen, permission: null },
+        { path: '/help', label: 'Yardım', icon: BookOpen, permission: null },
     ];
 
     const filteredNavItems = navItems.filter(item => {

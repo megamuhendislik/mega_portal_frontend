@@ -106,7 +106,7 @@ const HelpLibrary = () => {
                                 <BookOpen size={18} />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Yardim Rehberi</h2>
+                                <h2 className="text-sm font-bold text-slate-800">Yardım Rehberi</h2>
                                 <p className="text-[10px] text-slate-400 font-medium">{filteredSections.length} bölüm</p>
                             </div>
                         </div>
@@ -201,7 +201,7 @@ const HelpLibrary = () => {
                         {/* Steps */}
                         {currentSection.steps?.length > 0 && (
                             <div className="mb-10">
-                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Nasil Yapilir</h2>
+                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Nasıl Yapılır</h2>
                                 <div className="space-y-4">
                                     {currentSection.steps.map((step, i) => (
                                         <div key={i} className="flex gap-4 group">
@@ -226,7 +226,7 @@ const HelpLibrary = () => {
                         {/* Tips */}
                         {currentSection.tips?.length > 0 && (
                             <div className="mb-10">
-                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Ipuclari</h2>
+                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">İpuçları</h2>
                                 <div className="space-y-3">
                                     {currentSection.tips.map((tip, i) => {
                                         const style = tipStyles[tip.type] || tipStyles.info;
@@ -245,7 +245,7 @@ const HelpLibrary = () => {
                         {/* FAQ */}
                         {currentSection.faq?.length > 0 && (
                             <div className="mb-10">
-                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Sikca Sorulan Sorular</h2>
+                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Sıkça Sorulan Sorular</h2>
                                 <div className="space-y-3">
                                     {currentSection.faq.map((item, i) => (
                                         <FaqItem key={i} question={item.q} answer={item.a} />

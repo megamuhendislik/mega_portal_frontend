@@ -8,13 +8,13 @@ const helpContent = [
         id: 'giris-cikis',
         title: 'Giriş / Çıkış',
         icon: Clock,
-        description: 'Kart okutma, şift başlatma ve canlı durum takibi',
+        description: 'Kart okutma ile giriş/çıkış ve canlı durum takibi',
         permission: null,
         link: '/',
         steps: [
             {
-                title: 'Şift Başlatma',
-                description: 'Ana sayfadaki "Şift Başlat" butonuna tıklayın. Kart okutucu aktifse otomatik algılanır. Yoksa manuel giriş yapabilirsiniz.'
+                title: 'Giriş Yapma (Kart Okutma)',
+                description: 'İşe geldiğinizde kartınızı kart okuyucuya okutun. Sistem giriş saatinizi otomatik olarak kaydeder ve mesainiz başlar.'
             },
             {
                 title: 'Canlı Durum Takibi',
@@ -22,22 +22,23 @@ const helpContent = [
             },
             {
                 title: 'Çıkış Yapma',
-                description: 'Mesai bitiminde kart okutun veya "Şift Bitir" butonuna tıklayın. Sistem otomatik olarak çalışma sürenizi hesaplar.'
+                description: 'Mesai bitiminde kartınızı tekrar okutun. Sistem çıkış saatinizi kaydeder ve çalışma sürenizi otomatik hesaplar.'
             },
             {
                 title: 'Mola Takibi',
-                description: 'Üst menüdeki kahve ikonunda mola sürenizi görebilirsiniz. Mavi = normal, turuncu = %80 doldu, kırmızı = limit aşıldı.'
+                description: 'Üst menüdeki kahve ikonunda mola sürenizi görebilirsiniz. Mavi = normal, turuncu = %80 doldu, kırmızı = limit aşıldı. Çıkış yapıp tekrar giriş yaptığınızda aradaki süre mola sayılır.'
             }
         ],
         tips: [
-            { type: 'info', text: 'Giriş yaptıktan sonra ilk 5 dakika tolerans süresidir — erken giriş vardiya başlangıcına yuvarlanır.' },
-            { type: 'warning', text: 'Çıkış yapmadan ayrılırsanız, gece yarısı sistemi otomatik olarak mesainizi kapatır.' },
-            { type: 'success', text: 'Kart okutucu arızalıysa "Kartsız Giriş Talebi" oluşturabilirsiniz. Bu talep yöneticinizin onayına gider.' }
+            { type: 'info', text: 'Vardiya başlangıcından 5 dakika önce kart okutursanız, giriş saatiniz vardiya başlangıcına yuvarlanır (tolerans süresi).' },
+            { type: 'warning', text: 'Çıkış yapmadan (kart okutmadan) ayrılırsanız, gece yarısı sistemi otomatik olarak mesainizi kapatır.' },
+            { type: 'success', text: 'Kart okutucu arızalıysa veya kartınızı unuttaysanız "Kartsız Giriş Talebi" oluşturabilirsiniz. Bu talep yöneticinizin onayına gider.' }
         ],
         faq: [
-            { q: 'Kart okutmayı unuttum, ne yapmalıyım?', a: 'Talepler sayfasından "Kartsız Giriş Talebi" oluşturabilirsiniz. Giriş ve çıkış saatlerinizi belirtin, yöneticiniz onayladığında kayıt oluşturulur.' },
-            { q: 'Gece vardiyasında çalışıyorum, kayıtlarım nasıl hesaplanır?', a: 'Gece vardiyası özelliği aktifse, gece yarısını geçen kayıtlar otomatik olarak bölünür. Her gün için ayrı kayıt oluşturulur.' },
-            { q: 'Mola sürem neden azalıyor?', a: 'Çıkış yapıp tekrar giriş yaptığınızda aradaki süre mola olarak sayılır. Toplam mola hakkınız (genellikle 30 dk) dahilinde takip edilir.' }
+            { q: 'Kart okutmayı unuttum, ne yapmalıyım?', a: 'Talepler sayfasından "Kartsız Giriş Talebi" oluşturabilirsiniz. Giriş ve çıkış saatlerinizi belirtin, yöneticiniz onayladığında puantaj kaydınız oluşturulur.' },
+            { q: 'Gece vardiyasında çalışıyorum, kayıtlarım nasıl hesaplanır?', a: 'Gece vardiyası özelliği aktifse, gece yarısını geçen kayıtlar otomatik olarak bölünür. Her gün için ayrı puantaj kaydı oluşturulur.' },
+            { q: 'Mola sürem neden azalıyor?', a: 'Çıkış yapıp tekrar giriş yaptığınızda (kart okutma arası) aradaki süre mola olarak sayılır. Toplam mola hakkınız (genellikle 30 dk) dahilinde takip edilir.' },
+            { q: 'Birden fazla giriş/çıkış kaydım var, bu normal mi?', a: 'Evet. Gün içinde her kart okutma bir giriş veya çıkış olarak kaydedilir. Sistem tüm kayıtları birleştirerek toplam çalışma sürenizi hesaplar.' }
         ]
     },
     {
