@@ -98,12 +98,12 @@ const HelpLibrary = () => {
             <div className={`
                 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
                 md:translate-x-0 fixed md:static z-50 md:z-auto
-                w-72 h-full bg-white/80 backdrop-blur-sm border-r border-slate-200/60
+                w-64 h-full bg-white border-r border-slate-200/60
                 flex flex-col shrink-0 transition-transform duration-300
                 shadow-lg md:shadow-none
             `}>
                 {/* Sidebar header */}
-                <div className="px-4 pt-5 pb-3">
+                <div className="px-3 pt-4 pb-3">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
@@ -133,7 +133,7 @@ const HelpLibrary = () => {
                 </div>
 
                 {/* Nav items */}
-                <nav className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
+                <nav className="flex-1 overflow-y-auto px-1.5 pb-4 space-y-0.5">
                     {filteredSections.map(section => {
                         const isActive = section.id === activeSection;
                         const Icon = section.icon;
