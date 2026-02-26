@@ -16,6 +16,7 @@ import {
     SparklesIcon,
     ClipboardDocumentCheckIcon,
     WrenchScrewdriverIcon,
+    PauseCircleIcon,
     ChartBarIcon,
     MagnifyingGlassCircleIcon,
     UsersIcon,
@@ -35,6 +36,7 @@ import AttendanceAuditTab from './system-health/AttendanceAuditTab';
 import SpecTestsTab from './system-health/SpecTestsTab';
 import PasswordResetTab from './system-health/PasswordResetTab';
 import OrgAuditTab from './system-health/OrgAuditTab';
+import BreakFixTab from './system-health/BreakFixTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -93,6 +95,7 @@ export default function SystemHealth() {
                         { id: 'rbac_audit', name: 'RBAC Uyumluluk', icon: ClipboardDocumentCheckIcon },
                         { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
                         { id: 'spec_tests', name: 'Spec Testleri', icon: PlayCircleIcon },
+                        { id: 'break_fix', name: 'Mola Düzeltme', icon: PauseCircleIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
                         { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
@@ -133,6 +136,7 @@ export default function SystemHealth() {
                 {activeTab === 'rbac_audit' && <RBACAuditTab />}
                 {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
                 {activeTab === 'spec_tests' && <SpecTestsTab />}
+                {activeTab === 'break_fix' && <BreakFixTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}
                 {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
@@ -1009,122 +1013,13 @@ function SyntheticDataTab() {
 
 
 function MaintenanceTab() {
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState(null);
-    const [logs, setLogs] = useState([]);
-
-    const handleRunFix = async () => {
-        if (!confirm("Bu işlem tüm personelin 1 Ocak 2026'dan bugüne kadar olan puantaj verilerini YENİ MOLA MANTIĞINA göre tekrar hesaplayacaktır.\n\nİşlem uzun sürebilir ve canlı log akışı başlayacaktır. Devam etmek istiyor musunuz?")) return;
-
-        setLoading(true);
-        setLogs([]);
-        setResult(null);
-
-        try {
-            // Get token from localStorage or sessionStorage
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-            const headers = {
-                'Content-Type': 'application/json',
-            };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-            const response = await fetch(`${apiUrl}/system/health-check/fix_retroactive_breaks/`, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify({})
-            });
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n\n');
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(line.replace('data: ', ''));
-                            if (data.message) {
-                                setLogs(prev => [...prev, {
-                                    time: new Date().toLocaleTimeString(),
-                                    message: data.message,
-                                    success: data.success !== false
-                                }]);
-                            }
-                            if (data.done) {
-                                setLoading(false);
-                            }
-                        } catch (e) {
-                            console.error("Parse Error", e);
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            alert("Hata: " + e.message);
-            setLoading(false);
-        }
-    };
-
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
             <div className="flex items-center gap-4 mb-6 text-indigo-700 bg-indigo-50 p-4 rounded-xl border border-indigo-200">
                 <WrenchScrewdriverIcon className="w-10 h-10" />
                 <div>
                     <h3 className="text-xl font-bold">Sistem Bakım Araçları</h3>
-                    <p className="text-sm opacity-80">Otomatik düzeltme ve veri onarım araçları.</p>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-                <div className="border border-indigo-100 rounded-xl p-6 hover:shadow-md transition-shadow">
-                    <h4 className="font-bold text-gray-800 text-lg mb-2 flex items-center gap-2">
-                        <ClockIcon className="w-5 h-5 text-indigo-600" />
-                        Geçmişe Yönelik Mola & Eksik Çalışma Düzeltmesi
-                    </h4>
-                    <p className="text-sm text-gray-500 mb-6">
-                        Bu araç, sistemdeki yeni <strong>"Kullanılan Mola Kadar Kredi"</strong> mantığını tüm geçmiş kayıtlara uygular.
-                        <br />
-                        - Boşluk süresi mola hakkını (30dk) aşıyorsa, aşan kısım Eksik Mesaiye yansıtılır.
-                        <br />
-                        - "Mola" sütunu sadece kullanılan yasal hakkı gösterir.
-                    </p>
-
-                    <button
-                        onClick={handleRunFix}
-                        disabled={loading}
-                        className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-sm transition-all flex items-center justify-center gap-2 ${loading ? 'bg-gray-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'}`}
-                    >
-                        {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
-                        {loading ? 'Düzeltme Uygulanıyor...' : 'Düzeltme İşlemini Başlat'}
-                    </button>
-
-                    {/* LOGS */}
-                    {(logs.length > 0 || result) && (
-                        <div className="mt-6 bg-gray-900 rounded-lg p-4 font-mono text-xs text-green-400 max-h-[300px] overflow-y-auto">
-                            <div className="text-white font-bold border-b border-gray-700 pb-2 mb-2 sticky top-0 bg-gray-900">
-                                İşlem Logları:
-                            </div>
-                            {logs.map((log, i) => (
-                                <div key={i} className="mb-1 border-b border-gray-800 pb-1 last:border-0">
-                                    <span className="text-gray-500 mr-2">[{log.time}]</span>
-                                    <span className={log.success === false ? 'text-red-400' : 'text-green-400'}>
-                                        {log.message}
-                                    </span>
-                                </div>
-                            ))}
-                            {result && (
-                                <div className="mt-4 pt-4 border-t border-gray-700 text-yellow-400 font-bold">
-                                    SONUÇ: {result.message}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <p className="text-sm opacity-80">Bakım araçları için "Mola Düzeltme" sekmesini kullanın.</p>
                 </div>
             </div>
         </div>
