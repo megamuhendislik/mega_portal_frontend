@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, AlertTriangle, CheckCircle2, X, ZoomIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import helpContent from '../data/helpContent';
@@ -197,6 +197,35 @@ const HelpLibrary = () => {
                                 </Link>
                             )}
                         </div>
+
+                        {/* Images */}
+                        {currentSection.images?.length > 0 && (
+                            <div className="mb-10">
+                                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Ekran Görüntüleri</h2>
+                                <div className="space-y-4">
+                                    {currentSection.images.map((img, i) => (
+                                        <div key={i} className="group rounded-xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white">
+                                            <a href={img.src} target="_blank" rel="noopener noreferrer" className="block relative">
+                                                <img
+                                                    src={img.src}
+                                                    alt={img.caption}
+                                                    className="w-full h-auto"
+                                                    loading="lazy"
+                                                />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2 shadow-lg">
+                                                        <ZoomIn size={18} className="text-slate-600" />
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100">
+                                                <p className="text-[11px] text-slate-500 font-medium">{img.caption}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Steps */}
                         {currentSection.steps?.length > 0 && (

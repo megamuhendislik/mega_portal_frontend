@@ -11,6 +11,10 @@ const helpContent = [
         description: 'Kart okutma ile giriş/çıkış ve canlı durum takibi',
         permission: null,
         link: '/',
+        images: [
+            { src: '/help-images/anasayfa.png', caption: 'Ana sayfa — çalışma süresi, kalan mola ve fazla mesai bilgi kutuları' },
+            { src: '/help-images/mesai-takibi.png', caption: 'Mesai Takibi — günlük giriş/çıkış kayıtları ve detaylar' }
+        ],
         steps: [
             {
                 title: 'Giriş Yapma (Kart Okutma)',
@@ -48,6 +52,9 @@ const helpContent = [
         description: 'Yıllık izin, avans izin başvurusu ve izin bakiyesi takibi',
         permission: null,
         link: '/requests',
+        images: [
+            { src: '/help-images/talepler.png', caption: 'Talepler sayfası — izin, mesai, yemek ve kartsız giriş talepleri tek ekranda' }
+        ],
         steps: [
             {
                 title: 'İzin Bakiyesi Kontrolü',
@@ -84,6 +91,9 @@ const helpContent = [
         description: 'Fazla mesai türleri, talep oluşturma ve onay süreci',
         permission: null,
         link: '/requests',
+        images: [
+            { src: '/help-images/talepler.png', caption: 'Talepler sayfası — Ek Mesai sekmesinden mesai durumunu takip edin' }
+        ],
         steps: [
             {
                 title: 'Mesai Türlerini Anlama',
@@ -124,6 +134,9 @@ const helpContent = [
         description: 'Günlük yemek siparişi verme ve geçmiş siparişler',
         permission: 'PAGE_MEAL_ORDERS',
         link: '/meal-orders',
+        images: [
+            { src: '/help-images/admin-yemek-siparis.png', caption: 'Yemek Sipariş Yönetimi — günlük talep ve sipariş durumu' }
+        ],
         steps: [
             {
                 title: 'Sipariş Verme',
@@ -154,6 +167,9 @@ const helpContent = [
         description: 'Puantaj takvimi, renk kodları ve devamsızlık görüntüleme',
         permission: null,
         link: '/calendar',
+        images: [
+            { src: '/help-images/takvim.png', caption: 'Takvim — yıllık görünüm, renk kodları ve etkinlik kategorileri' }
+        ],
         steps: [
             {
                 title: 'Aylık Görünüm',
@@ -184,6 +200,9 @@ const helpContent = [
         description: 'Çalışan arama, iletişim bilgileri ve departman yapısı',
         permission: null,
         link: '/company-directory',
+        images: [
+            { src: '/help-images/sirket-rehberi.png', caption: 'Şirket Rehberi — çalışan kartları, durum göstergesi ve departman filtresi' }
+        ],
         steps: [
             {
                 title: 'Çalışan Arama',
@@ -212,6 +231,9 @@ const helpContent = [
         description: 'Talep onaylama, reddetme ve yönetici işlemleri',
         permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'APPROVAL_CARDLESS_ENTRY'],
         link: '/requests',
+        images: [
+            { src: '/help-images/talepler.png', caption: 'Talepler sayfası — Doğrudan Talepler ve Ekip Talepleri sekmeleri ile onay yönetimi' }
+        ],
         steps: [
             {
                 title: 'Bekleyen Talepler',
@@ -247,6 +269,9 @@ const helpContent = [
         description: 'Puantaj raporları, çözümleme ve veri dışa aktarma',
         permission: 'PAGE_REPORTS',
         link: '/reports',
+        images: [
+            { src: '/help-images/admin-raporlar.png', caption: 'Raporlar — mali dönem seçimi, personel filtresi ve Excel/PDF dışa aktarma' }
+        ],
         steps: [
             {
                 title: 'Rapor Türleri',
@@ -281,6 +306,9 @@ const helpContent = [
         description: 'Vardiya tanımları, takvim şablonları ve program yönetimi',
         permission: 'PAGE_WORK_SCHEDULES',
         link: '/work-schedules',
+        images: [
+            { src: '/help-images/admin-calisma-takvimleri.png', caption: 'Mali Takvim Yönetimi — şablonlar, haftalık program ve mola ayarları' }
+        ],
         steps: [
             {
                 title: 'Vardiya Şablonları',
@@ -315,6 +343,9 @@ const helpContent = [
         description: 'Yönetici araçları, sağlık kontrolleri ve veri yönetimi',
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/admin/system-health',
+        images: [
+            { src: '/help-images/admin-sistem-sagligi.png', caption: 'Sistem Kontrol Merkezi — durum panosu, sağlık kontrolleri ve denetim araçları' }
+        ],
         steps: [
             {
                 title: 'Sistem Sağlığı',
