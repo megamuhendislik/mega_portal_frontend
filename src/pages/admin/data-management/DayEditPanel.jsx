@@ -68,6 +68,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     const [leaveBalance, setLeaveBalance] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
     const [dailyTarget, setDailyTarget] = useState(0);
+    const [scheduleInfo, setScheduleInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [deleteIds, setDeleteIds] = useState([]);
@@ -121,6 +122,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             setLeaveBalance(res.data.leave_balance || []);
             setRequestTypes(res.data.request_types || []);
             setDailyTarget(res.data.daily_target_seconds || 0);
+            setScheduleInfo(res.data.schedule_info || null);
             if (res.data.request_types?.length > 0) {
                 setLeaveTypeId(prev => prev || res.data.request_types[0].id);
             }
@@ -421,6 +423,41 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     /* ====== Section 1: Özet ====== */
     const renderOverview = () => (
         <div className="space-y-4">
+            {/* Schedule Info Banner */}
+            {scheduleInfo && !scheduleInfo.is_off_day && scheduleInfo.shift_start && (
+                <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+                    <ClockCircleOutlined />
+                    <span className="font-medium">Vardiya:</span>
+                    <span>{scheduleInfo.shift_start} - {scheduleInfo.shift_end}</span>
+                    {scheduleInfo.lunch_start && (
+                        <>
+                            <span className="text-blue-300">|</span>
+                            <span className="font-medium">Öğle:</span>
+                            <span>{scheduleInfo.lunch_start} - {scheduleInfo.lunch_end}</span>
+                        </>
+                    )}
+                    {scheduleInfo.daily_break_allowance > 0 && (
+                        <>
+                            <span className="text-blue-300">|</span>
+                            <span className="font-medium">Mola:</span>
+                            <span>{scheduleInfo.daily_break_allowance} dk</span>
+                        </>
+                    )}
+                </div>
+            )}
+            {scheduleInfo?.is_off_day && (
+                <div className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500">
+                    <CloseCircleOutlined />
+                    <span className="font-medium">Bu gün tatil / izin günü olarak tanımlı</span>
+                </div>
+            )}
+            {scheduleInfo?.is_holiday && (
+                <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600">
+                    <CloseCircleOutlined />
+                    <span className="font-medium">Resmi tatil</span>
+                </div>
+            )}
+
             {/* Summary Statistics */}
             <div className="grid grid-cols-2 gap-3">
                 <Card size="small" className="!border-blue-200">
@@ -1233,6 +1270,10 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                 <div className="text-xs text-slate-500 mt-1 flex gap-3 flex-wrap">
                     <span>Toplam: <b className="text-slate-800">{totalHours()} saat</b></span>
                     {dailyTarget > 0 && <span>Hedef: <b className="text-blue-600">{fmtSec(dailyTarget)}</b></span>}
+                    {scheduleInfo?.shift_start && !scheduleInfo?.is_off_day && (
+                        <span>Vardiya: <b className="text-slate-700">{scheduleInfo.shift_start}-{scheduleInfo.shift_end}</b></span>
+                    )}
+                    {scheduleInfo?.is_off_day && <span className="text-slate-400 font-bold">Tatil Günü</span>}
                     {leaves.length > 0 && <span className="text-emerald-600 font-bold">İzinli</span>}
                     {otRequests.length > 0 && <span className="text-amber-600 font-bold">{otRequests.length} FM</span>}
                 </div>
