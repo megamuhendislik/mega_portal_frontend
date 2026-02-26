@@ -762,7 +762,7 @@ const OrganizationChart = () => {
         const containerW = container.clientWidth;
         const containerH = container.clientHeight;
 
-        const padding = 40;
+        const padding = 16;
         const availableW = containerW - padding * 2;
         const availableH = containerH - padding * 2;
 
@@ -1003,7 +1003,12 @@ const OrganizationChart = () => {
 
             <div
                 ref={containerRef}
-                className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
+                className="card flex-1 h-[calc(100vh-90px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
+                style={{
+                    backgroundColor: '#f8fafc',
+                    backgroundImage: 'radial-gradient(circle, #cbd5e1 0.5px, transparent 0.5px)',
+                    backgroundSize: '24px 24px',
+                }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -1022,7 +1027,7 @@ const OrganizationChart = () => {
                         left: 0,
                         minWidth: '100%',
                         minHeight: '100%',
-                        padding: '60px',
+                        padding: '16px',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'flex-start'
