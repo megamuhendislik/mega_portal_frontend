@@ -791,44 +791,35 @@ const OrganizationChart = () => {
         }
     };
 
-    // Fit-to-screen: measure content and calculate optimal scale + center
+    // Fit-to-screen: measure content via scrollWidth/scrollHeight (unaffected by CSS transforms)
     const fitToScreen = useCallback(() => {
         const container = containerRef.current;
         const content = contentRef.current;
         if (!container || !content) return;
 
-        // Temporarily reset transform to measure true content size
-        const prevTransform = content.style.transform;
-        content.style.transform = 'translate(0px, 0px) scale(1)';
+        const tree = content.querySelector('.tree');
+        if (!tree || tree.scrollWidth === 0 || tree.scrollHeight === 0) return;
 
-        // Wait one frame for layout recalculation
-        requestAnimationFrame(() => {
-            const containerRect = container.getBoundingClientRect();
-            const tree = content.querySelector('.tree');
-            if (!tree) {
-                content.style.transform = prevTransform;
-                return;
-            }
-            const treeRect = tree.getBoundingClientRect();
+        // scrollWidth/scrollHeight give natural (unscaled) layout dimensions
+        const treeW = tree.scrollWidth;
+        const treeH = tree.scrollHeight;
 
-            const padding = 40; // breathing room on each side
-            const availableW = containerRect.width - padding * 2;
-            const availableH = containerRect.height - padding * 2;
+        const containerW = container.clientWidth;
+        const containerH = container.clientHeight;
 
-            const scaleX = availableW / treeRect.width;
-            const scaleY = availableH / treeRect.height;
-            const newScale = Math.min(scaleX, scaleY, 1); // don't zoom in past 100%
-            const clampedScale = Math.max(newScale, 0.15); // floor at 15%
+        const padding = 40;
+        const availableW = containerW - padding * 2;
+        const availableH = containerH - padding * 2;
 
-            // Center the content
-            const scaledW = treeRect.width * clampedScale;
-            const scaledH = treeRect.height * clampedScale;
-            const offsetX = (containerRect.width - scaledW) / 2 - (treeRect.left - containerRect.left) * clampedScale;
-            const offsetY = (containerRect.height - scaledH) / 2 - (treeRect.top - containerRect.top) * clampedScale;
+        const newScale = Math.min(availableW / treeW, availableH / treeH, 1);
+        const clampedScale = Math.max(newScale, 0.15);
 
-            setScale(clampedScale);
-            setPosition({ x: offsetX, y: offsetY });
-        });
+        // Center the content within the container
+        const offsetX = (containerW - treeW * clampedScale) / 2;
+        const offsetY = Math.max((containerH - treeH * clampedScale) / 2, 20);
+
+        setScale(clampedScale);
+        setPosition({ x: offsetX, y: offsetY });
     }, []);
 
     // Zoom Handlers

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import {
-    MessageSquare, Plus, Send, Search, Filter, Clock, CheckCircle2, AlertCircle,
-    ThumbsUp, AlertTriangle, Lightbulb, Paperclip, X, ChevronDown, ChevronRight,
+    MessageSquare, Plus, Send, Search, Clock, CheckCircle2, AlertCircle,
+    ThumbsUp, AlertTriangle, Lightbulb, Paperclip, X, ChevronRight,
     Eye, FileText, Image, File, Download, Loader2, MessageCircle, XCircle,
-    Trash2, ShieldAlert, Ban
+    Trash2, Ban
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
