@@ -225,6 +225,7 @@ const MyRequestsSection = ({
                         onViewDetails={handleViewDetails}
                         onEdit={handleEditOvertimeClick}
                         onDelete={handleDeleteRequest}
+                        showEmployeeColumn={false}
                     />
                 </div>
             )}

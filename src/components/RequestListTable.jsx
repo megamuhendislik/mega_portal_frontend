@@ -5,7 +5,7 @@ import {
     Check, X, Eye, Edit2, Trash2, ArrowRight
 } from 'lucide-react';
 
-const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showApproverColumn = true }) => {
+const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true, showApproverColumn = true }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -129,9 +129,11 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wider">
-                            <th className="p-2 sm:p-3 md:p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('employee')}>
-                                <div className="flex items-center gap-1">Kişi <ArrowUpDown size={12} /></div>
-                            </th>
+                            {showEmployeeColumn && (
+                                <th className="p-2 sm:p-3 md:p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('employee')}>
+                                    <div className="flex items-center gap-1">Talep Eden <ArrowUpDown size={12} /></div>
+                                </th>
+                            )}
                             <th className="p-2 sm:p-3 md:p-4 font-bold">Talep Türü</th>
                             <th className="p-2 sm:p-3 md:p-4 font-bold cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('date')}>
                                 <div className="flex items-center gap-1">İlgili Tarih <ArrowUpDown size={12} /></div>
@@ -150,7 +152,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                     <tbody className="divide-y divide-slate-50">
                         {sortedRequests.length === 0 ? (
                             <tr>
-                                <td colSpan={7 + (showApproverColumn ? 1 : 0)} className="p-12 text-center text-slate-400">
+                                <td colSpan={6 + (showEmployeeColumn ? 1 : 0) + (showApproverColumn ? 1 : 0)} className="p-12 text-center text-slate-400">
                                     <div className="flex flex-col items-center justify-center gap-3">
                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
                                             <FileText size={24} className="opacity-50" />
@@ -169,22 +171,24 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             : 'hover:bg-slate-50/80'
                                         }`}
                                 >
-                                    {/* Kişi */}
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200">
-                                                {req.employee_avatar ? (
-                                                    <img src={req.employee_avatar} alt="" className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    <User size={16} />
-                                                )}
+                                    {/* Talep Eden */}
+                                    {showEmployeeColumn && (
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200">
+                                                    {req.employee_avatar ? (
+                                                        <img src={req.employee_avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                                    ) : (
+                                                        <User size={16} />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-800 text-sm truncate max-w-[120px] sm:max-w-[180px]">{req.employee_name || 'Bilinmiyor'}</div>
+                                                    <div className="text-[10px] text-slate-400 font-medium">{req.employee_department || '-'}</div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="font-bold text-slate-800 text-sm truncate max-w-[120px] sm:max-w-[180px]">{req.employee_name || 'Bilinmiyor'}</div>
-                                                <div className="text-[10px] text-slate-400 font-medium">{req.employee_department || '-'}</div>
-                                            </div>
-                                        </div>
-                                    </td>
+                                        </td>
+                                    )}
 
                                     {/* Type */}
                                     <td className="p-4">
