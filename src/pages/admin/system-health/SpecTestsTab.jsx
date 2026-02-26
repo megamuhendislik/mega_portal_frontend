@@ -28,6 +28,7 @@ const STAGES = [
     { id: 7, name: 'Sistem & Kritik Fix', icon: WrenchScrewdriverIcon, color: 'slate', description: '15 test — Şifre sıfırlama endpoint (XLSX, yetki), dept/pozisyon otomatik türetme, avans izin kısıtlama kaldırma, advance tracking' },
     { id: 8, name: 'Potansiyel Mola', icon: PauseCircleIcon, color: 'teal', description: '16 test — potential_break_seconds model alanı, tek/çoklu mola hesaplama, hak aşımı, break vs potential farkı, live-status endpoint mola bilgileri' },
     { id: 9, name: 'Yedekleme & Geri Yükleme', icon: CloudArrowDownIcon, color: 'sky', description: '32 test — JSON/CSV export, import yetki kontrolleri, dry-run simülasyon, UPSERT davranışı, round-trip veri bütünlüğü, validasyon kuralları' },
+    { id: 10, name: 'Tolerans & Normal Mesai', icon: ClockIcon, color: 'orange', description: '33 test — Geç kalma toleransı (uzatma bölgesi), servis toleransı (snap), mola entegrasyonu (break credit, potential_break), normal mesai hesaplama (bucket dağılımı, öğle kesintisi, OT ayrışımı)' },
 ];
 
 export default function SpecTestsTab() {
