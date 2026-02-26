@@ -297,10 +297,10 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
             onDragLeave={dnd ? () => dnd.handleDragLeave() : undefined}
             onDrop={dnd ? (e) => dnd.handleDrop(e, { ...empData, type: 'employee' }) : undefined}
             className={`
-                relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
+                relative z-10 p-2.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
                 bg-white ${theme.border}
-                flex flex-row items-center gap-2.5
-                w-[190px] group
+                flex flex-col items-center gap-1.5 text-center
+                w-[120px] group
                 ${isDragSource ? 'opacity-40 scale-95' : ''}
                 ${isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : ''}
                 ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
@@ -315,7 +315,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
             {/* Avatar */}
             <div className="relative shrink-0">
                 <div className={`
-                    w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold
+                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
                     ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : `${theme.badge} text-white`}
                 `}>
                     {emp.name.charAt(0)}
@@ -327,12 +327,12 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
             </div>
 
             {/* Info */}
-            <div className="flex flex-col min-w-0 flex-1">
-                <h4 className="font-bold text-[11px] leading-tight truncate text-slate-800">
+            <div className="flex flex-col items-center min-w-0 w-full">
+                <h4 className="font-bold text-[10px] leading-tight text-slate-800 line-clamp-2">
                     {emp.name}
                 </h4>
                 {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                    <p className="text-[9px] font-medium text-slate-500 line-clamp-2 mt-0.5">
                         {emp.title}
                     </p>
                 )}
@@ -358,18 +358,18 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd })
         onDrop={dnd ? (e) => dnd.handleDrop(e, { id: node.id, name: node.name, type: 'department' }) : undefined}
         onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
         className={`
-            relative z-10 px-4 py-3 rounded-xl border shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg
+            relative z-10 px-3 py-3 rounded-xl border shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg
             bg-gradient-to-b from-white to-slate-50 border-slate-200 text-slate-800
-            min-w-[180px] max-w-[240px] group
+            min-w-[120px] max-w-[180px] group
             ${isDragTarget ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}
         `}
         onClick={(e) => { e.stopPropagation(); }}
     >
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-col items-center gap-1.5 text-center">
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
                 <Building size={16} />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wide text-slate-700 leading-tight">
+            <h3 className="font-bold text-[10px] uppercase tracking-wide text-slate-700 leading-tight">
                 {node.name}
             </h3>
         </div>
@@ -430,7 +430,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
             </div>
 
             {/* Grid Content */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mt-2">
+            <div className="grid grid-cols-2 gap-1.5 mt-2">
                 {group.employees.map(emp => (
                     <div key={emp.id} className="transform transition-transform hover:scale-105 active:scale-95">
                         <EmployeeNode
@@ -1003,12 +1003,7 @@ const OrganizationChart = () => {
 
             <div
                 ref={containerRef}
-                className="card flex-1 h-[calc(100vh-90px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
-                style={{
-                    backgroundColor: '#f8fafc',
-                    backgroundImage: 'radial-gradient(circle, #cbd5e1 0.5px, transparent 0.5px)',
-                    backgroundSize: '24px 24px',
-                }}
+                className="card bg-slate-50/50 flex-1 h-[calc(100vh-90px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -1062,7 +1057,7 @@ const OrganizationChart = () => {
         transition: all 0.3s;
         display: flex;
         justify-content: center;
-        gap: 24px;
+        gap: 16px;
         width: max-content;
         min-width: 100%;
     }
@@ -1071,7 +1066,7 @@ const OrganizationChart = () => {
         text-align: center;
         list-style-type: none;
         position: relative;
-        padding: 32px 6px 0 6px;
+        padding: 28px 4px 0 4px;
         transition: all 0.3s;
         display: flex;
         flex-direction: column;
