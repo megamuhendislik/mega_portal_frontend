@@ -7,6 +7,9 @@ import {
     ChevronRightIcon,
     CommandLineIcon,
     TableCellsIcon,
+    DocumentTextIcon,
+    ClipboardDocumentIcon,
+    ClipboardDocumentCheckIcon,
     FunnelIcon,
     CheckCircleIcon,
     ExclamationTriangleIcon,
@@ -48,6 +51,144 @@ function pctColor(pct) {
     if (pct >= 70) return 'bg-teal-500';
     if (pct >= 40) return 'bg-amber-500';
     return 'bg-red-500';
+}
+
+/** Pad a string to given length (right-pad) */
+function pad(str, len) {
+    const s = String(str ?? '-');
+    return s.length >= len ? s : s + ' '.repeat(len - s.length);
+}
+
+/** Pad a string to given length (left-pad) */
+function lpad(str, len) {
+    const s = String(str ?? '-');
+    return s.length >= len ? s : ' '.repeat(len - s.length) + s;
+}
+
+/**
+ * Generate a full text log from detailedData for copy/share.
+ * Returns a single string with all employee/date details in readable format.
+ */
+function generateLogText(detailedData) {
+    const lines = [];
+    const SEP = '═'.repeat(80);
+    const THIN = '─'.repeat(76);
+
+    const empNames = Object.keys(detailedData).sort((a, b) => a.localeCompare(b, 'tr'));
+
+    lines.push(SEP);
+    lines.push(`  PUANTAJ TANILAMA RAPORU — ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}`);
+    lines.push(`  Toplam Personel: ${empNames.length}`);
+    lines.push(SEP);
+    lines.push('');
+
+    for (const empName of empNames) {
+        const empData = detailedData[empName];
+        const dates = empData?.dates || {};
+        const sortedDates = Object.keys(dates).sort();
+
+        lines.push(SEP);
+        lines.push(`  PERSONEL: ${empName}  (${sortedDates.length} gün)`);
+        lines.push(SEP);
+
+        for (const dateStr of sortedDates) {
+            const detail = dates[dateStr];
+            const rules = detail.rules;
+            const recsBefore = detail.records_before || [];
+            const recsAfter = detail.records_after || [];
+            const gaps = detail.gaps || [];
+            const summary = detail.summary;
+
+            // Check if anything changed
+            const hasChange = recsBefore.some((b, i) => {
+                const a = recsAfter[i];
+                return a && (b.break_sec !== a.break_sec || b.missing_sec !== a.missing_sec ||
+                    b.normal_sec !== a.normal_sec || b.ot_sec !== a.ot_sec);
+            });
+
+            lines.push('');
+            lines.push(`  ┌─ ${dateStr} ${THIN.slice(0, 60)}${hasChange ? ' [DEĞİŞTİ]' : ''}`);
+
+            // Rules
+            if (rules) {
+                let rulesLine = `  │  KURALLAR: Vardiya ${rules.shift_start || '?'}-${rules.shift_end || '?'}`;
+                if (rules.lunch_start) rulesLine += ` | Öğle ${rules.lunch_start}-${rules.lunch_end}`;
+                rulesLine += ` | Mola Hak: ${rules.break_allowance_min ?? '?'}dk`;
+                if (rules.is_off_day) rulesLine += ' | TATİL GÜNÜ';
+                lines.push(rulesLine);
+            }
+
+            // Records table
+            const maxRecs = Math.max(recsBefore.length, recsAfter.length);
+            if (maxRecs > 0) {
+                lines.push('  │');
+                lines.push(`  │  KAYITLAR (${maxRecs} adet):`);
+                lines.push(`  │  ${pad('#', 4)}${pad('Giriş', 12)}${pad('Çıkış', 12)}${lpad('Normal', 12)}${lpad('F.Mesai', 12)}${lpad('Mola', 12)}${lpad('Eksik', 12)}`);
+                lines.push(`  │  ${'-'.repeat(76)}`);
+
+                for (let i = 0; i < maxRecs; i++) {
+                    const b = recsBefore[i];
+                    const a = recsAfter[i];
+                    const rec = a || b;
+
+                    const fmtField = (field) => {
+                        const bv = b?.[field];
+                        const av = a?.[field];
+                        if (bv !== undefined && av !== undefined && bv !== av) {
+                            return `${formatSec(bv)}→${formatSec(av)}`;
+                        }
+                        return formatSec(av ?? bv);
+                    };
+
+                    lines.push(
+                        `  │  ${pad(i + 1, 4)}${pad(rec?.check_in || '-', 12)}${pad(rec?.check_out || '-', 12)}` +
+                        `${lpad(fmtField('normal_sec'), 12)}${lpad(fmtField('ot_sec'), 12)}` +
+                        `${lpad(fmtField('break_sec'), 12)}${lpad(fmtField('missing_sec'), 12)}`
+                    );
+                }
+            } else {
+                lines.push('  │  KAYIT: Kayıt bulunamadı.');
+            }
+
+            // Gaps table
+            if (gaps.length > 0) {
+                lines.push('  │');
+                lines.push(`  │  BOŞLUK ANALİZİ (${gaps.length} adet):`);
+                lines.push(`  │  ${pad('#', 4)}${pad('Başlangıç', 12)}${pad('Bitiş', 12)}${lpad('Ham', 10)}${lpad('Öğle Kes.', 10)}${lpad('Net', 10)}${lpad('Kredi', 10)}${lpad('Kalan', 10)}`);
+                lines.push(`  │  ${'-'.repeat(78)}`);
+
+                for (let i = 0; i < gaps.length; i++) {
+                    const g = gaps[i];
+                    lines.push(
+                        `  │  ${pad(i + 1, 4)}${pad(g.from || '-', 12)}${pad(g.to || '-', 12)}` +
+                        `${lpad(formatSec(g.raw_sec), 10)}${lpad(g.lunch_overlap_sec > 0 ? formatSec(g.lunch_overlap_sec) : '-', 10)}` +
+                        `${lpad(formatSec(g.net_sec), 10)}${lpad(formatSec(g.credit_sec), 10)}${lpad(formatSec(g.remaining_allowance_sec), 10)}`
+                    );
+                }
+            }
+
+            // Summary
+            if (summary) {
+                lines.push('  │');
+                const pct = summary.break_used_pct ?? 0;
+                lines.push(
+                    `  │  ÖZET: Normal: ${formatSec(summary.total_normal)} | F.Mesai: ${formatSec(summary.total_ot)} ` +
+                    `| Mola: ${formatSec(summary.total_break)}/${formatSec(summary.break_allowance)} (%${Math.round(pct)}) ` +
+                    `| Eksik: ${formatSec(summary.total_missing)}`
+                );
+            }
+
+            lines.push(`  └${'─'.repeat(78)}`);
+        }
+
+        lines.push('');
+    }
+
+    lines.push(SEP);
+    lines.push(`  RAPOR SONU — ${empNames.length} personel`);
+    lines.push(SEP);
+
+    return lines.join('\n');
 }
 
 /** Check if a before/after pair changed */
@@ -361,7 +502,8 @@ export default function BreakFixTab() {
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [compactLogs, setCompactLogs] = useState([]);
     const [detailedData, setDetailedData] = useState({});  // {employeeName: {dates: {date: dateDetailObj}}}
-    const [viewMode, setViewMode] = useState('compact');     // 'compact' | 'detailed'
+    const [viewMode, setViewMode] = useState('compact');     // 'compact' | 'detailed' | 'log'
+    const [copied, setCopied] = useState(false);
     const [filterChanged, setFilterChanged] = useState(false);
     const [filterErrors, setFilterErrors] = useState(false);
     const [elapsed, setElapsed] = useState(0);
@@ -694,6 +836,17 @@ export default function BreakFixTab() {
                                 <TableCellsIcon className="w-3.5 h-3.5" />
                                 Detayli Tablo
                             </button>
+                            <button
+                                onClick={() => { setViewMode('log'); setCopied(false); }}
+                                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                                    viewMode === 'log'
+                                        ? 'bg-teal-600 text-white'
+                                        : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                            >
+                                <DocumentTextIcon className="w-3.5 h-3.5" />
+                                Log Tablo
+                            </button>
                         </div>
 
                         {/* Filters (only in detailed mode) */}
@@ -795,6 +948,60 @@ export default function BreakFixTab() {
                                     filterErrors={filterErrors}
                                 />
                             ))
+                        )}
+                    </div>
+                )}
+
+                {/* Mode C: Log Text View (copyable) */}
+                {hasAnyData && viewMode === 'log' && (
+                    <div>
+                        {employeeNames.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400 text-sm">
+                                {loading
+                                    ? 'Detayli veriler yukleniyor...'
+                                    : 'Detayli veri bulunamadi.'
+                                }
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-xs text-gray-500">
+                                        {employeeNames.length} personel, kopyalanabilir metin formatinda
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            const text = generateLogText(detailedData);
+                                            navigator.clipboard.writeText(text).then(() => {
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 3000);
+                                            });
+                                        }}
+                                        className={`px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-2 transition-all ${
+                                            copied
+                                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                                                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
+                                        }`}
+                                    >
+                                        {copied ? (
+                                            <>
+                                                <ClipboardDocumentCheckIcon className="w-4 h-4" />
+                                                Kopyalandi!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ClipboardDocumentIcon className="w-4 h-4" />
+                                                Tumunu Kopyala
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                                <pre
+                                    className="bg-gray-900 text-green-300 rounded-xl border border-gray-700 p-4 font-mono text-[11px] leading-relaxed overflow-auto whitespace-pre select-all"
+                                    style={{ maxHeight: '700px' }}
+                                >
+                                    {generateLogText(detailedData)}
+                                </pre>
+                            </>
                         )}
                     </div>
                 )}
