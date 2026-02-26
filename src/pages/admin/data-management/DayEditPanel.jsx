@@ -375,8 +375,13 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     const getTimeDayjs = (dtStr) => {
         if (!dtStr) return null;
         try {
-            const timePart = dtStr.includes('T') ? dtStr.split('T')[1] : dtStr;
-            return dayjs(timePart, 'HH:mm');
+            // Backend'den gelen saatler UTC olabilir — Date ile parse edip
+            // yerel saat (İstanbul UTC+3) olarak dayjs'e çeviriyoruz
+            const d = new Date(dtStr);
+            if (isNaN(d.getTime())) return null;
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return dayjs(`${h}:${m}`, 'HH:mm');
         } catch { return null; }
     };
 
@@ -387,6 +392,16 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
         }
         const hhmm = timeValue.format('HH:mm');
         updateRec(idx, field, `${dateStr}T${hhmm}`);
+    };
+
+    // Özet görüntüleme için de yerel saat formatı
+    const formatLocalTime = (dtStr) => {
+        if (!dtStr) return '?';
+        try {
+            const d = new Date(dtStr);
+            if (isNaN(d.getTime())) return '?';
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        } catch { return '?'; }
     };
 
     /* ───── computed ───── */
@@ -452,7 +467,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                         {records.map((rec, i) => (
                             <div key={i} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg">
                                 <span className="font-mono text-slate-600">
-                                    {rec.check_in ? format(new Date(rec.check_in), 'HH:mm') : '?'} → {rec.check_out ? format(new Date(rec.check_out), 'HH:mm') : '?'}
+                                    {formatLocalTime(rec.check_in)} → {formatLocalTime(rec.check_out)}
                                 </span>
                                 <Space size={4}>
                                     <Tag className="!text-[10px] !m-0">{rec.source}</Tag>
@@ -535,142 +550,40 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     /* ====== Section 2: Giriş/Çıkış ====== */
     const renderAttendance = () => (
         <div className="space-y-4">
-            {/* Smart Entry */}
-            <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100">
-                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5">
-                    <ThunderboltOutlined className="text-blue-500" /> Hızlı İşlem
-                </div>
-                <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 mb-1">Başlangıç</label>
-                            <TimePicker
-                                value={workStart}
-                                onChange={setWorkStart}
-                                format="HH:mm"
-                                minuteStep={15}
-                                className="w-full"
-                                size="small"
-                                placeholder="08:00"
-                                needConfirm={false}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 mb-1">Süre (Saat)</label>
-                            <InputNumber
-                                value={workDuration}
-                                onChange={setWorkDuration}
-                                step={0.5}
-                                min={0.5}
-                                max={24}
-                                className="w-full"
-                                size="small"
-                            />
-                        </div>
-                    </div>
-                    <Button
-                        type="primary"
-                        icon={<ThunderboltOutlined />}
-                        onClick={applyDailyWork}
-                        block
-                        size="small"
-                    >
-                        Günü Oluştur
-                    </Button>
-
-                    <Divider className="!my-2" />
-
-                    <div className="grid grid-cols-2 gap-2 items-end">
-                        <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 mb-1">Mesai (Saat)</label>
-                            <InputNumber
-                                value={otDuration}
-                                onChange={setOtDuration}
-                                step={0.5}
-                                min={0.5}
-                                max={12}
-                                className="w-full"
-                                size="small"
-                            />
-                        </div>
-                        <Button
-                            onClick={addOvertime}
-                            size="small"
-                            className="!bg-amber-500 !text-white !border-amber-500 hover:!bg-amber-600"
-                        >
-                            +Mesai Ekle
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Records List */}
+            {/* ── Mevcut Kayıtlar ── */}
             <div>
                 <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-semibold text-slate-500">
-                        Kayıtlar ({records.length})
+                    <span className="text-sm font-bold text-slate-700">
+                        Mevcut Kayıtlar ({records.length})
                     </span>
                     <Button
-                        type="dashed"
+                        type="primary"
                         size="small"
                         icon={<PlusOutlined />}
                         onClick={addRecord}
                     >
-                        Yeni Kayıt
+                        Elle Giriş Ekle
                     </Button>
                 </div>
 
                 {records.length > 0 ? (
                     <div className="space-y-2">
                         {records.map((rec, i) => (
-                            <div key={i} className="bg-white rounded-lg border p-2.5 space-y-2">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                    {rec.is_manual_override && (
-                                        <Tag color="purple" className="!text-[10px] !m-0">Elle Düzenlendi</Tag>
-                                    )}
-                                    <Tag color={statusColor[rec.status] || 'default'} className="!text-[10px] !m-0">
-                                        {statusLabel[rec.status] || rec.status}
-                                    </Tag>
-                                    {rec.id && (
-                                        <span className="text-[10px] text-slate-300">#{rec.id}</span>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="block text-[10px] text-slate-400 mb-0.5">Giriş</label>
-                                        <TimePicker
-                                            value={getTimeDayjs(rec.check_in)}
-                                            onChange={(val) => setRecordTime(i, 'check_in', val)}
-                                            format="HH:mm"
-                                            minuteStep={5}
-                                            className="w-full"
-                                            size="small"
-                                            placeholder="GG:DD"
-                                            needConfirm={false}
-                                        />
+                            <div key={i} className="bg-white rounded-lg border border-slate-200 p-3 hover:border-blue-300 transition-colors">
+                                {/* Üst satır: Badge'ler + Sil butonu */}
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <Tag color={statusColor[rec.status] || 'default'} className="!text-[10px] !m-0">
+                                            {statusLabel[rec.status] || rec.status}
+                                        </Tag>
+                                        <Tag className="!text-[10px] !m-0">{rec.source}</Tag>
+                                        {rec.is_manual_override && (
+                                            <Tag color="purple" className="!text-[10px] !m-0">Elle Düzenlendi</Tag>
+                                        )}
+                                        {rec.id && (
+                                            <span className="text-[10px] text-slate-300">#{rec.id}</span>
+                                        )}
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-400 mb-0.5">Çıkış</label>
-                                        <TimePicker
-                                            value={getTimeDayjs(rec.check_out)}
-                                            onChange={(val) => setRecordTime(i, 'check_out', val)}
-                                            format="HH:mm"
-                                            minuteStep={5}
-                                            className="w-full"
-                                            size="small"
-                                            placeholder="GG:DD"
-                                            needConfirm={false}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Select
-                                        value={rec.source}
-                                        onChange={(val) => updateRec(i, 'source', val)}
-                                        options={sourceOptions}
-                                        size="small"
-                                        className="flex-1"
-                                    />
                                     <Popconfirm
                                         title="Bu kaydı silmek istediğinize emin misiniz?"
                                         onConfirm={() => removeRec(i)}
@@ -682,27 +595,84 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                             type="text"
                                             size="small"
                                             icon={<DeleteOutlined />}
+                                            title="Kaydı Sil"
                                         />
                                     </Popconfirm>
+                                </div>
+
+                                {/* Giriş / Çıkış satırı */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-medium text-slate-500 mb-1">Giriş Saati</label>
+                                        <TimePicker
+                                            value={getTimeDayjs(rec.check_in)}
+                                            onChange={(val) => setRecordTime(i, 'check_in', val)}
+                                            format="HH:mm"
+                                            minuteStep={5}
+                                            className="w-full"
+                                            size="middle"
+                                            placeholder="Saat seçin"
+                                            needConfirm={false}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-medium text-slate-500 mb-1">Çıkış Saati</label>
+                                        <TimePicker
+                                            value={getTimeDayjs(rec.check_out)}
+                                            onChange={(val) => setRecordTime(i, 'check_out', val)}
+                                            format="HH:mm"
+                                            minuteStep={5}
+                                            className="w-full"
+                                            size="middle"
+                                            placeholder="Saat seçin"
+                                            needConfirm={false}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Kaynak seçimi */}
+                                <div className="mt-2">
+                                    <label className="block text-[11px] font-medium text-slate-500 mb-1">Kaynak</label>
+                                    <Select
+                                        value={rec.source}
+                                        onChange={(val) => updateRec(i, 'source', val)}
+                                        options={sourceOptions}
+                                        size="small"
+                                        className="w-full"
+                                    />
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <Empty description="Kayıt bulunamadı" image={Empty.PRESENTED_IMAGE_SIMPLE} className="!my-2" />
+                    <div className="bg-slate-50 rounded-lg p-6 text-center border border-dashed border-slate-200">
+                        <ClockCircleOutlined className="text-3xl text-slate-300 mb-2" />
+                        <p className="text-sm text-slate-400">Bu gün için kayıt bulunamadı</p>
+                        <Button
+                            type="primary"
+                            size="small"
+                            icon={<PlusOutlined />}
+                            onClick={addRecord}
+                            className="mt-3"
+                        >
+                            İlk Kaydı Ekle
+                        </Button>
+                    </div>
                 )}
             </div>
 
-            {/* Total Hours */}
-            <div className="flex justify-between items-center text-sm bg-slate-50 rounded-lg p-2.5">
-                <span className="text-slate-500 font-medium">Toplam Saat:</span>
-                <span className="font-bold text-slate-800">{totalHours()} saat</span>
-            </div>
+            {/* ── Toplam Saat ── */}
+            {records.length > 0 && (
+                <div className="flex justify-between items-center text-sm bg-slate-50 rounded-lg p-3 border">
+                    <span className="text-slate-500 font-medium">Toplam Çalışma:</span>
+                    <span className="font-bold text-slate-800 text-base">{totalHours()} saat</span>
+                </div>
+            )}
 
-            {/* Override Note */}
+            {/* ── Override Notu ── */}
             <div>
-                <label className="block text-[10px] font-semibold text-slate-500 mb-1">
-                    Override Notu (Opsiyonel)
+                <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                    Düzenleme Notu (Opsiyonel)
                 </label>
                 <TextArea
                     value={overrideNote}
@@ -713,14 +683,14 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                 />
             </div>
 
-            {/* Delete count info */}
+            {/* ── Silinecek kayıt bilgisi ── */}
             {deleteIds.length > 0 && (
-                <div className="text-xs text-red-500 font-semibold">
+                <div className="text-xs text-red-500 font-semibold bg-red-50 p-2 rounded-lg border border-red-100">
                     {deleteIds.length} kayıt silinecek
                 </div>
             )}
 
-            {/* Save Button */}
+            {/* ── Kaydet Butonu ── */}
             <Button
                 type="primary"
                 icon={<SaveOutlined />}
@@ -728,10 +698,92 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                 loading={saving}
                 disabled={loading}
                 block
+                size="large"
                 className="!bg-green-600 !border-green-600 hover:!bg-green-700"
             >
                 Değişiklikleri Kaydet
             </Button>
+
+            <Divider className="!my-3">
+                <span className="text-[10px] text-slate-400">Hızlı İşlemler</span>
+            </Divider>
+
+            {/* ── Hızlı İşlemler (altta, collapsible) ── */}
+            <Collapse
+                ghost
+                size="small"
+                items={[{
+                    key: 'quick',
+                    label: <span className="text-xs text-blue-600 font-medium">Tüm Günü Tek Seferde Oluştur</span>,
+                    children: (
+                        <div className="space-y-3 bg-blue-50/50 rounded-lg p-3 border border-blue-100">
+                            <p className="text-[11px] text-slate-500">
+                                Mevcut tüm kayıtları silip tek bir giriş/çıkış kaydı oluşturur.
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Başlangıç Saati</label>
+                                    <TimePicker
+                                        value={workStart}
+                                        onChange={setWorkStart}
+                                        format="HH:mm"
+                                        minuteStep={15}
+                                        className="w-full"
+                                        size="small"
+                                        placeholder="08:00"
+                                        needConfirm={false}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Çalışma Süresi (Saat)</label>
+                                    <InputNumber
+                                        value={workDuration}
+                                        onChange={setWorkDuration}
+                                        step={0.5}
+                                        min={0.5}
+                                        max={24}
+                                        className="w-full"
+                                        size="small"
+                                    />
+                                </div>
+                            </div>
+                            <Button
+                                type="primary"
+                                icon={<ThunderboltOutlined />}
+                                onClick={applyDailyWork}
+                                block
+                                size="small"
+                            >
+                                Günü Oluştur
+                            </Button>
+
+                            <Divider className="!my-2" />
+
+                            <div className="grid grid-cols-2 gap-2 items-end">
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Mesai Süresi (Saat)</label>
+                                    <InputNumber
+                                        value={otDuration}
+                                        onChange={setOtDuration}
+                                        step={0.5}
+                                        min={0.5}
+                                        max={12}
+                                        className="w-full"
+                                        size="small"
+                                    />
+                                </div>
+                                <Button
+                                    onClick={addOvertime}
+                                    size="small"
+                                    className="!bg-amber-500 !text-white !border-amber-500 hover:!bg-amber-600"
+                                >
+                                    +Mesai Ekle
+                                </Button>
+                            </div>
+                        </div>
+                    ),
+                }]}
+            />
         </div>
     );
 
