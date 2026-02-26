@@ -84,7 +84,7 @@ const StatCard = ({ label, value, icon, color, trend }) => (
 const MyRequestsSection = ({
     requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes,
     loading, getStatusBadge, handleDeleteRequest, handleEditOvertimeClick,
-    handleResubmitOvertime, handleViewDetails, setShowCreateModal
+    handleResubmitOvertime, handleViewDetails, setShowCreateModal, currentUserInfo
 }) => {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -92,8 +92,10 @@ const MyRequestsSection = ({
 
     const allMyRequests = useMemo(() => {
         const items = [];
+        const myInfo = { employee_name: currentUserInfo?.name || '', employee_department: currentUserInfo?.department || '' };
         requests.forEach(r => items.push({
             ...r,
+            ...myInfo,
             _type: 'LEAVE',
             type: 'LEAVE',
             _sortDate: r.start_date || r.created_at,
@@ -103,15 +105,17 @@ const MyRequestsSection = ({
         }));
         overtimeRequests.forEach(r => items.push({
             ...r,
+            ...myInfo,
             _type: 'OVERTIME',
             type: 'OVERTIME',
             _sortDate: r.date || r.created_at,
             onResubmit: () => handleResubmitOvertime(r),
             target_approver_name: r.target_approver_name || null,
         }));
-        mealRequests.forEach(r => items.push({ ...r, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
+        mealRequests.forEach(r => items.push({ ...r, ...myInfo, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
         cardlessEntryRequests.forEach(r => items.push({
             ...r,
+            ...myInfo,
             _type: 'CARDLESS_ENTRY',
             type: 'CARDLESS_ENTRY',
             _sortDate: r.date || r.created_at,
@@ -119,7 +123,7 @@ const MyRequestsSection = ({
         }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
-    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes]);
+    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes, currentUserInfo]);
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
@@ -221,7 +225,6 @@ const MyRequestsSection = ({
                         onViewDetails={handleViewDetails}
                         onEdit={handleEditOvertimeClick}
                         onDelete={handleDeleteRequest}
-                        showEmployeeColumn={false}
                     />
                 </div>
             )}
@@ -971,6 +974,7 @@ const Requests = () => {
     const [subordinateIds, setSubordinateIds] = useState(new Set());
     const [directSubordinateIds, setDirectSubordinateIds] = useState(new Set());
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
+    const [currentUserInfo, setCurrentUserInfo] = useState({ name: '', department: '' });
 
     const [createModalInitialData, setCreateModalInitialData] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
@@ -1012,6 +1016,10 @@ const Requests = () => {
         try {
             const res = await api.get('/employees/me/');
             setCurrentUserEmployeeId(res.data.id);
+            setCurrentUserInfo({
+                name: res.data.full_name || `${res.data.first_name || ''} ${res.data.last_name || ''}`.trim(),
+                department: res.data.department_name || res.data.department?.name || '',
+            });
         } catch (e) { console.error("Error fetching me:", e); }
     };
 
@@ -1309,6 +1317,7 @@ const Requests = () => {
                         handleResubmitOvertime={handleResubmitOvertime}
                         handleViewDetails={handleViewDetails}
                         setShowCreateModal={setShowCreateModal}
+                        currentUserInfo={currentUserInfo}
                     />
                 )}
                 {activeTab === 'direct_requests' && (
