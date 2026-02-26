@@ -23,6 +23,7 @@ const HeroDailySummary = ({ summary, loading }) => {
 
     const usedBreakSeconds = safeSummary.break_used || 0;
     const totalBreakAllowanceSeconds = safeSummary.break_allowance || ((safeSummary.remaining_break || 0) + usedBreakSeconds);
+    const remainingBreakSeconds = Math.max(0, totalBreakAllowanceSeconds - usedBreakSeconds);
     const breakPercent = totalBreakAllowanceSeconds > 0
         ? Math.min(100, Math.round((usedBreakSeconds / totalBreakAllowanceSeconds) * 100))
         : 0;
@@ -108,22 +109,23 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">DİNLENME</p>
-                                    <h3 className="text-base font-bold text-slate-700">Mola Kullanımı</h3>
+                                    <h3 className="text-base font-bold text-slate-700">Kalan Mola</h3>
                                 </div>
                             </div>
 
                             <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor(usedBreakSeconds / 3600)}
-                                </span>
-                                <span className="text-sm font-bold text-slate-400 uppercase mr-2">sa</span>
-                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor((usedBreakSeconds % 3600) / 60)}
+                                <span className={clsx(
+                                    "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter",
+                                    remainingBreakSeconds <= 0 ? "text-red-500" : "text-slate-800"
+                                )}>
+                                    {Math.floor(remainingBreakSeconds / 60)}
                                 </span>
                                 <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
                             </div>
                             <p className="text-xs font-semibold text-slate-400 pl-1">
-                                Hak: <span className="text-slate-600">{Math.floor(totalBreakAllowanceSeconds / 3600)}s {Math.floor((totalBreakAllowanceSeconds % 3600) / 60)}dk</span>
+                                Kullanılan: <span className="text-amber-600 font-bold">{Math.floor(usedBreakSeconds / 60)}dk</span>
+                                <span className="mx-1">/</span>
+                                Hak: <span className="text-slate-600">{Math.floor(totalBreakAllowanceSeconds / 60)}dk</span>
                             </p>
                         </div>
 
@@ -142,8 +144,12 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 </div>
                             </div>
                             <div className="flex justify-between mt-3 text-[10px] font-bold tracking-wide uppercase">
-                                <span className={clsx(usedBreakSeconds > totalBreakAllowanceSeconds ? "text-red-500" : "text-amber-600")}>
-                                    {usedBreakSeconds > totalBreakAllowanceSeconds ? "LİMİT AŞILDI" : "LİMİT DAHİLİNDE"}
+                                <span className={clsx(
+                                    usedBreakSeconds > totalBreakAllowanceSeconds ? "text-red-500" :
+                                    remainingBreakSeconds <= 0 ? "text-orange-500" : "text-amber-600"
+                                )}>
+                                    {usedBreakSeconds > totalBreakAllowanceSeconds ? "LİMİT AŞILDI" :
+                                     remainingBreakSeconds <= 0 ? "MOLA HAKKI DOLDU" : "LİMİT DAHİLİNDE"}
                                 </span>
                             </div>
                         </div>
