@@ -37,6 +37,7 @@ import SpecTestsTab from './system-health/SpecTestsTab';
 import PasswordResetTab from './system-health/PasswordResetTab';
 import OrgAuditTab from './system-health/OrgAuditTab';
 import BreakFixTab from './system-health/BreakFixTab';
+import RequestAnalysisTab from './system-health/RequestAnalysisTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -95,6 +96,7 @@ export default function SystemHealth() {
                         { id: 'rbac_audit', name: 'RBAC Uyumluluk', icon: ClipboardDocumentCheckIcon },
                         { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
                         { id: 'spec_tests', name: 'Spec Testleri', icon: PlayCircleIcon },
+                        { id: 'request_analysis', name: 'Talep Analizi', icon: ClipboardDocumentCheckIcon },
                         { id: 'break_fix', name: 'Mola Düzeltme', icon: PauseCircleIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
@@ -136,6 +138,7 @@ export default function SystemHealth() {
                 {activeTab === 'rbac_audit' && <RBACAuditTab />}
                 {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
                 {activeTab === 'spec_tests' && <SpecTestsTab />}
+                {activeTab === 'request_analysis' && <RequestAnalysisTab />}
                 {activeTab === 'break_fix' && <BreakFixTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'data_audit' && <DataAuditTab />}

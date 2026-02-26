@@ -233,29 +233,34 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             </div>
 
             {/* Talep Eden Bilgisi */}
-            {(request.employee_name || request.employee?.name) && (
-              <div className="bg-white rounded-xl p-4 border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm border border-slate-200">
-                    <User size={18} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-800">{request.employee_name || request.employee?.name}</div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                      {(request.employee_department || request.employee?.department) && (
-                        <span>{request.employee_department || request.employee?.department}</span>
-                      )}
-                      {request.employee_position && (
-                        <>
-                          <span className="text-slate-300">·</span>
-                          <span>{request.employee_position}</span>
-                        </>
-                      )}
+            {(() => {
+              const empName = request.employee_name || request.employee_detail?.full_name || request.employee?.name || request.employee?.full_name || '';
+              const empDept = request.employee_department || request.employee_detail?.department_name || request.employee?.department || '';
+              const empPos = request.employee_position || request.employee_detail?.job_position_name || '';
+              if (!empName) return null;
+              return (
+                <div className="bg-white rounded-xl p-4 border border-slate-200">
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Talep Eden</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 font-bold text-sm border border-blue-200">
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-800">{empName}</div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                        {empDept && <span>{empDept}</span>}
+                        {empPos && (
+                          <>
+                            <span className="text-slate-300">·</span>
+                            <span>{empPos}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {requestType === 'LEAVE' && (
               <>
