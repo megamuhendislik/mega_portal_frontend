@@ -53,33 +53,17 @@ function pctColor(pct) {
     return 'bg-red-500';
 }
 
-/** Pad a string to given length (right-pad) */
-function pad(str, len) {
-    const s = String(str ?? '-');
-    return s.length >= len ? s : s + ' '.repeat(len - s.length);
-}
-
-/** Pad a string to given length (left-pad) */
-function lpad(str, len) {
-    const s = String(str ?? '-');
-    return s.length >= len ? s : ' '.repeat(len - s.length) + s;
-}
-
 /**
- * Generate a full text log from detailedData for copy/share.
- * Returns a single string with all employee/date details in readable format.
+ * Generate console-log style output from detailedData.
+ * Raw key=value pairs, easy to read/parse/share.
  */
 function generateLogText(detailedData) {
     const lines = [];
-    const SEP = '═'.repeat(80);
-    const THIN = '─'.repeat(76);
-
+    const now = new Date();
     const empNames = Object.keys(detailedData).sort((a, b) => a.localeCompare(b, 'tr'));
 
-    lines.push(SEP);
-    lines.push(`  PUANTAJ TANILAMA RAPORU — ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}`);
-    lines.push(`  Toplam Personel: ${empNames.length}`);
-    lines.push(SEP);
+    lines.push(`[LOG] PUANTAJ TANILAMA RAPORU`);
+    lines.push(`[LOG] tarih=${now.toLocaleDateString('tr-TR')} saat=${now.toLocaleTimeString('tr-TR')} toplam_personel=${empNames.length}`);
     lines.push('');
 
     for (const empName of empNames) {
@@ -87,9 +71,7 @@ function generateLogText(detailedData) {
         const dates = empData?.dates || {};
         const sortedDates = Object.keys(dates).sort();
 
-        lines.push(SEP);
-        lines.push(`  PERSONEL: ${empName}  (${sortedDates.length} gün)`);
-        lines.push(SEP);
+        lines.push(`[PERSONEL] ad="${empName}" gun_sayisi=${sortedDates.length}`);
 
         for (const dateStr of sortedDates) {
             const detail = dates[dateStr];
@@ -99,96 +81,76 @@ function generateLogText(detailedData) {
             const gaps = detail.gaps || [];
             const summary = detail.summary;
 
-            // Check if anything changed
             const hasChange = recsBefore.some((b, i) => {
                 const a = recsAfter[i];
                 return a && (b.break_sec !== a.break_sec || b.missing_sec !== a.missing_sec ||
                     b.normal_sec !== a.normal_sec || b.ot_sec !== a.ot_sec);
             });
 
-            lines.push('');
-            lines.push(`  ┌─ ${dateStr} ${THIN.slice(0, 60)}${hasChange ? ' [DEĞİŞTİ]' : ''}`);
+            lines.push(`  [TARIH] ${dateStr} degisti=${hasChange}`);
 
             // Rules
             if (rules) {
-                let rulesLine = `  │  KURALLAR: Vardiya ${rules.shift_start || '?'}-${rules.shift_end || '?'}`;
-                if (rules.lunch_start) rulesLine += ` | Öğle ${rules.lunch_start}-${rules.lunch_end}`;
-                rulesLine += ` | Mola Hak: ${rules.break_allowance_min ?? '?'}dk`;
-                if (rules.is_off_day) rulesLine += ' | TATİL GÜNÜ';
-                lines.push(rulesLine);
+                lines.push(`    [KURAL] vardiya=${rules.shift_start || '?'}-${rules.shift_end || '?'} ogle=${rules.lunch_start || '-'}-${rules.lunch_end || '-'} mola_hak=${rules.break_allowance_min ?? 0}dk tatil=${rules.is_off_day || false}`);
             }
 
-            // Records table
+            // Records
             const maxRecs = Math.max(recsBefore.length, recsAfter.length);
-            if (maxRecs > 0) {
-                lines.push('  │');
-                lines.push(`  │  KAYITLAR (${maxRecs} adet):`);
-                lines.push(`  │  ${pad('#', 4)}${pad('Giriş', 12)}${pad('Çıkış', 12)}${lpad('Normal', 12)}${lpad('F.Mesai', 12)}${lpad('Mola', 12)}${lpad('Eksik', 12)}`);
-                lines.push(`  │  ${'-'.repeat(76)}`);
+            for (let i = 0; i < maxRecs; i++) {
+                const b = recsBefore[i];
+                const a = recsAfter[i];
+                const rec = a || b;
 
-                for (let i = 0; i < maxRecs; i++) {
-                    const b = recsBefore[i];
-                    const a = recsAfter[i];
-                    const rec = a || b;
+                let line = `    [KAYIT] #${i + 1} giris=${rec?.check_in || '-'} cikis=${rec?.check_out || '-'}`;
+                line += ` normal=${a?.normal_sec ?? '-'}sn mola=${a?.break_sec ?? '-'}sn mesai=${a?.ot_sec ?? '-'}sn eksik=${a?.missing_sec ?? '-'}sn`;
 
-                    const fmtField = (field) => {
-                        const bv = b?.[field];
-                        const av = a?.[field];
-                        if (bv !== undefined && av !== undefined && bv !== av) {
-                            return `${formatSec(bv)}→${formatSec(av)}`;
-                        }
-                        return formatSec(av ?? bv);
-                    };
-
-                    lines.push(
-                        `  │  ${pad(i + 1, 4)}${pad(rec?.check_in || '-', 12)}${pad(rec?.check_out || '-', 12)}` +
-                        `${lpad(fmtField('normal_sec'), 12)}${lpad(fmtField('ot_sec'), 12)}` +
-                        `${lpad(fmtField('break_sec'), 12)}${lpad(fmtField('missing_sec'), 12)}`
-                    );
+                // Show before values if changed
+                if (b && a) {
+                    const changed = [];
+                    if (b.normal_sec !== a.normal_sec) changed.push(`normal:${b.normal_sec}->${a.normal_sec}`);
+                    if (b.break_sec !== a.break_sec) changed.push(`mola:${b.break_sec}->${a.break_sec}`);
+                    if (b.ot_sec !== a.ot_sec) changed.push(`mesai:${b.ot_sec}->${a.ot_sec}`);
+                    if (b.missing_sec !== a.missing_sec) changed.push(`eksik:${b.missing_sec}->${a.missing_sec}`);
+                    if (changed.length > 0) {
+                        line += ` DEGISIM=[${changed.join(', ')}]`;
+                    }
                 }
-            } else {
-                lines.push('  │  KAYIT: Kayıt bulunamadı.');
+                lines.push(line);
+            }
+            if (maxRecs === 0) {
+                lines.push(`    [KAYIT] kayit_yok`);
             }
 
-            // Gaps table
-            if (gaps.length > 0) {
-                lines.push('  │');
-                lines.push(`  │  BOŞLUK ANALİZİ (${gaps.length} adet):`);
-                lines.push(`  │  ${pad('#', 4)}${pad('Başlangıç', 12)}${pad('Bitiş', 12)}${lpad('Ham', 10)}${lpad('Öğle Kes.', 10)}${lpad('Net', 10)}${lpad('Kredi', 10)}${lpad('Kalan', 10)}`);
-                lines.push(`  │  ${'-'.repeat(78)}`);
-
-                for (let i = 0; i < gaps.length; i++) {
-                    const g = gaps[i];
-                    lines.push(
-                        `  │  ${pad(i + 1, 4)}${pad(g.from || '-', 12)}${pad(g.to || '-', 12)}` +
-                        `${lpad(formatSec(g.raw_sec), 10)}${lpad(g.lunch_overlap_sec > 0 ? formatSec(g.lunch_overlap_sec) : '-', 10)}` +
-                        `${lpad(formatSec(g.net_sec), 10)}${lpad(formatSec(g.credit_sec), 10)}${lpad(formatSec(g.remaining_allowance_sec), 10)}`
-                    );
-                }
+            // Gaps
+            for (let i = 0; i < gaps.length; i++) {
+                const g = gaps[i];
+                lines.push(`    [GAP] #${i + 1} from=${g.from} to=${g.to} ham=${g.raw_sec}sn ogle_kesisim=${g.lunch_overlap_sec}sn net=${g.net_sec}sn kredi=${g.credit_sec}sn kalan_hak=${g.remaining_allowance_sec}sn`);
             }
 
             // Summary
             if (summary) {
-                lines.push('  │');
                 const pct = summary.break_used_pct ?? 0;
-                lines.push(
-                    `  │  ÖZET: Normal: ${formatSec(summary.total_normal)} | F.Mesai: ${formatSec(summary.total_ot)} ` +
-                    `| Mola: ${formatSec(summary.total_break)}/${formatSec(summary.break_allowance)} (%${Math.round(pct)}) ` +
-                    `| Eksik: ${formatSec(summary.total_missing)}`
-                );
+                lines.push(`    [OZET] normal=${summary.total_normal}sn mesai=${summary.total_ot}sn mola=${summary.total_break}/${summary.break_allowance}sn (%${Math.round(pct)}) eksik=${summary.total_missing}sn`);
             }
-
-            lines.push(`  └${'─'.repeat(78)}`);
         }
-
         lines.push('');
     }
 
-    lines.push(SEP);
-    lines.push(`  RAPOR SONU — ${empNames.length} personel`);
-    lines.push(SEP);
-
+    lines.push(`[LOG] RAPOR SONU — ${empNames.length} personel`);
     return lines.join('\n');
+}
+
+/** Download text as .txt file */
+function downloadTxt(text, filename) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 /** Check if a before/after pair changed */
@@ -966,37 +928,50 @@ export default function BreakFixTab() {
                             <>
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="text-xs text-gray-500">
-                                        {employeeNames.length} personel, kopyalanabilir metin formatinda
+                                        {employeeNames.length} personel — console log formati (key=value)
                                     </span>
-                                    <button
-                                        onClick={() => {
-                                            const text = generateLogText(detailedData);
-                                            navigator.clipboard.writeText(text).then(() => {
-                                                setCopied(true);
-                                                setTimeout(() => setCopied(false), 3000);
-                                            });
-                                        }}
-                                        className={`px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-2 transition-all ${
-                                            copied
-                                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                                                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
-                                        }`}
-                                    >
-                                        {copied ? (
-                                            <>
-                                                <ClipboardDocumentCheckIcon className="w-4 h-4" />
-                                                Kopyalandi!
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ClipboardDocumentIcon className="w-4 h-4" />
-                                                Tumunu Kopyala
-                                            </>
-                                        )}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const text = generateLogText(detailedData);
+                                                const dateStr = new Date().toISOString().slice(0, 10);
+                                                downloadTxt(text, `puantaj_log_${dateStr}.txt`);
+                                            }}
+                                            className="px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white shadow-sm transition-all"
+                                        >
+                                            <DocumentTextIcon className="w-4 h-4" />
+                                            TXT Indir
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const text = generateLogText(detailedData);
+                                                navigator.clipboard.writeText(text).then(() => {
+                                                    setCopied(true);
+                                                    setTimeout(() => setCopied(false), 3000);
+                                                });
+                                            }}
+                                            className={`px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-2 transition-all ${
+                                                copied
+                                                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                                                    : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
+                                            }`}
+                                        >
+                                            {copied ? (
+                                                <>
+                                                    <ClipboardDocumentCheckIcon className="w-4 h-4" />
+                                                    Kopyalandi!
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ClipboardDocumentIcon className="w-4 h-4" />
+                                                    Kopyala
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                                 <pre
-                                    className="bg-gray-900 text-green-300 rounded-xl border border-gray-700 p-4 font-mono text-[11px] leading-relaxed overflow-auto whitespace-pre select-all"
+                                    className="bg-gray-950 text-gray-300 rounded-xl border border-gray-700 p-4 font-mono text-[11px] leading-relaxed overflow-auto whitespace-pre select-all"
                                     style={{ maxHeight: '700px' }}
                                 >
                                     {generateLogText(detailedData)}
