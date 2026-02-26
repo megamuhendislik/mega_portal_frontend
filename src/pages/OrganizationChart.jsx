@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactDOM from 'react-dom';
 import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star } from 'lucide-react';
@@ -626,11 +626,13 @@ const OrganizationChart = () => {
     const canReassign = hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN');
 
     // Zoom & Pan State
-    const [scale, setScale] = useState(1); // Default 100% zoom as requested
+    const [scale, setScale] = useState(0.5);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
     const containerRef = useRef(null);
+    const contentRef = useRef(null);
+    const hasFittedRef = useRef(false);
 
     // 5. Hierarchy Flattening for System Admins
     // This function merges a Manager and their Subordinate Managers into a single "Group" node
@@ -747,6 +749,16 @@ const OrganizationChart = () => {
         fetchHierarchy();
     }, []);
 
+    // Auto fit-to-screen after tree data loads
+    useEffect(() => {
+        if (treeData.length > 0 && !hasFittedRef.current) {
+            hasFittedRef.current = true;
+            // Wait for DOM to render the tree nodes
+            const timer = setTimeout(() => fitToScreen(), 150);
+            return () => clearTimeout(timer);
+        }
+    }, [treeData, fitToScreen]);
+
     // Drag & Drop for employee reassignment (must be after fetchHierarchy definition)
     const dnd = useOrgChartDnD({ isEditMode: isEditMode && canReassign, onReassignComplete: fetchHierarchy });
 
@@ -779,10 +791,50 @@ const OrganizationChart = () => {
         }
     };
 
+    // Fit-to-screen: measure content and calculate optimal scale + center
+    const fitToScreen = useCallback(() => {
+        const container = containerRef.current;
+        const content = contentRef.current;
+        if (!container || !content) return;
+
+        // Temporarily reset transform to measure true content size
+        const prevTransform = content.style.transform;
+        content.style.transform = 'translate(0px, 0px) scale(1)';
+
+        // Wait one frame for layout recalculation
+        requestAnimationFrame(() => {
+            const containerRect = container.getBoundingClientRect();
+            const tree = content.querySelector('.tree');
+            if (!tree) {
+                content.style.transform = prevTransform;
+                return;
+            }
+            const treeRect = tree.getBoundingClientRect();
+
+            const padding = 40; // breathing room on each side
+            const availableW = containerRect.width - padding * 2;
+            const availableH = containerRect.height - padding * 2;
+
+            const scaleX = availableW / treeRect.width;
+            const scaleY = availableH / treeRect.height;
+            const newScale = Math.min(scaleX, scaleY, 1); // don't zoom in past 100%
+            const clampedScale = Math.max(newScale, 0.15); // floor at 15%
+
+            // Center the content
+            const scaledW = treeRect.width * clampedScale;
+            const scaledH = treeRect.height * clampedScale;
+            const offsetX = (containerRect.width - scaledW) / 2 - (treeRect.left - containerRect.left) * clampedScale;
+            const offsetY = (containerRect.height - scaledH) / 2 - (treeRect.top - containerRect.top) * clampedScale;
+
+            setScale(clampedScale);
+            setPosition({ x: offsetX, y: offsetY });
+        });
+    }, []);
+
     // Zoom Handlers
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
-    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.3));
-    const handleResetZoom = () => { setScale(1); setPosition({ x: 0, y: 0 }); };
+    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.15));
+    const handleResetZoom = () => fitToScreen();
 
     // Pan Handlers (Mouse & Touch)
     const handleStart = (clientX, clientY) => {
@@ -828,7 +880,7 @@ const OrganizationChart = () => {
         if (e.ctrlKey) {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            setScale(prev => Math.min(Math.max(prev + delta, 0.3), 2));
+            setScale(prev => Math.min(Math.max(prev + delta, 0.15), 2));
         }
     };
 
@@ -963,6 +1015,7 @@ const OrganizationChart = () => {
             )}
 
             <div
+                ref={containerRef}
                 className="card bg-slate-50/50 flex-1 h-[calc(100vh-140px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -974,6 +1027,7 @@ const OrganizationChart = () => {
                 onWheel={handleWheel}
             >
                 <div
+                    ref={contentRef}
                     className="origin-top-left transition-transform duration-75 ease-out absolute"
                     style={{
                         transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
@@ -981,7 +1035,7 @@ const OrganizationChart = () => {
                         left: 0,
                         minWidth: '100%',
                         minHeight: '100%',
-                        padding: '100px',
+                        padding: '60px',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'flex-start'
