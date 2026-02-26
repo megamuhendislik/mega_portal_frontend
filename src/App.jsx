@@ -28,6 +28,7 @@ import ProgramManagement from './pages/admin/ProgramManagement';
 import Feedback from './pages/Feedback';
 
 const RequestAnalytics = React.lazy(() => import('./pages/RequestAnalytics'));
+const HelpLibrary = React.lazy(() => import('./pages/HelpLibrary'));
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -124,6 +125,15 @@ function App() {
 
             {/* External Program Management */}
             <Route path="program-management" element={<ProtectedRoute requiredPermission="PAGE_PROGRAM_MANAGEMENT"><ProgramManagement /></ProtectedRoute>} />
+
+            {/* Help Library - No permission required */}
+            <Route path="help" element={
+              <ProtectedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div></div>}>
+                  <HelpLibrary />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
             {/* 404 - Sayfa Bulunamadı */}
             <Route path="*" element={
