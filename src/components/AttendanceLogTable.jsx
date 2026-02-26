@@ -12,6 +12,38 @@ const formatDate = (isoString) => {
 };
 
 const getStatusBadge = (log) => {
+    // OT Status override: show OvertimeRequest status when available
+    if (log.ot_status) {
+        const otStyles = {
+            'POTENTIAL': 'bg-purple-50 border-purple-200 text-purple-600',
+            'PENDING': 'bg-amber-50 border-amber-100 text-amber-600',
+            'APPROVED': 'bg-emerald-50 border-emerald-100 text-emerald-600',
+            'REJECTED': 'bg-rose-50 border-rose-100 text-rose-600',
+            'CANCELLED': 'bg-gray-50 border-gray-100 text-gray-500',
+        };
+        const otDots = {
+            'POTENTIAL': 'bg-purple-500',
+            'PENDING': 'bg-amber-500',
+            'APPROVED': 'bg-emerald-500',
+            'REJECTED': 'bg-rose-500',
+            'CANCELLED': 'bg-gray-400',
+        };
+        const otLabels = {
+            'POTENTIAL': 'Potansiyel Mesai',
+            'PENDING': 'Onay Bekliyor',
+            'APPROVED': 'Onaylandı',
+            'REJECTED': 'Reddedildi',
+            'CANCELLED': 'Geri Çekildi',
+        };
+
+        return (
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${otStyles[log.ot_status] || 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${otDots[log.ot_status] || 'bg-gray-400'} shadow-sm`}></span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">{otLabels[log.ot_status] || log.ot_status}</span>
+            </div>
+        );
+    }
+
     const status = log.status;
 
     // Custom Check: Normal Mesai (Approved/Calculated but no overtime)
