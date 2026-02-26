@@ -64,10 +64,10 @@ export default function RequestAnalysisTab() {
     const { overview, monthly_trend, department_breakdown, employee_breakdown, weekly_pattern } = data;
 
     // KPI Cards
-    const totalAll = overview ? Object.values(overview).reduce((s, v) => s + (v.total || 0), 0) : 0;
-    const totalPending = overview ? Object.values(overview).reduce((s, v) => s + (v.pending || 0), 0) : 0;
-    const totalApproved = overview ? Object.values(overview).reduce((s, v) => s + (v.approved || 0), 0) : 0;
-    const totalRejected = overview ? Object.values(overview).reduce((s, v) => s + (v.rejected || 0), 0) : 0;
+    const totalAll = overview ? Object.values(overview).reduce((s, v) => s + (v?.total || 0), 0) : 0;
+    const totalPending = overview ? Object.values(overview).reduce((s, v) => s + (v?.pending || 0), 0) : 0;
+    const totalApproved = overview ? Object.values(overview).reduce((s, v) => s + (v?.approved || 0), 0) : 0;
+    const totalRejected = overview ? Object.values(overview).reduce((s, v) => s + (v?.rejected || 0), 0) : 0;
     const approvalRate = data.approval_rate ?? pct(totalApproved, totalApproved + totalRejected);
 
     return (
