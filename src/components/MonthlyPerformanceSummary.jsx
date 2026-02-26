@@ -73,6 +73,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pTotal, // For Bar 2
                 lateCount,
 
+                // Fiscal month from backend (not JS Date)
+                fiscalMonth: periodSummary.fiscal_month || (new Date().getMonth() + 1),
+
                 cumulative: periodSummary.cumulative ? {
                     carryOver: periodSummary.cumulative.carry_over_seconds,
                     carryOverHours: (periodSummary.cumulative.carry_over_seconds / 3600).toFixed(1),
@@ -84,12 +87,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                     totalNetBalance: (periodSummary.cumulative.total_net_balance_seconds / 3600).toFixed(1),
 
+                    // YTD values
                     ytdTargetHours: (periodSummary.cumulative.ytd_target_seconds / 3600).toFixed(1),
                     ytdCompletedHours: (periodSummary.cumulative.ytd_completed_seconds / 3600).toFixed(1),
                     ytdNetBalanceHours: (periodSummary.cumulative.ytd_net_balance_seconds / 3600).toFixed(1),
 
                     ytdTarget: periodSummary.cumulative.ytd_target_seconds,
                     ytdCompleted: periodSummary.cumulative.ytd_completed_seconds,
+
+                    // Annual target (full year, respects system start date)
+                    annualTargetSeconds: periodSummary.cumulative.annual_target_seconds || 0,
+                    annualTargetHours: ((periodSummary.cumulative.annual_target_seconds || 0) / 3600).toFixed(1),
+
+                    // Current fiscal month from backend
+                    currentFiscalMonth: periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || (new Date().getMonth() + 1),
 
                     // PASSING THE DATA form WITH CUMULATIVE CALCULATION
                     breakdown: (periodSummary.cumulative.breakdown || []).reduce((acc, month, idx) => {
@@ -108,9 +119,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     }, []) || [],
 
 
-                    // Visualization Helper
-                    progressPercent: periodSummary.cumulative.ytd_target_seconds > 0
-                        ? (periodSummary.cumulative.ytd_completed_seconds / periodSummary.cumulative.ytd_target_seconds) * 100
+                    // Visualization Helper — use annual target for progress
+                    progressPercent: (periodSummary.cumulative.annual_target_seconds || 0) > 0
+                        ? (periodSummary.cumulative.ytd_completed_seconds / periodSummary.cumulative.annual_target_seconds) * 100
                         : 0
                 } : null,
 
@@ -232,13 +243,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 </div>
                             </div>
 
-                            {/* 2. YTD Target */}
+                            {/* 2. Annual Target (Full Year) */}
                             <div className="p-5 rounded-2xl border border-slate-100 bg-white hover:shadow-lg transition-shadow duration-300 shadow-sm">
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">YILLIK HEDEF</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.ytdTargetHours}</span>
+                                    <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.annualTargetHours}</span>
                                     <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
+                                <p className="text-[10px] text-slate-400 mt-1">Gerçekleşen: <span className="font-bold text-indigo-600">{stats.cumulative.ytdTargetHours}</span> sa (YTD)</p>
                             </div>
 
                             {/* 3. YTD Completed */}
@@ -280,9 +292,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                     <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
                                         {stats.cumulative.breakdown.map((m, idx) => {
-                                            const currentMonthIdx = new Date().getMonth();
-                                            const isCurrentMonth = idx === currentMonthIdx;
-                                            const isPast = idx < currentMonthIdx;
+                                            // Use fiscal month from backend (1-indexed), convert to 0-indexed for comparison with idx
+                                            const currentFiscalIdx = (stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1)) - 1;
+                                            const isCurrentMonth = idx === currentFiscalIdx;
+                                            const isPast = idx < currentFiscalIdx;
+                                            const isFuture = idx > currentFiscalIdx;
 
                                             const target = m.target;
                                             const completed = m.completed;
@@ -307,9 +321,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             }
 
                                             // Colors
-                                            let containerBg = 'bg-transparent';
-                                            // if (isPast && balance < 0) containerBg = 'bg-rose-50/30'; // Handled by Missing Bar now
-                                            if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
+                                            let containerBg = isFuture ? 'bg-slate-50/80' : 'bg-transparent';
+                                            if (!isFuture && completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
 
                                             const balanceHours = (balance / 3600).toFixed(1);
                                             // Cumulative from reduced breakdown
@@ -319,7 +332,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             return (
                                                 <div
                                                     key={idx}
-                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1`}
+                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 ${isFuture ? 'opacity-30' : 'hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1'}`}
                                                 >
                                                     {/* Normal Work Bar (Indigo) */}
                                                     <div
@@ -356,9 +369,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                                     {/* Label Inside */}
                                                     <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-1">
-                                                        <span className="text-[10px] font-bold text-slate-500/80 mb-0.5 mix-blend-multiply">{m.month}</span>
+                                                        <span className={`text-[10px] font-bold mb-0.5 ${isFuture ? 'text-slate-300' : 'text-slate-500/80 mix-blend-multiply'}`}>{m.month}</span>
 
-                                                        {isCurrentMonth ? (
+                                                        {isFuture ? (
+                                                            <span className="text-[10px] text-slate-300">-</span>
+                                                        ) : isCurrentMonth ? (
                                                             <div className="flex flex-col items-center mt-1">
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mb-0.5"></div>
                                                             </div>
@@ -369,8 +384,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         )}
                                                     </div>
 
-                                                    {/* Tooltip */}
-                                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
+                                                    {/* Tooltip (hide for future months) */}
+                                                    {!isFuture && <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">}
                                                         <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
                                                             <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
@@ -410,7 +425,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             )}
                                                         </div>
                                                         <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
-                                                    </div>
+                                                    </div>}
                                                 </div>
                                             );
                                         })}
@@ -440,8 +455,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             <tbody className="divide-y divide-slate-100">
                                                 {stats.cumulative.breakdown
                                                     .filter(m => {
-                                                        const currentMonth = new Date().getMonth() + 1;
-                                                        return m.month <= currentMonth;
+                                                        // Use fiscal month from backend
+                                                        const fiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
+                                                        return m.month <= fiscalMonth;
                                                     })
                                                     .map((m, idx) => {
                                                         const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];

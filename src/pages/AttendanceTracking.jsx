@@ -23,8 +23,24 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
 
     // State — propMonth is 0-based (from Attendance.jsx), convert to 1-based for API
-    const [year, setYear] = useState(propYear || moment().year());
-    const [month, setMonth] = useState(propMonth != null ? propMonth + 1 : moment().month() + 1);
+    // Default to fiscal month: if day >= 26, we're in next month's fiscal period
+    const getFiscalMonth = () => {
+        const today = moment();
+        if (today.date() >= 26) {
+            // Next month's fiscal period
+            return today.month() + 2 > 12 ? 1 : today.month() + 2;
+        }
+        return today.month() + 1;
+    };
+    const getFiscalYear = () => {
+        const today = moment();
+        if (today.date() >= 26 && today.month() === 11) {
+            return today.year() + 1; // December 26+ → January of next year
+        }
+        return today.year();
+    };
+    const [year, setYear] = useState(propYear || getFiscalYear());
+    const [month, setMonth] = useState(propMonth != null ? propMonth + 1 : getFiscalMonth());
 
     useEffect(() => {
         if (propYear) setYear(propYear);

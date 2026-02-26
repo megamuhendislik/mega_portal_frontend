@@ -31,7 +31,7 @@ const Dashboard = () => {
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
 
-    // Helper: Period Calc
+    // Helper: Period Calc (26-25 fiscal rule)
     const getPeriodDates = () => {
         const t = new Date();
         const y = t.getFullYear();
@@ -50,6 +50,9 @@ const Dashboard = () => {
         };
     };
 
+    // Period dates state (updated from backend response)
+    const [periodDates, setPeriodDates] = useState(null);
+
     const fetchDashboardData = async () => {
         // Align with Attendance.jsx: use user.employee.id if available
         const employeeId = user?.employee?.id || user?.id;
@@ -65,7 +68,8 @@ const Dashboard = () => {
 
             const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes] = await Promise.allSettled([
                 api.get('/attendance/today_summary/'),
-                api.get(`/attendance/monthly_summary/?start_date=${startStr}&end_date=${endStr}&employee_id=${employeeId}`),
+                // Don't send dates — let backend auto-detect fiscal period
+                api.get(`/attendance/monthly_summary/?employee_id=${employeeId}`),
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
@@ -73,7 +77,16 @@ const Dashboard = () => {
             ]);
 
             if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
-            if (monthRes.status === 'fulfilled') setMonthlySummary(monthRes.value.data);
+            if (monthRes.status === 'fulfilled') {
+                setMonthlySummary(monthRes.value.data);
+                // Store period dates from backend for other uses
+                if (monthRes.value.data.period_start && monthRes.value.data.period_end) {
+                    setPeriodDates({
+                        startStr: monthRes.value.data.period_start,
+                        endStr: monthRes.value.data.period_end
+                    });
+                }
+            }
             if (logsRes.status === 'fulfilled') setLogs(logsRes.value.data);
 
             // Requests
