@@ -192,7 +192,7 @@ const Dashboard = () => {
                 <StatCard
                     title="BUGÜN MOLA"
                     value={`${formatMin(todaySummary?.break_used)} dk`}
-                    subValue={`Hak: ${formatMin(todaySummary?.break_allowance || (todaySummary?.remaining_break !== undefined ? todaySummary?.remaining_break + todaySummary?.break_used : 1800))} dk`}
+                    subValue={`Hak: ${formatMin(todaySummary?.break_allowance || 0)} dk`}
                     icon={Coffee}
                     color="amber"
                 />
