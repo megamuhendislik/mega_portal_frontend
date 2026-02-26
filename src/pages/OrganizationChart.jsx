@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactDOM from 'react-dom';
-import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star } from 'lucide-react';
+import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star, Clock } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
@@ -117,8 +117,6 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
         const fetchStatus = async () => {
             if (!employee) return;
             try {
-                // Determine endpoint based on known API structure
-                // Assume registered at /api/attendance/live-status/
                 const res = await api.get(`/attendance/live-status/${employee.id}/status/`);
                 setLiveData(res.data);
             } catch (err) {
@@ -132,131 +130,117 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
 
     if (!employee) return null;
 
-    // Default static data if live fetch fails or loading
-    const displayStatus = liveData ? liveData.label : 'Yükleniyor...';
-    const statusColor = liveData ? liveData.color : 'gray'; // green, amber, gray
+    const category = getRoleCategory(employee.title);
+    const colorKey = getColorForCategory(category);
+    const displayStatus = liveData ? liveData.label : null;
+    const statusColor = liveData ? liveData.color : 'gray';
     const detailedUnit = liveData?.unit_detailed || employee.department_name || 'Ana Birim';
     const managerName = liveData?.manager_name || '-';
     const secondaryRoles = liveData?.secondary_roles || [];
 
-    // Status Badge Helpers
-    const getBadgeStyle = (color) => {
-        switch (color) {
-            case 'green': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-            case 'amber': return 'bg-amber-100 text-amber-700 border-amber-200';
-            default: return 'bg-slate-100 text-slate-600 border-slate-200';
-        }
+    const statusDotColor = statusColor === 'green' ? 'bg-emerald-400' : statusColor === 'amber' ? 'bg-amber-400' : 'bg-slate-300';
+    const statusBgColor = statusColor === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : statusColor === 'amber' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200';
+
+    const headerGradients = {
+        'blue': 'from-blue-600 to-blue-700',
+        'emerald': 'from-emerald-600 to-emerald-700',
+        'indigo': 'from-indigo-600 to-indigo-700',
+        'amber': 'from-amber-600 to-amber-700',
+        'rose': 'from-rose-600 to-rose-700',
+        'cyan': 'from-cyan-600 to-cyan-700',
+        'violet': 'from-violet-600 to-violet-700',
+        'slate': 'from-slate-600 to-slate-700',
     };
+    const gradient = headerGradients[colorKey] || headerGradients['slate'];
 
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-scale-in" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
-                <div className="bg-blue-600 p-6 text-white text-center relative shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/20 transition-colors"
-                    >
-                        <ChevronDown className="rotate-180" size={24} />
+                <div className={`bg-gradient-to-br ${gradient} p-5 text-white relative shrink-0`}>
+                    <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/20 transition-colors">
+                        <XIcon size={18} />
                     </button>
 
-                    <div className="w-24 h-24 mx-auto bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-4xl font-bold mb-4 border-4 border-white/30 shadow-xl">
-                        {employee.name.charAt(0)}
+                    <div className="flex items-center gap-4">
+                        <div className="relative shrink-0">
+                            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-2xl font-bold border-2 border-white/30">
+                                {employee.name.charAt(0)}
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${employee.is_online ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="text-xl font-bold truncate">{employee.name}</h2>
+                            <p className="text-white/80 text-sm mt-0.5 truncate">
+                                {(!employee.title || employee.title === 'Temp') ? 'Unvan Belirtilmemiş' : employee.title}
+                            </p>
+                            {/* Inline live status */}
+                            {loading ? (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-white/50 animate-pulse" />
+                                    <span className="text-xs text-white/60">Durum yükleniyor...</span>
+                                </div>
+                            ) : displayStatus && (
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium">
+                                    <div className={`w-2 h-2 rounded-full ${statusDotColor}`} />
+                                    {displayStatus}
+                                    {liveData?.check_in && <span className="text-white/60 ml-1">({liveData.check_in})</span>}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-bold">{employee.name}</h2>
-                    <p className="text-blue-100 font-medium text-base mt-1">
-                        {(!employee.title || employee.title === 'Temp') ? 'Unvan Belirtilmemiş' : employee.title}
-                    </p>
                 </div>
 
-                {/* Scrollable Content */}
-                <div className="p-6 space-y-6 overflow-y-auto">
-
-                    {/* Live Status Card */}
-                    <div className={`p-4 rounded-xl border-l-4 shadow-sm flex items-center justify-between ${getBadgeStyle(statusColor).replace('bg-', 'bg-opacity-50 bg-')}`}>
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-wide opacity-70">Canlı Durum</p>
-                            <h3 className="text-lg font-bold flex items-center gap-2">
-                                {loading ? (
-                                    <span className="animate-pulse">Yükleniyor...</span>
-                                ) : (
-                                    <span>{displayStatus}</span>
-                                )}
-                            </h3>
-                        </div>
-                        <div className="text-right">
-                            {liveData?.check_in && (
-                                <p className="text-sm font-medium">Giriş: {liveData.check_in}</p>
-                            )}
-                            {liveData?.duration && (
-                                <p className="text-xs opacity-75">{liveData.duration}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        {/* Unit Info (Renamed to Departman) */}
-                        <div className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                                <Building size={24} />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500 font-bold uppercase">Departman</p>
-                                <p className="text-sm font-semibold text-slate-800 break-words leading-snug mt-1">
-                                    {detailedUnit}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Manager Info (Replaced Job Description) */}
-                        <div className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                                <User size={24} />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500 font-bold uppercase">Yönetici</p>
-                                <p className="text-sm font-semibold text-slate-800 break-words leading-snug mt-1">
-                                    {managerName}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Secondary Roles (Matrix) */}
-                        {secondaryRoles.length > 0 && (
-                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                                <p className="text-xs text-amber-700 font-bold mb-2 uppercase tracking-wide">Diğer Görevler (Matrix)</p>
-                                <ul className="space-y-2">
-                                    {secondaryRoles.map((role, idx) => (
-                                        <li key={idx} className="flex items-center gap-2 text-sm text-amber-900 font-medium">
-                                            <Star size={14} className="fill-amber-500 text-amber-500" />
-                                            {role}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                {/* Content */}
+                <div className="p-4 space-y-3 overflow-y-auto">
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                        <InfoCell icon={<Building size={16} />} label="Departman" value={detailedUnit} color="blue" />
+                        <InfoCell icon={<User size={16} />} label="Yönetici" value={managerName} color="indigo" />
+                        {liveData?.duration && (
+                            <InfoCell icon={<Clock size={16} />} label="Süre" value={liveData.duration} color="emerald" />
                         )}
-
-                        {employee.functional_groups && employee.functional_groups.length > 0 && (
-                            <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                                <p className="text-xs text-blue-600 font-bold mb-2 uppercase tracking-wide">Fonksiyonel Gruplar</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {employee.functional_groups.map((group, idx) => (
-                                        <span key={idx} className="px-2 py-1 bg-white text-blue-700 text-xs font-medium rounded border border-blue-200 shadow-sm">
-                                            {group}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
+                        {employee.is_secondary && (
+                            <InfoCell icon={<Star size={16} />} label="Atama" value="İkincil Görevlendirme" color="amber" />
                         )}
                     </div>
+
+                    {/* Secondary Roles */}
+                    {secondaryRoles.length > 0 && (
+                        <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-100">
+                            <p className="text-[10px] text-amber-600 font-bold mb-1.5 uppercase tracking-wider">Diğer Görevler</p>
+                            <div className="space-y-1">
+                                {secondaryRoles.map((role, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5 text-xs text-amber-800 font-medium">
+                                        <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+                                        <span className="truncate">{role}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Functional Groups */}
+                    {employee.functional_groups?.length > 0 && (
+                        <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+                            <p className="text-[10px] text-blue-600 font-bold mb-1.5 uppercase tracking-wider">Fonksiyonel Gruplar</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {employee.functional_groups.map((group, idx) => (
+                                    <span key={idx} className="px-2 py-0.5 bg-white text-blue-700 text-[11px] font-medium rounded-md border border-blue-200">
+                                        {group}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0">
+                <div className="px-4 pb-4 pt-1 shrink-0">
                     <button
                         onClick={() => { onClose(); navigate(`/employees/${employee.id}`); }}
-                        className="text-sm text-blue-600 font-bold hover:underline"
+                        className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-sm hover:shadow-md transition-all"
                     >
                         Tam Profili Görüntüle
                     </button>
@@ -267,8 +251,29 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
     );
 };
 
-// Horizontal Employee Card (Compact)
-// Horizontal Employee Card (Compact)
+const InfoCell = ({ icon, label, value, color }) => {
+    const colors = {
+        blue: 'bg-blue-50 text-blue-600',
+        indigo: 'bg-indigo-50 text-indigo-600',
+        emerald: 'bg-emerald-50 text-emerald-600',
+        amber: 'bg-amber-50 text-amber-600',
+        slate: 'bg-slate-50 text-slate-600',
+    };
+    const iconColor = colors[color] || colors.slate;
+    return (
+        <div className="flex items-start gap-2.5 p-2.5 bg-slate-50/80 rounded-lg border border-slate-100">
+            <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${iconColor}`}>
+                {icon}
+            </div>
+            <div className="min-w-0">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{label}</p>
+                <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">{value}</p>
+            </div>
+        </div>
+    );
+};
+
+// Employee Card
 const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }) => {
     const category = getRoleCategory(emp.title);
     const colorKey = getColorForCategory(category);
@@ -292,10 +297,10 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
             onDragLeave={dnd ? () => dnd.handleDragLeave() : undefined}
             onDrop={dnd ? (e) => dnd.handleDrop(e, { ...empData, type: 'employee' }) : undefined}
             className={`
-                relative z-10 p-1.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
-                bg-white ${theme.border} ${theme.text}
-                flex flex-row items-center gap-2
-                w-[170px] h-[48px] group /* Fixed compact width/height */
+                relative z-10 p-2 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
+                bg-white ${theme.border}
+                flex flex-row items-center gap-2.5
+                w-[190px] group
                 ${isDragSource ? 'opacity-40 scale-95' : ''}
                 ${isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : ''}
                 ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
@@ -307,29 +312,27 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
             onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
             onContextMenu={isEditMode && onContextMenu ? (e) => onContextMenu(e, empData) : undefined}
         >
-            {/* Avatar Left with Status Dot */}
+            {/* Avatar */}
             <div className="relative shrink-0">
                 <div className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm
+                    w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold
                     ${emp.is_secondary ? 'bg-amber-100 text-amber-700' : `${theme.badge} text-white`}
                 `}>
                     {emp.name.charAt(0)}
                 </div>
-                {/* Online/Offline Status Dot */}
                 <div
-                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${emp.is_online ? 'bg-emerald-500' : 'bg-slate-300'
-                        }`}
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-white ${emp.is_online ? 'bg-emerald-500' : 'bg-slate-300'}`}
                     title={emp.is_online ? 'Şirkette' : 'Dışarıda'}
                 />
             </div>
 
-            {/* Info Right */}
+            {/* Info */}
             <div className="flex flex-col min-w-0 flex-1">
-                <h4 className="font-bold text-[10px] leading-tight truncate text-slate-900">
+                <h4 className="font-bold text-[11px] leading-tight truncate text-slate-800">
                     {emp.name}
                 </h4>
                 {(!emp.title || emp.title === 'Temp') ? null : (
-                    <p className="text-[9px] font-medium opacity-80 truncate mt-0.5">
+                    <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
                         {emp.title}
                     </p>
                 )}
@@ -344,7 +347,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
     );
 };
 
-// White Department Card
+// Department Card
 const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd }) => {
     const isDragTarget = dnd?.dropTargetId === node.id;
 
@@ -355,38 +358,32 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd })
         onDrop={dnd ? (e) => dnd.handleDrop(e, { id: node.id, name: node.name, type: 'department' }) : undefined}
         onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
         className={`
-            relative z-10 p-3 rounded-xl border-l-4 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer
-            bg-white border-slate-200 border-l-emerald-500 text-slate-800
-            min-w-[220px] max-w-[260px] group
+            relative z-10 px-4 py-3 rounded-xl border shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg
+            bg-gradient-to-b from-white to-slate-50 border-slate-200 text-slate-800
+            min-w-[180px] max-w-[240px] group
             ${isDragTarget ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}
         `}
-        onClick={(e) => {
-            e.stopPropagation();
-        }}
+        onClick={(e) => { e.stopPropagation(); }}
     >
-        <div className="flex flex-col items-center gap-2">
-            {/* Icon */}
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 mb-1">
-                <Building size={18} />
+        <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                <Building size={16} />
             </div>
-
-            <div className="text-center px-2">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-slate-800 leading-tight">
-                    {node.name}
-                </h3>
-            </div>
-
-            {/* Edit Actions */}
-            {isEditMode && (
-                <div className="absolute -top-3 -right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-1.5 bg-blue-100 text-blue-600 rounded-full shadow hover:bg-blue-200" title="Düzenle"><Edit size={14} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} className="p-1.5 bg-emerald-100 text-emerald-600 rounded-full shadow hover:bg-emerald-200" title="Alt Birim Ekle"><PlusCircle size={14} /></button>
-                    {(!node.children || node.children.length === 0) && (!node.employees || node.employees.length === 0) && (
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} className="p-1.5 bg-red-100 text-red-600 rounded-full shadow hover:bg-red-200" title="Sil"><Trash2 size={14} /></button>
-                    )}
-                </div>
-            )}
+            <h3 className="font-bold text-xs uppercase tracking-wide text-slate-700 leading-tight">
+                {node.name}
+            </h3>
         </div>
+
+        {/* Edit Actions */}
+        {isEditMode && (
+            <div className="absolute -top-2.5 -right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-1.5 bg-blue-100 text-blue-600 rounded-full shadow hover:bg-blue-200" title="Düzenle"><Edit size={12} /></button>
+                <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} className="p-1.5 bg-emerald-100 text-emerald-600 rounded-full shadow hover:bg-emerald-200" title="Alt Birim Ekle"><PlusCircle size={12} /></button>
+                {(!node.children || node.children.length === 0) && (!node.employees || node.employees.length === 0) && (
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} className="p-1.5 bg-red-100 text-red-600 rounded-full shadow hover:bg-red-200" title="Sil"><Trash2 size={12} /></button>
+                )}
+            </div>
+        )}
     </div>
     );
 };
@@ -1054,15 +1051,13 @@ const OrganizationChart = () => {
             </div>
 
             <style>{`
-    /* Tree CSS - Robust Flexbox Implementation */
     .tree ul {
-        padding-top: 40px; /* Increased vertical spacing */
+        padding-top: 32px;
         position: relative;
-        transition: all 0.5s;
+        transition: all 0.3s;
         display: flex;
         justify-content: center;
-        gap: 40px; /* Reduced for mobile friendliness */
-        /* Ensure the container can grow wide enough */
+        gap: 24px;
         width: max-content;
         min-width: 100%;
     }
@@ -1071,60 +1066,45 @@ const OrganizationChart = () => {
         text-align: center;
         list-style-type: none;
         position: relative;
-        padding: 40px 10px 0 10px;
-        transition: all 0.5s;
+        padding: 32px 6px 0 6px;
+        transition: all 0.3s;
         display: flex;
         flex-direction: column;
         align-items: center;
-        
-        /* CRITICAL: Prevent shrinking */
         flex-shrink: 0;
     }
 
-    /* Connectors */
     .tree li::before, .tree li::after {
         content: '';
         position: absolute;
         top: 0;
         right: 50%;
-        border-top: 2px solid #cbd5e1;
-        /* CRITICAL FIX: Bridge the 40px gap. 50% + half-gap (20px) */
-        width: calc(50% + 20px);
-        height: 40px; /* Match padding-top */
+        border-top: 1.5px solid #94a3b8;
+        width: calc(50% + 12px);
+        height: 32px;
         z-index: -1;
     }
 
     .tree li::after {
         right: auto;
         left: 50%;
-        border-left: 2px solid #cbd5e1;
+        border-left: 1.5px solid #94a3b8;
     }
 
-    /* Only Child: No horizontal connectors needed at top */
     .tree li:only-child::after, .tree li:only-child::before {
         display: none;
     }
 
-    /* Only Child: Remove top padding */
     .tree li:only-child {
         padding-top: 0;
     }
-
-    /* First Child: Remove left connector logic is TRICKY with gap */
-    /* With gap, the lines might break if we just use width 50%. */
-    /* Alternative approach: Use Pseudoelements on the PARENT UL? No, classic nested set. */
-    
-    /* Adjusted Logic for Gap Support: */
-    /* Instead of width 50%, we might need to rely on the fact that ::before/::after are absolute to the LI */
-    /* If we have gap, the line needs to extend? No, connecting lines are purely internal to the LI space towards the parent. */
-    /* The Horizontal line connects sibling centers effectively. */
 
     .tree li:first-child::before {
         border: 0 none;
     }
 
     .tree li:first-child::after {
-        border-radius: 5px 0 0 0;
+        border-radius: 4px 0 0 0;
     }
 
     .tree li:last-child::after {
@@ -1132,19 +1112,18 @@ const OrganizationChart = () => {
     }
 
     .tree li:last-child::before {
-        border-right: 2px solid #cbd5e1;
-        border-radius: 0 5px 0 0;
+        border-right: 1.5px solid #94a3b8;
+        border-radius: 0 4px 0 0;
     }
 
-    /* Vertical connector from Parent down to Children */
     .tree ul ul::before {
         content: '';
         position: absolute;
         top: 0;
         left: 50%;
-        border-left: 2px solid #cbd5e1;
+        border-left: 1.5px solid #94a3b8;
         width: 0;
-        height: 40px; /* Match new spacing */
+        height: 32px;
         transform: translateX(-50%);
         z-index: -1;
     }
