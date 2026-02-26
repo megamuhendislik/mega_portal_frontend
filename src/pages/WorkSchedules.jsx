@@ -849,7 +849,15 @@ const PeriodsSettingsForm = ({ data, refresh }) => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {periods.map(p => {
-                        const isCurrentMonth = new Date().getMonth() + 1 === p.month && new Date().getFullYear() === p.year;
+                        // Detect fiscal month: if day >= 26, we're in next month's fiscal period
+                        const _today = new Date();
+                        const _fiscalMonth = _today.getDate() >= 26
+                            ? (_today.getMonth() + 2 > 12 ? 1 : _today.getMonth() + 2)
+                            : _today.getMonth() + 1;
+                        const _fiscalYear = _today.getDate() >= 26 && _today.getMonth() === 11
+                            ? _today.getFullYear() + 1
+                            : _today.getFullYear();
+                        const isCurrentMonth = _fiscalMonth === p.month && _fiscalYear === p.year;
                         const edits = editedPeriods[p.id] || {};
                         const isEdited = !!editedPeriods[p.id];
                         const currentStart = edits.start_date ?? p.start_date;

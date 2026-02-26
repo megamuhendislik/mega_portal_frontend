@@ -6,8 +6,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function AttendanceDiagTab() {
-    const [year, setYear] = useState(new Date().getFullYear());
-    const [month, setMonth] = useState(new Date().getMonth() + 1);
+    const [year, setYear] = useState(() => { const d = new Date(); return d.getDate() >= 26 && d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear(); });
+    const [month, setMonth] = useState(() => { const d = new Date(); return d.getDate() >= 26 ? (d.getMonth() + 2 > 12 ? 1 : d.getMonth() + 2) : d.getMonth() + 1; });
     const [allMonths, setAllMonths] = useState(false);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);

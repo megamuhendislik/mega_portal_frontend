@@ -399,7 +399,7 @@ const YearlyView = ({ data }) => {
     );
 };
 
-const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth() + 1, employeeId, onDateClick }) => {
+const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = (() => { const d = new Date(); return d.getDate() >= 26 ? (d.getMonth() + 2 > 12 ? 1 : d.getMonth() + 2) : d.getMonth() + 1; })(), employeeId, onDateClick }) => {
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
     const [monthlyTrendData, setMonthlyTrendData] = useState([]);

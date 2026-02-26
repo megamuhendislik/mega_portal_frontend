@@ -7,8 +7,8 @@ const AttendanceDebugger = () => {
     const [selectedEmp, setSelectedEmp] = useState('');
     const [debugData, setDebugData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [month, setMonth] = useState(new Date().getMonth() + 1);
-    const [year, setYear] = useState(new Date().getFullYear());
+    const [month, setMonth] = useState(() => { const d = new Date(); return d.getDate() >= 26 ? (d.getMonth() + 2 > 12 ? 1 : d.getMonth() + 2) : d.getMonth() + 1; });
+    const [year, setYear] = useState(() => { const d = new Date(); return d.getDate() >= 26 && d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear(); });
 
     useEffect(() => {
         fetchEmployees();
