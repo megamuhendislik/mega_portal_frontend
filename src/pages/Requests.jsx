@@ -99,6 +99,7 @@ const MyRequestsSection = ({
             _sortDate: r.start_date || r.created_at,
             leave_type_name: requestTypes.find(t => t.id === r.request_type)?.name,
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
+            approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
         overtimeRequests.forEach(r => items.push({
             ...r,
@@ -248,24 +249,24 @@ const TeamRequestsSection = ({
         // Normalize Incoming Requests (Pending / Potential)
         const incoming = incomingRequests.map(r => ({
             ...r,
-            employee_name: r.employee_detail?.full_name || r.employee?.name || r.employee?.first_name + ' ' + r.employee?.last_name,
-            employee_department: r.employee_detail?.department_name || r.employee?.department?.name || '',
-            employee_avatar: r.employee_detail?.avatar || r.employee?.avatar,
+            employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
+            employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
+            employee_position: r.employee_position || '',
+            employee_avatar: r.employee_avatar || r.employee_detail?.avatar || r.employee?.avatar,
             start_date: r.start_date || r.date || r.created_at,
-            // Ensure type is consistent
-            type: r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN'),
-            // Normalize target_approver for display
-            target_approver_name: r.approver_target?.name || r.target_approver_name || null,
+            type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN')),
+            target_approver_name: r.target_approver_name || r.approver_target?.name || null,
         }));
 
         // Normalize History Requests (Approved / Rejected)
         const history = teamHistoryRequests.map(r => ({
             ...r,
-            employee_name: r.employee_detail?.full_name || r.employee?.first_name + ' ' + r.employee?.last_name,
-            employee_department: r.employee_detail?.department_name || '',
-            employee_avatar: r.employee_detail?.avatar,
+            employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
+            employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
+            employee_position: r.employee_position || '',
+            employee_avatar: r.employee_avatar || r.employee_detail?.avatar || r.employee?.avatar,
             start_date: r.start_date || r.date || r.created_at,
-            type: r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN'),
+            type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || (r.leave_type_name ? 'LEAVE' : 'UNKNOWN')),
         }));
 
         // Combine and dedup by ID just in case

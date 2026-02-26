@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import {
     ArrowUpDown, Calendar, Clock, CheckCircle2, XCircle, AlertCircle,
     FileText, Utensils, CreditCard, ChevronRight, User, MoreHorizontal,
-    Check, X, Eye, Edit2, Trash2
+    Check, X, Eye, Edit2, Trash2, ArrowRight
 } from 'lucide-react';
 
-const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true }) => {
+const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true, showApproverColumn = true }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -134,6 +134,9 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                 <div className="flex items-center gap-1">Tarih <ArrowUpDown size={12} /></div>
                             </th>
                             <th className="p-2 sm:p-3 md:p-4 font-bold">Detay / Süre</th>
+                            {showApproverColumn && (
+                                <th className="p-2 sm:p-3 md:p-4 font-bold">Onay Bilgisi</th>
+                            )}
                             <th className="p-2 sm:p-3 md:p-4 font-bold">Durum</th>
                             <th className="p-2 sm:p-3 md:p-4 font-bold text-right">İşlemler</th>
                         </tr>
@@ -141,7 +144,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                     <tbody className="divide-y divide-slate-50">
                         {sortedRequests.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="p-12 text-center text-slate-400">
+                                <td colSpan={4 + (showEmployeeColumn ? 1 : 0) + (showApproverColumn ? 1 : 0)} className="p-12 text-center text-slate-400">
                                     <div className="flex flex-col items-center justify-center gap-3">
                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
                                             <FileText size={24} className="opacity-50" />
@@ -286,20 +289,56 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     {req.reason || req.description}
                                                 </p>
                                             )}
-                                            {/* Target Approver (PENDING durumda) */}
-                                            {req.status === 'PENDING' && (req.target_approver_name || req.target_approver_detail?.full_name || req.approver_target?.name) && (
-                                                <p className="text-[11px] text-blue-500 font-medium">
-                                                    Onaya giden: {req.target_approver_name || req.target_approver_detail?.full_name || req.approver_target?.name}
-                                                </p>
-                                            )}
-                                            {/* Approved by */}
-                                            {req.approved_by_name && req.status === 'APPROVED' && (
-                                                <p className="text-[11px] text-slate-400 font-medium">
-                                                    Onaylayan: {req.approved_by_name}
-                                                </p>
-                                            )}
                                         </div>
                                     </td>
+
+                                    {/* Onay Bilgisi */}
+                                    {showApproverColumn && (
+                                        <td className="p-4">
+                                            <div className="space-y-1">
+                                                {/* PENDING: Onaya giden kisi */}
+                                                {req.status === 'PENDING' && (req.target_approver_name || req.target_approver_detail?.full_name || req.approver_target?.name) && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <ArrowRight size={12} className="text-blue-400 shrink-0" />
+                                                        <div>
+                                                            <div className="text-sm font-bold text-blue-700 truncate max-w-[140px]">
+                                                                {req.target_approver_name || req.target_approver_detail?.full_name || req.approver_target?.name}
+                                                            </div>
+                                                            <div className="text-[10px] text-blue-400 font-medium">Onay Bekliyor</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* APPROVED: Onaylayan kisi */}
+                                                {['APPROVED', 'ORDERED'].includes(req.status) && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                                                        <div>
+                                                            <div className="text-sm font-bold text-emerald-700 truncate max-w-[140px]">
+                                                                {req.approved_by_name || req.target_approver_name || '-'}
+                                                            </div>
+                                                            <div className="text-[10px] text-emerald-400 font-medium">Onaylayan</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* REJECTED: Reddeden kisi */}
+                                                {req.status === 'REJECTED' && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <XCircle size={12} className="text-red-400 shrink-0" />
+                                                        <div>
+                                                            <div className="text-sm font-bold text-red-700 truncate max-w-[140px]">
+                                                                {req.approved_by_name || req.target_approver_name || '-'}
+                                                            </div>
+                                                            <div className="text-[10px] text-red-400 font-medium">Reddeden</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* No approver info */}
+                                                {!req.target_approver_name && !req.target_approver_detail?.full_name && !req.approver_target?.name && !req.approved_by_name && (
+                                                    <span className="text-xs text-slate-300">-</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
 
                                     {/* Status */}
                                     <td className="p-4">

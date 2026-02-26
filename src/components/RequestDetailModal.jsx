@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Clock, Calendar, FileText, AlertCircle, Shield, Lock, CheckCircle, XCircle, Briefcase } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, Shield, Lock, CheckCircle, XCircle, Briefcase, User } from 'lucide-react';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -232,10 +232,28 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               {getStatusBadge(request.status)}
             </div>
 
-            {request.employee_name && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-600">Talep Eden</span>
-                <span className="text-sm font-semibold text-slate-800">{request.employee_name}</span>
+            {/* Talep Eden Bilgisi */}
+            {(request.employee_name || request.employee?.name) && (
+              <div className="bg-white rounded-xl p-4 border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm border border-slate-200">
+                    <User size={18} />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">{request.employee_name || request.employee?.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                      {(request.employee_department || request.employee?.department) && (
+                        <span>{request.employee_department || request.employee?.department}</span>
+                      )}
+                      {request.employee_position && (
+                        <>
+                          <span className="text-slate-300">·</span>
+                          <span>{request.employee_position}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -350,6 +368,55 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                   </span>
                 </div>
               </>
+            )}
+
+            {/* Calisan Aylik Calisma Ozeti — Fazla Mesai Talepleri */}
+            {requestType === 'OVERTIME' && request.employee_monthly_stats && (
+              <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock size={16} className="text-amber-600" />
+                  <h4 className="text-sm font-bold text-amber-700">Aylik Calisma Ozeti</h4>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                  <div className="bg-white p-2.5 rounded-lg border border-amber-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Hedef</span>
+                    <span className="block font-black text-slate-700 text-lg">{request.employee_monthly_stats.target_hours}s</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-amber-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Tamamlanan</span>
+                    <span className="block font-black text-emerald-600 text-lg">{request.employee_monthly_stats.completed_hours}s</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-amber-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Eksik</span>
+                    <span className={`block font-black text-lg ${request.employee_monthly_stats.missing_hours > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {request.employee_monthly_stats.missing_hours}s
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-center mb-3">
+                  <div className="bg-white p-2 rounded-lg border border-amber-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Net Bakiye</span>
+                    <span className={`block font-bold text-sm ${request.employee_monthly_stats.is_surplus ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {request.employee_monthly_stats.is_surplus ? '+' : ''}{request.employee_monthly_stats.net_balance_hours}s
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-amber-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Calisan Gun</span>
+                    <span className="block font-bold text-sm text-slate-700">{request.employee_monthly_stats.worked_days}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs bg-white/60 p-2 rounded-lg border border-amber-100">
+                  <span className="text-slate-600">
+                    OT Onayli: <span className="font-bold text-emerald-700">{request.employee_monthly_stats.ot_requests_approved}</span>
+                  </span>
+                  <span className="text-slate-600">
+                    OT Bekleyen: <span className="font-bold text-amber-700">{request.employee_monthly_stats.ot_requests_pending}</span>
+                  </span>
+                  <span className="text-slate-600">
+                    Toplam OT: <span className="font-bold text-slate-800">{request.employee_monthly_stats.ot_total_approved_minutes} dk</span>
+                  </span>
+                </div>
+              </div>
             )}
 
             {requestType === 'CARDLESS_ENTRY' && (
