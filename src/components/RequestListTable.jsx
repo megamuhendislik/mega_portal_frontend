@@ -2,10 +2,30 @@ import React, { useState } from 'react';
 import {
     ArrowUpDown, Calendar, Clock, CheckCircle2, XCircle, AlertCircle,
     FileText, Utensils, CreditCard, ChevronRight, User, MoreHorizontal,
-    Check, X, Eye, Edit2, Trash2, ArrowRight
+    Check, X, Eye, Edit2, Trash2, ArrowRight, ArrowRightLeft, Users
 } from 'lucide-react';
 
-const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true, showApproverColumn = true }) => {
+const SourceBadge = ({ source, principalName }) => {
+    const config = {
+        DIRECT: { label: 'Doğrudan', bg: 'bg-blue-50', text: 'text-blue-700', icon: <User size={10} /> },
+        INDIRECT: { label: 'Dolaylı', bg: 'bg-purple-50', text: 'text-purple-700', icon: <Users size={10} /> },
+        SUBSTITUTE: { label: 'Vekalet', bg: 'bg-orange-50', text: 'text-orange-700', icon: <ArrowRightLeft size={10} /> },
+    };
+    const c = config[source];
+    if (!c) return null;
+    return (
+        <div className="flex flex-col gap-0.5">
+            <span className={`${c.bg} ${c.text} px-2 py-0.5 rounded text-[10px] font-bold inline-flex items-center gap-1 w-fit`}>
+                {c.icon} {c.label}
+            </span>
+            {principalName && (
+                <span className="text-[10px] text-orange-600 font-medium truncate max-w-[120px]">{principalName} adına</span>
+            )}
+        </div>
+    );
+};
+
+const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true, showApproverColumn = true, showSourceBadge = false }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -145,6 +165,9 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                             {showApproverColumn && (
                                 <th className="p-2 sm:p-3 md:p-4 font-bold">Yönetici</th>
                             )}
+                            {showSourceBadge && (
+                                <th className="p-2 sm:p-3 md:p-4 font-bold">Kaynak</th>
+                            )}
                             <th className="p-2 sm:p-3 md:p-4 font-bold">Durum</th>
                             <th className="p-2 sm:p-3 md:p-4 font-bold text-right">İşlemler</th>
                         </tr>
@@ -152,7 +175,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                     <tbody className="divide-y divide-slate-50">
                         {sortedRequests.length === 0 ? (
                             <tr>
-                                <td colSpan={6 + (showEmployeeColumn ? 1 : 0) + (showApproverColumn ? 1 : 0)} className="p-12 text-center text-slate-400">
+                                <td colSpan={6 + (showEmployeeColumn ? 1 : 0) + (showApproverColumn ? 1 : 0) + (showSourceBadge ? 1 : 0)} className="p-12 text-center text-slate-400">
                                     <div className="flex flex-col items-center justify-center gap-3">
                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
                                             <FileText size={24} className="opacity-50" />
@@ -357,6 +380,13 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     <span className="text-xs text-slate-300">-</span>
                                                 )}
                                             </div>
+                                        </td>
+                                    )}
+
+                                    {/* Source Badge */}
+                                    {showSourceBadge && (
+                                        <td className="p-4">
+                                            <SourceBadge source={req._source} principalName={req._principalName} />
                                         </td>
                                     )}
 

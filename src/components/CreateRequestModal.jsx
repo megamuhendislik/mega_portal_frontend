@@ -14,7 +14,7 @@ import {
 // ... (Inside Component)
 
 
-const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData }) => {
+const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData, onOvertimeTabSwitch }) => {
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
 
@@ -640,7 +640,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             </button>
 
             <button
-                onClick={() => handleTypeSelect('OVERTIME')}
+                onClick={() => {
+                    if (onOvertimeTabSwitch) {
+                        onClose();
+                        onOvertimeTabSwitch();
+                    } else {
+                        handleTypeSelect('OVERTIME');
+                    }
+                }}
                 className="group relative p-5 bg-white border border-slate-200 rounded-2xl hover:border-amber-500 hover:shadow-xl hover:shadow-amber-500/10 transition-all text-left flex items-center gap-5"
             >
                 <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform shrink-0">
