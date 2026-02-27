@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import {
-    Clock, Calendar, XCircle, Users, Plus, Loader2,
+    Clock, Calendar, XCircle, Users, Plus, Loader2, CheckCircle2,
     ChevronDown, ChevronRight, Zap, PenLine, FileText, Send, TrendingUp,
     ClipboardList, CalendarCheck, X, LayoutList, UserCheck,
     LogIn, LogOut, Coffee, Briefcase, Sun, Moon
@@ -291,6 +291,178 @@ const GroupAccordion = ({ name, count, children, defaultOpen = true }) => {
                 <CountBadge count={count} color="emerald" />
             </button>
             {open && <div className="border-t border-slate-100 p-2 space-y-1">{children}</div>}
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// REQUEST CARD (for "Tüm Ek Mesai Taleplerim")
+// ═══════════════════════════════════════════════════════════
+
+const RequestCard = ({ req, onCancel }) => {
+    const d = new Date(req.date + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const monthName = MONTH_NAMES[d.getMonth()];
+    const approverName = ['APPROVED', 'REJECTED'].includes(req.status)
+        ? (req.approval_manager_name || req.target_approver_name)
+        : req.target_approver_name;
+
+    return (
+        <div className="rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-all overflow-hidden">
+            <div className="flex">
+                <div className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 bg-slate-50">
+                    <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName}</span>
+                    <span className="text-[10px] font-bold text-slate-400 mt-0.5">{dayName}</span>
+                </div>
+                <div className="flex-1 p-3 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <SourcePill type={req.source_type} />
+                        <StatusPill status={req.status} />
+                        {req.start_time && req.end_time && (
+                            <span className="text-xs text-slate-500 font-medium">
+                                {req.start_time?.slice(0, 5)} – {req.end_time?.slice(0, 5)}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                        {req.duration_seconds > 0 && (
+                            <span className="text-slate-500">
+                                Süre: <strong className="text-slate-700">{formatDuration(req.duration_seconds)}</strong>
+                            </span>
+                        )}
+                        {approverName && (
+                            <span className="flex items-center gap-1 text-slate-400">
+                                {req.status === 'APPROVED' && <CheckCircle2 size={10} className="text-emerald-500" />}
+                                {req.status === 'PENDING' && <Clock size={10} className="text-amber-500" />}
+                                {req.status === 'REJECTED' && <XCircle size={10} className="text-red-400" />}
+                                {req.status === 'PENDING' ? 'Onay: ' : req.status === 'APPROVED' ? 'Onaylayan: ' : 'Reddeden: '}
+                                <span className="font-bold text-slate-600">{approverName}</span>
+                            </span>
+                        )}
+                    </div>
+                    {req.reason && (
+                        <div className="text-[11px] text-slate-400 mt-1 truncate max-w-sm">{req.reason}</div>
+                    )}
+                    {req.rejection_reason && req.status === 'REJECTED' && (
+                        <div className="text-[11px] text-red-500 mt-0.5 flex items-center gap-1">
+                            <XCircle size={10} /> Ret sebebi: {req.rejection_reason}
+                        </div>
+                    )}
+                </div>
+                <div className="flex flex-col items-end justify-center px-3 flex-shrink-0">
+                    {req.status === 'PENDING' && (
+                        <button onClick={onCancel}
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                            <XCircle size={10} /> İptal
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// ASSIGNMENT CARD (for "Oluşturduklarım" team tab)
+// ═══════════════════════════════════════════════════════════
+
+const AssignmentCard = ({ assignment, onCancel }) => {
+    const d = new Date(assignment.date + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const monthName = MONTH_NAMES[d.getMonth()];
+
+    return (
+        <div className="rounded-xl border border-slate-100 bg-white hover:border-emerald-200 transition-all overflow-hidden">
+            <div className="flex">
+                <div className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 bg-slate-50">
+                    <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName}</span>
+                    <span className="text-[10px] font-bold text-slate-400 mt-0.5">{dayName}</span>
+                </div>
+                <div className="flex-1 p-3 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-sm text-slate-800">{assignment.employee_name}</span>
+                        <AssignmentPill assignment={assignment} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                        <span>Maks <strong className="text-slate-700">{assignment.max_duration_hours} sa</strong></span>
+                        {assignment.employee_department && (
+                            <span className="flex items-center gap-1">
+                                <Briefcase size={10} className="text-slate-400" />
+                                {assignment.employee_department}
+                            </span>
+                        )}
+                    </div>
+                    {assignment.task_description && (
+                        <div className="text-[11px] text-slate-400 mt-1 truncate max-w-sm">{assignment.task_description}</div>
+                    )}
+                </div>
+                <div className="flex flex-col items-end justify-center px-3 flex-shrink-0">
+                    {assignment.status === 'ASSIGNED' && (
+                        <button onClick={() => onCancel(assignment)}
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                            <XCircle size={10} /> İptal
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// TEAM ITEM CARD (for "Ekip Talepleri" accordion items)
+// ═══════════════════════════════════════════════════════════
+
+const TeamItemCard = ({ item, onCancel }) => {
+    const d = new Date(item.date + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const monthName = MONTH_NAMES[d.getMonth()];
+
+    return (
+        <div className="rounded-lg border border-slate-50 bg-white hover:border-emerald-100 transition-all overflow-hidden">
+            <div className="flex">
+                <div className="w-[60px] flex-shrink-0 flex flex-col items-center justify-center py-2 bg-slate-50/70">
+                    <span className="text-lg font-black text-slate-800 leading-none">{dayNum}</span>
+                    <span className="text-[9px] font-bold text-slate-500 mt-0.5">{monthName}</span>
+                    <span className="text-[9px] font-bold text-slate-400 mt-0.5">{dayName}</span>
+                </div>
+                <div className="flex-1 p-2.5 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <span className="font-bold text-sm text-slate-800">{item.employee_name}</span>
+                        {item._type === 'assignment'
+                            ? <AssignmentPill assignment={item} />
+                            : <><SourcePill type={item.source_type} /><StatusPill status={item.status} /></>
+                        }
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                        {item._type === 'assignment' && (
+                            <span>Maks <strong className="text-slate-700">{item.max_duration_hours} sa</strong></span>
+                        )}
+                        {item._type === 'request' && item.duration_seconds > 0 && (
+                            <span>Süre: <strong className="text-slate-700">{formatDuration(item.duration_seconds)}</strong></span>
+                        )}
+                        {item.assigned_by_name && (
+                            <span>Atayan: <strong className="text-slate-600">{item.assigned_by_name}</strong></span>
+                        )}
+                    </div>
+                    {(item.task_description || item.reason) && (
+                        <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description || item.reason}</div>
+                    )}
+                </div>
+                {item._type === 'assignment' && item.status === 'ASSIGNED' && onCancel && (
+                    <div className="flex items-center px-2.5">
+                        <button onClick={() => onCancel(item)}
+                            className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                            <XCircle size={10} /> İptal
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -744,31 +916,9 @@ const AssignedOvertimeTab = () => {
                         {filteredRequests.length === 0
                             ? <EmptyState text="Ek mesai talebiniz bulunmuyor." />
                             : (
-                                <div className="space-y-1.5">
+                                <div className="space-y-2">
                                     {filteredRequests.map(req => (
-                                        <div key={req.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-slate-200 transition-all">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <span className="font-bold text-sm text-slate-800">{formatDateShort(req.date)}</span>
-                                                    <SourcePill type={req.source_type} />
-                                                    <StatusPill status={req.status} />
-                                                </div>
-                                                <div className="text-xs text-slate-500 mt-0.5">
-                                                    {req.start_time && req.end_time && `${req.start_time?.slice(0, 5)} – ${req.end_time?.slice(0, 5)} · `}
-                                                    {formatDuration(req.duration_seconds)}
-                                                    {req.reason && <> · <span className="text-slate-400">{req.reason.slice(0, 50)}{req.reason.length > 50 ? '…' : ''}</span></>}
-                                                </div>
-                                                {req.rejection_reason && req.status === 'REJECTED' && (
-                                                    <div className="text-xs text-red-500 mt-0.5">Sebep: {req.rejection_reason}</div>
-                                                )}
-                                            </div>
-                                            {req.status === 'PENDING' && (
-                                                <button onClick={() => setCancelModal({ open: true, target: req })}
-                                                    className="flex-shrink-0 ml-3 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-lg transition-colors flex items-center gap-1">
-                                                    <XCircle size={11} /> İptal
-                                                </button>
-                                            )}
-                                        </div>
+                                        <RequestCard key={req.id} req={req} onCancel={() => setCancelModal({ open: true, target: req })} />
                                     ))}
                                 </div>
                             )
@@ -819,27 +969,9 @@ const AssignedOvertimeTab = () => {
                             {filteredMyCreated.length === 0
                                 ? <EmptyState text="Oluşturduğunuz atama bulunmuyor." />
                                 : (
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-2">
                                         {filteredMyCreated.map(a => (
-                                            <div key={a.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-emerald-200 transition-all">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-sm text-slate-800">{a.employee_name}</span>
-                                                        <AssignmentPill assignment={a} />
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">
-                                                        {formatDateShort(a.date)} · Maks {a.max_duration_hours} sa
-                                                        {a.employee_department && <> · {a.employee_department}</>}
-                                                    </div>
-                                                    {a.task_description && <div className="text-xs text-slate-400 mt-0.5 truncate max-w-sm">{a.task_description}</div>}
-                                                </div>
-                                                {a.status === 'ASSIGNED' && (
-                                                    <button onClick={() => handleCancelAssignment(a)}
-                                                        className="flex-shrink-0 ml-3 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-lg transition-colors">
-                                                        İptal
-                                                    </button>
-                                                )}
-                                            </div>
+                                            <AssignmentCard key={a.id} assignment={a} onCancel={handleCancelAssignment} />
                                         ))}
                                     </div>
                                 )
@@ -878,32 +1010,7 @@ const AssignedOvertimeTab = () => {
                                         {teamGroups.map(group => (
                                             <GroupAccordion key={group.name} name={group.name} count={group.items.length}>
                                                 {group.items.map(item => (
-                                                    <div key={item._key} className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-50 hover:border-emerald-100 transition-all">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                                                <span className="font-bold text-sm text-slate-800">{item.employee_name}</span>
-                                                                {item._type === 'assignment'
-                                                                    ? <AssignmentPill assignment={item} />
-                                                                    : <><SourcePill type={item.source_type} /><StatusPill status={item.status} /></>
-                                                                }
-                                                            </div>
-                                                            <div className="text-xs text-slate-500 mt-0.5">
-                                                                {formatDateShort(item.date)}
-                                                                {item._type === 'assignment' && <> · Maks {item.max_duration_hours} sa</>}
-                                                                {item._type === 'request' && item.duration_seconds && <> · {formatDuration(item.duration_seconds)}</>}
-                                                                {item.assigned_by_name && <> · Atayan: {item.assigned_by_name}</>}
-                                                            </div>
-                                                            {(item.task_description || item.reason) && (
-                                                                <div className="text-xs text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description || item.reason}</div>
-                                                            )}
-                                                        </div>
-                                                        {item._type === 'assignment' && item.status === 'ASSIGNED' && (
-                                                            <button onClick={() => handleCancelAssignment(item)}
-                                                                className="flex-shrink-0 ml-2 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-lg transition-colors">
-                                                                İptal
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    <TeamItemCard key={item._key} item={item} onCancel={item._type === 'assignment' ? handleCancelAssignment : null} />
                                                 ))}
                                             </GroupAccordion>
                                         ))}
