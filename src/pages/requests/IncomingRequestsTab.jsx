@@ -40,6 +40,9 @@ const IncomingRequestsTab = ({
                 employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
                 employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
                 employee_position: r.employee_position || '',
+                target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
+                approved_by_name: r.approved_by_name || r.approved_by_detail?.full_name || '',
+                leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
                 start_date: r.start_date || r.date || r.created_at,
                 type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN'),
                 _source: r.level === 'direct' ? 'DIRECT' : 'INDIRECT',
@@ -47,9 +50,10 @@ const IncomingRequestsTab = ({
             });
         });
 
-        // 2. History (don't duplicate)
+        // 2. History (leave requests only — don't duplicate)
         (teamHistoryRequests || []).forEach(r => {
-            const key = `${r.type}-${r.id}`;
+            const histType = r.type || 'LEAVE'; // team_history only returns leave requests
+            const key = `${histType}-${r.id}`;
             if (incomingIds.has(key)) return;
             const empId = r.employee?.id || r.employee;
             items.push({
@@ -57,8 +61,11 @@ const IncomingRequestsTab = ({
                 employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
                 employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
                 employee_position: r.employee_position || '',
+                target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
+                approved_by_name: r.approved_by_name || r.approved_by_detail?.full_name || '',
+                leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
                 start_date: r.start_date || r.date || r.created_at,
-                type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN'),
+                type: histType,
                 _source: directSubordinateIds.has(empId) ? 'DIRECT' : 'INDIRECT',
                 _isSubstitute: false,
             });

@@ -156,7 +156,6 @@ const MyRequestsTab = ({
                         onViewDetails={handleViewDetails}
                         onEdit={handleEditOvertimeClick}
                         onDelete={handleDeleteRequest}
-                        showEmployeeColumn={false}
                     />
                 </div>
             )}

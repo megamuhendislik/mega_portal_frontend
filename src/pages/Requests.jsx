@@ -192,8 +192,9 @@ const Requests = () => {
     const handleEditOvertimeClick = (r) => { setEditOvertimeForm({ id: r.id, start_time: r.start_time, end_time: r.end_time, reason: r.reason }); setShowEditOvertimeModal(true); };
     const handleResubmitOvertime = (r) => { setCreateModalInitialData({ type: 'OVERTIME', data: r }); setShowCreateModal(true); };
 
-    const handleDeleteRequest = async (r, t) => {
+    const handleDeleteRequest = async (r) => {
         if (!window.confirm('Emin misiniz?')) return;
+        const t = r.type || r._type;
         try {
             if (t === 'LEAVE') await api.delete(`/leave/requests/${r.id}/`);
             else if (t === 'OVERTIME') await api.delete(`/overtime-requests/${r.id}/`);

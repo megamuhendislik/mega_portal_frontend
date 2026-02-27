@@ -430,7 +430,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             {(req.status === 'PENDING' || req.status === 'POTENTIAL') && onApprove && (
                                                 <>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); onApprove(req.id, 'Hızlı Onay'); }}
+                                                        onClick={(e) => { e.stopPropagation(); onApprove(req, 'Hızlı Onay'); }}
                                                         className="w-8 h-8 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
                                                         title="Onayla"
                                                     >
@@ -476,7 +476,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                             <button
                                 onClick={() => {
                                     if (rejectReason.trim()) {
-                                        onReject(selectedRequest.id, rejectReason);
+                                        onReject(selectedRequest, rejectReason);
                                         setShowRejectModal(false);
                                     } else {
                                         alert('Lütfen bir sebep giriniz.');
