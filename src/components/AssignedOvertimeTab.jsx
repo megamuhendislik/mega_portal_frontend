@@ -216,12 +216,27 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                     {item.task_description && (
                         <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description}</div>
                     )}
+                    {item.is_rejected && item.rejection_reason && (
+                        <div className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
+                            <XCircle size={10} /> Ret sebebi: {item.rejection_reason}
+                        </div>
+                    )}
                 </div>
 
                 {/* Action */}
-                <div className="flex items-center px-3 flex-shrink-0">
-                    {claimed ? (
-                        <Pill color={type === 'potential' ? 'purple' : 'blue'}>Talep Edildi</Pill>
+                <div className="flex flex-col items-end justify-center gap-1.5 px-3 flex-shrink-0">
+                    {item.claim_status === 'APPROVED' ? (
+                        <Pill color="emerald">Onaylandı</Pill>
+                    ) : item.claim_status === 'PENDING' ? (
+                        <Pill color="amber">Bekliyor</Pill>
+                    ) : item.is_rejected ? (
+                        <>
+                            <Pill color="red">Reddedildi</Pill>
+                            <button onClick={onClaim}
+                                className="px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700">
+                                <Send size={10} /> Tekrar Talep
+                            </button>
+                        </>
                     ) : type === 'intended' && !(item.actual_overtime_hours > 0) ? (
                         <Pill color="slate">Bekleniyor</Pill>
                     ) : (
