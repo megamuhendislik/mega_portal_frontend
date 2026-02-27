@@ -37,24 +37,24 @@ const helpContent = [
             }
         ],
         tips: [
-            { type: 'info', text: 'Tolerans Türleri: Sistemde iki farklı tolerans vardır. (1) Servis Toleransı — vardiya başlangıç/bitiş saatlerine yakın okutmaları vardiya saatine yuvarlar. Örneğin vardiyası 09:00 olan biri 08:57\'de okutsa, giriş 09:00 olarak kaydedilir. (2) Geç Kalma Toleransı (varsayılan 15 dk) — vardiya bitiş saatinden sonraki kısa süre için uzatma penceresi oluşturur. Bu süre içindeki çıkış, normal mesai olarak değerlendirilir ve fazla mesai oluşturmaz.' },
-            { type: 'info', text: 'Mola Hesaplama: Günlük mola hakkı (varsayılan 30 dk) toplam çalışma sürenizden otomatik düşülür. Gün içinde çıkış-giriş arasındaki boşluklar "potansiyel mola" olarak hesaplanır. Mola hakkınızı aşarsanız, aşan kısım çalışma sürenizden kesilir.' },
-            { type: 'warning', text: 'Çıkış yapmadan (kart okutmadan) ayrılmayın! Kayıt "AÇIK" kalır ve gece yarısı (00:01) otomatik görevi bu kaydı vardiya bitiş saatinde kapatır. Bu durum istenmeyen "Potansiyel Ek Mesai" kaydı oluşturabilir ve puantajınızda yanlış veriler görünür. Her zaman çıkışta kart okutun.' },
+            { type: 'info', text: 'Tolerans Türleri: Sistemde iki farklı tolerans vardır. (1) Servis Toleransı — Servis kullanan personel için vardiya başlangıç/bitiş saatlerine yakın okutmaları vardiya saatine yuvarlar. Örneğin vardiyası 08:00 olan biri 07:57\'de okutsa (veya 08:03\'te okutsa), giriş 08:00 olarak kaydedilir. (2) Geç Kalma Toleransı (30 dk) — vardiya bitiş saatinden sonraki kısa süre için uzatma penceresi oluşturur. Bu süre içindeki çıkış, normal mesai olarak değerlendirilir ve fazla mesai oluşturmaz.' },
+            { type: 'info', text: 'Mola Hesaplama: Günlük mola hakkı (varsayılan 30 dk) toplam çalışma sürenizden otomatik düşülür. Gün içinde çıkış-giriş arasındaki boşluklar "potansiyel mola" olarak hesaplanır. Mola hakkınızı aşarsanız, aşan kısım çalışma sürenizden kesilir. Mola hakkının kullanılabilmesi için çıkış yaptıktan sonra normal mesai saatleri içerisinde tekrar giriş yapmanız gerekmektedir!' },
+            { type: 'warning', text: 'Çıkış yapmadan (kart okutmadan) ayrılmayın! Kayıt "AÇIK" kalır ve gece yarısı (00:01) otomatik görevi bu kaydı vardiya bitiş saatinde kapatır. Bu durum istenmeyen "Potansiyel Ek Mesai" kaydı oluşturabilir ve puantajınızda yanlış veriler görünür. Her zaman çıkışta ve girişte kart okutun.' },
             { type: 'success', text: 'Kart okutucunuz arızalıysa veya kartınızı unuttaysanız Talepler sayfasından "Kartsız Giriş Talebi" oluşturabilirsiniz. Bu talep yöneticinizin onayına gider ve onaylandığında puantaj kaydınız oluşturulur.' }
         ],
         faq: [
             { q: 'Kart okutmayı unuttum, ne yapmalıyım?', a: 'Talepler sayfasından "Kartsız Giriş Talebi" oluşturun. Giriş ve çıkış saatlerinizi belirtin. Talep yöneticinize gider ve onaylandığında puantaj kaydınız oluşturulur. Bu talepler geçmiş 2 mali ay içindeki tarihler için verilebilir.' },
-            { q: 'Gece vardiyasında çalışıyorum, kayıtlarım nasıl hesaplanır?', a: 'Gece vardiyası özelliği aktifse, gece yarısını geçen kayıtlar Celery gece görevi tarafından otomatik olarak bölünür. Her takvim günü için ayrı puantaj kaydı oluşturulur. Bu özellik sistem yöneticisi tarafından açılıp kapatılabilir.' },
+            { q: 'Gece fazla mesai yaptım, kayıtlarım nasıl hesaplanır?', a: 'Gece 00:00\'ı geçen kayıtlar, sistem tarafından otomatik kapatılır (kartsız çıkışları ayıklamak için), eğer ki 00:00 dan sonra mesaiye devam etmeniz gerekiyorsa lütfen kartınızla çıkış ve giriş yapın!' },
             { q: 'Mola sürem neden azalıyor?', a: 'Gün içinde her çıkış-giriş arası "potansiyel mola" olarak sayılır. Toplam potansiyel mola süreniz (çıkış-giriş arasındaki tüm boşluklar) üst menüdeki mola göstergesinde takip edilir. Günlük mola hakkı (genellikle 30 dk) otomatik olarak çalışma sürenizden düşülür.' },
             { q: 'Birden fazla giriş/çıkış kaydım var, bu normal mi?', a: 'Evet. Gün içinde her kart okutma bir giriş veya çıkış olarak kaydedilir (tek-çift sıralama). Sistem tüm kayıtları birleştirerek toplam çalışma sürenizi hesaplar. Aradaki boşluklar mola olarak değerlendirilir.' },
-            { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya bitiş saatinizin ardından geç kalma toleransını (varsayılan 15 dk) aştığınızda, ek çalışma süreniz otomatik olarak hesaplanır. Günlük toplam fazla mesai minimum eşik süresini (varsayılan 15 dk) geçerse, sistem otomatik "Potansiyel Ek Mesai" kaydı oluşturur. Bu eşiğin altındaki süre sıfırlanır — yani 10 dk fazla çalışma kaydedilmez.' }
+            { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya bitişini aştığınızda, ek çalışma süreniz otomatik olarak hesaplanır. Günlük toplam fazla mesai minimum eşik süresini (varsayılan 30 dk) geçerse, sistem otomatik "Potansiyel Ek Mesai" kaydı oluşturur. Bu eşiğin altındaki süre sıfırlanır — yani 10 dk fazla çalışma kaydedilmez.' }
         ]
     },
     {
         id: 'izin-talepleri',
         title: 'İzin Talepleri',
         icon: CalendarDays,
-        description: 'Yıllık izin, avans izin başvurusu, FIFO düşüm sistemi ve izin bakiyesi takibi',
+        description: 'Yıllık izin, avans izin başvurusu, sıralı düşüm sistemi ve izin bakiyesi takibi',
         permission: null,
         link: '/requests',
         images: [
@@ -63,7 +63,7 @@ const helpContent = [
         steps: [
             {
                 title: 'İzin Bakiyesi Kontrolü',
-                description: 'Talepler sayfasında izin bakiyenizi görebilirsiniz. Toplam hak ediş, kullanılan gün, avans kullanımı ve kalan bakiye bilgileri özet kartlarda gösterilir. Bakiye hesaplaması FIFO (ilk hak edilen ilk düşülür) yöntemiyle yapılır.'
+                description: 'Talepler sayfasında izin bakiyenizi görebilirsiniz. Toplam hak ediş, kullanılan gün, avans kullanımı ve kalan bakiye bilgileri özet kartlarda gösterilir. Bakiye hesaplaması "İlk Hak Edilen → İlk Düşülür" yöntemiyle yapılır; en eski hak edişiniz önce kullanılır.'
             },
             {
                 title: 'Yeni İzin Talebi Oluşturma',
@@ -75,11 +75,11 @@ const helpContent = [
             },
             {
                 title: 'İzin İptali',
-                description: 'Henüz onaylanmamış ("Bekleyen") talepleri kendiniz iptal edebilirsiniz. Onaylanmış izinlerin iptali için sistem yöneticinize başvurun — onaylanan izin gün sayısı FIFO bakiyesine geri yüklenir.'
+                description: 'Henüz onaylanmamış ("Bekleyen") talepleri kendiniz iptal edebilirsiniz. Onaylanmış izinlerin iptali için sistem yöneticinize başvurun — onaylanan izin gün sayısı bakiyenize geri yüklenir.'
             }
         ],
         tips: [
-            { type: 'info', text: 'FIFO Düşüm: İzin günleri "İlk Hak Edilen → İlk Düşülür" kuralıyla çalışır. Birden fazla hak ediş döneminiz varsa, en eski dönemdeki bakiye önce kullanılır. Bu sistemle devir izinleri doğru takip edilir.' },
+            { type: 'info', text: 'Sıralı Düşüm: İzin günleri "İlk Hak Edilen → İlk Düşülür" kuralıyla çalışır. Birden fazla hak ediş döneminiz varsa, en eski dönemdeki bakiye önce kullanılır. Bu sistemle devir izinleri doğru takip edilir.' },
             { type: 'warning', text: 'Avans İzin: Henüz hak etmediğiniz günleri önceden kullanmanızdır. Bakiyeniz negatife düşebilir. Avans kullanımı ayrıca takip edilir (annual_leave_advance_used) ve gelecek hak edişlerinizden otomatik düşülür. İzin iadesi yapılırsa önce avans bakiyesi iade edilir.' },
             { type: 'success', text: 'Geriye dönük izin talebi 2 mali ay penceresi içinde verilebilir. Örneğin Şubat dönemindeyseniz (26 Ocak – 25 Şubat), Aralık dönemine kadar geriye dönük talep oluşturabilirsiniz.' }
         ],
@@ -87,7 +87,7 @@ const helpContent = [
             { q: 'Kaç gün izin hakkım var?', a: 'İzin hakkınız kıdeminize göre belirlenir: 1-5 yıl: 14 gün, 5-15 yıl: 20 gün, 15+ yıl: 26 gün (yasal minimum). Talepler sayfasında güncel bakiyenizi ve her hak ediş döneminin kalan gün sayısını görebilirsiniz.' },
             { q: 'Avans izin nedir?', a: 'Henüz hak etmediğiniz izin günlerini önceden kullanmanızdır. Yönetici onayı gerektirir. Kıdem şartı aranmaz. Kullanılan avans, gelecek hak edişlerinizden otomatik düşülür ve ayrı bir sayaçta (avans kullanımı) takip edilir.' },
             { q: 'Mazeret izni nasıl kullanırım?', a: 'İzin talebi oluştururken "Mazeret İzni" türünü seçin. Evlilik, doğum, vefat gibi yasal mazeret izinleri yıllık izin hakkınızdan düşülmez. Mazeret izin günleri kanunla belirlenmiştir.' },
-            { q: 'Bakiyemde kullanılan günler neden farklı görünüyor?', a: 'FIFO sistemi nedeniyle, izin kullanımı farklı hak ediş dönemlerinden düşülmüş olabilir. Her dönemin kalan bakiyesi ayrıca gösterilir. Hak edişi sıfıra inmiş dönemler listeden düşer.' }
+            { q: 'Bakiyemde kullanılan günler neden farklı görünüyor?', a: 'Sıralı düşüm sistemi nedeniyle, izin kullanımı farklı hak ediş dönemlerinden düşülmüş olabilir. Her dönemin kalan bakiyesi ayrıca gösterilir. Hak edişi sıfıra inmiş dönemler listeden düşer.' }
         ]
     },
     {
