@@ -32,6 +32,7 @@ const STAGES = [
     { id: 10, name: 'Tolerans & Normal Mesai', icon: ClockIcon, color: 'orange', description: '33 test — Geç kalma toleransı (uzatma bölgesi), servis toleransı (snap), mola entegrasyonu (break credit, potential_break), normal mesai hesaplama (bucket dağılımı, öğle kesintisi, OT ayrışımı)' },
     { id: 11, name: 'Mazeret İzni', icon: ExclamationCircleIcon, color: 'amber', description: '42 test — ExcuseLeaveEntitlement model (lazy init, unique, defaults), EXCUSE_LEAVE validasyon (4.5sa/gün, 18sa/yıl kota, aynı gün engeli), onay/red/iptal bakiye akışı, excuse-balance API, Dashboard stats, Celery yıllık reset, saat hesaplama edge case\'leri' },
     { id: 12, name: 'Kart Okuyucu & Gate Service', icon: ShieldCheckIcon, color: 'blue', description: '65 test — Temel giriş/çıkış, duplicate detection, GateEventLog, fallback mekanizması (race condition), refresh_from_db, shift split entegrasyonu, midnight split, E2E senaryolar' },
+    { id: 13, name: 'İzin Formu Validasyon & Preview', icon: ClipboardDocumentCheckIcon, color: 'violet', description: '37 test — İzin türü filtreleme (ANNUAL_LEAVE + EXCUSE_LEAVE), mazeret izni tarih validasyonu (yıl içi + 2 mali dönem geriye), mali dönem sınır testleri (26/25 geçişi), excuse-balance API (recent_requests, bakiye preview, sıralama), oluşturma validasyonları, yıllık izin bakiye kontrolleri' },
 ];
 
 export default function SpecTestsTab() {
