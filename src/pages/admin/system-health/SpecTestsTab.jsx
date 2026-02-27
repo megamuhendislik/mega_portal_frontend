@@ -16,6 +16,7 @@ import {
     WrenchScrewdriverIcon,
     PauseCircleIcon,
     CloudArrowDownIcon,
+    ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -29,6 +30,7 @@ const STAGES = [
     { id: 8, name: 'Potansiyel Mola', icon: PauseCircleIcon, color: 'teal', description: '16 test — potential_break_seconds model alanı, tek/çoklu mola hesaplama, hak aşımı, break vs potential farkı, live-status endpoint mola bilgileri' },
     { id: 9, name: 'Yedekleme & Geri Yükleme', icon: CloudArrowDownIcon, color: 'sky', description: '32 test — JSON/CSV export, import yetki kontrolleri, dry-run simülasyon, UPSERT davranışı, round-trip veri bütünlüğü, validasyon kuralları' },
     { id: 10, name: 'Tolerans & Normal Mesai', icon: ClockIcon, color: 'orange', description: '33 test — Geç kalma toleransı (uzatma bölgesi), servis toleransı (snap), mola entegrasyonu (break credit, potential_break), normal mesai hesaplama (bucket dağılımı, öğle kesintisi, OT ayrışımı)' },
+    { id: 11, name: 'Mazeret İzni', icon: ExclamationCircleIcon, color: 'amber', description: '42 test — ExcuseLeaveEntitlement model (lazy init, unique, defaults), EXCUSE_LEAVE validasyon (4.5sa/gün, 18sa/yıl kota, aynı gün engeli), onay/red/iptal bakiye akışı, excuse-balance API, Dashboard stats, Celery yıllık reset, saat hesaplama edge case\'leri' },
 ];
 
 export default function SpecTestsTab() {
