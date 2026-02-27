@@ -31,6 +31,7 @@ const STAGES = [
     { id: 9, name: 'Yedekleme & Geri Yükleme', icon: CloudArrowDownIcon, color: 'sky', description: '32 test — JSON/CSV export, import yetki kontrolleri, dry-run simülasyon, UPSERT davranışı, round-trip veri bütünlüğü, validasyon kuralları' },
     { id: 10, name: 'Tolerans & Normal Mesai', icon: ClockIcon, color: 'orange', description: '33 test — Geç kalma toleransı (uzatma bölgesi), servis toleransı (snap), mola entegrasyonu (break credit, potential_break), normal mesai hesaplama (bucket dağılımı, öğle kesintisi, OT ayrışımı)' },
     { id: 11, name: 'Mazeret İzni', icon: ExclamationCircleIcon, color: 'amber', description: '42 test — ExcuseLeaveEntitlement model (lazy init, unique, defaults), EXCUSE_LEAVE validasyon (4.5sa/gün, 18sa/yıl kota, aynı gün engeli), onay/red/iptal bakiye akışı, excuse-balance API, Dashboard stats, Celery yıllık reset, saat hesaplama edge case\'leri' },
+    { id: 12, name: 'Kart Okuyucu & Gate Service', icon: ShieldCheckIcon, color: 'blue', description: '65 test — Temel giriş/çıkış, duplicate detection, GateEventLog, fallback mekanizması (race condition), refresh_from_db, shift split entegrasyonu, midnight split, E2E senaryolar' },
 ];
 
 export default function SpecTestsTab() {
@@ -184,7 +185,7 @@ export default function SpecTestsTab() {
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        9 aşamalı otomatik test — target_spec.md gereksinimlerini doğrular
+                        12 aşamalı otomatik test — target_spec.md gereksinimlerini doğrular
                     </p>
                 </div>
                 <button

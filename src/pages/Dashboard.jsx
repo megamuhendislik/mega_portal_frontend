@@ -194,7 +194,7 @@ const Dashboard = () => {
             </div>
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
                 <StatCard
                     title="BUGÜN ÇALIŞMA"
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
@@ -217,109 +217,108 @@ const Dashboard = () => {
                     color="emerald"
                 />
 
-                {/* 4. Annual Leave StatCard (Revamp) */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-all duration-300 relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">YILLIK İZİN DURUMU</p>
-                        <div className="p-2 rounded-lg bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
-                            <Briefcase size={20} />
+                {/* 4. Unified Leave Card — Annual + Excuse side by side */}
+                <div className="col-span-1 md:col-span-2 lg:col-span-2 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    {/* Card Header */}
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">İZİN DURUMU</p>
+                        <div className="flex items-center gap-1.5">
+                            <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                                <Briefcase size={16} />
+                            </div>
+                            <div className="p-1.5 rounded-lg bg-orange-50 text-orange-600">
+                                <Clock size={16} />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-end mb-4">
-                        <div>
-                            <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-                                {monthlySummary?.annual_leave_balance || 0}
-                            </span>
-                            <span className="text-xs font-bold text-slate-400 ml-1">GÜN</span>
-                            <p className="text-[10px] text-slate-400 font-medium mt-1">
-                                Bu Yıl Kullanılan: <span className="text-amber-600 font-bold">{monthlySummary?.annual_leave_used_this_year || 0} Gün</span>
+                    {/* Two Sections Side by Side */}
+                    <div className="grid grid-cols-2 gap-0">
+                        {/* LEFT — Yıllık İzin */}
+                        <div className="pr-3 border-r border-slate-100">
+                            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mb-1">YILLIK İZİN</p>
+                            <div className="flex items-baseline gap-1 mb-1">
+                                <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                                    {monthlySummary?.annual_leave_balance || 0}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400">GÜN</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-medium">
+                                Kullanılan: <span className="text-amber-600 font-bold">{monthlySummary?.annual_leave_used_this_year || 0} Gün</span>
                             </p>
-                        </div>
 
-                        <div className="text-right">
-                            <div className="flex flex-col items-end">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">SIRADAKİ İZİN</span>
-                                {monthlySummary?.next_leave_request ? (
-                                    <div className="text-right">
-                                        <span className="block text-sm font-bold text-blue-600">
-                                            {monthlySummary.next_leave_request.start_date.split('-').slice(1).reverse().join('.')}
-                                        </span>
-                                        <span className="text-[10px] font-medium text-slate-400">
-                                            {monthlySummary.next_leave_request.total_days} Gün
-                                        </span>
-                                    </div>
+                            {/* Next Leave */}
+                            {monthlySummary?.next_leave_request && (
+                                <div className="mt-2 pt-2 border-t border-slate-50">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">SIRADAKİ İZİN</span>
+                                    <span className="text-xs font-bold text-blue-600">
+                                        {monthlySummary.next_leave_request.start_date.split('-').slice(1).reverse().join('.')}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 ml-1">
+                                        ({monthlySummary.next_leave_request.total_days} Gün)
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Accrual Progress */}
+                            <div className="mt-2 pt-2 border-t border-slate-50">
+                                {monthlySummary?.days_to_next_accrual !== undefined ? (
+                                    <>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[9px] font-bold text-indigo-500 uppercase">YENİLEME</span>
+                                            <span className="text-[9px] font-bold text-indigo-600">{monthlySummary.days_to_next_accrual} Gün</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                            <div
+                                                className="h-full bg-indigo-500 rounded-full"
+                                                style={{ width: `${Math.max(0, Math.min(100, (365 - monthlySummary.days_to_next_accrual) / 365 * 100))}%` }}
+                                            />
+                                        </div>
+                                    </>
                                 ) : (
-                                    <span className="text-xs font-bold text-slate-300">-</span>
+                                    <span className="text-[9px] text-slate-400 italic">İşe giriş tarihi eksik.</span>
                                 )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Progress Bar for Next Accrual */}
-                    {monthlySummary?.days_to_next_accrual !== undefined ? (
-                        <div className="pt-3 border-t border-slate-50">
-                            <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-[10px] font-bold text-indigo-500 uppercase">YILLIK İZİN YENİLEMESİNE KALAN</span>
-                                <span className="text-[10px] font-bold text-indigo-600">{monthlySummary.days_to_next_accrual} Gün</span>
+                        {/* RIGHT — Mazeret İzni */}
+                        <div className="pl-3">
+                            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wide mb-1">MAZERET İZNİ</p>
+                            <div className="flex items-baseline gap-1 mb-1">
+                                <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                                    {monthlySummary?.excuse_leave_hours_remaining != null
+                                        ? monthlySummary.excuse_leave_hours_remaining
+                                        : 18}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400">SAAT</span>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                    className="h-full bg-indigo-500 rounded-full"
-                                    style={{ width: `${Math.max(0, Math.min(100, (365 - monthlySummary.days_to_next_accrual) / 365 * 100))}%` }}
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="pt-3 border-t border-slate-50">
-                            <span className="text-[10px] text-slate-400 italic">İşe giriş tarihi eksik.</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* 5. Excuse Leave StatCard */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-all duration-300 relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">MAZERET İZNİ</p>
-                        <div className="p-2 rounded-lg bg-orange-50 text-orange-600 transition-colors group-hover:bg-orange-100">
-                            <Clock size={20} />
-                        </div>
-                    </div>
-
-                    <div className="flex justify-between items-end mb-4">
-                        <div>
-                            <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-                                {monthlySummary?.excuse_leave_hours_remaining != null
-                                    ? monthlySummary.excuse_leave_hours_remaining
-                                    : 18}
-                            </span>
-                            <span className="text-xs font-bold text-slate-400 ml-1">SAAT</span>
-                            <p className="text-[10px] text-slate-400 font-medium mt-1">
+                            <p className="text-[10px] text-slate-400 font-medium">
                                 Kullanılan: <span className="text-amber-600 font-bold">
                                     {monthlySummary?.excuse_leave_hours_used || 0} Saat
                                 </span>
                             </p>
-                        </div>
 
-                        <div className="text-right">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 block">GÜNLÜK MAX</span>
-                            <span className="block text-sm font-bold text-orange-600">4.5 Saat</span>
-                        </div>
-                    </div>
+                            {/* Daily Max */}
+                            <div className="mt-2 pt-2 border-t border-slate-50">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">GÜNLÜK MAX</span>
+                                <span className="text-xs font-bold text-orange-600">4.5 Saat</span>
+                            </div>
 
-                    {/* Progress Bar */}
-                    <div className="pt-3 border-t border-slate-50">
-                        <div className="flex justify-between items-center mb-1.5">
-                            <span className="text-[10px] font-bold text-orange-500 uppercase">YILLIK KOTA KULLANIMI</span>
-                            <span className="text-[10px] font-bold text-orange-600">
-                                {monthlySummary?.excuse_leave_hours_used || 0} / {monthlySummary?.excuse_leave_hours_entitled || 18} sa
-                            </span>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div
-                                className="h-full bg-orange-400 rounded-full transition-all"
-                                style={{ width: `${Math.min(100, ((monthlySummary?.excuse_leave_hours_used || 0) / (monthlySummary?.excuse_leave_hours_entitled || 18)) * 100)}%` }}
-                            />
+                            {/* Quota Progress */}
+                            <div className="mt-2 pt-2 border-t border-slate-50">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[9px] font-bold text-orange-500 uppercase">KOTA</span>
+                                    <span className="text-[9px] font-bold text-orange-600">
+                                        {monthlySummary?.excuse_leave_hours_used || 0}/{monthlySummary?.excuse_leave_hours_entitled || 18}sa
+                                    </span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                    <div
+                                        className="h-full bg-orange-400 rounded-full transition-all"
+                                        style={{ width: `${Math.min(100, ((monthlySummary?.excuse_leave_hours_used || 0) / (monthlySummary?.excuse_leave_hours_entitled || 18)) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
