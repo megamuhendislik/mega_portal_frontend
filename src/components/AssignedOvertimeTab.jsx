@@ -186,6 +186,31 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                         </div>
                     )}
 
+                    {/* Segment bilgisi (V3 parçalı mesai) */}
+                    {type === 'potential' && item.start_time && item.end_time && (
+                        <div className="flex items-center gap-2 text-[11px] text-purple-700 mb-1.5">
+                            <Clock size={10} />
+                            <span className="font-bold">{item.start_time} – {item.end_time}</span>
+                            {item.segments && item.segments.length > 1 && (
+                                <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 text-[9px] font-extrabold">
+                                    {item.segments.length} parça
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {type === 'potential' && item.segments && item.segments.length > 1 && (
+                        <div className="space-y-0.5 mb-1.5 ml-3 border-l-2 border-purple-100 pl-2">
+                            {item.segments.map((seg, si) => (
+                                <div key={si} className="text-[10px] text-purple-500 flex items-center gap-1">
+                                    <span className="w-3 h-3 rounded-full bg-purple-100 text-purple-600 text-[8px] font-extrabold flex items-center justify-center flex-shrink-0">
+                                        {si + 1}
+                                    </span>
+                                    {seg.start} – {seg.end}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Özet satırı */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                         {item.total_work_hours > 0 && (
@@ -595,7 +620,10 @@ const AssignedOvertimeTab = () => {
         try {
             const { type, target } = claimModal;
             if (type === 'INTENDED') await api.post(`/overtime-assignments/${target.assignment_id}/claim/`, { reason: reason || undefined });
-            else if (type === 'POTENTIAL') await api.post('/overtime-requests/claim-potential/', { attendance_id: target.attendance_id, reason: reason || undefined });
+            else if (type === 'POTENTIAL') await api.post('/overtime-requests/claim-potential/', {
+                    ...(target.overtime_request_id ? { overtime_request_id: target.overtime_request_id } : { attendance_id: target.attendance_id }),
+                    reason: reason || undefined,
+                });
             setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' });
             fetchData();
         } catch (err) { alert(err.response?.data?.error || 'Talep sırasında hata oluştu.'); }
@@ -847,7 +875,7 @@ const AssignedOvertimeTab = () => {
                                             onClaim={() => setClaimModal({
                                                 open: true, type: 'POTENTIAL', target: item,
                                                 title: 'Plansız Mesai Talep Et',
-                                                subtitle: `${formatDateTurkish(item.date)} — ${item.actual_overtime_hours} saat`,
+                                                subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}–${item.end_time})` : ''} — ${item.actual_overtime_hours} saat`,
                                             })}
                                         />
                                     ))}
