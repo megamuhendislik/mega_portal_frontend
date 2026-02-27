@@ -45,7 +45,6 @@ const HelpLibrary = () => {
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [lightboxImage, setLightboxImage] = useState(null);
     const [lightboxVisible, setLightboxVisible] = useState(false);
-    const hoverTimer = useRef(null);
     const contentRef = useRef(null);
 
     const openLightbox = (img) => {
@@ -58,13 +57,7 @@ const HelpLibrary = () => {
         setTimeout(() => setLightboxImage(null), 300);
     };
 
-    const handleThumbEnter = (img) => {
-        hoverTimer.current = setTimeout(() => openLightbox(img), 200);
-    };
-
-    const handleThumbLeave = () => {
-        if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    };
+    // hover artık lightbox açmıyor — sadece tıklama ile açılır
 
     useEffect(() => {
         if (!lightboxImage) return;
@@ -272,8 +265,6 @@ const HelpLibrary = () => {
                                             <div
                                                 key={i}
                                                 className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white cursor-pointer hover:shadow-xl hover:border-indigo-300 transition-all duration-300"
-                                                onMouseEnter={() => handleThumbEnter(img)}
-                                                onMouseLeave={handleThumbLeave}
                                                 onClick={() => openLightbox(img)}
                                             >
                                                 <div className="relative aspect-video overflow-hidden">
