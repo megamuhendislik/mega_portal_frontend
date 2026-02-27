@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, AlertTriangle, CheckCircle2, ZoomIn, ArrowRight, Hash, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -122,10 +123,10 @@ const HelpLibrary = () => {
                 <div className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
             )}
 
-            {/* Image Lightbox */}
-            {lightboxImage && (
+            {/* Image Lightbox - rendered via portal to escape overflow parent */}
+            {lightboxImage && createPortal(
                 <div
-                    className={`fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12 cursor-pointer transition-all duration-300 ${
+                    className={`fixed inset-0 z-[9999] flex items-center justify-center p-6 md:p-12 cursor-pointer transition-all duration-300 ${
                         lightboxVisible ? 'bg-black/85 backdrop-blur-sm' : 'bg-black/0'
                     }`}
                     onClick={closeLightbox}
@@ -151,7 +152,8 @@ const HelpLibrary = () => {
                     }`}>
                         {lightboxImage.caption}
                     </p>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Sidebar */}
