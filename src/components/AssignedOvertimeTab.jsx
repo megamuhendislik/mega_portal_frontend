@@ -34,6 +34,14 @@ function getStatusConfig(assignment) {
 
     switch (assignment.status) {
         case 'ASSIGNED':
+            if (past && !today && (assignment.actual_overtime_hours == null || assignment.actual_overtime_hours === 0)) {
+                return {
+                    label: 'Süresi Doldu',
+                    color: 'bg-red-100 text-red-700',
+                    icon: <XCircle size={12} />,
+                    canClaim: false,
+                };
+            }
             if (past || today) {
                 return {
                     label: 'Talep Edilebilir',
