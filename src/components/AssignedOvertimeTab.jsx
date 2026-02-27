@@ -894,26 +894,38 @@ export default function AssignedOvertimeTab() {
                         ) : (
                             <div className="divide-y divide-slate-100">
                                 {claimableData.intended.map((item) => {
+                                    const isPast = isDatePast(item.date) && !isDateToday(item.date);
+                                    const hasNoOT = !item.actual_overtime_hours || item.actual_overtime_hours === 0;
+                                    const isExpired = isPast && hasNoOT;
+
                                     return (
-                                        <div key={`intended-${item.assignment_id}`} className="p-5 hover:bg-slate-50/30 transition-all">
+                                        <div key={`intended-${item.assignment_id}`} className={`p-5 transition-all ${isExpired ? 'opacity-50' : 'hover:bg-slate-50/30'}`}>
                                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                                 <div className="flex items-start gap-4 flex-1">
-                                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                                                        isExpired ? 'bg-gradient-to-br from-slate-400 to-slate-500' : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                                                    }`}>
                                                         <Calendar size={20} />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                            <h4 className="font-bold text-slate-800 text-base">
+                                                            <h4 className={`font-bold text-base ${isExpired ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                                                                 {formatDateTurkish(item.date)}
                                                             </h4>
                                                             {item.is_today && (
                                                                 <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full">Bugun</span>
                                                             )}
+                                                            {isExpired && (
+                                                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[11px] font-bold rounded-full flex items-center gap-1">
+                                                                    <XCircle size={10} />
+                                                                    Gerceklesmedi
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 mt-1">
                                                             <span>Atayan: <span className="font-semibold text-slate-700">{item.manager_name || '-'}</span></span>
                                                             <span>Maks: <span className="font-semibold text-violet-700">{item.max_duration_hours} saat</span></span>
-                                                            <span>Gerceklesen: <span className="font-semibold text-emerald-700">{item.actual_overtime_hours ?? '-'} saat</span></span>
+                                                            <span>Gerceklesen: <span className={`font-semibold ${isExpired ? 'text-red-500' : 'text-emerald-700'}`}>{item.actual_overtime_hours ?? '-'} saat</span></span>
                                                         </div>
                                                         {item.task_description && (
                                                             <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
@@ -931,8 +943,8 @@ export default function AssignedOvertimeTab() {
                                                     </div>
                                                 </div>
 
-                                                {/* Claim Button */}
-                                                {!item.already_claimed && (
+                                                {/* Claim Button — hidden for expired items */}
+                                                {!item.already_claimed && !isExpired && (
                                                     <button
                                                         onClick={() => handleOpenIntendedClaim(item)}
                                                         className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
@@ -945,6 +957,12 @@ export default function AssignedOvertimeTab() {
                                                     <span className="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold flex items-center gap-1.5 shrink-0">
                                                         <CheckCircle2 size={16} />
                                                         Talep Edildi
+                                                    </span>
+                                                )}
+                                                {isExpired && !item.already_claimed && (
+                                                    <span className="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-sm font-bold flex items-center gap-1.5 shrink-0">
+                                                        <XCircle size={16} />
+                                                        Suresi Doldu
                                                     </span>
                                                 )}
                                             </div>
