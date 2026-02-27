@@ -66,14 +66,14 @@ const HelpLibrary = () => {
         return () => window.removeEventListener('keydown', handler);
     }, [lightboxImage]);
 
+    const checkPerm = (perm) => {
+        if (!perm) return true;
+        if (Array.isArray(perm)) return perm.some(p => hasPermission(p));
+        return hasPermission(perm);
+    };
+
     const sections = useMemo(() => {
-        return helpContent.filter(section => {
-            if (!section.permission) return true;
-            if (Array.isArray(section.permission)) {
-                return section.permission.some(p => hasPermission(p));
-            }
-            return hasPermission(section.permission);
-        });
+        return helpContent.filter(section => checkPerm(section.permission));
     }, [hasPermission]);
 
     const filteredSections = useMemo(() => {
@@ -93,7 +93,17 @@ const HelpLibrary = () => {
         }
     }, [filteredSections]);
 
-    const currentSection = filteredSections.find(s => s.id === activeSection);
+    const rawSection = filteredSections.find(s => s.id === activeSection);
+    const currentSection = useMemo(() => {
+        if (!rawSection) return null;
+        return {
+            ...rawSection,
+            images: rawSection.images?.filter(item => checkPerm(item.permission)),
+            steps: rawSection.steps?.filter(item => checkPerm(item.permission)),
+            tips: rawSection.tips?.filter(item => checkPerm(item.permission)),
+            faq: rawSection.faq?.filter(item => checkPerm(item.permission)),
+        };
+    }, [rawSection, hasPermission]);
 
     const handleSectionClick = (id) => {
         setActiveSection(id);

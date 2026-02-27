@@ -16,7 +16,7 @@ const helpContent = [
         images: [
             { src: '/help-images/anasayfa.png', caption: 'Ana sayfa — üst başlıkta çalışma süresi, kalan mola ve fazla mesai bilgileri; altta hızlı erişim kartları' },
             { src: '/help-images/mesai-takibi.png', caption: 'Mesai Takibi sayfası — günlük giriş/çıkış saatleri, toplam çalışma süresi ve hesaplanan mola/mesai detayları' },
-            { src: '/help-images/admin-anasayfa.png', caption: 'Yönetici Ana Sayfası — aylık puantaj grafikleri, devamsızlık oranı ve ekip performans özeti' }
+            { src: '/help-images/admin-anasayfa.png', caption: 'Yönetici Ana Sayfası — aylık puantaj grafikleri, devamsızlık oranı ve ekip performans özeti', permission: 'PAGE_EMPLOYEES' }
         ],
         steps: [
             {
@@ -37,7 +37,7 @@ const helpContent = [
             }
         ],
         tips: [
-            { type: 'info', text: 'Tolerans Türleri: Sistemde iki farklı tolerans vardır. (1) Servis Toleransı — Servis kullanan personel için vardiya başlangıç/bitiş saatlerine yakın okutmaları vardiya saatine yuvarlar. Örneğin vardiyası 08:00 olan biri 07:57\'de okutsa (veya 08:03\'te okutsa), giriş 08:00 olarak kaydedilir. (2) Geç Kalma Toleransı (varsayılan 30 dk) — vardiya bitiş saatinden sonraki uzatma penceresidir. Örneğin vardiya bitişi 18:00 ise, 18:30\'a kadar yapılan çıkış normal mesai sayılır ve fazla mesai oluşturmaz. 18:35\'te çıkarsanız 18:00-18:35 arası fazla mesai olarak hesaplanır.' },
+            { type: 'info', text: 'Tolerans Türleri: Sistemde iki farklı tolerans vardır. (1) Servis Toleransı (varsayılan 0 dk, şablonda tanımlanır) — Servis kullanan personel için vardiya başlangıç/bitiş saatlerine yakın okutmaları vardiya saatine yuvarlar. Örneğin 3 dk servis toleransı tanımlıysa vardiyası 08:00 olan biri 07:57\'de okutsa, giriş 08:00 olarak kaydedilir. Servis toleransı 0 ise yuvarlama yapılmaz. (2) Geç Kalma Toleransı (varsayılan 30 dk) — vardiya bitiş saatinden sonraki uzatma penceresidir. Örneğin vardiya bitişi 18:00 ise, 18:30\'a kadar yapılan çıkış normal mesai sayılır ve fazla mesai oluşturmaz. 18:35\'te çıkarsanız 18:00-18:35 arası fazla mesai olarak hesaplanır.' },
             { type: 'info', text: 'Mola Hesaplama: Günlük mola hakkı (varsayılan 30 dk) toplam çalışma sürenizden otomatik düşülür. Gün içinde çıkış-giriş arasındaki boşluklar "potansiyel mola" olarak hesaplanır. Mola hakkınızı aşarsanız, aşan kısım çalışma sürenizden kesilir. Mola hakkının kullanılabilmesi için çıkış yaptıktan sonra normal mesai saatleri içerisinde tekrar giriş yapmanız gerekmektedir!' },
             { type: 'warning', text: 'Çıkış yapmadan (kart okutmadan) ayrılmayın! Kayıt "AÇIK" kalır ve gece yarısı (00:01) otomatik görevi bu kaydı vardiya bitiş saatinde kapatır. Bu durum istenmeyen "Potansiyel Ek Mesai" kaydı oluşturabilir ve puantajınızda yanlış veriler görünür. Her zaman çıkışta ve girişte kart okutun.' },
             { type: 'success', text: 'Kart okutucunuz arızalıysa veya kartınızı unuttaysanız Talepler sayfasından "Kartsız Giriş Talebi" oluşturabilirsiniz. Bu talep yöneticinizin onayına gider ve onaylandığında puantaj kaydınız oluşturulur.' }
@@ -71,7 +71,7 @@ const helpContent = [
             },
             {
                 title: 'Onay Süreci',
-                description: 'Talebiniz önce birincil (doğrudan) yöneticinize gider. Birincil yönetici bulunamazsa çapraz yönetici, departman yöneticisi veya üst hiyerarşi devreye girer. Onay/red bildirimi alırsınız. Onaylanan izinler takvimde gösterilir.'
+                description: 'Talebiniz önce birincil (doğrudan) yöneticinize gider. Birincil yönetici bulunamazsa ikincil yönetici, departman yöneticisi veya üst hiyerarşi devreye girer. Onay/red bildirimi alırsınız. Onaylanan izinler takvimde gösterilir.'
             },
             {
                 title: 'İzin İptali',
@@ -84,7 +84,7 @@ const helpContent = [
             { type: 'success', text: 'Geriye dönük izin talebi 2 mali ay penceresi içinde verilebilir. Örneğin Şubat dönemindeyseniz (26 Ocak – 25 Şubat), Aralık dönemine kadar geriye dönük talep oluşturabilirsiniz.' }
         ],
         faq: [
-            { q: 'Kaç gün izin hakkım var?', a: 'İzin hakkınız kıdeminize göre belirlenir: 1-5 yıl: 14 gün, 5-15 yıl: 20 gün, 15+ yıl: 26 gün (yasal minimum). Talepler sayfasında güncel bakiyenizi ve her hak ediş döneminin kalan gün sayısını görebilirsiniz.' },
+            { q: 'Kaç gün izin hakkım var?', a: 'İzin hakkınız kıdeminize göre belirlenir (İş Kanunu Madde 53): 1–5 yıl (5 yıl dahil): 14 gün, 5 yıldan fazla–15 yıla kadar: 20 gün, 15 yıl ve üzeri: 26 gün. Örneğin tam 5 yıllık kıdeminiz varsa 14 gün, 5 yıl 1 gün olduğunda 20 güne yükselir. Talepler sayfasında güncel bakiyenizi ve her hak ediş döneminin kalan gün sayısını görebilirsiniz.' },
             { q: 'Avans izin nedir?', a: 'Henüz hak etmediğiniz izin günlerini önceden kullanmanızdır. 2026 itibari ile sadece ilk yılında olan çalışanlara bu hak tanınacaktır.' },
             { q: 'Mazeret izni nasıl kullanırım?', a: 'İzin talebi oluştururken "Mazeret İzni" türünü seçin. Evlilik, doğum, vefat gibi yasal mazeret izinleri yıllık izin hakkınızdan düşülmez. Mazeret izin günleri kanunla belirlenmiştir.' },
             { q: 'Bakiyemde kullanılan günler neden farklı görünüyor?', a: 'Sıralı düşüm sistemi nedeniyle, izin kullanımı farklı hak ediş dönemlerinden düşülmüş olabilir. Her dönemin kalan bakiyesi ayrıca gösterilir. Hak edişi sıfıra inmiş dönemler listeden düşer.' }
@@ -151,8 +151,8 @@ const helpContent = [
                 description: 'Yemek Siparişi sayfasında bugünün menüsünü görüntüleyin. İstediğiniz öğünü seçin ve "Sipariş Ver" düğmesine tıklayın. Sipariş anında sisteme kaydedilir.'
             },
             {
-                title: 'Sipariş Saatleri',
-                description: 'Yemek siparişleri belirli kapanış saatine kadar açıktır. Kapanış saati geçtikten sonra yeni sipariş veremez, mevcut siparişi değiştiremez veya iptal edemezsiniz. Sipariş saatini kaçırmamaya dikkat edin.'
+                title: 'Sipariş Durumu Takibi',
+                description: 'Siparişinizin durumunu "Beklemede → Sipariş Edildi → Teslim Edildi" akışında takip edebilirsiniz. Sipariş edilmeden önce iptal edebilirsiniz. Sipariş durumu güncellemeleri sayfada anlık olarak yansır.'
             },
             {
                 title: 'Geçmiş Siparişler',
@@ -160,12 +160,12 @@ const helpContent = [
             }
         ],
         tips: [
-            { type: 'warning', text: 'Sipariş kapanış saatinden önce siparişinizi vermeyi unutmayın. Kapandıktan sonra değişiklik yapılamaz ve o gün için sipariş veremezsiniz.' },
+            { type: 'warning', text: 'Siparişiniz "Sipariş Edildi" durumuna geçtikten sonra iptal veya değişiklik yapılamaz. Sipariş vermeden önce doğru öğünü seçtiğinizden emin olun.' },
             { type: 'info', text: 'Bu sayfayı görmek için "Yemek Siparişi" yetkisi (PAGE_MEAL_ORDERS) gereklidir. Sayfayı göremiyorsanız yetkinizin tanımlanıp tanımlanmadığını sistem yöneticinize sorun.' },
             { type: 'success', text: 'Yemek siparişleri de 2 mali ay geriye dönük pencere kuralına tabidir. Geçmiş tarihler için sipariş talebi oluşturabilirsiniz.' }
         ],
         faq: [
-            { q: 'Sipariş verdikten sonra değiştirebilir miyim?', a: 'Sipariş kapanış saatine kadar siparişinizi değiştirebilir veya iptal edebilirsiniz. Kapanış saatinden sonra değişiklik mümkün değildir.' },
+            { q: 'Sipariş verdikten sonra değiştirebilir miyim?', a: 'Siparişiniz henüz "Beklemede" durumdaysa değiştirebilir veya iptal edebilirsiniz. "Sipariş Edildi" durumuna geçtikten sonra değişiklik yapılamaz.' },
             { q: 'Yemek siparişi sayfasını göremiyorum', a: 'Bu sayfa PAGE_MEAL_ORDERS yetkisi gerektirir. Sistem yöneticinize veya İK birimine başvurarak yetki tanımlamasını isteyin.' }
         ]
     },
@@ -270,7 +270,8 @@ const helpContent = [
             },
             {
                 title: 'Yönetim Paneli (Yöneticiler İçin)',
-                description: 'Yönetici yetkisi olanlar "Yönetim" sekmesinden tüm çalışan geri bildirimlerini görebilir, yanıtlayabilir ve durum güncellemesi yapabilir.'
+                description: 'Yönetici yetkisi olanlar "Yönetim" sekmesinden tüm çalışan geri bildirimlerini görebilir, yanıtlayabilir ve durum güncellemesi yapabilir.',
+                permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'SYSTEM_FULL_ACCESS']
             }
         ],
         tips: [
@@ -338,7 +339,7 @@ const helpContent = [
             },
             {
                 title: 'Onay Hiyerarşisi',
-                description: 'Sistem 5 katmanlı onay hiyerarşisi kullanır: (1) EmployeeManager (birincil yönetici), (2) DepartmentAssignment, (3) Department.manager, (4) reports_to zinciri, (5) departman hiyerarşisi. İlk bulunan yetkili yönetici onay verir. Çapraz (CROSS) yöneticiler de onay yetkisine sahiptir.'
+                description: 'Sistem kademeli onay hiyerarşisi kullanır: Önce birincil (PRIMARY) yöneticiniz kontrol edilir. Birincil yönetici yoksa reports_to zinciri ve departman hiyerarşisi yukarı doğru taranır. İlk bulunan yetkili yönetici onayı verir. İkincil (SECONDARY) yöneticiler tüm onaylayıcı listesinde yer alır ancak birincil onay akışında birincil yönetici önceliklidir.'
             },
             {
                 title: 'Talep İnceleme',
@@ -362,7 +363,7 @@ const helpContent = [
         faq: [
             { q: 'Bekleyen onayım var ama göremiyorum', a: 'Onay yetkinizin doğru tanımlandığından emin olun. Mesai onaylama (APPROVAL_OVERTIME), izin onaylama (APPROVAL_LEAVE) veya kartsız giriş onaylama (APPROVAL_CARDLESS_ENTRY) yetkilerinden en az birine sahip olmanız gerekir. Rolünüzü kontrol etmek için sistem yöneticisine başvurun.' },
             { q: 'Yanlışlıkla onay verdim, geri alabilir miyim?', a: 'Hayır. Onaylanan talepler doğrudan geri alınamaz ve puantaja yansır. Düzeltme için sistem yöneticisine başvurmanız gerekir.' },
-            { q: 'Birincil yöneticim yoksa talepler kime gider?', a: 'Sistem 5 katmanlı hiyerarşi kullanır. Birincil yönetici bulunamazsa sırasıyla: departman ataması, departman yöneticisi, reports_to zinciri ve departman hiyerarşisi kontrol edilir. Çapraz yönetici atanmışsa onlar da onay yetkisine sahiptir.' }
+            { q: 'Birincil yöneticim yoksa talepler kime gider?', a: 'Birincil yönetici bulunamazsa sistem sırasıyla reports_to zincirini ve departman hiyerarşisini yukarı doğru tarar. İlk bulunan yetkili yönetici onayı verir. İkincil (SECONDARY) yöneticiler tüm onaylayıcı listesinde yer alır ve toplu onay ekranında görünür.' }
         ]
     },
     {
@@ -438,14 +439,14 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Çalışma programı değişiklikleri, ilişkili tüm puantaj kayıtlarının yeniden hesaplanmasını tetikler. Büyük kadrolarda bu işlem Celery async task olarak arka planda çalışır ve birkaç dakika sürebilir. İlerleme durumu sayfada gösterilir.' },
-            { type: 'info', text: 'Tolerans Ayarları: Servis toleransı (service_tolerance_minutes) = vardiya saatlerine yakın okutmaları yuvarlama. Geç kalma toleransı (late_tolerance_minutes, varsayılan 30 dk) = vardiya sonrası uzatma penceresi; örneğin 18:00 bitişli vardiyada 18:30\'a kadar çıkış normal sayılır. Mola hakkı (daily_break_allowance, varsayılan 30 dk) = çalışma süresinden düşülecek mola süresi.' },
+            { type: 'info', text: 'Tolerans Ayarları: Servis toleransı (service_tolerance_minutes, varsayılan 0 dk) = servis kullanan personel için vardiya saatlerine yakın okutmaları yuvarlama. Bu değer 0 ise yuvarlama yapılmaz, şablonda tanımlanmalıdır. Geç kalma toleransı (late_tolerance_minutes, varsayılan 30 dk) = vardiya sonrası uzatma penceresi; örneğin 18:00 bitişli vardiyada 18:30\'a kadar çıkış normal sayılır. Mola hakkı (daily_break_allowance, varsayılan 30 dk) = çalışma süresinden düşülecek mola süresi.' },
             { type: 'info', text: 'Minimum mesai eşiği (minimum_overtime_minutes, varsayılan 30 dk) bu şablonda tanımlanır. Günlük toplam fazla mesai bu eşiğin altındaysa sıfırlanır. Örneğin 20 dk fazla çalışma kaydedilmez.' },
             { type: 'success', text: 'Takvim değişikliklerinin geçmişi CalendarChangeLog\'da tutulur. Her değişikliğin ne zaman, kim tarafından yapıldığı ve önceki/sonraki değerleri kaydedilir.' }
         ],
         faq: [
             { q: 'Yeni vardiya şablonu nasıl oluştururum?', a: '"Yeni Şablon" düğmesine tıklayın. Her gün (Pzt-Paz) için başlangıç-bitiş saatleri ve tatil durumunu tanımlayın. Servis toleransı, geç kalma toleransı, mola hakkı ve minimum mesai eşiği ayarlarını yapın.' },
             { q: 'Bir çalışanın programını değiştirince eski kayıtlar etkilenir mi?', a: 'Takvim değişikliği ileriye dönük uygulanır. Geçmiş kayıtları etkilemek için "Yeniden Hesapla" işlemi tetiklenmelidir. Bu işlem Celery async task olarak çalışır ve ilerleme durumu izlenebilir.' },
-            { q: 'Override (günlük değişiklik) şablondan mı öncelikli?', a: 'Evet. Öncelik sırası: Override > DayAssignment > ScheduleTemplate > FiscalCalendar > Employee-level. Override en yüksek önceliğe sahiptir ve o günün tüm diğer tanımlarını geçersiz kılar.' }
+            { q: 'Override (günlük değişiklik) şablondan mı öncelikli?', a: 'Evet. Öncelik sırası (en yüksekten en düşüğe): Çalışan-düzeyi override > DailyScheduleOverride (günlük) > DayTemplateAssignment (gün ataması) > ScheduleTemplate (şablon) > FiscalCalendar (mali takvim). En özel tanım geçerlidir ve üstündeki genel tanımları geçersiz kılar.' }
         ]
     },
     {
@@ -477,11 +478,12 @@ const helpContent = [
             },
             {
                 title: 'Şifre Sıfırlama',
-                description: 'SYSTEM_FULL_ACCESS yetkisi ile tüm kullanıcıların şifrelerini sıfırlayabilirsiniz. POST /api/system/health-check/reset-passwords/ endpoint\'i sıfırlanan şifreleri XLSX dosyası olarak indirir.'
+                description: 'SYSTEM_FULL_ACCESS yetkisi ile tüm kullanıcıların şifrelerini sıfırlayabilirsiniz. POST /api/system/health-check/reset-passwords/ endpoint\'i sıfırlanan şifreleri XLSX dosyası olarak indirir.',
+                permission: 'SYSTEM_FULL_ACCESS'
             }
         ],
         tips: [
-            { type: 'warning', text: 'Sistem yönetimi araçları kritik işlemler içerir. Şifre sıfırlama ve veri silme gibi işlemler geri alınamaz. SYSTEM_FULL_ACCESS yetkisi gerektirir.' },
+            { type: 'warning', text: 'Sistem yönetimi araçları kritik işlemler içerir. Şifre sıfırlama ve veri silme gibi işlemler geri alınamaz. SYSTEM_FULL_ACCESS yetkisi gerektirir.', permission: 'SYSTEM_FULL_ACCESS' },
             { type: 'info', text: 'Uyumluluk testleri 9 aşamada çalışır. Her aşama farklı bir sistem modülünü test eder. "Test Verisi Tara" ile mevcut test verilerini bulabilir, "Test Verisi Temizle" ile temizleyebilirsiniz.' },
             { type: 'success', text: 'Gösterge panelinde tüm testlerin geçme oranı yüzdelik olarak gösterilir. %100 oranı sistemin tam uyumlu olduğunu gösterir.' }
         ],
@@ -516,23 +518,24 @@ const helpContent = [
             },
             {
                 title: 'Yönetici Atama (Matris Yönetim)',
-                description: 'Birincil (PRIMARY) yönetici = doğrudan amir. Çapraz (CROSS) yönetici = fonksiyonel/proje bazlı yönetici. Her ikisi de onay yetkisine sahiptir. Bu atamalar talep onay süreçlerinde kimin onay vereceğini belirler.'
+                description: 'Birincil (PRIMARY) yönetici = doğrudan amir. İkincil (SECONDARY) yönetici = fonksiyonel/proje bazlı yönetici. Her ikisi de onay yetkisine sahiptir. Bu atamalar talep onay süreçlerinde kimin onay vereceğini belirler.'
             },
             {
                 title: 'Çalışma Programı Atama',
-                description: 'Çalışana mali takvim (FiscalCalendar) ve vardiya şablonu (ScheduleTemplate) atayarak çalışma saatlerini tanımlayın. Bu tanım puantaj hesaplamalarının temelini oluşturur. Departman ve pozisyon bilgisi mali takvim atamasından otomatik türetilebilir.'
+                description: 'Çalışana mali takvim (FiscalCalendar) ve vardiya şablonu (ScheduleTemplate) atayarak çalışma saatlerini tanımlayın. Bu tanım puantaj hesaplamalarının temelini oluşturur.'
             }
         ],
         tips: [
             { type: 'warning', text: 'Çalışan silme işlemi geri alınamaz ve ilişkili tüm kayıtları etkiler. Ayrılan personeli silmek yerine "Pasif" durumuna geçirmeniz şiddetle önerilir.' },
-            { type: 'info', text: 'Departman ve pozisyon değişikliği, çalışana atanan mali takvimden (FiscalCalendar) otomatik türetilebilir. Bu özellik mali takvim yapılandırmasında ayarlanır.' },
+            { type: 'info', text: 'Departman ve pozisyon bilgisi, çalışana atanan yönetici ilişkisinden (EmployeeManager) otomatik türetilebilir. Yönetici değişikliği yapıldığında departman/unvan bilgisi güncellenebilir.' },
             { type: 'info', text: 'Çalışanın 1:1 Django User kaydı vardır. Kullanıcı adı (username) ve e-posta ile giriş yapılabilir (FlexiblePermissionBackend). Şifre sıfırlama Sistem Yönetimi sayfasından yapılabilir.' },
+            { type: 'info', text: 'Çalışan listesini görüntüleme (list/retrieve) tüm giriş yapmış kullanıcılara açıktır — bu API birçok frontend bileşeni tarafından kullanılır. Ancak çalışan ekleme, düzenleme ve silme (CUD) işlemleri PAGE_EMPLOYEES yetkisi gerektirir.', permission: 'PAGE_EMPLOYEES' },
             { type: 'success', text: 'Çalışan listesini Excel olarak dışa aktarabilirsiniz. Dışa aktarma tüm aktif çalışanları ve seçili filtre kriterlerini içerir.' }
         ],
         faq: [
             { q: 'Yeni çalışan nasıl eklenir?', a: '"Yeni Çalışan" düğmesine tıklayın. İsim, e-posta, departman ve pozisyon bilgilerini girin. Kayıt sonrası çalışana otomatik Django kullanıcı hesabı oluşturulur ve giriş bilgileri atanır.' },
             { q: 'Çalışanın yetkilerini nasıl kontrol ederim?', a: 'Çalışan detayında "Roller" bölümünde atanmış rolleri ve bu rollerin verdiği tüm yetki kodlarını görebilirsiniz. Etkili yetki listesi (get_effective_permission_codes) miras alma ve dışlama kurallarını hesaba katarak gösterilir.' },
-            { q: 'Bir çalışanın birden fazla yöneticisi olabilir mi?', a: 'Evet. Birincil (PRIMARY) yönetici doğrudan amirdir. Çapraz (CROSS) yönetici fonksiyonel veya proje bazlı atamalardır. Onay süreçlerinde her ikisi de yetkilidir. Sistem, ApproverService ile 5 katmanlı hiyerarşide yetkili onaylayıcıyı bulur.' }
+            { q: 'Bir çalışanın birden fazla yöneticisi olabilir mi?', a: 'Evet. Birincil (PRIMARY) yönetici doğrudan amirdir. İkincil (SECONDARY) yönetici fonksiyonel veya proje bazlı atamalardır. Onay süreçlerinde birincil yönetici öncelikli olarak kontrol edilir, ikincil yöneticiler tüm onaylayıcı listesinde yer alır. Sistem, ApproverService ile kademeli hiyerarşi taraması yaparak yetkili onaylayıcıyı bulur.' }
         ]
     },
     {
@@ -556,7 +559,7 @@ const helpContent = [
             },
             {
                 title: 'Raporlama Zinciri',
-                description: 'Her çalışanın üstünde birincil (PRIMARY) yöneticisi gösterilir. Bu hiyerarşi izin ve mesai taleplerinde onay akışını belirler. Çapraz (CROSS) yönetici ilişkileri ayrıca gösterilir.'
+                description: 'Her çalışanın üstünde birincil (PRIMARY) yöneticisi gösterilir. Bu hiyerarşi izin ve mesai taleplerinde onay akışını belirler. İkincil (SECONDARY) yönetici ilişkileri ayrıca gösterilir.'
             },
             {
                 title: 'Gezinme ve Yakınlaştırma',
@@ -565,6 +568,7 @@ const helpContent = [
         ],
         tips: [
             { type: 'info', text: 'Organizasyon şeması çalışan profilleri ve departman atamalarından otomatik oluşturulur. Bir çalışanın departmanını, yöneticisini veya pozisyonunu değiştirdiğinizde şema da güncellenir.' },
+            { type: 'warning', text: 'Organizasyon şemasının tam görünümü (tüm departman ve çalışanlar) PAGE_ORG_CHART yetkisi gerektirir. Yetkiniz yoksa bu sayfaya erişemezsiniz.' },
             { type: 'success', text: 'Şemayı yakınlaştırıp uzaklaştırabilir ve sürükleyerek gezebilirsiniz. Büyük şemalarda "Sığdır" düğmesi tüm yapıyı ekrana sığdırır.' }
         ],
         faq: [
@@ -585,7 +589,7 @@ const helpContent = [
         steps: [
             {
                 title: 'Günlük Hesaplama Tetikleme',
-                description: 'Hedef tarih seçerek o gün için tüm çalışanların puantaj hesaplamalarını (giriş/çıkış, mola, fazla mesai, devamsızlık) yeniden başlatabilirsiniz. Bu işlem recalculate_daily_attendance() fonksiyonunu çağırır. Manuel düzeltmelerden sonra veya hesaplama hatası şüphesinde kullanışlıdır.'
+                description: 'Hedef tarih seçerek o gün için tüm çalışanların puantaj hesaplamalarını (giriş/çıkış, mola, fazla mesai, devamsızlık) yeniden başlatabilirsiniz. Bu işlem recalculate_daily_attendance() fonksiyonunu çağırır. Manuel düzeltmelerden sonra veya hesaplama hatası şüphesinde kullanışlıdır. Not: Hesaplama tetikleme ayrıca PAGE_WORK_SCHEDULES yetkisi gerektirir.'
             },
             {
                 title: 'Otomatik Görevler (Celery Tasks)',
@@ -672,8 +676,8 @@ const helpContent = [
                 description: '"Yeni Program" düğmesine tıklayarak yeni bir yazılım kaydı oluşturun. Program adı, versiyon, lisans bilgisi ve açıklama girin.'
             },
             {
-                title: 'Cihaz Erişim Yönetimi',
-                description: 'Her program için hangi cihazlarda kurulu olduğunu takip edebilirsiniz. Cihaz ekleme, çıkarma ve erişim durumu güncelleme işlemleri program detay sayfasından yapılır.'
+                title: 'Cihaz Erişim Yönetimi (HWID Bazlı)',
+                description: 'Her program için hangi cihazlarda kurulu olduğunu HWID (Donanım Kimliği) bazlı takip edebilirsiniz. Cihazlar benzersiz HWID parmak izi ile tanımlanır. Program bazında maksimum cihaz limiti (max_devices_per_user) ayarlanabilir — limit aşıldığında yeni cihazlar otomatik engellenir. Cihaz durumu (aktif/engelli) program detay sayfasından yönetilir.'
             },
             {
                 title: 'Versiyon Yönetimi',
