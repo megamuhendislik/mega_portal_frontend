@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info, PenLine, Zap, Eye } from 'lucide-react';
 import api from '../services/api';
 
@@ -110,7 +111,7 @@ function SourceBadge({ type }) {
     );
 }
 
-/* ----- Reusable Popup Modal ----- */
+/* ----- Reusable Popup Modal (portal-based) ----- */
 function ClaimModal({ open, onClose, title, icon, children }) {
     // Prevent body scroll when modal is open
     useEffect(() => {
@@ -122,12 +123,12 @@ function ClaimModal({ open, onClose, title, icon, children }) {
 
     if (!open) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    return ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="absolute inset-0" onClick={onClose} />
             {/* Modal */}
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ animation: 'claimModalIn 0.2s ease-out' }}>
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between p-5 border-b border-slate-100">
                     <div className="flex items-center gap-3">
@@ -143,13 +144,8 @@ function ClaimModal({ open, onClose, title, icon, children }) {
                     {children}
                 </div>
             </div>
-            <style>{`
-                @keyframes claimModalIn {
-                    from { opacity: 0; transform: scale(0.95); }
-                    to { opacity: 1; transform: scale(1); }
-                }
-            `}</style>
-        </div>
+        </div>,
+        document.body
     );
 }
 

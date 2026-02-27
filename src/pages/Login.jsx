@@ -160,7 +160,7 @@ const Login = () => {
 
             {/* Şifremi Unuttum Popup */}
             {showForgotPassword && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4 animate-fade-in">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">

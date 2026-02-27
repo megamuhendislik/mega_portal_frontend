@@ -293,7 +293,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
                     {/* Recalculate Console Modal/Area */}
                     {recalcConsoleOpen && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
                             <div className="bg-gray-900 w-full max-w-4xl h-[60vh] md:h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700">
                                 <div className="bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
                                     <h3 className="text-white font-mono font-bold flex items-center gap-2">
