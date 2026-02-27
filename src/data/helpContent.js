@@ -37,7 +37,7 @@ const helpContent = [
             }
         ],
         tips: [
-            { type: 'info', text: 'Tolerans Türleri: Sistemde iki farklı tolerans vardır. (1) Servis Toleransı — Servis kullanan personel için vardiya başlangıç/bitiş saatlerine yakın okutmaları vardiya saatine yuvarlar. Örneğin vardiyası 08:00 olan biri 07:57\'de okutsa (veya 08:03\'te okutsa), giriş 08:00 olarak kaydedilir. (2) Geç Kalma Toleransı (30 dk) — vardiya bitiş saatinden sonraki kısa süre için uzatma penceresi oluşturur. Bu süre içindeki çıkış, normal mesai olarak değerlendirilir ve fazla mesai oluşturmaz.' },
+            { type: 'info', text: 'Tolerans Türleri: Sistemde iki farklı tolerans vardır. (1) Servis Toleransı — Servis kullanan personel için vardiya başlangıç/bitiş saatlerine yakın okutmaları vardiya saatine yuvarlar. Örneğin vardiyası 08:00 olan biri 07:57\'de okutsa (veya 08:03\'te okutsa), giriş 08:00 olarak kaydedilir. (2) Geç Kalma Toleransı (varsayılan 30 dk) — vardiya bitiş saatinden sonraki uzatma penceresidir. Örneğin vardiya bitişi 18:00 ise, 18:30\'a kadar yapılan çıkış normal mesai sayılır ve fazla mesai oluşturmaz. 18:35\'te çıkarsanız 18:00-18:35 arası fazla mesai olarak hesaplanır.' },
             { type: 'info', text: 'Mola Hesaplama: Günlük mola hakkı (varsayılan 30 dk) toplam çalışma sürenizden otomatik düşülür. Gün içinde çıkış-giriş arasındaki boşluklar "potansiyel mola" olarak hesaplanır. Mola hakkınızı aşarsanız, aşan kısım çalışma sürenizden kesilir. Mola hakkının kullanılabilmesi için çıkış yaptıktan sonra normal mesai saatleri içerisinde tekrar giriş yapmanız gerekmektedir!' },
             { type: 'warning', text: 'Çıkış yapmadan (kart okutmadan) ayrılmayın! Kayıt "AÇIK" kalır ve gece yarısı (00:01) otomatik görevi bu kaydı vardiya bitiş saatinde kapatır. Bu durum istenmeyen "Potansiyel Ek Mesai" kaydı oluşturabilir ve puantajınızda yanlış veriler görünür. Her zaman çıkışta ve girişte kart okutun.' },
             { type: 'success', text: 'Kart okutucunuz arızalıysa veya kartınızı unuttaysanız Talepler sayfasından "Kartsız Giriş Talebi" oluşturabilirsiniz. Bu talep yöneticinizin onayına gider ve onaylandığında puantaj kaydınız oluşturulur.' }
@@ -47,7 +47,7 @@ const helpContent = [
             { q: 'Gece fazla mesai yaptım, kayıtlarım nasıl hesaplanır?', a: 'Gece 00:00\'ı geçen kayıtlar, sistem tarafından otomatik kapatılır (kartsız çıkışları ayıklamak için), eğer ki 00:00 dan sonra mesaiye devam etmeniz gerekiyorsa lütfen kartınızla çıkış ve giriş yapın!' },
             { q: 'Mola sürem neden azalıyor?', a: 'Gün içinde her çıkış-giriş arası "potansiyel mola" olarak sayılır. Toplam potansiyel mola süreniz (çıkış-giriş arasındaki tüm boşluklar) üst menüdeki mola göstergesinde takip edilir. Günlük mola hakkı (genellikle 30 dk) otomatik olarak çalışma sürenizden düşülür.' },
             { q: 'Birden fazla giriş/çıkış kaydım var, bu normal mi?', a: 'Evet. Gün içinde her kart okutma bir giriş veya çıkış olarak kaydedilir (tek-çift sıralama). Sistem tüm kayıtları birleştirerek toplam çalışma sürenizi hesaplar. Aradaki boşluklar mola olarak değerlendirilir.' },
-            { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya bitişini aştığınızda, ek çalışma süreniz otomatik olarak hesaplanır. Günlük toplam fazla mesai minimum eşik süresini (varsayılan 30 dk) geçerse, sistem otomatik "Potansiyel Ek Mesai" kaydı oluşturur. Bu eşiğin altındaki süre sıfırlanır — yani 10 dk fazla çalışma kaydedilmez.' }
+            { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya bitişiniz 18:00 ise ve geç kalma toleransı 30 dk ise: 18:30\'a kadar çıkış yaparsanız fazla mesai oluşmaz. 18:30\'dan sonra çıkarsanız (örneğin 19:00), 18:00-19:00 arası = 60 dk fazla mesai hesaplanır. Bu süre minimum eşiği (varsayılan 30 dk) geçtiği için sistem otomatik "Potansiyel Ek Mesai" kaydı oluşturur. Eşiğin altındaki süreler kaydedilmez.' }
         ]
     },
     {
@@ -85,7 +85,7 @@ const helpContent = [
         ],
         faq: [
             { q: 'Kaç gün izin hakkım var?', a: 'İzin hakkınız kıdeminize göre belirlenir: 1-5 yıl: 14 gün, 5-15 yıl: 20 gün, 15+ yıl: 26 gün (yasal minimum). Talepler sayfasında güncel bakiyenizi ve her hak ediş döneminin kalan gün sayısını görebilirsiniz.' },
-            { q: 'Avans izin nedir?', a: 'Henüz hak etmediğiniz izin günlerini önceden kullanmanızdır. Yönetici onayı gerektirir. Kıdem şartı aranmaz. Kullanılan avans, gelecek hak edişlerinizden otomatik düşülür ve ayrı bir sayaçta (avans kullanımı) takip edilir.' },
+            { q: 'Avans izin nedir?', a: 'Henüz hak etmediğiniz izin günlerini önceden kullanmanızdır. 2026 itibari ile sadece ilk yılında olan çalışanlara bu hak tanınacaktır.' },
             { q: 'Mazeret izni nasıl kullanırım?', a: 'İzin talebi oluştururken "Mazeret İzni" türünü seçin. Evlilik, doğum, vefat gibi yasal mazeret izinleri yıllık izin hakkınızdan düşülmez. Mazeret izin günleri kanunla belirlenmiştir.' },
             { q: 'Bakiyemde kullanılan günler neden farklı görünüyor?', a: 'Sıralı düşüm sistemi nedeniyle, izin kullanımı farklı hak ediş dönemlerinden düşülmüş olabilir. Her dönemin kalan bakiyesi ayrıca gösterilir. Hak edişi sıfıra inmiş dönemler listeden düşer.' }
         ]
@@ -111,7 +111,7 @@ const helpContent = [
             },
             {
                 title: 'Algılanan Mesai (Otomatik Tespit)',
-                description: 'Vardiya bitiş saatinden sonra geç kalma toleransını (15 dk) aştığınızda, sistem fazla çalışmanızı otomatik algılar. Günlük toplam fazla mesai minimum eşik süresini (15 dk) geçerse, "Potansiyel Ek Mesai" kaydı otomatik oluşturulur. Bu eşiğin altındaki süreler kaydedilmez — yani 12 dk fazla çalışma için kayıt oluşmaz.'
+                description: 'Vardiya bitişi 18:00, geç kalma toleransı 30 dk ise: 18:30\'a kadar çıkış normal mesaidir. 18:30\'dan sonra çıkarsanız (örneğin 19:15), 18:00-19:15 arası = 75 dk fazla mesai hesaplanır. Bu süre minimum eşiği (varsayılan 30 dk) geçtiği için "Potansiyel Ek Mesai" kaydı otomatik oluşturulur. Eşiğin altındaki süreler kaydedilmez — örneğin 18:45\'te çıkarsanız 18:00-18:45 = 45 dk fazla mesai, eşiği geçer ve kayıt oluşur. Ama 18:20\'de çıkarsanız tolerans içinde olduğunuz için fazla mesai oluşmaz.'
             },
             {
                 title: 'Manuel Mesai Girişi',
@@ -124,13 +124,13 @@ const helpContent = [
         ],
         tips: [
             { type: 'info', text: 'Potansiyel mesai, sistem tarafından algılanan ancak henüz talep edilmemiş fazla çalışmadır. Siz "Talep Et" düğmesine basana kadar taslak halinde kalır ve yöneticinize gitmez. Talep etmediğiniz potansiyel mesailer puantajınıza yansımaz.' },
-            { type: 'info', text: 'Minimum Mesai Eşiği: Günlük toplam fazla mesai 15 dakikanın altındaysa, tüm fazla çalışma süresi sıfırlanır — yani kısa süreli aşımlar kayda geçmez. Bu eşik yönetici tarafından ayarlanabilir.' },
+            { type: 'info', text: 'Minimum Mesai Eşiği: Günlük toplam fazla mesai 30 dakikanın altındaysa, tüm fazla çalışma süresi sıfırlanır — yani kısa süreli aşımlar kayda geçmez. Örneğin 18:00 vardiya bitişi olup 18:20\'de çıkarsanız, 20 dk fazla mesai eşik altında kalır ve kayıt oluşmaz. Bu eşik yönetici tarafından ayarlanabilir.' },
             { type: 'warning', text: 'Tüm mesai talepleri (planlı, algılanan ve manuel) 2 mali ay geriye dönük pencere içinde yapılmalıdır. Bu süreyi aşan mesailer talep edilemez ve potansiyel kayıtlar otomatik olarak süresi dolmuş (expire) olarak işaretlenir.' },
             { type: 'success', text: 'Hafta sonu ve resmi tatillerde yapılan çalışmalar, tatil günü çalışma programınız "tatil" olarak tanımlıysa otomatik olarak ek mesai kabul edilir ve potansiyel mesai kaydı oluşturulur.' }
         ],
         faq: [
             { q: 'Potansiyel mesai ile bekleyen mesai arasındaki fark nedir?', a: '"Potansiyel" mesai henüz taslak halindedir — sistem otomatik algılamıştır ama siz henüz talep etmediniz. "Talep Et" düğmesine bastığınızda durumu "Bekleyen"e geçer ve yönetici onayına gider. Potansiyel mesai puantajınıza yansımaz, sadece onaylanan mesai yansır.' },
-            { q: 'Mesaim neden otomatik algılanmadı?', a: 'Mesainin algılanması için iki koşul sağlanmalıdır: (1) Vardiya bitiş saatinden sonra geç kalma toleransını (15 dk) aşmanız, (2) Günlük toplam fazla mesai süresinin minimum eşik süresini (15 dk) geçmesi. Her iki koşul da sağlanmazsa potansiyel mesai oluşmaz.' },
+            { q: 'Mesaim neden otomatik algılanmadı?', a: 'Mesainin algılanması için iki koşul sağlanmalıdır: (1) Vardiya bitiş saatinden sonra geç kalma toleransını (30 dk) aşmanız — örneğin 18:00 bitişli vardiyada 18:30\'dan sonra çıkmanız gerekir. (2) Günlük toplam fazla mesai süresinin minimum eşik süresini (30 dk) geçmesi. Her iki koşul da sağlanmazsa potansiyel mesai oluşmaz.' },
             { q: 'Onaylanan mesai puantajıma nasıl yansır?', a: 'Onaylanan mesai o gün için oluşturulan puantaj kaydına "Fazla Mesai" olarak eklenir. Geçmiş ay mesaileri onaylandığında, o ayın Aylık Çalışma Özeti (MonthlyWorkSummary) de otomatik güncellenir — kümülatif bakiye yeniden hesaplanır.' },
             { q: 'Planlı mesai atamasını nasıl talep ederim?', a: 'Talepler sayfasında "Atanan Mesailer" bölümünde yöneticinizin size atadığı mesaileri göreceksiniz. Her atamanın yanındaki "Talep Et" düğmesine tıklayın — tarih, süre ve açıklama bilgileri otomatik doldurulur. İsterseniz iş tanımı (task_description) ekleyerek gönderebilirsiniz.' }
         ]
@@ -438,8 +438,8 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Çalışma programı değişiklikleri, ilişkili tüm puantaj kayıtlarının yeniden hesaplanmasını tetikler. Büyük kadrolarda bu işlem Celery async task olarak arka planda çalışır ve birkaç dakika sürebilir. İlerleme durumu sayfada gösterilir.' },
-            { type: 'info', text: 'Tolerans Ayarları: Servis toleransı (service_tolerance_minutes) = vardiya saatlerine yakın okutmaları yuvarlama. Geç kalma toleransı (late_tolerance_minutes, varsayılan 15 dk) = vardiya sonrası uzatma penceresi. Mola hakkı (daily_break_allowance, varsayılan 30 dk) = çalışma süresinden düşülecek mola süresi.' },
-            { type: 'info', text: 'Minimum mesai eşiği (minimum_overtime_minutes, varsayılan 15 dk) bu şablonda tanımlanır. Günlük toplam fazla mesai bu eşiğin altındaysa sıfırlanır.' },
+            { type: 'info', text: 'Tolerans Ayarları: Servis toleransı (service_tolerance_minutes) = vardiya saatlerine yakın okutmaları yuvarlama. Geç kalma toleransı (late_tolerance_minutes, varsayılan 30 dk) = vardiya sonrası uzatma penceresi; örneğin 18:00 bitişli vardiyada 18:30\'a kadar çıkış normal sayılır. Mola hakkı (daily_break_allowance, varsayılan 30 dk) = çalışma süresinden düşülecek mola süresi.' },
+            { type: 'info', text: 'Minimum mesai eşiği (minimum_overtime_minutes, varsayılan 30 dk) bu şablonda tanımlanır. Günlük toplam fazla mesai bu eşiğin altındaysa sıfırlanır. Örneğin 20 dk fazla çalışma kaydedilmez.' },
             { type: 'success', text: 'Takvim değişikliklerinin geçmişi CalendarChangeLog\'da tutulur. Her değişikliğin ne zaman, kim tarafından yapıldığı ve önceki/sonraki değerleri kaydedilir.' }
         ],
         faq: [
