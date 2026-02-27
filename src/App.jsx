@@ -27,8 +27,16 @@ import DataManagement from './pages/admin/DataManagement';
 import ProgramManagement from './pages/admin/ProgramManagement';
 import Feedback from './pages/Feedback';
 
-const RequestAnalytics = React.lazy(() => import('./pages/RequestAnalytics'));
-const HelpLibrary = React.lazy(() => import('./pages/HelpLibrary'));
+const lazyRetry = (importFn) =>
+  React.lazy(() =>
+    importFn().catch(() => {
+      window.location.reload();
+      return new Promise(() => {});
+    })
+  );
+
+const RequestAnalytics = lazyRetry(() => import('./pages/RequestAnalytics'));
+const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));
 
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission } = useAuth();
