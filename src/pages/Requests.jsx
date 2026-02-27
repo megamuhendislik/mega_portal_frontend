@@ -286,7 +286,7 @@ const Requests = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Taleplerim</h1>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Kendi Taleplerim</h1>
                     <p className="text-slate-500 font-medium">Bütün izin, mesai ve diğer taleplerinizi tek yerden yönetin.</p>
                 </div>
                 <button
@@ -316,7 +316,7 @@ const Requests = () => {
                     onClick={() => setActiveTab('my_requests')}
                     icon={<Layers size={18} />}
                 >
-                    Taleplerim
+                    Kendi Taleplerim
                 </TabButton>
 
                 {isManager && (

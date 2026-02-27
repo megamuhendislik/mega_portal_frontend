@@ -161,7 +161,7 @@ const IncomingRequestsTab = ({
                     {[
                         { key: 'ALL', label: 'Tümü', count: counts.all, icon: null },
                         { key: 'DIRECT', label: 'Doğrudan', count: counts.direct, icon: <User size={14} /> },
-                        { key: 'INDIRECT', label: 'Dolaylı', count: counts.indirect, icon: <Users size={14} /> },
+                        { key: 'INDIRECT', label: 'Ekibimin Talepleri', count: counts.indirect, icon: <Users size={14} /> },
                         { key: 'SUBSTITUTE', label: 'Vekalet', count: counts.substitute, icon: <ArrowRightLeft size={14} /> },
                     ].map(({ key, label, count, icon }) => (
                         <button
