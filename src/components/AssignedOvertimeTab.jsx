@@ -353,8 +353,8 @@ export default function AssignedOvertimeTab() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const selectedDate = new Date(manualForm.work_date + 'T00:00:00');
-        if (selectedDate >= today) {
-            setManualError('Tarih bugun veya gelecekte olamaz. Sadece gecmis tarihler secilabilir.');
+        if (selectedDate > today) {
+            setManualError('Gelecek tarih secilemez. Bugun veya gecmis tarih secin.');
             return;
         }
 
@@ -366,6 +366,17 @@ export default function AssignedOvertimeTab() {
         if (manualForm.start_time >= manualForm.end_time) {
             setManualError('Bitis saati baslangic saatinden sonra olmalidir.');
             return;
+        }
+
+        // Bugün seçildiyse bitiş saati şu anki saatten sonra olamaz
+        const isToday = selectedDate.getTime() === today.getTime();
+        if (isToday) {
+            const now = new Date();
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            if (manualForm.end_time > currentTime) {
+                setManualError('Bugun icin bitis saati su anki saatten sonra olamaz.');
+                return;
+            }
         }
 
         if (!manualForm.reason.trim()) {
@@ -381,7 +392,7 @@ export default function AssignedOvertimeTab() {
         setManualLoading(true);
         try {
             await api.post('/overtime-requests/manual-entry/', {
-                work_date: manualForm.work_date,
+                date: manualForm.work_date,
                 start_time: manualForm.start_time,
                 end_time: manualForm.end_time,
                 reason: manualForm.reason.trim(),
