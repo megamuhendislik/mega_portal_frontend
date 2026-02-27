@@ -173,7 +173,7 @@ const helpContent = [
         id: 'takvim',
         title: 'Takvim',
         icon: Calendar,
-        description: 'Puantaj takvimi, mali dönem sınırları, renk kodları ve günlük detay görüntüleme',
+        description: 'Kişisel ajanda, etkinlik kategorileri, yıllık/aylık/haftalık görünüm ve şirket takvimi düzenleme',
         permission: null,
         link: '/calendar',
         images: [
@@ -181,31 +181,35 @@ const helpContent = [
         ],
         steps: [
             {
-                title: 'Aylık Görünüm',
-                description: 'Takvim sayfasında ay görünümünde çalışma günlerinizi görebilirsiniz. Her gün renk koduyla puantaj durumunu gösterir. İleri-geri ok düğmeleriyle aylar arası geçiş yapabilirsiniz.'
+                title: 'Yıllık Görünüm (Varsayılan)',
+                description: 'Takvim sayfası açıldığında yıllık görünüm gelir. 12 ayı tek ekranda görebilirsiniz. Herhangi bir güne tıklayarak o günün ajanda moduna geçebilirsiniz.'
             },
             {
-                title: 'Renk Kodları',
-                description: 'Yeşil = onaylanmış normal çalışma, Turuncu = izinli gün, Kırmızı = devamsızlık (kayıt yok), Mavi = açık kayıt (henüz çıkış yapılmadı), Mor = ek mesai tespit edildi, Gri = tatil günü.'
+                title: 'Ajanda Modu (Ay/Hafta/Gün)',
+                description: 'Bir güne tıkladığınızda ajanda moduna geçilir. Ay, hafta ve gün görünümleri arasında geçiş yapabilirsiniz. Bu modda etkinlik oluşturabilir, düzenleyebilir ve silebilirsiniz.'
             },
             {
-                title: 'Gün Detayı',
-                description: 'Herhangi bir güne tıklayarak o günün detaylı puantaj kaydını görüntüleyin: giriş/çıkış saatleri, toplam çalışma süresi, mola kullanımı, fazla mesai miktarı ve kayıt durumu.'
+                title: 'Etkinlik Oluşturma',
+                description: 'Takvimde boş bir alana tıklayarak yeni etkinlik oluşturun. Başlık, tarih/saat, kategori (Genel, Toplantı, Not, Hatırlatma, Acil/Tatil, İzin/Seyahat) ve açıklama girin. Etkinlikleri diğer çalışanlarla veya departmanlarla paylaşabilirsiniz.'
             },
             {
-                title: 'Mali Dönem Sınırları',
-                description: 'Takvimde mali dönem sınırları belirgindir. Her dönem ayın 26\'sından bir sonraki ayın 25\'ine kadardır (Türk bordro döngüsü). Örneğin "Şubat dönemi" = 26 Ocak – 25 Şubat. Kilitlenmiş dönemlerde kayıtlar değiştirilemez.'
+                title: 'Etkinlik Kategorileri ve Renk Kodları',
+                description: 'Her kategori farklı renkte gösterilir: Genel (mavi), Toplantı (mor), Not (yeşil), Hatırlatma (turuncu), Acil/Tatil (kırmızı), İzin/Seyahat (sarı). Sizinle paylaşılan etkinlikler italik etiketle ayırt edilir.'
+            },
+            {
+                title: 'Şirket Takvimi Düzenleme (Yönetici)',
+                description: '"Şirket Takvimi Düzenle" düğmesine tıklayarak mali takvim yönetim moduna geçebilirsiniz. Bu modda resmi tatiller, şirket geneli etkinlikler ve mali dönem ayarlarını düzenleyebilirsiniz. Kişisel takvime dönmek için "Kişisel Takvime Dön" düğmesini kullanın.'
             }
         ],
         tips: [
-            { type: 'info', text: 'Mali Dönem Kuralı: Her dönem önceki ayın 26\'sından hedef ayın 25\'ine kadardır. Örneğin "Mart 2026 dönemi" = 26 Şubat – 25 Mart. Bu dönem kapandığında (kilitlendiğinde) o dönemin puantaj kayıtları değiştirilemez hale gelir.' },
-            { type: 'warning', text: 'Kırmızı (devamsız) günler, o tarih için giriş kaydı bulunmadığı veya çalışma yapılmadığı anlamına gelir. Kartsız giriş talebi oluşturarak bu durumu düzeltebilirsiniz.' },
-            { type: 'success', text: 'Takvim görünümünü haftalık veya günlük olarak değiştirebilirsiniz. Ay görünümü genel bakış, gün görünümü detaylı inceleme için uygundur.' }
+            { type: 'info', text: 'Etkinlik Paylaşımı: Oluşturduğunuz etkinlikleri belirli kişilerle veya departmanlarla paylaşabilirsiniz. Paylaşılan etkinlikler karşı tarafın takviminde "Paylaşılan" etiketiyle görünür.' },
+            { type: 'info', text: 'Takvim verileri her 60 saniyede bir otomatik güncellenir (ajanda modunda). Yıllık görünümde otomatik güncelleme yoktur — sayfa yenileyerek güncel verileri alabilirsiniz.' },
+            { type: 'success', text: 'Yıllık görünümden herhangi bir güne tıklayarak hızlıca o günün ajanda görünümüne geçebilirsiniz. Sol üstteki "Yıllık Görünüm" düğmesiyle tekrar yıllık moda dönebilirsiniz.' }
         ],
         faq: [
-            { q: 'Takvimde kırmızı gün ne anlama geliyor?', a: 'Kırmızı renk devamsızlık anlamına gelir. O gün için giriş kaydı girilmemiş veya çalışma yapılmamıştır. Eğer o gün çalıştıysanız ama kart okutmadıysanız, "Kartsız Giriş Talebi" oluşturarak düzeltme yapabilirsiniz.' },
-            { q: 'Geçmiş ayları görebilir miyim?', a: 'Evet, takvimde ileri-geri ok düğmeleriyle geçmiş ve gelecek aylara geçebilirsiniz. Kilitlenmiş mali dönemlerin kayıtları salt okunurdur — düzenleme yapılamaz.' },
-            { q: 'Mali dönem kapandıktan sonra düzeltme yapılabilir mi?', a: 'Hayır. Mali dönem kilitlendiğinde o dönemin puantaj kayıtları (Attendance) değiştirilemez hale gelir. Düzeltme gerekiyorsa sistem yöneticisinin dönem kilidini açması gerekir.' }
+            { q: 'Takvimde başkasının etkinliğini görebilir miyim?', a: 'Sadece sizinle paylaşılmış etkinlikleri görebilirsiniz. Paylaşılan etkinlikler takvimde italik "Paylaşılan" etiketiyle görünür. Paylaşılmamış kişisel etkinliklere erişilemez.' },
+            { q: 'Şirket Takvimi Düzenle düğmesini göremiyorum', a: 'Bu düğme yönetici yetkisi gerektirebilir. Normal çalışanlar kişisel ajanda ve yıllık görünümü kullanabilir.' },
+            { q: 'Resmi tatiller takvimde otomatik görünür mü?', a: 'Evet. Sistem yöneticisi tarafından tanımlanan resmi tatiller ve şirket geneli etkinlikler tüm çalışanların takviminde otomatik olarak gösterilir.' }
         ]
     },
     {
