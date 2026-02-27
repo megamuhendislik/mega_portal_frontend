@@ -43,7 +43,34 @@ const HelpLibrary = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [lightboxImage, setLightboxImage] = useState(null);
+    const [lightboxVisible, setLightboxVisible] = useState(false);
+    const hoverTimer = useRef(null);
     const contentRef = useRef(null);
+
+    const openLightbox = (img) => {
+        setLightboxImage(img);
+        requestAnimationFrame(() => setLightboxVisible(true));
+    };
+
+    const closeLightbox = () => {
+        setLightboxVisible(false);
+        setTimeout(() => setLightboxImage(null), 300);
+    };
+
+    const handleThumbEnter = (img) => {
+        hoverTimer.current = setTimeout(() => openLightbox(img), 200);
+    };
+
+    const handleThumbLeave = () => {
+        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    };
+
+    useEffect(() => {
+        if (!lightboxImage) return;
+        const handler = (e) => { if (e.key === 'Escape') closeLightbox(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [lightboxImage]);
 
     const sections = useMemo(() => {
         return helpContent.filter(section => {
@@ -98,19 +125,30 @@ const HelpLibrary = () => {
             {/* Image Lightbox */}
             {lightboxImage && (
                 <div
-                    className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 md:p-12 cursor-pointer"
-                    onClick={() => setLightboxImage(null)}
+                    className={`fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12 cursor-pointer transition-all duration-300 ${
+                        lightboxVisible ? 'bg-black/85 backdrop-blur-sm' : 'bg-black/0'
+                    }`}
+                    onClick={closeLightbox}
                 >
-                    <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10">
+                    <button
+                        className={`absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 z-10 ${
+                            lightboxVisible ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        onClick={closeLightbox}
+                    >
                         <X size={22} className="text-white" />
                     </button>
                     <img
                         src={lightboxImage.src}
                         alt={lightboxImage.caption}
-                        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                        className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl transition-all duration-300 ease-out ${
+                            lightboxVisible ? 'scale-100 opacity-100' : 'scale-75 opacity-0'
+                        }`}
                         onClick={(e) => e.stopPropagation()}
                     />
-                    <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium bg-black/50 px-4 py-2 rounded-lg backdrop-blur-sm max-w-lg text-center">
+                    <p className={`absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium bg-black/50 px-4 py-2 rounded-lg backdrop-blur-sm max-w-lg text-center transition-all duration-300 delay-100 ${
+                        lightboxVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                    }`}>
                         {lightboxImage.caption}
                     </p>
                 </div>
@@ -231,17 +269,17 @@ const HelpLibrary = () => {
                                         {currentSection.images.map((img, i) => (
                                             <div
                                                 key={i}
-                                                className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white cursor-pointer hover:shadow-xl hover:border-indigo-200 transition-all duration-300"
-                                                onClick={() => setLightboxImage(img)}
+                                                className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white cursor-pointer hover:shadow-xl hover:border-indigo-300 transition-all duration-300"
+                                                onMouseEnter={() => handleThumbEnter(img)}
+                                                onMouseLeave={handleThumbLeave}
+                                                onClick={() => openLightbox(img)}
                                             >
                                                 <div className="relative aspect-video overflow-hidden">
-                                                    <img src={img.src} alt={img.caption} className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-110" loading="lazy" />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
-                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 flex flex-col items-center gap-1">
-                                                            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
-                                                                <ZoomIn size={16} className="text-slate-600" />
-                                                            </div>
-                                                            <span className="text-white text-[11px] font-medium drop-shadow">Büyüt</span>
+                                                    <img src={img.src} alt={img.caption} className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105" loading="lazy" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                                                        <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-lg">
+                                                            <ZoomIn size={13} className="text-indigo-600" />
+                                                            <span className="text-indigo-600 text-[11px] font-semibold">Büyüt</span>
                                                         </div>
                                                     </div>
                                                 </div>
