@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom';
 import {
     Clock, Calendar, XCircle, Users, Plus, Loader2,
     ChevronDown, ChevronRight, Zap, PenLine, FileText, Send, TrendingUp,
-    ClipboardList, CalendarCheck, X, LayoutList, UserCheck
+    ClipboardList, CalendarCheck, X, LayoutList, UserCheck,
+    LogIn, LogOut, Coffee, Briefcase, Sun, Moon
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -116,6 +117,128 @@ const EmptyState = ({ text }) => (
         <p className="text-sm text-slate-400 font-medium">{text}</p>
     </div>
 );
+
+// ═══════════════════════════════════════════════════════════
+// OVERTIME DETAIL CARD (rich info for claimable items)
+// ═══════════════════════════════════════════════════════════
+
+const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
+    const entries = item.entries || [];
+    const isOffDay = item.is_off_day;
+    const d = new Date(item.date + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const monthName = MONTH_NAMES[d.getMonth()];
+
+    return (
+        <div className="rounded-xl border border-slate-100 bg-white hover:border-blue-200 transition-all overflow-hidden">
+            <div className="flex">
+                {/* Left: Date column */}
+                <div className={`w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 ${isOffDay ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                    <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName}</span>
+                    <span className={`text-[10px] font-bold mt-0.5 ${isOffDay ? 'text-amber-600' : 'text-slate-400'}`}>{dayName}</span>
+                    {isOffDay && (
+                        <span className="mt-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-100 text-amber-700">TATİL</span>
+                    )}
+                </div>
+
+                {/* Right: Details */}
+                <div className="flex-1 p-3 min-w-0">
+                    {/* Vardiya bilgisi */}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                        {item.shift_start_time && item.shift_end_time && !isOffDay && (
+                            <span className="flex items-center gap-1">
+                                <Briefcase size={11} className="text-slate-400" />
+                                Vardiya: {item.shift_start_time} – {item.shift_end_time}
+                            </span>
+                        )}
+                        {isOffDay && (
+                            <span className="flex items-center gap-1 text-amber-600 font-bold">
+                                <Sun size={11} /> Tatil / İzin Günü
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Giriş/çıkış kayıtları */}
+                    {entries.length > 0 && (
+                        <div className="space-y-1 mb-2">
+                            {entries.map((e, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs">
+                                    {entries.length > 1 && (
+                                        <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-500 text-[9px] font-extrabold flex items-center justify-center flex-shrink-0">
+                                            {idx + 1}
+                                        </span>
+                                    )}
+                                    <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                                        <LogIn size={10} /> {e.check_in || '—'}
+                                    </span>
+                                    <span className="text-slate-300">→</span>
+                                    <span className="flex items-center gap-1 text-red-600 font-medium">
+                                        <LogOut size={10} /> {e.check_out || '—'}
+                                    </span>
+                                    {e.total_seconds > 0 && (
+                                        <span className="text-slate-400 ml-1">({formatDuration(e.total_seconds)})</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Özet satırı */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                        {item.total_work_hours > 0 && (
+                            <span className="text-slate-500">
+                                Toplam: <strong className="text-slate-700">{item.total_work_hours} sa</strong>
+                            </span>
+                        )}
+                        <span className="text-slate-500">
+                            Fazla Mesai: <strong className={`${type === 'potential' ? 'text-purple-700' : 'text-blue-700'}`}>
+                                {item.actual_overtime_hours} sa
+                            </strong>
+                        </span>
+                        {item.total_break_seconds > 0 && (
+                            <span className="flex items-center gap-0.5 text-slate-400">
+                                <Coffee size={10} /> {formatDuration(item.total_break_seconds)}
+                            </span>
+                        )}
+                        {type === 'intended' && (
+                            <span className="text-slate-500">
+                                Maks: <strong className="text-slate-700">{item.max_duration_hours} sa</strong>
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Atayan / task description */}
+                    {item.manager_name && (
+                        <div className="text-[11px] text-slate-400 mt-1">Atayan: {item.manager_name}</div>
+                    )}
+                    {item.task_description && (
+                        <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description}</div>
+                    )}
+                </div>
+
+                {/* Action */}
+                <div className="flex items-center px-3 flex-shrink-0">
+                    {claimed ? (
+                        <Pill color={type === 'potential' ? 'purple' : 'blue'}>Talep Edildi</Pill>
+                    ) : type === 'intended' && !(item.actual_overtime_hours > 0) ? (
+                        <Pill color="slate">Bekleniyor</Pill>
+                    ) : (
+                        <button onClick={onClaim}
+                            className={`px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 ${
+                                type === 'potential'
+                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}>
+                            <Send size={11} /> Talep Et
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ═══════════════════════════════════════════════════════════
 // SECTION HEADER (lightweight, no gradient icon box)
@@ -495,36 +618,19 @@ const AssignedOvertimeTab = () => {
                             ? <EmptyState text="Atanmış planlı ek mesai bulunmuyor." />
                             : (
                                 <div className="space-y-2">
-                                    {claimableData.intended.map((item, i) => {
-                                        const canClaim = item.actual_overtime_hours > 0;
-                                        return (
-                                            <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-blue-200 transition-all">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-sm text-slate-800">{formatDateShort(item.date)}</span>
-                                                        <span className="text-xs text-slate-400">{DAY_NAMES[new Date(item.date + 'T00:00:00').getDay()]}</span>
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">
-                                                        Maks {item.max_duration_hours} sa
-                                                        {item.actual_overtime_hours > 0 && <> · Gerçekleşen: <strong className="text-emerald-600">{item.actual_overtime_hours} sa</strong></>}
-                                                        {item.manager_name && <> · {item.manager_name}</>}
-                                                    </div>
-                                                    {item.task_description && <div className="text-xs text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description}</div>}
-                                                </div>
-                                                <div className="flex-shrink-0 ml-3">
-                                                    {item.already_claimed
-                                                        ? <Pill color="blue">Talep Edildi</Pill>
-                                                        : canClaim ? (
-                                                            <button onClick={() => setClaimModal({ open: true, type: 'INTENDED', target: item, title: 'Planlı Mesai Talep Et', subtitle: `${formatDateTurkish(item.date)} — ${item.claimable_hours || item.actual_overtime_hours} saat` })}
-                                                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1">
-                                                                <Send size={11} /> Talep Et
-                                                            </button>
-                                                        ) : <Pill color="slate">Bekleniyor</Pill>
-                                                    }
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    {claimableData.intended.map((item, i) => (
+                                        <OvertimeDetailCard
+                                            key={i}
+                                            item={item}
+                                            type="intended"
+                                            claimed={item.already_claimed}
+                                            onClaim={() => setClaimModal({
+                                                open: true, type: 'INTENDED', target: item,
+                                                title: 'Planlı Mesai Talep Et',
+                                                subtitle: `${formatDateTurkish(item.date)} — ${item.claimable_hours || item.actual_overtime_hours} saat`,
+                                            })}
+                                        />
+                                    ))}
                                 </div>
                             )
                         }
@@ -538,30 +644,17 @@ const AssignedOvertimeTab = () => {
                             : (
                                 <div className="space-y-2">
                                     {claimableData.potential.map((item, i) => (
-                                        <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-purple-200 transition-all">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-sm text-slate-800">{formatDateShort(item.date)}</span>
-                                                    <span className="text-xs text-slate-400">{DAY_NAMES[new Date(item.date + 'T00:00:00').getDay()]}</span>
-                                                </div>
-                                                <div className="text-xs text-slate-500 mt-0.5">
-                                                    Algılanan: <strong className="text-purple-600">{item.actual_overtime_hours} sa</strong>
-                                                    {item.shift_end_time && <> · Vardiya: {item.shift_end_time?.slice(0, 5)}</>}
-                                                    {item.check_out_time && <> · Çıkış: {item.check_out_time?.slice(0, 5)}</>}
-                                                </div>
-                                            </div>
-                                            <div className="flex-shrink-0 ml-3">
-                                                {item.already_claimed
-                                                    ? <Pill color="purple">Talep Edildi</Pill>
-                                                    : (
-                                                        <button onClick={() => setClaimModal({ open: true, type: 'POTENTIAL', target: item, title: 'Plansız Mesai Talep Et', subtitle: `${formatDateTurkish(item.date)} — ${item.actual_overtime_hours} saat` })}
-                                                            className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1">
-                                                            <Send size={11} /> Talep Et
-                                                        </button>
-                                                    )
-                                                }
-                                            </div>
-                                        </div>
+                                        <OvertimeDetailCard
+                                            key={i}
+                                            item={item}
+                                            type="potential"
+                                            claimed={item.already_claimed}
+                                            onClaim={() => setClaimModal({
+                                                open: true, type: 'POTENTIAL', target: item,
+                                                title: 'Plansız Mesai Talep Et',
+                                                subtitle: `${formatDateTurkish(item.date)} — ${item.actual_overtime_hours} saat`,
+                                            })}
+                                        />
                                     ))}
                                 </div>
                             )
