@@ -42,6 +42,7 @@ const HelpLibrary = () => {
     const [activeSection, setActiveSection] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const [lightboxImage, setLightboxImage] = useState(null);
     const contentRef = useRef(null);
 
     const sections = useMemo(() => {
@@ -92,6 +93,27 @@ const HelpLibrary = () => {
             {/* Mobile overlay */}
             {mobileSidebarOpen && (
                 <div className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
+            )}
+
+            {/* Image Lightbox */}
+            {lightboxImage && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 md:p-12 cursor-pointer"
+                    onClick={() => setLightboxImage(null)}
+                >
+                    <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10">
+                        <X size={22} className="text-white" />
+                    </button>
+                    <img
+                        src={lightboxImage.src}
+                        alt={lightboxImage.caption}
+                        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                    <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium bg-black/50 px-4 py-2 rounded-lg backdrop-blur-sm max-w-lg text-center">
+                        {lightboxImage.caption}
+                    </p>
+                </div>
             )}
 
             {/* Sidebar */}
@@ -205,19 +227,26 @@ const HelpLibrary = () => {
                             {currentSection.images?.length > 0 && (
                                 <div>
                                     <SectionHeading>Ekran Görüntüleri</SectionHeading>
-                                    <div className="grid gap-4">
+                                    <div className={`grid gap-3 ${currentSection.images.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-2 md:grid-cols-3'}`}>
                                         {currentSection.images.map((img, i) => (
-                                            <div key={i} className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white hover:shadow-lg transition-shadow">
-                                                <a href={img.src} target="_blank" rel="noopener noreferrer" className="block relative">
-                                                    <img src={img.src} alt={img.caption} className="w-full h-auto" loading="lazy" />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
-                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-full p-2.5 shadow-lg">
-                                                            <ZoomIn size={18} className="text-slate-600" />
+                                            <div
+                                                key={i}
+                                                className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white cursor-pointer hover:shadow-lg hover:border-indigo-200 transition-all duration-200"
+                                                onClick={() => setLightboxImage(img)}
+                                            >
+                                                <div className="relative aspect-video">
+                                                    <img src={img.src} alt={img.caption} className="w-full h-full object-cover object-top" loading="lazy" />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">
+                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center gap-1">
+                                                            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                                                                <ZoomIn size={16} className="text-slate-600" />
+                                                            </div>
+                                                            <span className="text-white text-[11px] font-medium drop-shadow">Büyüt</span>
                                                         </div>
                                                     </div>
-                                                </a>
-                                                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100">
-                                                    <p className="text-xs text-slate-500 font-medium">{img.caption}</p>
+                                                </div>
+                                                <div className="px-3 py-2 bg-slate-50 border-t border-slate-100">
+                                                    <p className="text-[11px] text-slate-500 font-medium leading-snug line-clamp-2">{img.caption}</p>
                                                 </div>
                                             </div>
                                         ))}
