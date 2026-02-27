@@ -19,10 +19,12 @@ export const LeaveRequestForm = ({
     workingDaysInfo,
     recentLeaveHistory,
     fifoPreview,
+    excuseBalance,
 }) => {
     const balance = leaveBalance;
     const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
     const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
+    const isExcuseLeave = selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
     const isInsufficient = isInsufficientBalance;
 
     return (
@@ -147,6 +149,51 @@ export const LeaveRequestForm = ({
                 </div>
             )}
 
+            {/* Excuse Leave Balance Box */}
+            {isExcuseLeave && excuseBalance && (
+                <div className="p-4 rounded-xl border bg-orange-50 border-orange-100 transition-colors">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Clock size={18} className="text-orange-600" />
+                        <h4 className="font-bold text-orange-700">Mazeret İzni Bakiyesi</h4>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                        <div className="bg-white/60 p-2 rounded-lg">
+                            <span className="block text-xs text-slate-500 font-bold uppercase">TOPLAM HAK</span>
+                            <span className="block font-black text-slate-700 text-lg">{excuseBalance.hours_entitled} sa</span>
+                        </div>
+                        <div className="bg-white/60 p-2 rounded-lg">
+                            <span className="block text-xs text-slate-500 font-bold uppercase">KULLANILAN</span>
+                            <span className="block font-black text-amber-700 text-lg">{excuseBalance.hours_used} sa</span>
+                        </div>
+                        <div className={`p-2 rounded-lg ${excuseBalance.hours_remaining <= 0 ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-50 ring-1 ring-emerald-100'}`}>
+                            <span className="block text-xs font-bold uppercase text-slate-500">KALAN</span>
+                            <span className={`block font-black text-lg ${excuseBalance.hours_remaining <= 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                {excuseBalance.hours_remaining} sa
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all ${excuseBalance.hours_remaining <= 4.5 ? 'bg-red-400' : 'bg-orange-400'}`}
+                            style={{ width: `${Math.min(100, (excuseBalance.hours_used / excuseBalance.hours_entitled) * 100)}%` }}
+                        />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                        <span>0 sa</span>
+                        <span>{excuseBalance.hours_entitled} sa</span>
+                    </div>
+
+                    {excuseBalance.hours_remaining <= 0 && (
+                        <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-1">
+                            <AlertCircle size={14} /> Bu yılın mazeret izni kotası dolmuştur.
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Gecmis Izin Talepleri */}
             {recentLeaveHistory && recentLeaveHistory.length > 0 && (
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -204,28 +251,87 @@ export const LeaveRequestForm = ({
                 </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-5">
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç <span className="text-red-500">*</span></label>
-                    <input
-                        required
-                        type="date"
-                        value={leaveForm.start_date}
-                        onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                    />
+            {/* Mazeret İzni: Tek tarih + Saat Aralığı */}
+            {isExcuseLeave ? (
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="date"
+                            value={leaveForm.start_date}
+                            onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Saat Aralığı <span className="text-red-500">*</span></label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs text-slate-500 mb-1">Başlangıç</label>
+                                <input
+                                    type="time"
+                                    value={leaveForm.start_time || ''}
+                                    onChange={e => setLeaveForm({ ...leaveForm, start_time: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-500 mb-1">Bitiş</label>
+                                <input
+                                    type="time"
+                                    value={leaveForm.end_time || ''}
+                                    onChange={e => setLeaveForm({ ...leaveForm, end_time: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        {leaveForm.start_time && leaveForm.end_time && (() => {
+                            const [sh, sm] = leaveForm.start_time.split(':').map(Number);
+                            const [eh, em] = leaveForm.end_time.split(':').map(Number);
+                            const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+                            if (hours <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Bitiş saati başlangıçtan sonra olmalı.</p>;
+                            if (hours > 4.5) return <p className="text-xs text-red-600 font-bold mt-2">Günlük mazeret izni en fazla 4.5 saat olabilir. ({hours.toFixed(1)} saat)</p>;
+                            return (
+                                <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg mt-2 border border-orange-100">
+                                    <Clock size={14} className="text-orange-600" />
+                                    <span className="text-sm font-bold text-orange-700">{hours.toFixed(1)} saat mazeret izni</span>
+                                    {excuseBalance && (
+                                        <span className="text-xs text-slate-400 ml-auto">
+                                            (Kalan: {(excuseBalance.hours_remaining - hours).toFixed(1)} sa)
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş <span className="text-red-500">*</span></label>
-                    <input
-                        required
-                        type="date"
-                        value={leaveForm.end_date}
-                        onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                    />
+            ) : (
+                <div className="grid grid-cols-2 gap-5">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="date"
+                            value={leaveForm.start_date}
+                            onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="date"
+                            value={leaveForm.end_date}
+                            onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Duration Display */}
             {leaveForm.start_date && leaveForm.end_date && (

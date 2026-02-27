@@ -54,7 +54,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         reason: '',
         destination: '',
         contact_phone: '',
-        send_to_substitute: false
+        send_to_substitute: false,
+        start_time: '',
+        end_time: '',
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
@@ -117,6 +119,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // FIFO Preview
     const [fifoPreview, setFifoPreview] = useState(null);
 
+    // Excuse leave balance
+    const [excuseBalance, setExcuseBalance] = useState(null);
+
     useEffect(() => {
         if (selectedType !== 'CARDLESS_ENTRY' || !cardlessEntryForm.date) {
             setCardlessSchedule(null);
@@ -158,6 +163,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setWorkingDaysInfo(null);
             setRecentLeaveHistory([]);
             setFifoPreview(null);
+            setExcuseBalance(null);
             setApproverSubstitutes([]);
             // Reset forms
             setOvertimeForm({
@@ -301,6 +307,18 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return () => clearTimeout(timer);
     }, [selectedType, leaveForm.start_date, leaveForm.end_date, leaveForm.request_type, requestTypes]);
 
+    // Fetch excuse leave balance when EXCUSE_LEAVE is selected
+    useEffect(() => {
+        const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+        if (selectedTypeObj?.code === 'EXCUSE_LEAVE') {
+            api.get('/leave/requests/excuse-balance/')
+                .then(res => setExcuseBalance(res.data))
+                .catch(() => setExcuseBalance(null));
+        } else {
+            setExcuseBalance(null);
+        }
+    }, [leaveForm.request_type, requestTypes]);
+
     // FIFO Preview fetch
     useEffect(() => {
         if (selectedType !== 'LEAVE' || !workingDaysInfo?.working_days) {
@@ -409,7 +427,18 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             const approverPayload = selectedApproverId ? { target_approver_id: selectedApproverId } : {};
 
             if (selectedType === 'LEAVE') {
-                response = await api.post('/leave/requests/', { ...leaveForm, ...approverPayload });
+                const leavePayload = { ...leaveForm, ...approverPayload };
+                // Mazeret izni: end_date = start_date, include start_time/end_time
+                const leaveTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+                if (leaveTypeObj?.code === 'EXCUSE_LEAVE') {
+                    leavePayload.end_date = leavePayload.start_date;
+                }
+                // Remove empty time fields for non-excuse leave
+                if (!leaveTypeObj || leaveTypeObj.code !== 'EXCUSE_LEAVE') {
+                    delete leavePayload.start_time;
+                    delete leavePayload.end_time;
+                }
+                response = await api.post('/leave/requests/', leavePayload);
             } else if (selectedType === 'OVERTIME') {
                 // Only manual entry uses the form submit
                 response = await api.post('/overtime-requests/manual-entry/', {
@@ -514,7 +543,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const duration = calculateDuration();
         const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
         const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
-        return isAnnualLeave && balance && duration > 0 && (duration > balance.available);
+        if (isAnnualLeave && balance && duration > 0 && (duration > balance.available)) return true;
+
+        // Mazeret izni bakiye kontrolü
+        const isExcuseLeave = selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
+        if (isExcuseLeave && excuseBalance) {
+            if (excuseBalance.hours_remaining <= 0) return true;
+            if (leaveForm.start_time && leaveForm.end_time) {
+                const [sh, sm] = leaveForm.start_time.split(':').map(Number);
+                const [eh, em] = leaveForm.end_time.split(':').map(Number);
+                const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+                if (hours > 0 && hours > excuseBalance.hours_remaining) return true;
+            }
+        }
+        return false;
     };
     const isInsufficientBalance = selectedType === 'LEAVE' && getInsufficientBalanceState();
 
@@ -796,6 +838,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     workingDaysInfo={workingDaysInfo}
                                     recentLeaveHistory={recentLeaveHistory}
                                     fifoPreview={fifoPreview}
+                                    excuseBalance={excuseBalance}
                                 />
                             )}
                             {selectedType === 'OVERTIME' && (

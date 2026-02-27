@@ -194,7 +194,7 @@ const Dashboard = () => {
             </div>
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
                 <StatCard
                     title="BUGÜN ÇALIŞMA"
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
@@ -275,6 +275,53 @@ const Dashboard = () => {
                             <span className="text-[10px] text-slate-400 italic">İşe giriş tarihi eksik.</span>
                         </div>
                     )}
+                </div>
+
+                {/* 5. Excuse Leave StatCard */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">MAZERET İZNİ</p>
+                        <div className="p-2 rounded-lg bg-orange-50 text-orange-600 transition-colors group-hover:bg-orange-100">
+                            <Clock size={20} />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-end mb-4">
+                        <div>
+                            <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+                                {monthlySummary?.excuse_leave_hours_remaining != null
+                                    ? monthlySummary.excuse_leave_hours_remaining
+                                    : 18}
+                            </span>
+                            <span className="text-xs font-bold text-slate-400 ml-1">SAAT</span>
+                            <p className="text-[10px] text-slate-400 font-medium mt-1">
+                                Kullanılan: <span className="text-amber-600 font-bold">
+                                    {monthlySummary?.excuse_leave_hours_used || 0} Saat
+                                </span>
+                            </p>
+                        </div>
+
+                        <div className="text-right">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 block">GÜNLÜK MAX</span>
+                            <span className="block text-sm font-bold text-orange-600">4.5 Saat</span>
+                        </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="pt-3 border-t border-slate-50">
+                        <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[10px] font-bold text-orange-500 uppercase">YILLIK KOTA KULLANIMI</span>
+                            <span className="text-[10px] font-bold text-orange-600">
+                                {monthlySummary?.excuse_leave_hours_used || 0} / {monthlySummary?.excuse_leave_hours_entitled || 18} sa
+                            </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                                className="h-full bg-orange-400 rounded-full transition-all"
+                                style={{ width: `${Math.min(100, ((monthlySummary?.excuse_leave_hours_used || 0) / (monthlySummary?.excuse_leave_hours_entitled || 18)) * 100)}%` }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 

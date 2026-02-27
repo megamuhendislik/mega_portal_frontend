@@ -189,9 +189,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
           <div>
             <h2 className="text-2xl font-bold text-slate-800">Talep Detayları</h2>
             <p className="text-sm text-slate-600 mt-1">
-              {requestType === 'LEAVE' ? 'İzin Talebi' :
-                requestType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
-                  requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' : 'Talep'}
+              {requestType === 'LEAVE'
+                ? (request.leave_type_name || request.request_type_detail?.name || 'İzin Talebi')
+                : requestType === 'OVERTIME' ? 'Fazla Mesai Talebi'
+                : requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi'
+                : requestType === 'MEAL' ? 'Yemek Talebi'
+                : 'Talep'}
+              {request.id && <span className="text-slate-400 ml-2">#{request.id}</span>}
             </p>
           </div>
           <button
@@ -227,16 +231,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
           {/* Request Info */}
           <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-600">Durum</span>
-              {getStatusBadge(request.status)}
-            </div>
-
-            {/* Talep Eden Bilgisi */}
+            {/* Talep Eden Bilgisi — her zaman göster */}
             {(() => {
               const empName = request.employee_name || request.employee_detail?.full_name || request.employee?.name || request.employee?.full_name || '';
               const empDept = request.employee_department || request.employee_detail?.department_name || request.employee?.department || '';
-              if (!empName) return null;
+              const empPosition = request.employee_position || request.employee_detail?.job_position_name || '';
               return (
                 <div className="bg-white rounded-xl p-4 border border-slate-200">
                   <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Talep Eden</div>
@@ -244,16 +243,50 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 font-bold text-sm border border-blue-200">
                       <User size={18} />
                     </div>
-                    <div>
-                      <div className="font-bold text-slate-800">{empName}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-slate-800">{empName || 'Bilinmiyor'}</div>
                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                         {empDept && <span>{empDept}</span>}
+                        {empDept && empPosition && <span className="text-slate-300">|</span>}
+                        {empPosition && <span>{empPosition}</span>}
                       </div>
                     </div>
+                    {getStatusBadge(request.status)}
                   </div>
                 </div>
               );
             })()}
+
+            {/* Talep Bilgisi Kartı */}
+            <div className="bg-white rounded-xl p-4 border border-slate-200">
+              <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Talep Bilgisi</div>
+              <div className="space-y-2">
+                {/* Talep Türü */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-600">Talep Türü</span>
+                  <span className="text-sm font-bold text-slate-800">
+                    {requestType === 'LEAVE'
+                      ? (request.leave_type_name || request.request_type_detail?.name || 'İzin')
+                      : requestType === 'OVERTIME' ? 'Fazla Mesai'
+                      : requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş'
+                      : requestType === 'MEAL' ? 'Yemek'
+                      : 'Diğer'}
+                  </span>
+                </div>
+
+                {/* Oluşturulma Tarihi */}
+                {request.created_at && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Oluşturulma</span>
+                    <span className="text-sm text-slate-700">
+                      {new Date(request.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {' '}
+                      <span className="text-slate-400">{new Date(request.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {requestType === 'LEAVE' && (
               <>
@@ -269,6 +302,15 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                   <span className="text-sm font-medium text-slate-600">Toplam Gün</span>
                   <span className="text-sm font-bold text-blue-600">{request.total_days}</span>
                 </div>
+                {/* Mazeret izni saat aralığı */}
+                {request.start_time && request.end_time && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Saat Aralığı</span>
+                    <span className="text-sm font-bold text-orange-600">
+                      {request.start_time?.substring(0, 5)} - {request.end_time?.substring(0, 5)}
+                    </span>
+                  </div>
+                )}
                 {/* Yil Bazli Kesim */}
                 {request.usage_breakdown && Object.keys(request.usage_breakdown).length > 0 && (
                   <div className="pt-2">
@@ -357,14 +399,33 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-600">Tarih</span>
-                  <span className="text-sm text-slate-800">{formatDate(request.date)}</span>
+                  <span className="text-sm text-slate-800">{formatDate(request.date || request.start_date)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-600">Saat Aralığı</span>
-                  <span className="text-sm text-slate-800">
+                  <span className="text-sm font-bold text-amber-700">
                     {request.start_time?.substring(0, 5)} - {request.end_time?.substring(0, 5)}
                   </span>
                 </div>
+                {request.total_hours != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Toplam Süre</span>
+                    <span className="text-sm font-bold text-amber-600">{request.total_hours} Saat</span>
+                  </div>
+                )}
+                {request.source_type && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Kaynak</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      request.source_type === 'INTENDED' ? 'bg-emerald-50 text-emerald-700' :
+                      request.source_type === 'POTENTIAL' ? 'bg-yellow-50 text-yellow-700' :
+                      'bg-red-50 text-red-700'
+                    }`}>
+                      {request.source_type === 'INTENDED' ? 'Planlı' :
+                       request.source_type === 'POTENTIAL' ? 'Planlanmamış' : 'Manuel Giriş'}
+                    </span>
+                  </div>
+                )}
               </>
             )}
 
@@ -436,44 +497,62 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </>
             )}
 
-            {request.reason && (
+            {(request.reason || request.description) && (
               <div className="pt-3 border-t border-slate-200">
                 <span className="text-sm font-medium text-slate-600 block mb-1">Gerekçe</span>
-                <p className="text-sm text-slate-700">{request.reason}</p>
+                <p className="text-sm text-slate-700 whitespace-pre-line">{request.reason || request.description}</p>
               </div>
             )}
 
-            {/* Hedef Onaylayici */}
-            {(request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name) && (
-              <div className="pt-3 border-t border-slate-200">
-                <span className="text-sm font-medium text-slate-600 block mb-1">Onaya Gonderilen</span>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-blue-700 font-semibold">
-                    {request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name}
-                  </p>
-                  {request.target_approver_detail?.department_name && (
-                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                      {request.target_approver_detail.department_name}
-                    </span>
-                  )}
-                  {request.target_approver_detail?.relationship && (
-                    <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
-                      {request.target_approver_detail.relationship === 'PRIMARY' ? 'Birincil Yonetici' :
-                       request.target_approver_detail.relationship === 'SECONDARY' ? 'Ikincil Yonetici' :
-                       request.target_approver_detail.relationship === 'DEPT_MANAGER' ? 'Departman Yoneticisi' :
-                       'Yonetici'}
-                    </span>
-                  )}
+            {/* Onay / Karar Bilgisi */}
+            {(() => {
+              const targetName = request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name;
+              const approvedByName = request.approved_by_name || request.approved_by_detail?.full_name;
+              const targetDept = request.target_approver_detail?.department_name || request.approver_target?.department;
+
+              if (!targetName && !approvedByName) return null;
+              return (
+                <div className="bg-white rounded-xl p-4 border border-slate-200">
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Onay Bilgisi</div>
+                  <div className="space-y-2">
+                    {/* Hedef Onaylayıcı */}
+                    {targetName && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-600">Onaya Gönderilen</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-blue-700 font-bold">{targetName}</span>
+                          {targetDept && (
+                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{targetDept}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {/* Onaylayan / Reddeden */}
+                    {approvedByName && request.status !== 'PENDING' && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-600">
+                          {['APPROVED', 'ORDERED'].includes(request.status) ? 'Onaylayan' : 'Reddeden'}
+                        </span>
+                        <span className={`text-sm font-bold ${['APPROVED', 'ORDERED'].includes(request.status) ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {approvedByName}
+                        </span>
+                      </div>
+                    )}
+                    {/* Onay Tarihi */}
+                    {request.approved_at && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-600">Karar Tarihi</span>
+                        <span className="text-sm text-slate-700">
+                          {new Date(request.approved_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {' '}
+                          <span className="text-slate-400">{new Date(request.approved_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {request.approved_by_name && (
-              <div className="pt-3 border-t border-slate-200">
-                <span className="text-sm font-medium text-slate-600 block mb-1">Onaylayan</span>
-                <p className="text-sm text-slate-700">{request.approved_by_name}</p>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Rejection Reason */}
             {request.status === 'REJECTED' && request.rejection_reason && (

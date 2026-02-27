@@ -82,6 +82,11 @@ const IncomingRequestsTab = ({
                     _source: 'SUBSTITUTE',
                     _isSubstitute: true,
                     _principalName: principal?.principal_name || '',
+                    employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
+                    employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
+                    target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
+                    approved_by_name: r.approved_by_name || r.approved_by_detail?.full_name || '',
+                    leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
                     start_date: r.start_date || r.created_at,
                     _sortDate: r.start_date || r.created_at,
                 });
@@ -94,6 +99,9 @@ const IncomingRequestsTab = ({
                     _source: 'SUBSTITUTE',
                     _isSubstitute: true,
                     _principalName: principal?.principal_name || '',
+                    employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
+                    employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
+                    target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
                     start_date: r.date || r.created_at,
                     _sortDate: r.date || r.created_at,
                 });

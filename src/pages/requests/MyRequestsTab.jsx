@@ -53,7 +53,7 @@ const MyRequestsTab = ({
         requests.forEach(r => items.push({
             ...r, ...myInfo, _type: 'LEAVE', type: 'LEAVE',
             _sortDate: r.start_date || r.created_at,
-            leave_type_name: requestTypes.find(t => t.id === r.request_type)?.name,
+            leave_type_name: r.leave_type_name || requestTypes.find(t => t.id === r.request_type)?.name || r.request_type_detail?.name || '',
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
             approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
@@ -61,13 +61,15 @@ const MyRequestsTab = ({
             ...r, ...myInfo, _type: 'OVERTIME', type: 'OVERTIME',
             _sortDate: r.date || r.created_at,
             onResubmit: () => handleResubmitOvertime(r),
-            target_approver_name: r.target_approver_name || null,
+            target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
+            approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
         mealRequests.forEach(r => items.push({ ...r, ...myInfo, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
         cardlessEntryRequests.forEach(r => items.push({
             ...r, ...myInfo, _type: 'CARDLESS_ENTRY', type: 'CARDLESS_ENTRY',
             _sortDate: r.date || r.created_at,
-            target_approver_name: r.target_approver_name || null,
+            target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
+            approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
@@ -156,6 +158,7 @@ const MyRequestsTab = ({
                         onViewDetails={handleViewDetails}
                         onEdit={handleEditOvertimeClick}
                         onDelete={handleDeleteRequest}
+                        showEmployeeColumn={false}
                     />
                 </div>
             )}
