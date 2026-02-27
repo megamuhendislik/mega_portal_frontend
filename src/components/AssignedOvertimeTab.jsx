@@ -129,6 +129,7 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
     const dayName = DAY_NAMES[d.getDay()];
     const dayNum = String(d.getDate()).padStart(2, '0');
     const monthName = MONTH_NAMES[d.getMonth()];
+    const year = d.getFullYear();
 
     return (
         <div className="rounded-xl border border-slate-100 bg-white hover:border-blue-200 transition-all overflow-hidden">
@@ -136,7 +137,7 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                 {/* Left: Date column */}
                 <div className={`w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 ${isOffDay ? 'bg-amber-50' : 'bg-slate-50'}`}>
                     <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
-                    <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName}</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName} {year}</span>
                     <span className={`text-[10px] font-bold mt-0.5 ${isOffDay ? 'text-amber-600' : 'text-slate-400'}`}>{dayName}</span>
                     {isOffDay && (
                         <span className="mt-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-100 text-amber-700">TATİL</span>
@@ -639,6 +640,13 @@ const AssignedOvertimeTab = () => {
     };
 
     // ── Computed ──
+    // Sadece çalışılmış (fazla mesaisi olan) veya talep edilmiş intended'ları göster
+    const visibleIntended = useMemo(() => {
+        return claimableData.intended.filter(item =>
+            item.actual_overtime_hours > 0 || item.claim_status
+        );
+    }, [claimableData.intended]);
+
     const pendingCount = myRequests.filter(r => r.status === 'PENDING').length;
     const approvedHours = Math.round(myRequests.filter(r => r.status === 'APPROVED').reduce((s, r) => s + (r.duration_seconds || 0), 0) / 3600 * 10) / 10;
     const thisMonthCount = myRequests.filter(r => {
@@ -800,12 +808,12 @@ const AssignedOvertimeTab = () => {
 
                     {/* ─── Benden İstenen Planlı Mesailer ─── */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                        <SectionHeader icon={<CalendarCheck size={16} />} title="Benden İstenen Planlı Mesailer" count={claimableData.intended.length} countColor="blue" />
-                        {claimableData.intended.length === 0
+                        <SectionHeader icon={<CalendarCheck size={16} />} title="Benden İstenen Planlı Mesailer" count={visibleIntended.length} countColor="blue" />
+                        {visibleIntended.length === 0
                             ? <EmptyState text="Atanmış planlı ek mesai bulunmuyor." />
                             : (
                                 <div className="space-y-2">
-                                    {claimableData.intended.map((item, i) => (
+                                    {visibleIntended.map((item, i) => (
                                         <OvertimeDetailCard
                                             key={i}
                                             item={item}
