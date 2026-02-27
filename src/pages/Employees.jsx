@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, ChevronDown, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key, Calculator } from 'lucide-react';
+import { Plus, Search, Filter, ChevronDown, ChevronRight, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key, Calculator, Network } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
@@ -1105,6 +1105,8 @@ const Employees = () => {
     const [workSchedules, setWorkSchedules] = useState([]); // Added
     const [roles, setRoles] = useState([]); // [NEW]
     const [availableTags, setAvailableTags] = useState([]); // [NEW]
+    const [hierarchyData, setHierarchyData] = useState([]);
+    const [collapsedNodes, setCollapsedNodes] = useState({});
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -1129,14 +1131,15 @@ const Employees = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes] = await Promise.all([
+            const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes, hierRes] = await Promise.all([
                 api.get('/employees/'),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
                 api.get('/attendance/fiscal-calendars/'),
                 api.get('/roles/'),
-                api.get('/employee-tags/')
+                api.get('/employee-tags/'),
+                api.get('/departments/hierarchy/').catch(() => ({ data: [] }))
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
@@ -1145,6 +1148,7 @@ const Employees = () => {
             setWorkSchedules(schedRes.data.results || schedRes.data);
             setRoles(roleRes.data.results || roleRes.data);
             setAvailableTags(tagsRes.data.results || tagsRes.data);
+            setHierarchyData(hierRes.data || []);
         } catch (error) {
             console.error("Data fetch error:", error);
         } finally {
@@ -1527,18 +1531,151 @@ const Employees = () => {
     if (loading) return <div className="flex justify-center items-center h-screen bg-slate-50"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
     if (viewMode === 'list') {
-        // Flat list (no department grouping)
-        const filteredEmployees = employees
-            .filter(e => e.employment_status !== 'TERMINATED')
-            .filter(e =>
-                (e.first_name + ' ' + e.last_name).toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
-                (e.job_position?.name || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
-                (e.email || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
-                (e.employee_code || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR'))
-            )
-            .filter(e => !positionFilter || (e.job_position?.id || e.job_position) == positionFilter)
-            .filter(e => !roleFilter || (e.role_ids || e.roles || []).some(r => (r.id || r) == roleFilter))
-            .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, 'tr'));
+        // Search filter for hierarchy
+        const searchLower = searchTerm.toLocaleLowerCase('tr-TR');
+        const matchesSearch = (emp) => {
+            if (!searchTerm) return true;
+            return (emp.name || '').toLocaleLowerCase('tr-TR').includes(searchLower) ||
+                (emp.title || '').toLocaleLowerCase('tr-TR').includes(searchLower);
+        };
+
+        // Toggle collapse
+        const toggleNode = (nodeId) => {
+            setCollapsedNodes(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
+        };
+
+        // Find employee data from employees array by id
+        const getEmpData = (empId) => {
+            const id = typeof empId === 'string' && empId.includes('-') ? null : empId;
+            return id ? employees.find(e => e.id === id) : null;
+        };
+
+        // Render a single employee row in the tree
+        const renderEmployeeRow = (emp, depth = 0, parentKey = '') => {
+            const empData = getEmpData(emp.id);
+            const hasChildren = (emp.children && emp.children.length > 0);
+            const nodeKey = `emp-${parentKey}-${emp.id}`;
+            const isCollapsed = collapsedNodes[nodeKey];
+            const show = matchesSearch(emp) || !searchTerm;
+
+            if (!show && !hasChildren) return null;
+
+            const rows = [];
+            rows.push(
+                <div key={nodeKey} className="group flex items-center gap-2 py-2.5 px-4 hover:bg-blue-50/40 transition-colors border-b border-slate-50" style={{ paddingLeft: `${16 + depth * 28}px` }}>
+                    {/* Expand/Collapse */}
+                    <button
+                        onClick={() => hasChildren && toggleNode(nodeKey)}
+                        className={`w-5 h-5 flex items-center justify-center rounded transition-all shrink-0 ${hasChildren ? 'text-slate-400 hover:text-blue-600 hover:bg-blue-100 cursor-pointer' : 'invisible'}`}
+                    >
+                        {hasChildren && (isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />)}
+                    </button>
+
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-lg ${hasChildren ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-slate-400 to-slate-500'} text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0`}>
+                        {(emp.name || '??').split(' ').map(w => w[0]).join('').slice(0, 2)}
+                    </div>
+
+                    {/* Name & Title */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                            <span className={`font-semibold text-sm truncate ${hasChildren ? 'text-slate-900' : 'text-slate-700'}`}>{emp.name}</span>
+                            {emp.is_secondary && <span className="text-[9px] font-bold bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded">Matrix</span>}
+                        </div>
+                        <span className="text-xs text-slate-500 truncate block">{emp.title}</span>
+                    </div>
+
+                    {/* Employee code */}
+                    {empData && (
+                        <span className="text-[10px] text-slate-400 font-mono bg-slate-50 px-1.5 py-0.5 rounded hidden md:inline-block shrink-0">#{empData.employee_code}</span>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        {showSettings ? (
+                            <>
+                                <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
+                                {hasPermission('PAGE_EMPLOYEES') && empData && (
+                                    <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
+                                )}
+                            </>
+                        ) : (
+                            <button onClick={() => empData && handleEdit(empData)} className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-bold transition-colors">Detay</button>
+                        )}
+                    </div>
+                </div>
+            );
+
+            // Render children recursively
+            if (hasChildren && !isCollapsed) {
+                emp.children.forEach(child => {
+                    // If child is a department
+                    if (child.employees !== undefined) {
+                        rows.push(...renderDepartmentNode(child, depth + 1, nodeKey));
+                    } else {
+                        const childRows = renderEmployeeRow(child, depth + 1, nodeKey);
+                        if (childRows) rows.push(...(Array.isArray(childRows) ? childRows : [childRows]));
+                    }
+                });
+            }
+
+            return rows;
+        };
+
+        // Render a department node in the tree
+        const renderDepartmentNode = (dept, depth = 0, parentKey = '') => {
+            const nodeKey = `dept-${parentKey}-${dept.id}`;
+            const isCollapsed = collapsedNodes[nodeKey];
+            const empCount = (dept.employees || []).length;
+            const childDeptCount = (dept.children || []).length;
+            const hasContent = empCount > 0 || childDeptCount > 0;
+
+            const rows = [];
+            rows.push(
+                <div key={nodeKey} className="flex items-center gap-2 py-2.5 px-4 bg-slate-50/80 border-b border-slate-100 cursor-pointer hover:bg-slate-100/80 transition-colors" style={{ paddingLeft: `${16 + depth * 28}px` }} onClick={() => hasContent && toggleNode(nodeKey)}>
+                    <button className={`w-5 h-5 flex items-center justify-center rounded transition-all shrink-0 ${hasContent ? 'text-slate-500' : 'invisible'}`}>
+                        {hasContent && (isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />)}
+                    </button>
+                    <div className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <Building size={13} />
+                    </div>
+                    <span className="font-bold text-sm text-slate-700">{dept.name}</span>
+                    <span className="text-[10px] text-slate-400 bg-white px-1.5 py-0.5 rounded-full border border-slate-100">{dept.code}</span>
+                </div>
+            );
+
+            if (!isCollapsed) {
+                // Render employees (flatten merged groups)
+                (dept.employees || []).forEach(emp => {
+                    if (emp.type === 'group' && emp.employees) {
+                        // Merged admin group — render each employee
+                        emp.employees.forEach(subEmp => {
+                            const subRows = renderEmployeeRow(subEmp, depth + 1, nodeKey);
+                            if (subRows) rows.push(...(Array.isArray(subRows) ? subRows : [subRows]));
+                        });
+                        // Render children departments of the merged group
+                        (emp.children || []).forEach(child => {
+                            if (child.employees !== undefined) {
+                                rows.push(...renderDepartmentNode(child, depth + 1, nodeKey));
+                            } else {
+                                const childRows = renderEmployeeRow(child, depth + 1, nodeKey);
+                                if (childRows) rows.push(...(Array.isArray(childRows) ? childRows : [childRows]));
+                            }
+                        });
+                    } else {
+                        const empRows = renderEmployeeRow(emp, depth + 1, nodeKey);
+                        if (empRows) rows.push(...(Array.isArray(empRows) ? empRows : [empRows]));
+                    }
+                });
+
+                // Render child departments
+                (dept.children || []).forEach(child => {
+                    rows.push(...renderDepartmentNode(child, depth + 1, nodeKey));
+                });
+            }
+
+            return rows;
+        };
 
         return (
             <div className="min-h-screen bg-slate-50/50 p-6 md:p-8 animate-fade-in">
@@ -1548,7 +1685,7 @@ const Employees = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                         <div>
                             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Personel Yönetimi</h1>
-                            <p className="text-slate-500 mt-1">Süper Admin / İK Yönetimi</p>
+                            <p className="text-slate-500 mt-1 flex items-center gap-2"><Network size={16} /> Hiyerarşik Görünüm</p>
                         </div>
                         <div className="flex items-center gap-3">
                             {hasPermission('PAGE_EMPLOYEES') && (
@@ -1583,161 +1720,67 @@ const Employees = () => {
                         <div className="relative flex-1 min-w-[200px]">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                             <input
-                                placeholder="İsim, unvan, e-posta, sicil no..."
+                                placeholder="İsim, unvan ara..."
                                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="relative w-full md:w-52">
-                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <select
-                                value={positionFilter}
-                                onChange={e => setPositionFilter(e.target.value)}
-                                className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
-                            >
-                                <option value="">Tüm Pozisyonlar</option>
-                                {jobPositions.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                        </div>
-                        <div className="relative w-full md:w-48">
-                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <select
-                                value={roleFilter}
-                                onChange={e => setRoleFilter(e.target.value)}
-                                className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
-                            >
-                                <option value="">Tüm Roller</option>
-                                {roles.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(r => (
-                                    <option key={r.id} value={r.id}>{r.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                        </div>
-                        {(searchTerm || positionFilter || roleFilter) && (
+                        {searchTerm && (
                             <button
-                                onClick={() => { setSearchTerm(''); setPositionFilter(''); setRoleFilter(''); }}
+                                onClick={() => setSearchTerm('')}
                                 className="h-12 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold flex items-center gap-1.5 transition-all text-sm shrink-0"
                             >
                                 <X size={16} /> Temizle
                             </button>
                         )}
+                        <button
+                            onClick={() => setCollapsedNodes({})}
+                            className="h-12 px-4 bg-white hover:bg-slate-50 text-slate-600 rounded-xl font-medium flex items-center gap-1.5 transition-all text-sm border border-slate-200 shrink-0"
+                        >
+                            <ChevronDown size={16} /> Tümünü Aç
+                        </button>
+                        <button
+                            onClick={() => {
+                                // Collapse all nodes
+                                const allCollapsed = {};
+                                const collapseAll = (nodes, prefix = '') => {
+                                    (nodes || []).forEach(dept => {
+                                        const key = `dept-${prefix}-${dept.id}`;
+                                        allCollapsed[key] = true;
+                                        (dept.employees || []).forEach(emp => {
+                                            if (emp.children?.length) allCollapsed[`emp-${key}-${emp.id}`] = true;
+                                            if (emp.type === 'group') {
+                                                (emp.employees || []).forEach(sub => { if (sub.children?.length) allCollapsed[`emp-${key}-${sub.id}`] = true; });
+                                            }
+                                        });
+                                        collapseAll(dept.children, key);
+                                    });
+                                };
+                                collapseAll(hierarchyData);
+                                setCollapsedNodes(allCollapsed);
+                            }}
+                            className="h-12 px-4 bg-white hover:bg-slate-50 text-slate-600 rounded-xl font-medium flex items-center gap-1.5 transition-all text-sm border border-slate-200 shrink-0"
+                        >
+                            <ChevronRight size={16} /> Tümünü Kapat
+                        </button>
                     </div>
 
-                    {/* Table View */}
+                    {/* Hierarchical Tree View */}
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
-                                        <th className="px-3 md:px-6 py-2 md:py-4">Personel</th>
-                                        <th className="px-3 md:px-6 py-2 md:py-4">Pozisyon & İletişim</th>
-                                        <th className="px-3 md:px-6 py-2 md:py-4">Takvim & Saatler</th>
-                                        <th className="px-3 md:px-6 py-2 md:py-4 text-right">Durum & İşlemler</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {filteredEmployees.map(emp => (
-                                                <tr key={emp.id} className="group hover:bg-blue-50/30 transition-colors">
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                                                                {emp.first_name[0]}{emp.last_name[0]}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{emp.first_name} {emp.last_name}</div>
-                                                                <div className="text-xs text-slate-500 font-mono mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded inline-block">#{emp.employee_code}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top">
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                                                <Briefcase size={14} className="text-slate-400" />
-                                                                {emp.job_position_name || '-'}
-                                                            </div>
-                                                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                                <div className="w-3.5 flex justify-center text-slate-300">@</div>
-                                                                {emp.email}
-                                                            </div>
-                                                            {emp.phone && (
-                                                                <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                                    <Phone size={14} className="text-slate-300" />
-                                                                    {emp.phone}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top">
-                                                        <div className="flex flex-col gap-1.5">
-                                                            <div className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 w-fit">
-                                                                {emp.fiscal_calendar_name || 'Takvim Yok'}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500 flex items-center gap-1">
-                                                                <span className="font-mono">{emp.shift_start?.slice(0, 5)} - {emp.shift_end?.slice(0, 5)}</span>
-                                                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                                                <span>Mola: {emp.daily_break_allowance}dk</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 align-top text-right">
-                                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            {showSettings && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => handleEdit(emp)}
-                                                                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
-                                                                        title="Düzenle"
-                                                                    >
-                                                                        <Edit2 size={18} />
-                                                                    </button>
-
-                                                                    {hasPermission('PAGE_EMPLOYEES') && !emp.isMatrix && (
-                                                                        <button
-                                                                            onClick={() => handleDelete(emp.id)}
-                                                                            className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-                                                                            title="Sil"
-                                                                        >
-                                                                            <Trash2 size={18} />
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                            {!showSettings && (
-                                                                <button
-                                                                    onClick={() => handleEdit(emp)}
-                                                                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 text-xs font-bold transition-colors"
-                                                                >
-                                                                    Detay
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        {/* Status Indicator */}
-                                                        <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${emp.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${emp.is_active ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                                                            {emp.is_active ? 'Aktif' : 'Pasif'}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                    ))}
-
-                                    {filteredEmployees.length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
-                                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
-                                                    <Search size={32} />
-                                                </div>
-                                                <p className="font-medium">Kayıt bulunamadı.</p>
-                                                <p className="text-sm mt-1">Arama kriterlerinizi değiştirerek tekrar deneyiniz.</p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                        {hierarchyData.length > 0 ? (
+                            <div className="divide-y divide-slate-50">
+                                {hierarchyData.map(dept => renderDepartmentNode(dept, 0, ''))}
+                            </div>
+                        ) : (
+                            <div className="px-6 py-12 text-center text-slate-500">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+                                    <Network size={32} />
+                                </div>
+                                <p className="font-medium">Hiyerarşi verisi bulunamadı.</p>
+                                <p className="text-sm mt-1">Organizasyon şeması henüz yapılandırılmamış olabilir.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
