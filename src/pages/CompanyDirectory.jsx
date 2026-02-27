@@ -121,12 +121,6 @@ const CompanyDirectory = () => {
 
                         <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-slate-800 text-sm truncate">{emp.full_name}</h3>
-                            {emp.department_name && (
-                                <p className="text-xs text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                                    <Building2 size={10} />
-                                    {emp.department_name}
-                                </p>
-                            )}
                         </div>
 
                         {/* Status badge */}
@@ -183,7 +177,6 @@ const CompanyDirectory = () => {
                         </div>
                     </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-slate-600 hidden md:table-cell">{emp.department_name}</td>
                 <td className="px-4 py-3 hidden lg:table-cell">
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text} ${cfg.border} border`}>
                         {cfg.label}
@@ -268,17 +261,6 @@ const CompanyDirectory = () => {
                         />
                     </div>
 
-                    {/* Department Filter */}
-                    <select
-                        value={selectedDepartment}
-                        onChange={e => setSelectedDepartment(e.target.value)}
-                        className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none min-w-[180px]"
-                    >
-                        <option value="">Tum Departmanlar</option>
-                        {departments.map(d => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                    </select>
 
                     {/* View Toggle */}
                     <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
@@ -350,7 +332,6 @@ const CompanyDirectory = () => {
                         <thead className="bg-slate-50 border-b border-slate-200">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Calisan</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden md:table-cell">Departman</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden lg:table-cell">Durum</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden lg:table-cell">Telefon</th>
                                 <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase hidden md:table-cell">Ulasılabilir</th>

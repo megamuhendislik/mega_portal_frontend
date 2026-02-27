@@ -1527,7 +1527,7 @@ const Employees = () => {
     if (loading) return <div className="flex justify-center items-center h-screen bg-slate-50"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
     if (viewMode === 'list') {
-        // Grouping Logic
+        // Flat list (no department grouping)
         const filteredEmployees = employees
             .filter(e => e.employment_status !== 'TERMINATED')
             .filter(e =>
@@ -1536,44 +1536,9 @@ const Employees = () => {
                 (e.email || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) ||
                 (e.employee_code || '').toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR'))
             )
-            .filter(e => !departmentFilter || (e.department?.id || e.department) == departmentFilter)
             .filter(e => !positionFilter || (e.job_position?.id || e.job_position) == positionFilter)
-            .filter(e => !roleFilter || (e.role_ids || e.roles || []).some(r => (r.id || r) == roleFilter));
-
-        const groupedEmployees = filteredEmployees.reduce((acc, emp) => {
-            // 1. Primary Department
-            const deptName = emp.department?.name || emp.department_name || 'Departmanı Yok';
-            if (!acc[deptName]) acc[deptName] = [];
-            acc[deptName].push(emp);
-
-            // 2. Matrix Assignments (Secondary Departments)
-            if (emp.assignments && emp.assignments.length > 0) {
-                emp.assignments.forEach(asn => {
-                    if (!asn.is_primary && asn.department_name) {
-                        const matrixDeptName = asn.department_name;
-
-                        // Create a view model for this context
-                        // Inherit most fields, but override job position and mark as matrix
-                        const matrixEmp = {
-                            ...emp,
-                            id: `${emp.id}-matrix-${asn.id}`, // Unique key for list
-                            original_id: emp.id, // Keep reference for edit
-                            job_position: { name: asn.job_position_name || emp.job_position?.name },
-                            isMatrix: true,
-                            manager_name: asn.manager_name
-                        };
-
-                        if (!acc[matrixDeptName]) acc[matrixDeptName] = [];
-                        acc[matrixDeptName].push(matrixEmp);
-                    }
-                });
-            }
-
-            return acc;
-        }, {});
-
-        // Sort departments alphabetically
-        const sortedDepartments = Object.keys(groupedEmployees).sort((a, b) => a.localeCompare(b, 'tr'));
+            .filter(e => !roleFilter || (e.role_ids || e.roles || []).some(r => (r.id || r) == roleFilter))
+            .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, 'tr'));
 
         return (
             <div className="min-h-screen bg-slate-50/50 p-6 md:p-8 animate-fade-in">
@@ -1624,20 +1589,6 @@ const Employees = () => {
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="relative w-full md:w-56">
-                            <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <select
-                                value={departmentFilter}
-                                onChange={e => setDepartmentFilter(e.target.value)}
-                                className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
-                            >
-                                <option value="">Tüm Departmanlar</option>
-                                {departments.map(d => (
-                                    <option key={d.id} value={d.id}>{d.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                        </div>
                         <div className="relative w-full md:w-52">
                             <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <select
@@ -1666,9 +1617,9 @@ const Employees = () => {
                             </select>
                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                         </div>
-                        {(searchTerm || departmentFilter || positionFilter || roleFilter) && (
+                        {(searchTerm || positionFilter || roleFilter) && (
                             <button
-                                onClick={() => { setSearchTerm(''); setDepartmentFilter(''); setPositionFilter(''); setRoleFilter(''); }}
+                                onClick={() => { setSearchTerm(''); setPositionFilter(''); setRoleFilter(''); }}
                                 className="h-12 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold flex items-center gap-1.5 transition-all text-sm shrink-0"
                             >
                                 <X size={16} /> Temizle
@@ -1689,24 +1640,7 @@ const Employees = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {sortedDepartments.map(deptName => (
-                                        <React.Fragment key={deptName}>
-                                            {/* Department Header */}
-                                            <tr className="bg-slate-50/50">
-                                                <td colSpan="4" className="px-6 py-3 border-y border-slate-100">
-                                                    <div className="flex items-center gap-2 font-bold text-slate-700 text-sm">
-                                                        <div className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center">
-                                                            <Building size={14} />
-                                                        </div>
-                                                        {deptName}
-                                                        <span className="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-100">
-                                                            {groupedEmployees[deptName].length} Kişi
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {/* Employees */}
-                                            {groupedEmployees[deptName].map(emp => (
+                                    {filteredEmployees.map(emp => (
                                                 <tr key={emp.id} className="group hover:bg-blue-50/30 transition-colors">
                                                     <td className="px-3 md:px-6 py-3 md:py-4 align-top">
                                                         <div className="flex items-center gap-4">
@@ -1788,11 +1722,9 @@ const Employees = () => {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))}
-                                        </React.Fragment>
                                     ))}
 
-                                    {sortedDepartments.length === 0 && (
+                                    {filteredEmployees.length === 0 && (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
