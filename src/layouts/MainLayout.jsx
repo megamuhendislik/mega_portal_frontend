@@ -56,9 +56,9 @@ const MainLayout = () => {
     // Live Status for break indicator
     const [liveStatus, setLiveStatus] = useState(null);
 
-    // Profile Reminder Popup
+    // Profile Reminder Popup (DB-backed via ui_preferences)
     const [showProfileReminder, setShowProfileReminder] = useState(() => {
-        return !localStorage.getItem('mega_portal_profile_reminder_dismissed');
+        return !user?.ui_preferences?.profile_reminder_dismissed;
     });
 
     // Handle Resize
@@ -214,9 +214,15 @@ const MainLayout = () => {
                         {/* Footer */}
                         <div className="px-6 pb-5 flex items-center justify-between gap-3">
                             <button
-                                onClick={() => {
-                                    localStorage.setItem('mega_portal_profile_reminder_dismissed', 'true');
+                                onClick={async () => {
                                     setShowProfileReminder(false);
+                                    try {
+                                        await api.patch('/employees/me/', {
+                                            ui_preferences: { ...user?.ui_preferences, profile_reminder_dismissed: true }
+                                        });
+                                    } catch (e) {
+                                        console.error('Failed to save preference:', e);
+                                    }
                                 }}
                                 className="px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
                             >
@@ -406,8 +412,8 @@ const MainLayout = () => {
                             </button>
                         )}
 
-                        {/* Mola Göstergesi — aktif vardiyası olan herkes */}
-                        {liveStatus?.status === 'INSIDE' && (() => {
+                        {/* Mola Göstergesi — aktif vardiyası olan herkes (off-day'de gizle) */}
+                        {liveStatus?.status === 'INSIDE' && !liveStatus?.is_off_day && (liveStatus?.daily_break_allowance_seconds > 0) && (() => {
                             const used = Math.round((liveStatus.potential_break_seconds || 0) / 60);
                             const allowed = Math.round((liveStatus.daily_break_allowance_seconds || 1800) / 60);
                             const isOver = used > allowed;
