@@ -19,9 +19,9 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        if (!form.employee) { setError('Calisan seciniz.'); return; }
-        if (!form.date) { setError('Tarih seciniz.'); return; }
-        if (!form.task_description.trim()) { setError('Gorev aciklamasi giriniz.'); return; }
+        if (!form.employee) { setError('Çalışan seçiniz.'); return; }
+        if (!form.date) { setError('Tarih seçiniz.'); return; }
+        if (!form.task_description.trim()) { setError('Görev açıklaması giriniz.'); return; }
 
         setSubmitting(true);
         try {
@@ -36,7 +36,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.response?.data?.error || err.response?.data?.detail || JSON.stringify(err.response?.data) || 'Hata olustu.');
+            setError(err.response?.data?.error || err.response?.data?.detail || JSON.stringify(err.response?.data) || 'Hata oluştu.');
         }
         setSubmitting(false);
     };
@@ -47,7 +47,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Calendar size={20} className="text-blue-500" />
-                        Calisana Ek Mesai Ata
+                        Çalışana Ek Mesai Ata
                     </h3>
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>
@@ -58,14 +58,14 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
 
                 <form onSubmit={handleSubmit} className="space-y-3">
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">Calisan</label>
+                        <label className="text-xs font-bold text-slate-500 mb-1 block">Çalışan</label>
                         <select
                             value={form.employee}
                             onChange={e => setForm({...form, employee: e.target.value})}
                             className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-200 outline-none"
                             required
                         >
-                            <option value="">Calisan seciniz...</option>
+                            <option value="">Çalışan seçiniz...</option>
                             {teamMembers.map(m => (
                                 <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>
                             ))}
@@ -83,7 +83,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-bold text-slate-500 mb-1 block">Maks Sure (saat)</label>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Maks Süre (saat)</label>
                             <input
                                 type="number"
                                 min="0.5"
@@ -97,12 +97,12 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">Gorev Aciklamasi</label>
+                        <label className="text-xs font-bold text-slate-500 mb-1 block">Görev Açıklaması</label>
                         <textarea
                             rows="3"
                             value={form.task_description}
                             onChange={e => setForm({...form, task_description: e.target.value})}
-                            placeholder="Yapilacak is aciklamasi..."
+                            placeholder="Yapılacak iş açıklaması..."
                             className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-blue-200 outline-none"
                             required
                         />
@@ -119,14 +119,14 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                     </div>
                     <div className="flex gap-2 pt-2">
                         <button type="button" onClick={onClose} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">
-                            Vazgec
+                            Vazgeç
                         </button>
                         <button
                             type="submit"
                             disabled={submitting}
                             className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 disabled:opacity-50"
                         >
-                            {submitting ? 'Ataniyor...' : 'Ata'}
+                            {submitting ? 'Atanıyor...' : 'Ata'}
                         </button>
                     </div>
                 </form>
