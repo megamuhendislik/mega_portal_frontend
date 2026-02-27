@@ -78,6 +78,15 @@ export const LeaveRequestForm = ({
                             <span className={`font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>{balance.available} gün</span>
                         </div>
                     </div>
+                    {/* Bu Taleple Kalacak Preview */}
+                    {duration > 0 && (
+                        <div className="mt-2 flex items-center justify-between text-xs bg-white/50 p-2 rounded-lg border border-blue-100">
+                            <span className="text-slate-500 font-medium">Bu taleple kalacak:</span>
+                            <span className={`font-black ${(balance.available - duration) < 0 ? 'text-red-600' : (balance.available - duration) <= 3 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                {balance.available - duration} gün
+                            </span>
+                        </div>
+                    )}
                     {/* Avans İzin Uyarısı */}
                     {balance && duration > 0 && (balance.effective || balance.balance || 0) < duration && (balance.advanceRemaining || balance.limit || 0) > 0 && (balance.available || 0) >= duration && (
                         <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
@@ -186,6 +195,27 @@ export const LeaveRequestForm = ({
                         <span>{excuseBalance.hours_entitled} sa</span>
                     </div>
 
+                    {/* Son Kullanım */}
+                    {excuseBalance.recent_requests?.length > 0 && (
+                        <div className="mt-2 flex items-center gap-2 text-xs bg-white/50 p-2 rounded-lg border border-orange-100">
+                            <CalendarDays size={12} className="text-orange-500 shrink-0" />
+                            <span className="text-slate-500">Son Kullanım:</span>
+                            <span className="font-bold text-slate-700">
+                                {new Date(excuseBalance.recent_requests[0].date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                            </span>
+                            <span className="text-slate-400">
+                                ({excuseBalance.recent_requests[0].hours} sa)
+                            </span>
+                            <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                excuseBalance.recent_requests[0].status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                                excuseBalance.recent_requests[0].status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                                {excuseBalance.recent_requests[0].status === 'APPROVED' ? 'Onaylı' :
+                                 excuseBalance.recent_requests[0].status === 'PENDING' ? 'Bekliyor' : excuseBalance.recent_requests[0].status}
+                            </span>
+                        </div>
+                    )}
+
                     {excuseBalance.hours_remaining <= 0 && (
                         <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-1">
                             <AlertCircle size={14} /> Bu yılın mazeret izni kotası dolmuştur.
@@ -243,7 +273,7 @@ export const LeaveRequestForm = ({
                 >
                     <option value="">Seçiniz</option>
                     {requestTypes
-                        .filter(t => t.category !== 'EXTERNAL_DUTY')
+                        .filter(t => ['ANNUAL_LEAVE', 'EXCUSE_LEAVE'].includes(t.code))
                         .filter((t, i, arr) => arr.findIndex(x => x.code === t.code) === i)
                         .map(t => (
                             <option key={t.id} value={t.id}>{t.name}</option>
@@ -256,13 +286,50 @@ export const LeaveRequestForm = ({
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-                        <input
-                            required
-                            type="date"
-                            value={leaveForm.start_date}
-                            onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all font-medium text-slate-700"
-                        />
+                        {(() => {
+                            // 2 mali dönem geriye: ayın 26'sından önceysek 3 ay geri, sonrasıysak 2 ay geri (26'sı dahil)
+                            const now = new Date();
+                            const curYear = now.getFullYear();
+                            const curMonth = now.getMonth(); // 0-based
+                            const curDay = now.getDate();
+                            // Mali dönem: 26-25 cycle. Şu anki mali ay hesabı
+                            let fiscalMonth, fiscalYear;
+                            if (curDay >= 26) {
+                                fiscalMonth = curMonth + 1; // next month is fiscal month
+                                fiscalYear = curMonth === 11 ? curYear + 1 : curYear;
+                            } else {
+                                fiscalMonth = curMonth; // current month is fiscal month
+                                fiscalYear = curYear;
+                            }
+                            // 2 mali dönem geri = fiscalMonth - 2
+                            let minFiscalMonth = fiscalMonth - 2;
+                            let minFiscalYear = fiscalYear;
+                            if (minFiscalMonth <= 0) {
+                                minFiscalMonth += 12;
+                                minFiscalYear -= 1;
+                            }
+                            // O mali dönemin başlangıcı: önceki ayın 26'sı
+                            let minStartMonth = minFiscalMonth - 1; // 0-based prev month
+                            let minStartYear = minFiscalYear;
+                            if (minStartMonth <= 0) {
+                                minStartMonth += 12;
+                                minStartYear -= 1;
+                            }
+                            const minDate = `${minStartYear}-${String(minStartMonth).padStart(2, '0')}-26`;
+                            // Yıl sonuna kadar
+                            const maxDate = `${curYear}-12-31`;
+                            return (
+                                <input
+                                    required
+                                    type="date"
+                                    value={leaveForm.start_date}
+                                    min={minDate}
+                                    max={maxDate}
+                                    onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
+                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all font-medium text-slate-700"
+                                />
+                            );
+                        })()}
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Saat Aralığı <span className="text-red-500">*</span></label>
@@ -294,14 +361,20 @@ export const LeaveRequestForm = ({
                             const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
                             if (hours <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Bitiş saati başlangıçtan sonra olmalı.</p>;
                             if (hours > 4.5) return <p className="text-xs text-red-600 font-bold mt-2">Günlük mazeret izni en fazla 4.5 saat olabilir. ({hours.toFixed(1)} saat)</p>;
+                            const remaining = excuseBalance ? (excuseBalance.hours_remaining - hours) : null;
                             return (
-                                <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg mt-2 border border-orange-100">
-                                    <Clock size={14} className="text-orange-600" />
-                                    <span className="text-sm font-bold text-orange-700">{hours.toFixed(1)} saat mazeret izni</span>
+                                <div className="p-2.5 bg-orange-50 rounded-lg mt-2 border border-orange-100 space-y-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <Clock size={14} className="text-orange-600" />
+                                        <span className="text-sm font-bold text-orange-700">{hours.toFixed(1)} saat mazeret izni</span>
+                                    </div>
                                     {excuseBalance && (
-                                        <span className="text-xs text-slate-400 ml-auto">
-                                            (Kalan: {(excuseBalance.hours_remaining - hours).toFixed(1)} sa)
-                                        </span>
+                                        <div className="flex items-center justify-between text-xs bg-white/60 p-1.5 rounded">
+                                            <span className="text-slate-500">Bu taleple kalacak:</span>
+                                            <span className={`font-black ${remaining < 0 ? 'text-red-600' : remaining <= 4.5 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                                {remaining.toFixed(1)} sa
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             );
