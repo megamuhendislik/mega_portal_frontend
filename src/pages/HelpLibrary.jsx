@@ -231,13 +231,13 @@ const HelpLibrary = () => {
                                         {currentSection.images.map((img, i) => (
                                             <div
                                                 key={i}
-                                                className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white cursor-pointer hover:shadow-lg hover:border-indigo-200 transition-all duration-200"
+                                                className="group rounded-xl border border-slate-200/80 overflow-hidden bg-white cursor-pointer hover:shadow-xl hover:border-indigo-200 transition-all duration-300"
                                                 onClick={() => setLightboxImage(img)}
                                             >
-                                                <div className="relative aspect-video">
-                                                    <img src={img.src} alt={img.caption} className="w-full h-full object-cover object-top" loading="lazy" />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">
-                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center gap-1">
+                                                <div className="relative aspect-video overflow-hidden">
+                                                    <img src={img.src} alt={img.caption} className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-110" loading="lazy" />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 flex flex-col items-center gap-1">
                                                             <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
                                                                 <ZoomIn size={16} className="text-slate-600" />
                                                             </div>
