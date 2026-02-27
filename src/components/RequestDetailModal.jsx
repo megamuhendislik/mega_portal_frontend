@@ -236,7 +236,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             {(() => {
               const empName = request.employee_name || request.employee_detail?.full_name || request.employee?.name || request.employee?.full_name || '';
               const empDept = request.employee_department || request.employee_detail?.department_name || request.employee?.department || '';
-              const empPos = request.employee_position || request.employee_detail?.job_position_name || '';
               if (!empName) return null;
               return (
                 <div className="bg-white rounded-xl p-4 border border-slate-200">
@@ -249,12 +248,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                       <div className="font-bold text-slate-800">{empName}</div>
                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                         {empDept && <span>{empDept}</span>}
-                        {empPos && (
-                          <>
-                            <span className="text-slate-300">·</span>
-                            <span>{empPos}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>

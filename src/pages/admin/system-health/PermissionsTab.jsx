@@ -401,8 +401,6 @@ function PermissionMatrixView() {
                                                 <span>@{u.username}</span>
                                                 <span className="text-slate-300 hidden md:inline">|</span>
                                                 <span>{u.department}</span>
-                                                <span className="text-slate-300 hidden md:inline">|</span>
-                                                <span>{u.job_position}</span>
                                             </div>
                                         </div>
 

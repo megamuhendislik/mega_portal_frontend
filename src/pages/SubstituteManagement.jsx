@@ -99,8 +99,7 @@ const SubstituteManagement = () => {
     if (!principalSearch) return employees;
     const s = principalSearch.toLowerCase();
     return employees.filter(e =>
-      `${e.first_name} ${e.last_name}`.toLowerCase().includes(s) ||
-      (e.job_position_display || '').toLowerCase().includes(s)
+      `${e.first_name} ${e.last_name}`.toLowerCase().includes(s)
     );
   }, [employees, principalSearch]);
 
@@ -108,8 +107,7 @@ const SubstituteManagement = () => {
     if (!substituteSearch) return employees;
     const s = substituteSearch.toLowerCase();
     return employees.filter(e =>
-      `${e.first_name} ${e.last_name}`.toLowerCase().includes(s) ||
-      (e.job_position_display || '').toLowerCase().includes(s)
+      `${e.first_name} ${e.last_name}`.toLowerCase().includes(s)
     );
   }, [employees, substituteSearch]);
 
@@ -376,7 +374,7 @@ const SubstituteManagement = () => {
                     <option value="">Seçiniz...</option>
                     {filteredPrincipalEmployees.map(emp => (
                       <option key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name} {emp.job_position_display ? `- ${emp.job_position_display}` : ''}
+                        {emp.first_name} {emp.last_name}
                       </option>
                     ))}
                   </select>
@@ -408,7 +406,7 @@ const SubstituteManagement = () => {
                     <option value="">Seçiniz...</option>
                     {filteredSubstituteEmployees.map(emp => (
                       <option key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name} {emp.job_position_display ? `- ${emp.job_position_display}` : ''}
+                        {emp.first_name} {emp.last_name}
                       </option>
                     ))}
                   </select>

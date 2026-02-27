@@ -125,7 +125,7 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                             <h4 className="font-bold text-slate-800 text-sm leading-tight truncate">
                                 {node.name}
                             </h4>
-                            <p className="text-[11px] text-slate-500 truncate">{node.jobPosition || '-'}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{node.department || '-'}</p>
                         </div>
                     </div>
 
@@ -270,7 +270,6 @@ const PerformanceTableView = ({ teamData }) => {
                     <thead className="bg-slate-50 border-b border-slate-200">
                         <tr>
                             <Th k="name" label="Çalışan" />
-                            <Th k="jobPosition" label="Pozisyon" />
                             <Th k="summaryNetBalance" label="Net Mesai" align="right" />
                             <Th k="monthWorkedHours" label="Çalışma (Sa)" align="right" />
                             <Th k="monthTarget" label="Hedef (Sa)" align="right" />
@@ -303,8 +302,6 @@ const PerformanceTableView = ({ teamData }) => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-slate-500">{emp.jobPosition || '-'}</td>
-
                                     <td className="px-4 py-3 text-right">
                                         <span className={clsx("font-bold text-sm", isPositive ? "text-emerald-600" : "text-red-500")}>
                                             {isPositive ? '+' : ''}{balance.toFixed(1)} sa

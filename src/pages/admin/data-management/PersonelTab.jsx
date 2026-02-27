@@ -225,12 +225,6 @@ export default function PersonelTab({ initialEmployee }) {
                                 {selectedEmployee.department_name && (
                                     <span>{selectedEmployee.department_name}</span>
                                 )}
-                                {selectedEmployee.job_position_title && (
-                                    <>
-                                        <span className="text-slate-300">|</span>
-                                        <span>{selectedEmployee.job_position_title}</span>
-                                    </>
-                                )}
                                 {selectedEmployee.employee_code && (
                                     <>
                                         <span className="text-slate-300">|</span>

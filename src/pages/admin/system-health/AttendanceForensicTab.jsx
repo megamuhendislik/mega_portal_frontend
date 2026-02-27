@@ -195,7 +195,6 @@ export default function AttendanceForensicTab() {
                                     </span>
                                 </div>
                                 <div className="flex justify-between"><span className="text-gray-500">Departman</span><span>{data.employee.department || '-'}</span></div>
-                                <div className="flex justify-between"><span className="text-gray-500">Pozisyon</span><span>{data.employee.job_position || '-'}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-500">FiscalCalendar</span><span>{data.employee.fiscal_calendar?.name || 'YOK'}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-500">WorkSchedule</span><span>{data.employee.work_schedule?.name || 'YOK'}</span></div>
                             </div>

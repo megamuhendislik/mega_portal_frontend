@@ -204,7 +204,7 @@ const Profile = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-[15px] font-bold text-slate-900 truncate leading-tight">{user.first_name} {user.last_name}</p>
-                            <p className="text-xs text-slate-500 truncate mt-0.5">{user.job_position?.name || 'Çalışan'}</p>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">{user.department?.name || 'Çalışan'}</p>
                             <div className="flex items-center gap-1.5 mt-1.5">
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                                     <Hash size={9} />
@@ -339,7 +339,7 @@ const Profile = () => {
                                             <h2 className="text-xl md:text-2xl font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
                                                 {user.first_name} {user.last_name}
                                             </h2>
-                                            <p className="text-sm text-slate-500 mt-0.5">{user.job_position?.name || 'Pozisyon belirtilmemiş'}</p>
+                                            <p className="text-sm text-slate-500 mt-0.5">{user.department?.name || '—'}</p>
                                         </div>
                                         <div className="flex flex-wrap gap-2 pb-1 shrink-0">
                                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-slate-50 to-teal-50/50 border border-teal-200/40 rounded-lg text-xs font-semibold text-slate-600">
@@ -430,7 +430,6 @@ const Profile = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                                         <ReadOnlyField icon={Calendar} label="İşe Başlama Tarihi" value={user.hired_date || '—'} />
                                         <ReadOnlyField icon={Building} label="Departman" value={user.department?.name || '—'} />
-                                        <ReadOnlyField icon={Briefcase} label="Pozisyon" value={user.job_position?.name || '—'} />
                                         <ReadOnlyField icon={Hash} label="Sicil No" value={user.employee_code || '—'} />
                                     </div>
                                 </div>

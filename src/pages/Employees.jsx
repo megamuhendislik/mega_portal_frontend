@@ -428,7 +428,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                             >
                                 {potentialManagers.map(mgr => ( // Re-using potentialManagers list as it contains employees
                                     <option key={mgr.id} value={mgr.id}>
-                                        {mgr.first_name} {mgr.last_name} — {mgr.job_position_name || 'Pozisyonsuz'}
+                                        {mgr.first_name} {mgr.last_name}
                                     </option>
                                 ))}
                             </select>

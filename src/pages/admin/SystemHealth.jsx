@@ -483,7 +483,6 @@ function DataAuditTab() {
                                 <td className="px-4 py-3">
                                     <div className="text-xs">
                                         <span className="block font-medium">{emp.department}</span>
-                                        <span className="text-gray-500">{emp.job_position}</span>
                                     </div>
                                 </td>
                                 <td className={`px-4 py-3 font-mono text-xs ${!emp.hired_date ? 'text-red-600 font-bold bg-red-50' : 'text-gray-600'}`}>
