@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info, PenLine, Zap, Eye } from 'lucide-react';
+import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info, PenLine, Zap, Eye, Plus, FileText } from 'lucide-react';
 import api from '../services/api';
 
 const DAY_NAMES = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
@@ -184,14 +184,19 @@ export default function AssignedOvertimeTab() {
     // Collapsible sections
     const [intendedOpen, setIntendedOpen] = useState(true);
     const [potentialOpen, setPotentialOpen] = useState(true);
-    const [allAssignmentsOpen, setAllAssignmentsOpen] = useState(false);
+    const [allAssignmentsOpen, setAllAssignmentsOpen] = useState(true);
+
+    // My OvertimeRequests
+    const [myOvertimeRequests, setMyOvertimeRequests] = useState([]);
+    const [subFilter, setSubFilter] = useState('all'); // 'all' | 'assignments' | 'requests'
 
     const fetchData = async () => {
         try {
             setError('');
-            const [assignRes, claimableRes] = await Promise.allSettled([
+            const [assignRes, claimableRes, requestsRes] = await Promise.allSettled([
                 api.get('/overtime-assignments/'),
                 api.get('/overtime-assignments/claimable/'),
+                api.get('/overtime-requests/'),
             ]);
 
             // Assignments
@@ -215,8 +220,17 @@ export default function AssignedOvertimeTab() {
                 setClaimableData({ intended: [], potential: [] });
             }
 
-            // Only set error if both failed
-            if (assignRes.status === 'rejected' && claimableRes.status === 'rejected') {
+            // My OvertimeRequests
+            if (requestsRes.status === 'fulfilled') {
+                const data = requestsRes.value.data?.results || requestsRes.value.data || [];
+                setMyOvertimeRequests(Array.isArray(data) ? data : []);
+            } else {
+                console.error('OvertimeRequests fetch error:', requestsRes.reason);
+                setMyOvertimeRequests([]);
+            }
+
+            // Only set error if all failed
+            if (assignRes.status === 'rejected' && claimableRes.status === 'rejected' && requestsRes.status === 'rejected') {
                 setError('Mesai verileri yuklenemedi.');
             }
         } catch (err) {
@@ -224,6 +238,7 @@ export default function AssignedOvertimeTab() {
             setError('Mesai verileri yuklenemedi.');
             setAssignments([]);
             setClaimableData({ intended: [], potential: [] });
+            setMyOvertimeRequests([]);
         } finally {
             setLoading(false);
         }
@@ -233,17 +248,44 @@ export default function AssignedOvertimeTab() {
         fetchData();
     }, []);
 
-    // --- Filtered assignments for "Tum Atamalar" section ---
-    const filtered = useMemo(() => {
-        if (filter === 'all') return assignments;
-        if (filter === 'past') return assignments.filter(a => isDatePast(a.date) || isDateToday(a.date));
-        if (filter === 'future') return assignments.filter(a => !isDatePast(a.date) && !isDateToday(a.date));
-        return assignments;
-    }, [assignments, filter]);
+    // --- Combined list for "Tum Isteklerim" section ---
+    const combinedItems = useMemo(() => {
+        const assignmentItems = assignments.map(a => ({ ...a, _kind: 'assignment' }));
+        const requestItems = myOvertimeRequests.map(r => ({ ...r, _kind: 'request' }));
+
+        let items;
+        if (subFilter === 'assignments') items = assignmentItems;
+        else if (subFilter === 'requests') items = requestItems;
+        else items = [...assignmentItems, ...requestItems];
+
+        // Apply time filter
+        if (filter === 'past') {
+            items = items.filter(a => {
+                const dateStr = a._kind === 'request' ? a.date : a.date;
+                return isDatePast(dateStr) || isDateToday(dateStr);
+            });
+        } else if (filter === 'future') {
+            items = items.filter(a => {
+                const dateStr = a._kind === 'request' ? a.date : a.date;
+                return !isDatePast(dateStr) && !isDateToday(dateStr);
+            });
+        }
+
+        return items;
+    }, [assignments, myOvertimeRequests, filter, subFilter]);
 
     const sorted = useMemo(() => {
-        return [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [filtered]);
+        return [...combinedItems].sort((a, b) => {
+            const dateA = a._kind === 'request' ? a.date : a.date;
+            const dateB = b._kind === 'request' ? b.date : b.date;
+            return new Date(dateB) - new Date(dateA);
+        });
+    }, [combinedItems]);
+
+    // Count for badge
+    const totalItemsCount = useMemo(() => {
+        return assignments.length + myOvertimeRequests.length;
+    }, [assignments, myOvertimeRequests]);
 
     // ==================== INTENDED Claim ====================
     const handleOpenIntendedClaim = (item) => {
@@ -462,6 +504,243 @@ export default function AssignedOvertimeTab() {
                     </button>
                 </div>
             )}
+
+            {/* ==================== Tum Isteklerim (Full List - FIRST SECTION) ==================== */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all">
+                    <button
+                        onClick={() => setAllAssignmentsOpen(!allAssignmentsOpen)}
+                        className="flex items-center gap-3 flex-1"
+                    >
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white">
+                            <Eye size={22} />
+                        </div>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg text-slate-800">Tum Isteklerim</h3>
+                                {totalItemsCount > 0 && (
+                                    <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[11px] font-bold rounded-full">
+                                        {totalItemsCount}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500">Ek mesai taleplerinizi yonetin ve takip edin</p>
+                        </div>
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setManualOpen(true); setManualError(''); }}
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                        >
+                            <Plus size={16} />
+                            Istek Olustur
+                        </button>
+                        <button onClick={() => setAllAssignmentsOpen(!allAssignmentsOpen)} className="p-1">
+                            <div className={`transition-transform duration-200 ${allAssignmentsOpen ? 'rotate-180' : ''}`}>
+                                <ChevronDown size={20} className="text-slate-400" />
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {allAssignmentsOpen && (
+                    <div className="border-t border-slate-100">
+                        {/* Filters */}
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                {/* Time filter */}
+                                <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
+                                    {[
+                                        { key: 'all', label: 'Tumu' },
+                                        { key: 'past', label: 'Gerceklesmis' },
+                                        { key: 'future', label: 'Gelecek' },
+                                    ].map(f => (
+                                        <button
+                                            key={f.key}
+                                            onClick={() => setFilter(f.key)}
+                                            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
+                                                filter === f.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            }`}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* Sub-filter: type */}
+                                <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
+                                    {[
+                                        { key: 'all', label: 'Tumu' },
+                                        { key: 'assignments', label: 'Atamalar' },
+                                        { key: 'requests', label: 'Talepler' },
+                                    ].map(f => (
+                                        <button
+                                            key={`sub-${f.key}`}
+                                            onClick={() => setSubFilter(f.key)}
+                                            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
+                                                subFilter === f.key ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            }`}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Empty State */}
+                        {sorted.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3 border border-slate-100">
+                                    <CalendarCheck size={24} className="text-slate-300" />
+                                </div>
+                                <p className="text-sm text-slate-500">
+                                    {filter === 'all' && subFilter === 'all'
+                                        ? 'Henuz ek mesai istegi bulunmamaktadir.'
+                                        : filter === 'past'
+                                        ? 'Gerceklesmis mesai istegi bulunamadi.'
+                                        : filter === 'future'
+                                        ? 'Gelecek tarihli mesai istegi bulunamadi.'
+                                        : subFilter === 'assignments'
+                                        ? 'Mesai atamasi bulunamadi.'
+                                        : subFilter === 'requests'
+                                        ? 'Mesai talebi bulunamadi.'
+                                        : 'Sonuc bulunamadi.'}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Combined Cards */}
+                        <div className="divide-y divide-slate-100">
+                            {sorted.map(item => {
+                                if (item._kind === 'request') {
+                                    // OvertimeRequest card
+                                    const reqStatusConfig = {
+                                        PENDING: { label: 'Onay Bekliyor', color: 'bg-amber-100 text-amber-700', icon: <Clock size={12} /> },
+                                        APPROVED: { label: 'Onaylandi', color: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle2 size={12} /> },
+                                        REJECTED: { label: 'Reddedildi', color: 'bg-red-100 text-red-700', icon: <XCircle size={12} /> },
+                                        CANCELLED: { label: 'Iptal Edildi', color: 'bg-slate-100 text-slate-500', icon: <XCircle size={12} /> },
+                                    };
+                                    const sCfg = reqStatusConfig[item.status] || { label: item.status, color: 'bg-slate-100 text-slate-600', icon: <Info size={12} /> };
+                                    const durationMin = item.duration_seconds ? Math.round(item.duration_seconds / 60) : null;
+                                    const durationHours = durationMin ? (durationMin / 60).toFixed(1) : null;
+
+                                    return (
+                                        <div key={`req-${item.id}`} className="p-5 hover:bg-slate-50/30 transition-all">
+                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                                <div className="flex items-start gap-4 flex-1">
+                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                                                        item.status === 'APPROVED' ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' :
+                                                        item.status === 'REJECTED' ? 'bg-gradient-to-br from-red-500 to-red-600' :
+                                                        item.status === 'PENDING' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                                                        'bg-gradient-to-br from-slate-400 to-slate-500'
+                                                    }`}>
+                                                        <FileText size={16} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <h4 className="font-bold text-slate-800 text-sm">
+                                                                {formatDateTurkish(item.date)}
+                                                            </h4>
+                                                            {durationHours && (
+                                                                <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-full">
+                                                                    {durationHours} saat
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                                                            {item.start_time && <span>Baslangic: <span className="font-semibold text-slate-700">{item.start_time.slice(0, 5)}</span></span>}
+                                                            {item.end_time && <span>Bitis: <span className="font-semibold text-slate-700">{item.end_time.slice(0, 5)}</span></span>}
+                                                            {item.target_approver_name && <span>Onaylayan: <span className="font-semibold text-slate-700">{item.target_approver_name}</span></span>}
+                                                        </div>
+                                                        {item.reason && (
+                                                            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                                                <Info size={11} />
+                                                                {item.reason}
+                                                            </p>
+                                                        )}
+                                                        {/* Status Badge */}
+                                                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${sCfg.color}`}>
+                                                                {sCfg.icon}
+                                                                {sCfg.label}
+                                                            </span>
+                                                            {item.source_type && (
+                                                                <SourceBadge type={item.source_type} />
+                                                            )}
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                                                                <FileText size={10} />
+                                                                Talep
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // OvertimeAssignment card (existing)
+                                const statusCfg = getStatusConfig(item);
+                                return (
+                                    <div key={`all-${item.id}`} className="p-5 hover:bg-slate-50/30 transition-all">
+                                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                            <div className="flex items-start gap-4 flex-1">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                                                    statusCfg.canClaim ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' :
+                                                    item.status === 'CLAIMED' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                                                    item.status === 'EXPIRED' ? 'bg-gradient-to-br from-red-500 to-red-600' :
+                                                    !isDatePast(item.date) ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
+                                                    'bg-gradient-to-br from-slate-400 to-slate-500'
+                                                }`}>
+                                                    <Calendar size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                        <h4 className="font-bold text-slate-800 text-sm">
+                                                            {formatDateTurkish(item.date)}
+                                                        </h4>
+                                                        <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-full">
+                                                            {item.max_duration_hours} saat maks
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500">
+                                                        Atayan: <span className="font-semibold text-slate-700">{item.assigned_by_name || '-'}</span>
+                                                    </p>
+                                                    {item.notes && (
+                                                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                                            <Info size={11} />
+                                                            {item.notes}
+                                                        </p>
+                                                    )}
+                                                    {/* Status Badge */}
+                                                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${statusCfg.color}`}>
+                                                            {statusCfg.icon}
+                                                            {statusCfg.label}
+                                                        </span>
+                                                        {item.source_type && (
+                                                            <SourceBadge type={item.source_type} />
+                                                        )}
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-100">
+                                                            <Calendar size={10} />
+                                                            Atama
+                                                        </span>
+                                                        {item.overtime_request && item.status === 'CLAIMED' && (
+                                                            <span className="text-[10px] text-slate-400 font-medium">
+                                                                Talep #{item.overtime_request}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* ==================== Manual Overtime Entry Button ==================== */}
             <button
@@ -1000,133 +1279,6 @@ export default function AssignedOvertimeTab() {
                 )}
             </ClaimModal>
 
-            {/* ==================== Tum Atamalar (Full List) ==================== */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <button
-                    onClick={() => setAllAssignmentsOpen(!allAssignmentsOpen)}
-                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-all"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white">
-                            <Eye size={22} />
-                        </div>
-                        <div className="text-left">
-                            <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-lg text-slate-800">Tum Istekler</h3>
-                                {assignments.length > 0 && (
-                                    <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[11px] font-bold rounded-full">
-                                        {assignments.length}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-slate-500">Tum mesai istekleri ve durumlarini goruntuleyip takip edin</p>
-                        </div>
-                    </div>
-                    <div className={`transition-transform duration-200 ${allAssignmentsOpen ? 'rotate-180' : ''}`}>
-                        <ChevronDown size={20} className="text-slate-400" />
-                    </div>
-                </button>
-
-                {allAssignmentsOpen && (
-                    <div className="border-t border-slate-100">
-                        {/* Filters */}
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
-                            <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
-                                {[
-                                    { key: 'all', label: 'Tumu' },
-                                    { key: 'past', label: 'Gerceklesmis' },
-                                    { key: 'future', label: 'Gelecek' },
-                                ].map(f => (
-                                    <button
-                                        key={f.key}
-                                        onClick={() => setFilter(f.key)}
-                                        className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
-                                            filter === f.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                    >
-                                        {f.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Empty State */}
-                        {sorted.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3 border border-slate-100">
-                                    <CalendarCheck size={24} className="text-slate-300" />
-                                </div>
-                                <p className="text-sm text-slate-500">
-                                    {filter === 'all'
-                                        ? 'Henuz size gonderilmis bir ek mesai istegi bulunmamaktadir.'
-                                        : filter === 'past'
-                                        ? 'Gerceklesmis mesai istegi bulunamadi.'
-                                        : 'Gelecek tarihli mesai istegi bulunamadi.'}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Assignment Cards */}
-                        <div className="divide-y divide-slate-100">
-                            {sorted.map(assignment => {
-                                const statusCfg = getStatusConfig(assignment);
-
-                                return (
-                                    <div key={`all-${assignment.id}`} className="p-5 hover:bg-slate-50/30 transition-all">
-                                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                            <div className="flex items-start gap-4 flex-1">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 ${
-                                                    statusCfg.canClaim ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' :
-                                                    assignment.status === 'CLAIMED' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
-                                                    assignment.status === 'EXPIRED' ? 'bg-gradient-to-br from-red-500 to-red-600' :
-                                                    !isDatePast(assignment.date) ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
-                                                    'bg-gradient-to-br from-slate-400 to-slate-500'
-                                                }`}>
-                                                    <Calendar size={16} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                        <h4 className="font-bold text-slate-800 text-sm">
-                                                            {formatDateTurkish(assignment.date)}
-                                                        </h4>
-                                                        <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-full">
-                                                            {assignment.max_duration_hours} saat maks
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-slate-500">
-                                                        Atayan: <span className="font-semibold text-slate-700">{assignment.assigned_by_name || '-'}</span>
-                                                    </p>
-                                                    {assignment.notes && (
-                                                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                                            <Info size={11} />
-                                                            {assignment.notes}
-                                                        </p>
-                                                    )}
-                                                    {/* Status Badge */}
-                                                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${statusCfg.color}`}>
-                                                            {statusCfg.icon}
-                                                            {statusCfg.label}
-                                                        </span>
-                                                        {assignment.source_type && (
-                                                            <SourceBadge type={assignment.source_type} />
-                                                        )}
-                                                        {assignment.overtime_request && assignment.status === 'CLAIMED' && (
-                                                            <span className="text-[10px] text-slate-400 font-medium">
-                                                                Talep #{assignment.overtime_request}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }
