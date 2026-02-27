@@ -14,9 +14,9 @@ const helpContent = [
         permission: null,
         link: '/',
         images: [
-            { src: '/help-images/anasayfa.png', caption: 'Ana sayfa — üst başlıkta çalışma süresi, kalan mola ve fazla mesai bilgileri; altta hızlı erişim kartları' },
-            { src: '/help-images/mesai-takibi.png', caption: 'Mesai Takibi sayfası — günlük giriş/çıkış saatleri, toplam çalışma süresi ve hesaplanan mola/mesai detayları' },
-            { src: '/help-images/admin-anasayfa.png', caption: 'Yönetici Ana Sayfası — aylık puantaj grafikleri, devamsızlık oranı ve ekip performans özeti', permission: 'PAGE_EMPLOYEES' }
+            { src: '/help-images/anasayfa.png', caption: 'Ana sayfa — özet kartları (çalışma, mola, fazla mesai, izin), haftalık puantaj grafiği ve son aktiviteler' },
+            { src: '/help-images/mesai-takibi.png', caption: 'Mesai Takibi — günlük/aylık görünüm, çalışma süresi/mola/fazla mesai durum kartları ve mesai hedefi ilerleme çubuğu' },
+            { src: '/help-images/admin-anasayfa.png', caption: 'Ana sayfa (devamı) — aylık performans özeti, normal mesai hedefi ilerleme çubuğu ve toplam efor takibi', permission: 'PAGE_EMPLOYEES' }
         ],
         steps: [
             {
@@ -33,7 +33,7 @@ const helpContent = [
             },
             {
                 title: 'Çıkış Yapma',
-                description: 'Mesai bitiminde kartınızı tekrar okutun. Sistem çıkış saatinizi kaydeder ve çalışma sürenizi otomatik hesaplar. Çıkış yapmadan ayrılmak sisteminize zarar verir — detaylar aşağıdaki uyarılarda.'
+                description: 'Mesai bitiminde kartınızı tekrar okutun. Sistem çıkış saatinizi kaydeder ve çalışma sürenizi otomatik hesaplar. Çıkış yapmadan ayrılmak puantaj kaydınızı olumsuz etkiler — detaylar aşağıdaki uyarılarda.'
             }
         ],
         tips: [
@@ -44,7 +44,7 @@ const helpContent = [
         ],
         faq: [
             { q: 'Kart okutmayı unuttum, ne yapmalıyım?', a: 'Talepler sayfasından "Kartsız Giriş Talebi" oluşturun. Giriş ve çıkış saatlerinizi belirtin. Talep yöneticinize gider ve onaylandığında puantaj kaydınız oluşturulur. Bu talepler geçmiş 2 mali ay içindeki tarihler için verilebilir.' },
-            { q: 'Gece fazla mesai yaptım, kayıtlarım nasıl hesaplanır?', a: 'Gece 00:00\'ı geçen kayıtlar, sistem tarafından otomatik kapatılır (kartsız çıkışları ayıklamak için), eğer ki 00:00 dan sonra mesaiye devam etmeniz gerekiyorsa lütfen kartınızla çıkış ve giriş yapın!' },
+            { q: 'Gece fazla mesai yaptım, kayıtlarım nasıl hesaplanır?', a: 'Gece 00:00\'ı geçen kayıtlar, sistem tarafından otomatik kapatılır (kartsız çıkışları ayıklamak için), eğer ki 00:00\'dan sonra mesaiye devam etmeniz gerekiyorsa lütfen kartınızla çıkış ve giriş yapın!' },
             { q: 'Mola sürem neden azalıyor?', a: 'Gün içinde her çıkış-giriş arası "potansiyel mola" olarak sayılır. Toplam potansiyel mola süreniz (çıkış-giriş arasındaki tüm boşluklar) üst menüdeki mola göstergesinde takip edilir. Günlük mola hakkı (genellikle 30 dk) otomatik olarak çalışma sürenizden düşülür.' },
             { q: 'Birden fazla giriş/çıkış kaydım var, bu normal mi?', a: 'Evet. Gün içinde her kart okutma bir giriş veya çıkış olarak kaydedilir (tek-çift sıralama). Sistem tüm kayıtları birleştirerek toplam çalışma sürenizi hesaplar. Aradaki boşluklar mola olarak değerlendirilir.' },
             { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya bitişiniz 18:00 ise ve geç kalma toleransı 30 dk ise: 18:30\'a kadar çıkış yaparsanız fazla mesai oluşmaz. 18:30\'dan sonra çıkarsanız (örneğin 19:00), 18:00-19:00 arası = 60 dk fazla mesai hesaplanır. Bu süre minimum eşiği (varsayılan 30 dk) geçtiği için sistem otomatik "Potansiyel Ek Mesai" kaydı oluşturur. Eşiğin altındaki süreler kaydedilmez.' }
@@ -58,7 +58,7 @@ const helpContent = [
         permission: null,
         link: '/requests',
         images: [
-            { src: '/help-images/talepler-izin.png', caption: 'Taleplerim — İzin sekmesi: izin bakiyesi kartları, yeni talep formu ve geçmiş talep listesi' }
+            { src: '/help-images/talepler-izin.png', caption: 'Kendi Taleplerim — izin/mesai/yemek/kartsız özet sayaçları, tür ve durum filtreleri, talep listesi tablosu' }
         ],
         steps: [
             {
@@ -98,7 +98,7 @@ const helpContent = [
         permission: null,
         link: '/requests',
         images: [
-            { src: '/help-images/talepler-ek-mesai.png', caption: 'Ek Mesai sekmesi — Planlı (atama), Algılanan (otomatik tespit) ve Manuel giriş bölümleri, talep durumu rozetleri' }
+            { src: '/help-images/talepler-ek-mesai.png', caption: 'Ek Mesai sekmesi — atama ve algılanan mesai listesi, zaman filtreleri, durum rozetleri ve talep oluşturma butonu' }
         ],
         steps: [
             {
@@ -107,7 +107,7 @@ const helpContent = [
             },
             {
                 title: 'Planlı Mesai (Yönetici Ataması)',
-                description: 'Yöneticiniz size mesai ataması yapar. Talepler sayfasında "Atanan Mesailer" bölümünde görünür. "Talep Et" düğmesine tıklayarak tarih, süre ve açıklama bilgileri otomatik doldurulmuş halde onay sürecini başlatırsınız.'
+                description: 'Yöneticiniz size mesai ataması yapar. Talepler sayfasında "Planlı Mesai İstekleri" bölümünde görünür. "Talep Et" düğmesine tıklayarak tarih, süre ve açıklama bilgileri otomatik doldurulmuş halde onay sürecini başlatırsınız.'
             },
             {
                 title: 'Algılanan Mesai (Otomatik Tespit)',
@@ -132,7 +132,7 @@ const helpContent = [
             { q: 'Potansiyel mesai ile bekleyen mesai arasındaki fark nedir?', a: '"Potansiyel" mesai henüz taslak halindedir — sistem otomatik algılamıştır ama siz henüz talep etmediniz. "Talep Et" düğmesine bastığınızda durumu "Bekleyen"e geçer ve yönetici onayına gider. Potansiyel mesai puantajınıza yansımaz, sadece onaylanan mesai yansır.' },
             { q: 'Mesaim neden otomatik algılanmadı?', a: 'Mesainin algılanması için iki koşul sağlanmalıdır: (1) Vardiya bitiş saatinden sonra geç kalma toleransını (30 dk) aşmanız — örneğin 18:00 bitişli vardiyada 18:30\'dan sonra çıkmanız gerekir. (2) Günlük toplam fazla mesai süresinin minimum eşik süresini (30 dk) geçmesi. Her iki koşul da sağlanmazsa potansiyel mesai oluşmaz.' },
             { q: 'Onaylanan mesai puantajıma nasıl yansır?', a: 'Onaylanan mesai o gün için oluşturulan puantaj kaydına "Fazla Mesai" olarak eklenir. Geçmiş ay mesaileri onaylandığında, o ayın Aylık Çalışma Özeti (MonthlyWorkSummary) de otomatik güncellenir — kümülatif bakiye yeniden hesaplanır.' },
-            { q: 'Planlı mesai atamasını nasıl talep ederim?', a: 'Talepler sayfasında "Atanan Mesailer" bölümünde yöneticinizin size atadığı mesaileri göreceksiniz. Her atamanın yanındaki "Talep Et" düğmesine tıklayın — tarih, süre ve açıklama bilgileri otomatik doldurulur. İsterseniz iş tanımı (task_description) ekleyerek gönderebilirsiniz.' }
+            { q: 'Planlı mesai atamasını nasıl talep ederim?', a: 'Talepler sayfasında "Planlı Mesai İstekleri" bölümünde yöneticinizin size atadığı mesaileri göreceksiniz. Her atamanın yanındaki "Talep Et" düğmesine tıklayın — tarih, süre ve açıklama bilgileri otomatik doldurulur. İsterseniz iş tanımı (task_description) ekleyerek gönderebilirsiniz.' }
         ]
     },
     {
@@ -143,7 +143,7 @@ const helpContent = [
         permission: 'PAGE_MEAL_ORDERS',
         link: '/meal-orders',
         images: [
-            { src: '/help-images/admin-yemek-siparis.png', caption: 'Yemek Sipariş Yönetimi — günlük sipariş durumu, çalışan listesi ve toplu sipariş yönetimi paneli' }
+            { src: '/help-images/admin-yemek-siparis.png', caption: 'Yemek Sipariş Yönetimi — tarih seçici, durum kartları (toplam/verilen/bekleyen/iptal), arama alanı ve talep oluşturma' }
         ],
         steps: [
             {
@@ -177,7 +177,7 @@ const helpContent = [
         permission: null,
         link: '/calendar',
         images: [
-            { src: '/help-images/takvim.png', caption: 'Takvim görünümü — yıllık/aylık takvim, renk kodlu durum göstergeleri, etkinlik kategorileri ve mali dönem sınırları' }
+            { src: '/help-images/takvim.png', caption: 'Takvim — yıllık görünüm, etkinlik kategorileri (genel/toplantı/not/hatırlatma/acil-tatil/izin-seyahat/paylaşılan) ve şirket takvimi düzenleme' }
         ],
         steps: [
             {
@@ -253,7 +253,7 @@ const helpContent = [
         permission: null,
         link: '/feedback',
         images: [
-            { src: '/help-images/dilek-sikayetler.png', caption: 'Dilek ve Şikayetler — geri bildirim formu, durum kartları (toplam/beklemede/cevaplanan/okunmamış) ve yönetim sekmesi' }
+            { src: '/help-images/dilek-sikayetler.png', caption: 'Dilek ve Şikayetler — durum kartları (toplam/beklemede/cevaplanan/okunmamış), geri bildirim listesi ve yönetim sekmesi' }
         ],
         steps: [
             {
@@ -291,7 +291,7 @@ const helpContent = [
         permission: null,
         link: '/substitute-management',
         images: [
-            { src: '/help-images/vekalet-yonetimi.png', caption: 'Vekalet Yönetimi — özet kartları (aktif/gelecek/süresi dolmuş), vekalet listesi ve yeni vekalet oluşturma formu' }
+            { src: '/help-images/vekalet-yonetimi.png', caption: 'Vekalet Yönetimi — özet kartları (aktif/gelecek/süresi dolmuş/toplam), verdiğim ve vekil olduğum sekmeleri, arama' }
         ],
         steps: [
             {
@@ -330,12 +330,12 @@ const helpContent = [
         permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'APPROVAL_CARDLESS_ENTRY'],
         link: '/requests',
         images: [
-            { src: '/help-images/talepler-ekip.png', caption: 'Ekip Talepleri — çalışan filtresi, talep türü ve durum bazlı filtreler, onay/red düğmeleri ve toplu işlem seçimi' }
+            { src: '/help-images/talepler-ekip.png', caption: 'Gelen Talepler — doğrudan/ekibimin talepleri/vekalet filtreleri, talep türü ve durum filtreleri, isim arama kutusu' }
         ],
         steps: [
             {
                 title: 'Bekleyen Talepler',
-                description: 'Talepler sayfasında "Ekip Talepleri" sekmesinde bekleyen onaylarınızı görebilirsiniz. Üst başlıktaki bildirim zili simgesinde bekleyen talep sayısı gösterilir. Bildirme tıklayarak doğrudan talep detayına gidebilirsiniz.'
+                description: 'Talepler sayfasında "Gelen Talepler" sekmesinde bekleyen onaylarınızı görebilirsiniz. Üst başlıktaki bildirim zili simgesinde bekleyen talep sayısı gösterilir. Bildirime tıklayarak doğrudan talep detayına gidebilirsiniz.'
             },
             {
                 title: 'Onay Hiyerarşisi',
@@ -374,7 +374,7 @@ const helpContent = [
         permission: 'PAGE_REPORTS',
         link: '/reports',
         images: [
-            { src: '/help-images/admin-raporlar.png', caption: 'Raporlar — mali dönem seçimi, departman/personel filtresi, puantaj tablosu ve Excel/PDF dışa aktarma düğmeleri' }
+            { src: '/help-images/admin-raporlar.png', caption: 'Raporlar — çalışma takvimi, mali dönem ve personel seçimi, rapor aralığı bilgisi, Excel ve PDF indirme düğmeleri' }
         ],
         steps: [
             {
@@ -413,7 +413,7 @@ const helpContent = [
         permission: 'PAGE_WORK_SCHEDULES',
         link: '/work-schedules',
         images: [
-            { src: '/help-images/admin-calisma-takvimleri.png', caption: 'Mali Takvim Yönetimi — şablon listesi, haftalık program tablosu, tolerans/mola ayarları ve gün ataması düzenleyici' }
+            { src: '/help-images/admin-calisma-takvimleri.png', caption: 'Mali Takvim Yönetimi — takvim listesi, şablon sekmeleri (Şablonlar/Yıllık Takvim/Tatiller/Dönemler & Ayarlar/Personel), haftalık program' }
         ],
         steps: [
             {
@@ -457,12 +457,12 @@ const helpContent = [
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/admin/system-health',
         images: [
-            { src: '/help-images/admin-sistem-sagligi.png', caption: 'Sistem Kontrol Merkezi — 4 sekmeli panel: Gösterge Paneli, Yetki Denetimi (RBAC), Puantaj Denetimi ve Uyumluluk Testleri' }
+            { src: '/help-images/admin-sistem-sagligi.png', caption: 'Sistem Kontrol Merkezi — çoklu sekmeli panel (Genel Bakış aktif), çalışan/kayıt istatistikleri, sistem ayarları ve servis durumu' }
         ],
         steps: [
             {
-                title: 'Gösterge Paneli',
-                description: 'Canlı sistem ölçümleri: toplam çalışan sayısı, aktif mesai sayısı, devamsızlık oranı, bekleyen talep sayısı. Sistem durumu ve son işlem logları burada görüntülenir.'
+                title: 'Genel Bakış',
+                description: 'Canlı sistem ölçümleri: toplam çalışan sayısı, aktif mesai sayısı, devamsızlık oranı, bekleyen talep sayısı. Sistem ayarları, servis durumu ve son işlem logları burada görüntülenir.'
             },
             {
                 title: 'Yetki Denetimi (RBAC Audit)',
@@ -485,7 +485,7 @@ const helpContent = [
         tips: [
             { type: 'warning', text: 'Sistem yönetimi araçları kritik işlemler içerir. Şifre sıfırlama ve veri silme gibi işlemler geri alınamaz. SYSTEM_FULL_ACCESS yetkisi gerektirir.', permission: 'SYSTEM_FULL_ACCESS' },
             { type: 'info', text: 'Uyumluluk testleri 9 aşamada çalışır. Her aşama farklı bir sistem modülünü test eder. "Test Verisi Tara" ile mevcut test verilerini bulabilir, "Test Verisi Temizle" ile temizleyebilirsiniz.' },
-            { type: 'success', text: 'Gösterge panelinde tüm testlerin geçme oranı yüzdelik olarak gösterilir. %100 oranı sistemin tam uyumlu olduğunu gösterir.' }
+            { type: 'success', text: 'Genel Bakış sekmesinde tüm testlerin geçme oranı yüzdelik olarak gösterilir. %100 oranı sistemin tam uyumlu olduğunu gösterir.' }
         ],
         faq: [
             { q: 'Sistem sağlığı sayfasını göremiyorum', a: 'Bu sayfa PAGE_SYSTEM_HEALTH yetkisi gerektirir. Sadece SYSTEM_FULL_ACCESS rolüne sahip kullanıcılar veya süper kullanıcılar erişebilir.' },
@@ -501,7 +501,7 @@ const helpContent = [
         permission: 'PAGE_EMPLOYEES',
         link: '/employees',
         images: [
-            { src: '/help-images/admin-calisanlar.png', caption: 'Çalışan Yönetimi — personel listesi, arama/filtre, durum göstergeleri, çalışan detay paneli ve rol atama bölümü' }
+            { src: '/help-images/admin-calisanlar.png', caption: 'Personel Yönetimi — departman/pozisyon/rol filtreleri, çalışan listesi (iletişim, takvim, durum), Yönet ve Yeni Ekle' }
         ],
         steps: [
             {
@@ -546,7 +546,7 @@ const helpContent = [
         permission: 'PAGE_ORG_CHART',
         link: '/organization-chart',
         images: [
-            { src: '/help-images/admin-organizasyon.png', caption: 'Organizasyon Şeması — departman ağacı, yönetici-çalışan ilişkileri, zoom/pan kontrolleri ve düğüm detayları' }
+            { src: '/help-images/admin-organizasyon.png', caption: 'Organizasyon Şeması — hiyerarşik departman ağacı, zoom kontrolleri, Debug/Etiket/Düzenle araç çubuğu' }
         ],
         steps: [
             {
@@ -584,7 +584,7 @@ const helpContent = [
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/admin/service-control',
         images: [
-            { src: '/help-images/admin-servis-yonetimi.png', caption: 'Servis Yönetimi — tarih seçici ile hesaplama tetikleme, servis durum paneli, Celery görev bilgileri ve canlı log akışı' }
+            { src: '/help-images/admin-servis-yonetimi.png', caption: 'Servis Yönetimi — günlük hesaplama tetikleme (tarih seçici), servis durum paneli, hızlı bağlantılar ve canlı loglar' }
         ],
         steps: [
             {
@@ -624,7 +624,7 @@ const helpContent = [
         permission: 'PAGE_DATA_MANAGEMENT',
         link: '/system-data-management',
         images: [
-            { src: '/help-images/admin-veri-yonetimi.png', caption: 'Veri Yönetimi — yıllık personel matrisi (12 ay bakiye tablosu), yedekleme sekmesi (JSON/CSV dışa aktarma, içe aktarma ve deneme modu)' }
+            { src: '/help-images/admin-veri-yonetimi.png', caption: 'Sistem Veri Yönetimi — 4 sekmeli panel (Personel Verileri/Toplu İşlemler/Yıllık Matris/Yedekleme), personel ve ay seçimi' }
         ],
         steps: [
             {
@@ -664,7 +664,7 @@ const helpContent = [
         permission: 'PAGE_PROGRAM_MANAGEMENT',
         link: '/program-management',
         images: [
-            { src: '/help-images/admin-program-yonetimi.png', caption: 'Program Yönetimi — yazılım listesi, versiyon bilgileri, durum göstergesi, cihaz erişim kayıtları ve detay paneli' }
+            { src: '/help-images/admin-program-yonetimi.png', caption: 'Program Yönetimi — toplam/aktif program ve cihaz sayaç kartları, program listesi ve detay paneli' }
         ],
         steps: [
             {

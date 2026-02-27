@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info, PenLine, Zap, Eye, Plus, FileText } from 'lucide-react';
+import { Clock, CalendarCheck, AlertCircle, CheckCircle2, XCircle, Timer, Loader2, ChevronDown, Calendar, Info, PenLine, Zap, Eye, Plus, FileText, Search } from 'lucide-react';
 import api from '../services/api';
 
 const DAY_NAMES = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
@@ -188,7 +188,7 @@ export default function AssignedOvertimeTab() {
 
     // My OvertimeRequests
     const [myOvertimeRequests, setMyOvertimeRequests] = useState([]);
-    const [subFilter, setSubFilter] = useState('all'); // 'all' | 'assignments' | 'requests'
+    const [searchText, setSearchText] = useState('');
 
     const fetchData = async () => {
         try {
@@ -249,30 +249,38 @@ export default function AssignedOvertimeTab() {
     }, []);
 
     // --- Combined list for "Tum Isteklerim" section ---
+    // POTENTIAL requests are excluded — they belong in "Algilanan Fazla Mesai" section
     const combinedItems = useMemo(() => {
         const assignmentItems = assignments.map(a => ({ ...a, _kind: 'assignment' }));
-        const requestItems = myOvertimeRequests.map(r => ({ ...r, _kind: 'request' }));
+        const requestItems = myOvertimeRequests
+            .filter(r => r.status !== 'POTENTIAL')
+            .map(r => ({ ...r, _kind: 'request' }));
 
-        let items;
-        if (subFilter === 'assignments') items = assignmentItems;
-        else if (subFilter === 'requests') items = requestItems;
-        else items = [...assignmentItems, ...requestItems];
+        let items = [...assignmentItems, ...requestItems];
 
         // Apply time filter
         if (filter === 'past') {
-            items = items.filter(a => {
-                const dateStr = a._kind === 'request' ? a.date : a.date;
-                return isDatePast(dateStr) || isDateToday(dateStr);
-            });
+            items = items.filter(a => isDatePast(a.date) || isDateToday(a.date));
         } else if (filter === 'future') {
-            items = items.filter(a => {
-                const dateStr = a._kind === 'request' ? a.date : a.date;
-                return !isDatePast(dateStr) && !isDateToday(dateStr);
+            items = items.filter(a => !isDatePast(a.date) && !isDateToday(a.date));
+        }
+
+        // Apply search filter
+        if (searchText.trim()) {
+            const q = searchText.trim().toLowerCase();
+            items = items.filter(item => {
+                const dateStr = formatDateTurkish(item.date).toLowerCase();
+                const reason = (item.reason || item.task_description || '').toLowerCase();
+                const status = item._kind === 'request'
+                    ? (item.status || '').toLowerCase()
+                    : (getStatusConfig(item)?.label || '').toLowerCase();
+                const sourceType = (item.source_type || '').toLowerCase();
+                return dateStr.includes(q) || reason.includes(q) || status.includes(q) || sourceType.includes(q);
             });
         }
 
         return items;
-    }, [assignments, myOvertimeRequests, filter, subFilter]);
+    }, [assignments, myOvertimeRequests, filter, searchText]);
 
     const sorted = useMemo(() => {
         return [...combinedItems].sort((a, b) => {
@@ -282,9 +290,10 @@ export default function AssignedOvertimeTab() {
         });
     }, [combinedItems]);
 
-    // Count for badge
+    // Count for badge (exclude POTENTIAL — they are in "Algilanan Fazla Mesai")
     const totalItemsCount = useMemo(() => {
-        return assignments.length + myOvertimeRequests.length;
+        const nonPotentialRequests = myOvertimeRequests.filter(r => r.status !== 'POTENTIAL');
+        return assignments.length + nonPotentialRequests.length;
     }, [assignments, myOvertimeRequests]);
 
     // ==================== INTENDED Claim ====================
@@ -566,23 +575,16 @@ export default function AssignedOvertimeTab() {
                                         </button>
                                     ))}
                                 </div>
-                                {/* Sub-filter: type */}
-                                <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
-                                    {[
-                                        { key: 'all', label: 'Tumu' },
-                                        { key: 'assignments', label: 'Atamalar' },
-                                        { key: 'requests', label: 'Talepler' },
-                                    ].map(f => (
-                                        <button
-                                            key={`sub-${f.key}`}
-                                            onClick={() => setSubFilter(f.key)}
-                                            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
-                                                subFilter === f.key ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                            }`}
-                                        >
-                                            {f.label}
-                                        </button>
-                                    ))}
+                                {/* Search filter */}
+                                <div className="relative">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={searchText}
+                                        onChange={(e) => setSearchText(e.target.value)}
+                                        placeholder="Tarih, aciklama ara..."
+                                        className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 w-48 sm:w-56"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -594,17 +596,13 @@ export default function AssignedOvertimeTab() {
                                     <CalendarCheck size={24} className="text-slate-300" />
                                 </div>
                                 <p className="text-sm text-slate-500">
-                                    {filter === 'all' && subFilter === 'all'
-                                        ? 'Henuz ek mesai istegi bulunmamaktadir.'
+                                    {searchText.trim()
+                                        ? 'Aramanizla eslesen sonuc bulunamadi.'
                                         : filter === 'past'
                                         ? 'Gerceklesmis mesai istegi bulunamadi.'
                                         : filter === 'future'
                                         ? 'Gelecek tarihli mesai istegi bulunamadi.'
-                                        : subFilter === 'assignments'
-                                        ? 'Mesai atamasi bulunamadi.'
-                                        : subFilter === 'requests'
-                                        ? 'Mesai talebi bulunamadi.'
-                                        : 'Sonuc bulunamadi.'}
+                                        : 'Henuz ek mesai istegi bulunmamaktadir.'}
                                 </p>
                             </div>
                         )}
