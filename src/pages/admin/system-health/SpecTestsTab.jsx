@@ -17,6 +17,7 @@ import {
     PauseCircleIcon,
     CloudArrowDownIcon,
     ExclamationCircleIcon,
+    MapPinIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -34,6 +35,7 @@ const STAGES = [
     { id: 12, name: 'Kart Okuyucu & Gate Service', icon: ShieldCheckIcon, color: 'blue', description: '65 test — Temel giriş/çıkış, duplicate detection, GateEventLog, fallback mekanizması (race condition), refresh_from_db, shift split entegrasyonu, midnight split, E2E senaryolar' },
     { id: 13, name: 'İzin Formu Validasyon & Preview', icon: ClipboardDocumentCheckIcon, color: 'violet', description: '37 test — İzin türü filtreleme (ANNUAL_LEAVE + EXCUSE_LEAVE), mazeret izni tarih validasyonu (yıl içi + 2 mali dönem geriye), mali dönem sınır testleri (26/25 geçişi), excuse-balance API (recent_requests, bakiye preview, sıralama), oluşturma validasyonları, yıllık izin bakiye kontrolleri' },
     { id: 14, name: 'Mola Off-Day & Parçalı Mesai', icon: PauseCircleIcon, color: 'rose', description: '63 test — Off-day/tatil mola kuralları (break=0, potential=0), live-status is_off_day doğruluğu (hafta sonu/tatil/normal gün), parçalı OT segment gruplama (≤30dk merge, >30dk ayrı), POTENTIAL net süre, claim-potential V3 (overtime_request_id, overlap kontrolü), claimable endpoint V3 (bireysel POTENTIAL, segments), today_summary endpoint off-day break_allowance=0 & is_off_day flag' },
+    { id: 15, name: 'Şirket Dışı Görev v2', icon: MapPinIcon, color: 'purple', description: '45 test — Model yeni alanlar (lokasyon, ulaşım, konaklama), onay sonrası mesai (vardiya içi=DUTY, dışı=OT PENDING), off-day görev→OT, çok günlü görev, OT ilişkilendirme, serializer/API, tarih validasyonları' },
 ];
 
 export default function SpecTestsTab() {

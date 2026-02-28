@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine } from 'lucide-react';
+import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 
 // ============================================================
 // LeaveRequestForm
@@ -910,7 +910,7 @@ export const MealRequestForm = ({ mealForm, setMealForm }) => {
 };
 
 // ============================================================
-// ExternalDutyForm
+// ExternalDutyForm — 7-Step Stepper
 // Props:
 //   externalDutyForm, setExternalDutyForm, duration, approverDropdown
 // ============================================================
@@ -919,185 +919,428 @@ export const ExternalDutyForm = ({
     setExternalDutyForm,
     duration,
     approverDropdown,
-}) => (
-    <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
-        {/* Info Note */}
-        <div className="bg-purple-50 p-4 rounded-xl flex items-start gap-3 text-purple-800 text-sm border border-purple-100">
-            <AlertCircle className="shrink-0 mt-0.5" size={18} />
-            <div>
-                <h4 className="font-bold">Mesai Hesaplama</h4>
-                <p className="mt-1">Görev tarihleri içinde normal mesai saatlerine denk gelen saatler <strong>normal mesai</strong>, mesai dışı saatler <strong>ek mesai (fazla mesai)</strong> olarak değerlendirilecektir.</p>
+}) => {
+    const [currentStep, setCurrentStep] = useState(1);
+    const TOTAL_STEPS = 7;
+
+    const steps = [
+        { num: 1, label: 'Tarih & Saat', icon: CalendarDays },
+        { num: 2, label: 'Lokasyon', icon: MapPin },
+        { num: 3, label: 'Görev Detayı', icon: Briefcase },
+        { num: 4, label: 'Ulaşım', icon: Car },
+        { num: 5, label: 'Konaklama', icon: Building2 },
+        { num: 6, label: 'Bütçe & Belge', icon: Wallet },
+        { num: 7, label: 'Özet', icon: Check },
+    ];
+
+    const goNext = () => setCurrentStep(s => Math.min(s + 1, TOTAL_STEPS));
+    const goPrev = () => setCurrentStep(s => Math.max(s - 1, 1));
+
+    const taskTypeLabels = {
+        SITE_VISIT: 'Saha Ziyareti',
+        TRAINING: 'Eğitim',
+        MEETING: 'Toplantı',
+        CUSTOMER_VISIT: 'Müşteri Ziyareti',
+        OTHER: 'Diğer',
+    };
+    const transportTypeLabels = {
+        COMPANY_CAR: 'Şirket Aracı',
+        PERSONAL_CAR: 'Kişisel Araç',
+        BUS: 'Otobüs',
+        PLANE: 'Uçak',
+        TRAIN: 'Tren',
+        OTHER: 'Diğer',
+    };
+    const tripTypeLabels = {
+        NONE: 'Belirtilmedi',
+        INNER_CITY: 'Şehir İçi',
+        OUT_OF_CITY: 'Şehir Dışı',
+    };
+
+    // -- Step 1: Tarih & Saat --
+    const Step1 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div className="bg-purple-50 p-4 rounded-xl flex items-start gap-3 text-purple-800 text-sm border border-purple-100">
+                <AlertCircle className="shrink-0 mt-0.5" size={18} />
+                <div>
+                    <h4 className="font-bold">Mesai Hesaplama</h4>
+                    <p className="mt-1">Görev tarihleri içinde normal mesai saatlerine denk gelen saatler <strong>normal mesai</strong>, mesai dışı saatler <strong>ek mesai (fazla mesai)</strong> olarak değerlendirilecektir.</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
+                    <input required type="date" value={externalDutyForm.start_date}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, start_date: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
+                    <input required type="date" value={externalDutyForm.end_date} min={externalDutyForm.start_date}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, end_date: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
+                </div>
+            </div>
+            {externalDutyForm.start_date && externalDutyForm.end_date && (
+                <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
+                    <span>Toplam Görev Süresi:</span>
+                    <span className="font-bold text-purple-700">{duration} Gün</span>
+                </div>
+            )}
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
+                    <input required type="time" value={externalDutyForm.start_time}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, start_time: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
+                    <input required type="time" value={externalDutyForm.end_time}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, end_time: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
+                </div>
             </div>
         </div>
+    );
 
-        {/* Date Range */}
-        <div className="grid grid-cols-2 gap-5">
+    // -- Step 2: Lokasyon --
+    const Step2 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div className="grid grid-cols-2 gap-5">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">İl <span className="text-red-500">*</span></label>
+                    <input required value={externalDutyForm.duty_city}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, duty_city: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        placeholder="Örn: İstanbul" />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">İlçe</label>
+                    <input value={externalDutyForm.duty_district}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, duty_district: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        placeholder="Örn: Kadıköy" />
+                </div>
+            </div>
             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="date"
-                    value={externalDutyForm.start_date}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, start_date: e.target.value })}
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Adres</label>
+                <textarea rows="2" value={externalDutyForm.duty_address}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, duty_address: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    placeholder="Açık adres (opsiyonel)" />
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Ziyaret Edilen Firma / Kurum</label>
+                <input value={externalDutyForm.duty_company}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, duty_company: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                />
+                    placeholder="Örn: ABC Mühendislik A.Ş." />
+            </div>
+        </div>
+    );
+
+    // -- Step 3: Görev Detayı --
+    const Step3 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Türü <span className="text-red-500">*</span></label>
+                <select value={externalDutyForm.task_type}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, task_type: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700">
+                    <option value="">Seçiniz...</option>
+                    <option value="SITE_VISIT">Saha Ziyareti</option>
+                    <option value="TRAINING">Eğitim</option>
+                    <option value="MEETING">Toplantı</option>
+                    <option value="CUSTOMER_VISIT">Müşteri Ziyareti</option>
+                    <option value="OTHER">Diğer</option>
+                </select>
             </div>
             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="date"
-                    value={externalDutyForm.end_date}
-                    min={externalDutyForm.start_date}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, end_date: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                />
-            </div>
-        </div>
-
-        {/* Duration Display */}
-        {externalDutyForm.start_date && externalDutyForm.end_date && (
-            <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                <span>Toplam Görev Süresi:</span>
-                <span className="font-bold text-purple-700">{duration} Gün</span>
-            </div>
-        )}
-
-        {/* Time Range */}
-        <div className="grid grid-cols-2 gap-5">
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="time"
-                    value={externalDutyForm.start_time}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, start_time: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                />
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Açıklaması <span className="text-red-500">*</span></label>
+                <textarea required rows="4" value={externalDutyForm.duty_description}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, duty_description: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    placeholder="Görevin detaylı açıklamasını yazınız..." />
             </div>
             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="time"
-                    value={externalDutyForm.end_time}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, end_time: e.target.value })}
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">İletişim Telefonu</label>
+                <input type="tel" value={externalDutyForm.contact_phone}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, contact_phone: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                />
+                    placeholder="Örn: 0532 123 45 67" />
             </div>
         </div>
+    );
 
-        {/* Destination */}
-        <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer <span className="text-red-500">*</span></label>
-            <input
-                required
-                value={externalDutyForm.destination}
-                onChange={e => setExternalDutyForm({ ...externalDutyForm, destination: e.target.value })}
-                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-                placeholder="Örn: Müşteri ziyareti, Eğitim..."
-            />
-        </div>
-
-        {/* Trip Type */}
-        <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Yeri Türü</label>
-            <select
-                value={externalDutyForm.trip_type}
-                onChange={e => setExternalDutyForm({ ...externalDutyForm, trip_type: e.target.value })}
-                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700"
-            >
-                <option value="NONE">Belirtilmedi</option>
-                <option value="INNER_CITY">Şehir İçi</option>
-                <option value="OUT_OF_CITY">Şehir Dışı</option>
-            </select>
-        </div>
-
-        {/* Reason */}
-        <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
-            <textarea
-                required
-                rows="3"
-                value={externalDutyForm.reason}
-                onChange={e => setExternalDutyForm({ ...externalDutyForm, reason: e.target.value })}
-                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
-                placeholder="Şirket dışı görevin gerekçesini belirtiniz..."
-            ></textarea>
-        </div>
-
-        {/* Transportation & Accommodation Checkboxes */}
-        <div className="space-y-3">
-            <h4 className="text-sm font-bold text-slate-700">Ek Talepler</h4>
-
-            {/* Transportation */}
-            <div className={`p-3.5 rounded-xl border transition-all ${externalDutyForm.needs_transportation
+    // -- Step 4: Ulaşım --
+    const Step4 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div className={`p-4 rounded-xl border transition-all ${externalDutyForm.needs_transportation
                 ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
-                : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                }`}>
+                : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                 <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        id="needs_transportation"
+                    <input type="checkbox" id="needs_transportation_v2"
                         checked={externalDutyForm.needs_transportation}
                         onChange={e => setExternalDutyForm({ ...externalDutyForm, needs_transportation: e.target.checked })}
-                        className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
-                    />
-                    <label htmlFor="needs_transportation" className="text-sm font-bold text-slate-700 cursor-pointer select-none flex items-center gap-2">
-                        🚗 Ulaşım Talep Ediyorum
+                        className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer" />
+                    <label htmlFor="needs_transportation_v2" className="text-sm font-bold text-slate-700 cursor-pointer select-none flex items-center gap-2">
+                        <Car size={18} className="text-purple-600" /> Ulaşım Talep Ediyorum
                     </label>
                 </div>
-                {externalDutyForm.needs_transportation && (
-                    <div className="mt-3 ml-8 animate-in slide-in-from-top-2 duration-200">
-                        <textarea
-                            rows="2"
-                            value={externalDutyForm.transport_description}
-                            onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_description: e.target.value })}
-                            className="w-full p-3 bg-white border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none font-medium text-slate-700 text-sm"
-                            placeholder="Ulaşım detayları (uçak, otobüs, araç talebi vb.)"
-                        ></textarea>
-                    </div>
-                )}
             </div>
+            {externalDutyForm.needs_transportation && (
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Ulaşım Türü</label>
+                        <select value={externalDutyForm.transport_type}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_type: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700">
+                            <option value="">Seçiniz...</option>
+                            <option value="COMPANY_CAR">Şirket Aracı</option>
+                            <option value="PERSONAL_CAR">Kişisel Araç</option>
+                            <option value="BUS">Otobüs</option>
+                            <option value="PLANE">Uçak</option>
+                            <option value="TRAIN">Tren</option>
+                            <option value="OTHER">Diğer</option>
+                        </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Araç Plakası</label>
+                            <input value={externalDutyForm.transport_plate}
+                                onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_plate: e.target.value })}
+                                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                                placeholder="Örn: 34 ABC 123" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Sürücü</label>
+                            <input value={externalDutyForm.transport_driver}
+                                onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_driver: e.target.value })}
+                                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                                placeholder="Sürücü adı soyadı" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Ulaşım Notları</label>
+                        <textarea rows="2" value={externalDutyForm.transport_description}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, transport_description: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                            placeholder="Ulaşım detayları (uçak, otobüs, araç talebi vb.)" />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 
-            {/* Accommodation */}
-            <div className={`p-3.5 rounded-xl border transition-all ${externalDutyForm.needs_accommodation
+    // -- Step 5: Konaklama --
+    const Step5 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div className={`p-4 rounded-xl border transition-all ${externalDutyForm.needs_accommodation
                 ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-200'
-                : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                }`}>
+                : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                 <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        id="needs_accommodation"
+                    <input type="checkbox" id="needs_accommodation_v2"
                         checked={externalDutyForm.needs_accommodation}
                         onChange={e => setExternalDutyForm({ ...externalDutyForm, needs_accommodation: e.target.checked })}
-                        className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
-                    />
-                    <label htmlFor="needs_accommodation" className="text-sm font-bold text-slate-700 cursor-pointer select-none flex items-center gap-2">
-                        🏨 Konaklama Talep Ediyorum
+                        className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer" />
+                    <label htmlFor="needs_accommodation_v2" className="text-sm font-bold text-slate-700 cursor-pointer select-none flex items-center gap-2">
+                        <Building2 size={18} className="text-purple-600" /> Konaklama Talep Ediyorum
                     </label>
                 </div>
             </div>
+            {externalDutyForm.needs_accommodation && (
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Otel / Konaklama Yeri</label>
+                        <input value={externalDutyForm.accommodation_name}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, accommodation_name: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                            placeholder="Otel veya konaklama yeri adı" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Gece Sayısı</label>
+                        <input type="number" min="0" value={externalDutyForm.accommodation_nights}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, accommodation_nights: parseInt(e.target.value) || 0 })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                            placeholder="0" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Konaklama Notları</label>
+                        <textarea rows="2" value={externalDutyForm.accommodation_notes}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, accommodation_notes: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
+                            placeholder="Ek talepler, tercihler vb." />
+                    </div>
+                </div>
+            )}
         </div>
+    );
 
-        {/* Approver Selection */}
-        {approverDropdown}
-
-        {/* Send to Substitute */}
-        <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
-            <input
-                type="checkbox"
-                id="send_to_sub_duty"
-                checked={externalDutyForm.send_to_substitute}
-                onChange={e => setExternalDutyForm({ ...externalDutyForm, send_to_substitute: e.target.checked })}
-                className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
-            />
-            <label htmlFor="send_to_sub_duty" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
-                Vekil yöneticiye de gönder
-            </label>
+    // -- Step 6: Bütçe & Belge --
+    const Step6 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tahmini Bütçe (TL)</label>
+                <input type="number" min="0" step="0.01" value={externalDutyForm.budget_amount}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, budget_amount: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    placeholder="Örn: 2500.00" />
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Yeri Türü</label>
+                <select value={externalDutyForm.trip_type}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, trip_type: e.target.value })}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700">
+                    <option value="NONE">Belirtilmedi</option>
+                    <option value="INNER_CITY">Şehir İçi</option>
+                    <option value="OUT_OF_CITY">Şehir Dışı</option>
+                </select>
+            </div>
+            {approverDropdown}
+            <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
+                <input type="checkbox" id="send_to_sub_duty_v2"
+                    checked={externalDutyForm.send_to_substitute}
+                    onChange={e => setExternalDutyForm({ ...externalDutyForm, send_to_substitute: e.target.checked })}
+                    className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer" />
+                <label htmlFor="send_to_sub_duty_v2" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                    Vekil yöneticiye de gönder
+                </label>
+            </div>
         </div>
-    </div>
-);
+    );
+
+    // -- Step 7: Özet --
+    const Step7 = () => {
+        const SummaryCard = ({ title, icon: Icon, children, color = 'purple' }) => (
+            <div className={`p-4 rounded-xl border border-${color}-100 bg-${color}-50/30`}>
+                <h4 className={`text-sm font-bold text-${color}-700 mb-2 flex items-center gap-2`}>
+                    <Icon size={16} /> {title}
+                </h4>
+                <div className="space-y-1 text-sm text-slate-700">{children}</div>
+            </div>
+        );
+        const SummaryRow = ({ label, value }) => value ? (
+            <div className="flex justify-between">
+                <span className="text-slate-500">{label}</span>
+                <span className="font-medium">{value}</span>
+            </div>
+        ) : null;
+
+        return (
+            <div className="space-y-4 animate-in slide-in-from-right-8 duration-300">
+                <div className="bg-purple-50 p-3 rounded-xl border border-purple-100 text-center">
+                    <h4 className="text-sm font-bold text-purple-700">Görev Özeti</h4>
+                    <p className="text-xs text-purple-600 mt-0.5">Bilgileri kontrol edip formu gönderebilirsiniz</p>
+                </div>
+                <SummaryCard title="Tarih & Saat" icon={CalendarDays}>
+                    <SummaryRow label="Tarih" value={`${externalDutyForm.start_date} - ${externalDutyForm.end_date}`} />
+                    <SummaryRow label="Saat" value={externalDutyForm.start_time && externalDutyForm.end_time ? `${externalDutyForm.start_time} - ${externalDutyForm.end_time}` : ''} />
+                    <SummaryRow label="Süre" value={duration ? `${duration} Gün` : ''} />
+                </SummaryCard>
+                <SummaryCard title="Lokasyon" icon={MapPin}>
+                    <SummaryRow label="Şehir" value={`${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim()} />
+                    <SummaryRow label="Adres" value={externalDutyForm.duty_address} />
+                    <SummaryRow label="Firma" value={externalDutyForm.duty_company} />
+                </SummaryCard>
+                <SummaryCard title="Görev Detayı" icon={Briefcase}>
+                    <SummaryRow label="Görev Türü" value={taskTypeLabels[externalDutyForm.task_type] || ''} />
+                    <SummaryRow label="Açıklama" value={externalDutyForm.duty_description} />
+                    <SummaryRow label="Telefon" value={externalDutyForm.contact_phone} />
+                </SummaryCard>
+                {externalDutyForm.needs_transportation && (
+                    <SummaryCard title="Ulaşım" icon={Car}>
+                        <SummaryRow label="Tür" value={transportTypeLabels[externalDutyForm.transport_type] || ''} />
+                        <SummaryRow label="Plaka" value={externalDutyForm.transport_plate} />
+                        <SummaryRow label="Sürücü" value={externalDutyForm.transport_driver} />
+                        <SummaryRow label="Not" value={externalDutyForm.transport_description} />
+                    </SummaryCard>
+                )}
+                {externalDutyForm.needs_accommodation && (
+                    <SummaryCard title="Konaklama" icon={Building2}>
+                        <SummaryRow label="Yer" value={externalDutyForm.accommodation_name} />
+                        <SummaryRow label="Gece" value={externalDutyForm.accommodation_nights > 0 ? `${externalDutyForm.accommodation_nights} gece` : ''} />
+                        <SummaryRow label="Not" value={externalDutyForm.accommodation_notes} />
+                    </SummaryCard>
+                )}
+                <SummaryCard title="Bütçe & Onay" icon={Wallet}>
+                    <SummaryRow label="Bütçe" value={externalDutyForm.budget_amount ? `${externalDutyForm.budget_amount} TL` : ''} />
+                    <SummaryRow label="Görev Yeri" value={tripTypeLabels[externalDutyForm.trip_type] || ''} />
+                    <SummaryRow label="Vekil" value={externalDutyForm.send_to_substitute ? 'Evet' : 'Hayır'} />
+                </SummaryCard>
+            </div>
+        );
+    };
+
+    const renderStep = () => {
+        switch (currentStep) {
+            case 1: return <Step1 />;
+            case 2: return <Step2 />;
+            case 3: return <Step3 />;
+            case 4: return <Step4 />;
+            case 5: return <Step5 />;
+            case 6: return <Step6 />;
+            case 7: return <Step7 />;
+            default: return <Step1 />;
+        }
+    };
+
+    return (
+        <div className="space-y-5">
+            {/* Step Indicator Pills */}
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                {steps.map((s) => {
+                    const StepIcon = s.icon;
+                    const isActive = currentStep === s.num;
+                    const isDone = currentStep > s.num;
+                    return (
+                        <button key={s.num} type="button" onClick={() => setCurrentStep(s.num)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                                isActive
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200 scale-105'
+                                    : isDone
+                                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}>
+                            {isDone ? <Check size={12} /> : <StepIcon size={12} />}
+                            <span className="hidden sm:inline">{s.label}</span>
+                            <span className="sm:hidden">{s.num}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-200 rounded-full h-1.5">
+                <div className="bg-purple-600 h-1.5 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }} />
+            </div>
+
+            {/* Step Content */}
+            <div className="min-h-[200px]">
+                {renderStep()}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-2">
+                <button type="button" onClick={goPrev} disabled={currentStep === 1}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                        currentStep === 1
+                            ? 'text-slate-300 cursor-not-allowed'
+                            : 'text-purple-700 bg-purple-50 hover:bg-purple-100 active:scale-95'
+                    }`}>
+                    <ChevronLeft size={16} /> Geri
+                </button>
+                {currentStep < TOTAL_STEPS && (
+                    <button type="button" onClick={goNext}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
+                        İleri <ChevronRightIcon size={16} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
 
 // ============================================================
 // CardlessEntryForm
