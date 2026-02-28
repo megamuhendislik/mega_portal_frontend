@@ -89,11 +89,16 @@ export const EmployeeAttendanceRow = ({
                 <span className="text-xs font-semibold text-slate-700 tabular-nums">{formatMinutes(s.today_normal)}</span>
             </td>
 
-            {/* Bugün: F.Mesai */}
-            <td className="py-3.5 px-3 text-center">
-                {(s.today_overtime || 0) > 0
-                    ? <span className="text-xs font-bold text-amber-600 tabular-nums">+{formatMinutes(s.today_overtime)}</span>
-                    : <Dash />}
+            {/* Bugün: F.Mesai (3 kategori) */}
+            <td className="py-3.5 px-2 text-center">
+                {(s.today_overtime || 0) > 0 ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                        {(s.today_ot_approved || 0) > 0 && <span className="text-[10px] font-bold text-emerald-600 tabular-nums">{formatMinutes(s.today_ot_approved)}</span>}
+                        {(s.today_ot_pending || 0) > 0 && <span className="text-[10px] font-bold text-amber-500 tabular-nums">{formatMinutes(s.today_ot_pending)}</span>}
+                        {(s.today_ot_potential || 0) > 0 && <span className="text-[10px] font-semibold text-slate-400 tabular-nums">{formatMinutes(s.today_ot_potential)}</span>}
+                        {!(s.today_ot_approved || s.today_ot_pending || s.today_ot_potential) && <span className="text-xs font-bold text-amber-600 tabular-nums">+{formatMinutes(s.today_overtime)}</span>}
+                    </div>
+                ) : <Dash />}
             </td>
 
             {/* Bugün: Mola */}
@@ -262,10 +267,9 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
 
                 <div className="p-5 space-y-5">
                     {/* Stats */}
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                         {[
                             { label: 'Normal', value: formatMinutes(employee.today_normal || 0), color: 'text-slate-800', bg: 'bg-slate-50 border-slate-200' },
-                            { label: 'Ek Mesai', value: `+${formatMinutes(employee.today_overtime || 0)}`, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
                             { label: 'Eksik', value: `-${formatMinutes(employee.today_missing || 0)}`, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
                             { label: 'Mola', value: formatMinutes(employee.today_break || 0), color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200' },
                         ].map(({ label, value, color, bg }) => (
@@ -274,6 +278,21 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                 <div className={`text-lg font-bold ${color} tabular-nums`}>{value}</div>
                             </div>
                         ))}
+                    </div>
+                    {/* OT Breakdown */}
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
+                            <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mb-0.5">Onaylı Mesai</div>
+                            <div className="text-base font-bold text-emerald-700 tabular-nums">{formatMinutes(employee.today_ot_approved || 0)}</div>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">
+                            <div className="text-[9px] font-bold text-amber-500 uppercase tracking-wider mb-0.5">Bekleyen</div>
+                            <div className="text-base font-bold text-amber-700 tabular-nums">{formatMinutes(employee.today_ot_pending || 0)}</div>
+                        </div>
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center">
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Potansiyel</div>
+                            <div className="text-base font-bold text-slate-600 tabular-nums">{formatMinutes(employee.today_ot_potential || 0)}</div>
+                        </div>
                     </div>
 
                     {/* Timeline */}

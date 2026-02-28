@@ -210,9 +210,9 @@ const Dashboard = () => {
                     color={todaySummary?.is_off_day ? 'gray' : 'amber'}
                 />
                 <StatCard
-                    title="ANLIK FAZLA MESAİ"
-                    value={`${formatMin(todaySummary?.current_overtime)} dk`}
-                    subValue={`Onay: ${formatMin(todaySummary?.overtime_approved)} / Bekl: ${formatMin(todaySummary?.overtime_pending)} / Taslak: ${formatMin(todaySummary?.current_overtime - (todaySummary?.overtime_approved || 0) - (todaySummary?.overtime_pending || 0))} dk`}
+                    title="FAZLA MESAİ"
+                    value={`${formatMin(todaySummary?.overtime_approved)} dk`}
+                    subValue={`Onaylı: ${formatMin(todaySummary?.overtime_approved)} / Bekleyen: ${formatMin(todaySummary?.overtime_pending)} / Potansiyel: ${formatMin(todaySummary?.overtime_potential)} dk`}
                     icon={Zap}
                     color="emerald"
                 />

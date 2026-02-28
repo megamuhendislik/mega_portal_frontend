@@ -30,6 +30,9 @@ const HeroDailySummary = ({ summary, loading }) => {
         : 0;
 
     const overtimeSeconds = safeSummary.current_overtime || 0;
+    const otApproved = safeSummary.overtime_approved || 0;
+    const otPending = safeSummary.overtime_pending || 0;
+    const otPotential = safeSummary.overtime_potential || 0;
     const isWorking = safeSummary.is_working || false;
 
     return (
@@ -169,14 +172,14 @@ const HeroDailySummary = ({ summary, loading }) => {
                     </div>
                 </div>
 
-                {/* 3. Overtime Widget - Emerald/Teal Theme */}
+                {/* 3. Overtime Widget - 3-Category Breakdown */}
                 <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-emerald-500/5 group transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1">
                     {/* Background Decor */}
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
 
                     <div className="relative z-10 flex flex-col h-full justify-between">
                         <div>
-                            <div className="flex items-center gap-4 mb-6">
+                            <div className="flex items-center gap-4 mb-4">
                                 <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl shadow-lg shadow-emerald-500/30 group-hover:rotate-6 transition-all duration-300">
                                     <Timer size={20} />
                                 </div>
@@ -186,25 +189,42 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 </div>
                             </div>
 
-                            <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor(overtimeSeconds / 60)}
-                                </span>
-                                <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
+                            {/* 3-Category OT Breakdown */}
+                            <div className="space-y-2.5">
+                                {/* Approved */}
+                                <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-xl border border-emerald-100/50">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                        <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Onaylı</span>
+                                    </div>
+                                    <span className="text-lg font-black text-emerald-700">{Math.floor(otApproved / 60)}<span className="text-[10px] font-bold text-emerald-400 ml-0.5">dk</span></span>
+                                </div>
+                                {/* Pending */}
+                                <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-xl border border-amber-100/50">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                        <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Bekleyen</span>
+                                    </div>
+                                    <span className="text-lg font-black text-amber-700">{Math.floor(otPending / 60)}<span className="text-[10px] font-bold text-amber-400 ml-0.5">dk</span></span>
+                                </div>
+                                {/* Potential */}
+                                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Potansiyel</span>
+                                    </div>
+                                    <span className="text-lg font-black text-slate-600">{Math.floor(otPotential / 60)}<span className="text-[10px] font-bold text-slate-400 ml-0.5">dk</span></span>
+                                </div>
                             </div>
-                            <p className="text-xs font-semibold text-slate-400 pl-1">
-                                Onaylanan veya bekleyen
-                            </p>
                         </div>
 
-                        <div className="mt-8">
+                        <div className="mt-3">
                             {overtimeSeconds > 0 ? (
-                                <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100/50">
-                                    <CheckCircle2 size={14} className="text-emerald-600" />
-                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">Mesai Tespit Edildi</span>
+                                <div className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    Toplam Tespit: {Math.floor(overtimeSeconds / 60)} dk
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100/50 opacity-60">
+                                <div className="flex items-center justify-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100/50 opacity-60">
                                     <Clock size={14} className="text-slate-400" />
                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Kayıt Yok</span>
                                 </div>

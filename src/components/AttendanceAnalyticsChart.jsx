@@ -159,6 +159,12 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             const totalOvertime = dayLogs.reduce((acc, l) => acc + (l.overtime_seconds || 0), 0);
             const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
 
+            // OT Breakdown: approved, pending, potential
+            const otApproved = dayLogs.reduce((acc, l) => acc + (l.ot_approved_seconds || 0), 0);
+            const otPending = dayLogs.reduce((acc, l) => acc + (l.pending_overtime_seconds || 0), 0);
+            const totalCalcOt = dayLogs.reduce((acc, l) => acc + (l.calculated_overtime_seconds || 0), 0);
+            const otPotential = Math.max(0, totalCalcOt - otApproved - otPending);
+
             // Revert: Use sum of missing_seconds from logs, as requested.
             // "if it's not processed as absent... don't show it"
             const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
@@ -179,6 +185,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 fullDate: format(d, 'd MMM yyyy', { locale: tr }),
                 normal: parseFloat((totalNormal / 3600).toFixed(1)),
                 overtime: parseFloat((totalOvertime / 3600).toFixed(1)),
+                ot_approved: parseFloat((otApproved / 3600).toFixed(2)),
+                ot_pending: parseFloat((otPending / 3600).toFixed(2)),
+                ot_potential: parseFloat((otPotential / 3600).toFixed(2)),
                 missing: parseFloat((calculatedMissing / 3600).toFixed(1)),
                 break: parseFloat((totalBreak / 3600).toFixed(2)),
                 target: dayTarget > 0 ? parseFloat((dayTarget / 3600).toFixed(1)) : null,
@@ -379,7 +388,9 @@ const YearlyView = ({ data }) => {
 
                     {/* Bars */}
                     <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" />
-                    <Bar yAxisId="left" dataKey="overtime" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} name="Ek Mesai (Sa)" />
+                    <Bar yAxisId="left" dataKey="ot_approved" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} name="Onaylı Mesai (Sa)" />
+                    <Bar yAxisId="left" dataKey="ot_pending" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} name="Bekleyen Mesai (Sa)" />
+                    <Bar yAxisId="left" dataKey="ot_potential" stackId="a" fill="#94a3b8" radius={[4, 4, 0, 0]} name="Potansiyel Mesai (Sa)" />
                     <Bar yAxisId="left" dataKey="missing" stackId="a" fill="url(#striped-year)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} name="Eksik (Sa)" />
 
                     {/* Cumulative Line */}
