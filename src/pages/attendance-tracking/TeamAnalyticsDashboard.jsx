@@ -10,8 +10,8 @@ import api from '../../services/api';
 import {
     TrendingUp, TrendingDown, Award, Clock, AlertTriangle, Users,
     Target, Zap, Minus, ChevronDown, ChevronUp, Shield,
-    Palmtree, BarChart3, Activity, Calendar, Eye, Star,
-    UserCheck, ArrowRight, Flame, AlertCircle, Info, X, Briefcase
+    Palmtree, BarChart3, Activity, Calendar, CheckCircle, Star,
+    UserCheck, ArrowRight, Flame, AlertCircle, Info, X, Briefcase, UtensilsCrossed
 } from 'lucide-react';
 import { formatMinutes } from './AttendanceComponents';
 
@@ -113,9 +113,13 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             <h3 className="text-sm font-bold text-slate-800">{person.employee_name}</h3>
                             <p className="text-[11px] text-slate-400">{person.department || '-'} · {person.job_title || '-'}</p>
                         </div>
-                        {person.is_online && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">Online</span>
-                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
+                            (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                        }`}>
+                            Katilim %{Math.round(person.attendance_rate || 100)}
+                        </span>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                         <X size={18} className="text-slate-400" />
@@ -144,6 +148,27 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             <div className="bg-red-50 rounded-xl p-3">
                                 <p className="text-[10px] text-red-400 font-semibold">Kayip</p>
                                 <p className="text-lg font-bold text-red-600">{formatMinutes(missing)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Katilim Durumu */}
+                    <div>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Katilim Durumu</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className={`text-center p-3 rounded-xl ${(person.attendance_rate || 100) >= 95 ? 'bg-emerald-50' : (person.attendance_rate || 100) >= 85 ? 'bg-amber-50' : 'bg-red-50'}`}>
+                                <p className="text-[10px] text-slate-400 font-semibold">Katilim Orani</p>
+                                <p className={`text-lg font-bold ${(person.attendance_rate || 100) >= 95 ? 'text-emerald-600' : (person.attendance_rate || 100) >= 85 ? 'text-amber-600' : 'text-red-600'}`}>
+                                    %{Math.round(person.attendance_rate || 100)}
+                                </p>
+                            </div>
+                            <div className="text-center p-3 bg-slate-50 rounded-xl">
+                                <p className="text-[10px] text-slate-400 font-semibold">Devam Gunleri</p>
+                                <p className="text-lg font-bold text-slate-700">{person.attendance_days || 0}</p>
+                            </div>
+                            <div className="text-center p-3 bg-red-50 rounded-xl">
+                                <p className="text-[10px] text-red-400 font-semibold">Devamsiz Gunler</p>
+                                <p className="text-lg font-bold text-red-600">{person.absent_days || 0}</p>
                             </div>
                         </div>
                     </div>
@@ -227,6 +252,56 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             <p className="text-[11px] text-slate-400 italic">Bu donem onaylanmis ek mesai yok</p>
                         )}
                     </div>
+
+                    {/* Hafta Sonu OT Analizi */}
+                    {((person.ot_weekend_minutes || 0) > 0 || (person.ot_weekday_minutes || 0) > 0) && (
+                        <div>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Hafta Sonu OT Analizi</h4>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="text-center p-3 bg-amber-50 rounded-xl">
+                                    <p className="text-[10px] text-amber-400 font-semibold">H.Sonu OT</p>
+                                    <p className="text-sm font-bold text-amber-600">{formatMinutes(person.ot_weekend_minutes || 0)}</p>
+                                    <p className="text-[10px] text-amber-300">{person.ot_weekend_count || 0} gun</p>
+                                </div>
+                                <div className="text-center p-3 bg-blue-50 rounded-xl">
+                                    <p className="text-[10px] text-blue-400 font-semibold">H.Ici OT</p>
+                                    <p className="text-sm font-bold text-blue-600">{formatMinutes(person.ot_weekday_minutes || 0)}</p>
+                                    <p className="text-[10px] text-blue-300">{person.ot_weekday_count || 0} gun</p>
+                                </div>
+                                <div className="text-center p-3 bg-violet-50 rounded-xl">
+                                    <p className="text-[10px] text-violet-400 font-semibold">H.Sonu Orani</p>
+                                    <p className="text-sm font-bold text-violet-600">
+                                        %{((person.ot_weekend_minutes || 0) + (person.ot_weekday_minutes || 0)) > 0
+                                            ? Math.round((person.ot_weekend_minutes || 0) / ((person.ot_weekend_minutes || 0) + (person.ot_weekday_minutes || 0)) * 100)
+                                            : 0}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Yemek Korelasyonu */}
+                    {(person.meal_ordered || 0) > 0 && (
+                        <div>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yemek Korelasyonu</h4>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="text-center p-3 bg-cyan-50 rounded-xl">
+                                    <p className="text-[10px] text-cyan-400 font-semibold">Toplam Yemek</p>
+                                    <p className="text-sm font-bold text-cyan-600">{person.meal_ordered || 0} siparis</p>
+                                </div>
+                                <div className="text-center p-3 bg-slate-50 rounded-xl">
+                                    <p className="text-[10px] text-slate-400 font-semibold">OT'de Yemek</p>
+                                    <p className="text-sm font-bold text-slate-700">{person.ot_meal_overlap || 0}/{person.ot_days_total || 0} gun</p>
+                                </div>
+                                <div className="text-center p-3 bg-emerald-50 rounded-xl">
+                                    <p className="text-[10px] text-emerald-400 font-semibold">OT Yemek Orani</p>
+                                    <p className="text-sm font-bold text-emerald-600">
+                                        %{(person.ot_days_total || 0) > 0 ? Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100) : 0}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Izin Durumu */}
                     {(person.annual_leave_entitlement > 0 || person.annual_leave_used > 0) && (
@@ -394,7 +469,6 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const totalMissing = filteredStats.reduce((a, c) => a + (c.total_missing || 0), 0);
         const totalRequired = filteredStats.reduce((a, c) => a + (c.monthly_required || 0), 0);
         const totalPastTarget = filteredStats.reduce((a, c) => a + (c.past_target_minutes || c.monthly_required || 0), 0);
-        const onlineCount = filteredStats.filter(s => s.is_online).length;
 
         // Work days from backend (accurate fiscal period days) with fallback
         const _sample = filteredStats[0] || {};
@@ -428,7 +502,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const deptMap = {};
         filteredStats.forEach(s => {
             const dept = s.department || 'Bilinmiyor';
-            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, worked: 0, completed: 0, ot: 0, missing: 0, required: 0, pastTarget: 0, online: 0, deviation: 0, positiveBalance: 0 };
+            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, worked: 0, completed: 0, ot: 0, missing: 0, required: 0, pastTarget: 0, deviation: 0, positiveBalance: 0, attendanceRateSum: 0, weekendOT: 0, weekdayOT: 0, leaveUsed: 0, leaveTotal: 0 };
             deptMap[dept].count++;
             deptMap[dept].worked += (s.total_worked || 0);
             deptMap[dept].completed += (s.completed_minutes || s.total_worked || 0);
@@ -437,7 +511,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             deptMap[dept].required += (s.monthly_required || 0);
             deptMap[dept].pastTarget += (s.past_target_minutes || s.monthly_required || 0);
             deptMap[dept].deviation += (s.monthly_deviation || 0);
-            if (s.is_online) deptMap[dept].online++;
+            deptMap[dept].attendanceRateSum += (s.attendance_rate || 100);
+            deptMap[dept].weekendOT += (s.ot_weekend_minutes || 0);
+            deptMap[dept].weekdayOT += (s.ot_weekday_minutes || 0);
+            deptMap[dept].leaveUsed += (s.annual_leave_used || 0);
+            deptMap[dept].leaveTotal += ((s.annual_leave_entitlement || 0) > 0 ? (s.annual_leave_entitlement || 0) : 0);
             if ((s.monthly_net_balance || 0) > 0) deptMap[dept].positiveBalance++;
         });
         const departments = Object.values(deptMap).sort((a, b) => b.count - a.count);
@@ -517,21 +595,21 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
         // Radar data for departments (only for "Tum Ekibim")
         const radarData = departments.length > 1 ? (() => {
-            const axes = ['Verimlilik', 'OT Yogunlugu', 'Eksik Dusukl.', 'Cevrimici', 'Pozitif Bakiye'];
+            const axes = ['Verimlilik', 'OT Yogunlugu', 'Eksik Dusukl.', 'Katilim', 'Pozitif Bakiye'];
             return axes.map(axis => {
                 const row = { axis };
                 departments.slice(0, 6).forEach(dept => {
                     const dEff = dept.pastTarget > 0 ? (dept.completed / dept.pastTarget) * 100 : 0;
                     const dOT = dept.pastTarget > 0 ? (dept.ot / dept.pastTarget) * 100 : 0;
                     const dMiss = dept.pastTarget > 0 ? 100 - (dept.missing / dept.pastTarget) * 100 : 100;
-                    const dOnline = dept.count > 0 ? (dept.online / dept.count) * 100 : 0;
+                    const dAttRate = dept.count > 0 ? (dept.attendanceRateSum / dept.count) : 100;
                     const dPosBal = dept.count > 0 ? (dept.positiveBalance / dept.count) * 100 : 0;
 
                     let val = 0;
                     if (axis === 'Verimlilik') val = Math.min(100, dEff);
                     else if (axis === 'OT Yogunlugu') val = Math.min(100, dOT * 5);
                     else if (axis === 'Eksik Dusukl.') val = Math.max(0, dMiss);
-                    else if (axis === 'Cevrimici') val = dOnline;
+                    else if (axis === 'Katilim') val = Math.min(100, dAttRate);
                     else if (axis === 'Pozitif Bakiye') val = dPosBal;
 
                     row[dept.name] = Math.round(val);
@@ -557,8 +635,69 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
         const otNormalRatio = totalWorked > 0 ? Math.round((totalOT / totalWorked) * 100) : 0;
 
+        // --- NEW ANALYTICS v3.0 ---
+        // Katılım oranı (departman ortalaması)
+        const avgAttendanceRate = count > 0
+            ? Math.round(filteredStats.reduce((s, p) => s + (p.attendance_rate || 100), 0) / count)
+            : 100;
+        const totalAttendanceDays = filteredStats.reduce((s, p) => s + (p.attendance_days || 0), 0);
+        const totalAbsentDays = filteredStats.reduce((s, p) => s + (p.absent_days || 0), 0);
+
+        // Günlük ortalama normal mesai (dk)
+        const dailyAvgNormalMin = elapsedWorkDays > 0
+            ? Math.round(totalCompleted / count / elapsedWorkDays)
+            : 0;
+
+        // OT/Normal oranı (%)
+        const otNormalPercent = totalCompleted > 0
+            ? Math.round(totalOT / totalCompleted * 100)
+            : 0;
+
+        // Hafta sonu OT toplamları
+        const totalWeekendOTMin = filteredStats.reduce((s, p) => s + (p.ot_weekend_minutes || 0), 0);
+        const totalWeekdayOTMin = filteredStats.reduce((s, p) => s + (p.ot_weekday_minutes || 0), 0);
+        const weekendOTRatio = (totalWeekendOTMin + totalWeekdayOTMin) > 0
+            ? Math.round(totalWeekendOTMin / (totalWeekendOTMin + totalWeekdayOTMin) * 100)
+            : 0;
+
+        // Yemek & OT-yemek korelasyonu
+        const totalMealOrdered = filteredStats.reduce((s, p) => s + (p.meal_ordered || 0), 0);
+        const totalOTMealOverlap = filteredStats.reduce((s, p) => s + (p.ot_meal_overlap || 0), 0);
+        const totalOTDays = filteredStats.reduce((s, p) => s + (p.ot_days_total || 0), 0);
+        const otMealRate = totalOTDays > 0 ? Math.round(totalOTMealOverlap / totalOTDays * 100) : 0;
+
+        // İzin kullanım oranı
+        const totalLeaveUsed = filteredStats.reduce((s, p) => s + (p.annual_leave_used || 0), 0);
+        const totalLeaveRemaining = filteredStats.reduce((s, p) => s + (p.annual_leave_balance || 0), 0);
+        const avgLeaveUsage = count > 0
+            ? Math.round(filteredStats.reduce((s, p) => {
+                const total = p.annual_leave_entitlement || 0;
+                return s + (total > 0 ? (p.annual_leave_used || 0) / total * 100 : 0);
+            }, 0) / count)
+            : 0;
+
+        // Weekend OT top 10 for chart
+        const weekendOTData = [...filteredStats]
+            .filter(s => (s.ot_weekend_minutes || 0) > 0 || (s.ot_weekday_minutes || 0) > 0)
+            .sort((a, b) => ((b.ot_weekend_minutes || 0) + (b.ot_weekday_minutes || 0)) - ((a.ot_weekend_minutes || 0) + (a.ot_weekday_minutes || 0)))
+            .slice(0, 10)
+            .map(s => ({
+                name: (s.employee_name || '').split(' ').slice(0, 2).join(' '),
+                'H.Ici OT': s.ot_weekday_minutes || 0,
+                'H.Sonu OT': s.ot_weekend_minutes || 0,
+            }));
+
+        // Leave usage by department
+        const leaveByDept = departments
+            .filter(d => d.leaveTotal > 0)
+            .map(d => ({
+                name: d.name,
+                usage: d.leaveTotal > 0 ? Math.round(d.leaveUsed / d.leaveTotal * 100) : 0,
+            }))
+            .sort((a, b) => b.usage - a.usage);
+
         return {
-            count, totalWorked, totalCompleted, totalOT, totalMissing, totalRequired, totalPastTarget, onlineCount,
+            count, totalWorked, totalCompleted, totalOT, totalMissing, totalRequired, totalPastTarget,
             avgWorked, avgOT, avgMissing, avgRequired, efficiency,
             dailyAvgMissing, projectedBalance, avgDeviation, elapsedWorkDays, totalWorkDaysInMonth, remainingWorkDays,
             positiveBalance, negativeBalance, zeroBalance,
@@ -571,6 +710,13 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             totalOTIntendedMin, totalOTPotentialMin, totalOTManualMin,
             totalOTIntendedCount, totalOTPotentialCount, totalOTManualCount,
             totalOTSourceMin, otSourceDistribution, otNormalRatio,
+            // v3.0 new fields
+            avgAttendanceRate, totalAttendanceDays, totalAbsentDays,
+            dailyAvgNormalMin, otNormalPercent,
+            totalWeekendOTMin, totalWeekdayOTMin, weekendOTRatio,
+            totalMealOrdered, totalOTMealOverlap, totalOTDays, otMealRate,
+            totalLeaveUsed, totalLeaveRemaining, avgLeaveUsage,
+            weekendOTData, leaveByDept,
         };
     }, [filteredStats]);
 
@@ -611,8 +757,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             const projectedDept = dept.count > 0 && analytics.elapsedWorkDays > 0
                 ? Math.round((dept.deviation / dept.count) + ((dept.deviation / dept.count / analytics.elapsedWorkDays) * analytics.remainingWorkDays))
                 : 0;
-            const activeRate = dept.count > 0 ? Math.round((dept.online / dept.count) * 100) : 0;
-            return { ...dept, efficiency: dEff, avgWorked: avgWorkedDept, avgOT: avgOTDept, avgMissing: avgMissingDept, dailyMissing: dailyMissingDept, projected: projectedDept, activeRate };
+            const attendanceRateAvg = dept.count > 0 ? Math.round(dept.attendanceRateSum / dept.count) : 100;
+            const dailyNormalDept = dept.count > 0 && analytics.elapsedWorkDays > 0 ? Math.round(dept.completed / dept.count / analytics.elapsedWorkDays) : 0;
+            const otNormalPctDept = dept.completed > 0 ? Math.round(dept.ot / dept.completed * 100) : 0;
+            return { ...dept, efficiency: dEff, avgWorked: avgWorkedDept, avgOT: avgOTDept, avgMissing: avgMissingDept, dailyMissing: dailyMissingDept, projected: projectedDept, attendanceRateAvg, dailyNormalDept, otNormalPctDept };
         });
         if (sortColumn) {
             depts.sort((a, b) => {
@@ -768,11 +916,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     color={analytics.avgMissing > 60 ? 'red' : 'slate'}
                 />
                 <KpiCard
-                    label="Gunluk Ort. Eksik"
-                    value={formatMinutes(analytics.dailyAvgMissing)}
-                    subValue={`${analytics.elapsedWorkDays} is gunu icinde`}
-                    icon={TrendingDown}
-                    color={analytics.dailyAvgMissing > 30 ? 'red' : 'slate'}
+                    label="Gnl. Ort. Normal"
+                    value={formatMinutes(analytics.dailyAvgNormalMin)}
+                    subValue={`OT/Normal: %${analytics.otNormalPercent}`}
+                    icon={Clock}
+                    color="blue"
                 />
                 <KpiCard
                     label="Tahmini Ay Sonu"
@@ -782,11 +930,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     color={analytics.projectedBalance >= 0 ? 'emerald' : 'red'}
                 />
                 <KpiCard
-                    label="Cevrimici"
-                    value={`${analytics.onlineCount}/${analytics.count}`}
-                    subValue={`%${analytics.count > 0 ? Math.round((analytics.onlineCount / analytics.count) * 100) : 0} orani`}
-                    icon={Eye}
-                    color="cyan"
+                    label="Katilim Orani"
+                    value={`%${analytics.avgAttendanceRate}`}
+                    subValue={`${analytics.totalAttendanceDays} devam / ${analytics.totalAbsentDays} devamsiz`}
+                    icon={CheckCircle}
+                    color={analytics.avgAttendanceRate >= 95 ? 'emerald' : analytics.avgAttendanceRate >= 85 ? 'amber' : 'red'}
                 />
                 <KpiCard
                     label="Pozitif Bakiye"
@@ -817,7 +965,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         { key: 'avgMissing', label: 'Ort. Eksik' },
                                         { key: 'dailyMissing', label: 'Gunluk Ort. Eksik' },
                                         { key: 'projected', label: 'Tahmini Bakiye' },
-                                        { key: 'activeRate', label: 'Aktif Oran' },
+                                        { key: 'dailyNormalDept', label: 'Gnl.Normal' },
+                                        { key: 'otNormalPctDept', label: 'OT/Normal%' },
+                                        { key: 'attendanceRateAvg', label: 'Katilim%' },
                                     ].map(col => (
                                         <th
                                             key={col.key}
@@ -877,7 +1027,13 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                                 {dept.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(dept.projected))}
                                             </td>
                                             <td className="px-3 py-2.5 text-right font-semibold text-slate-600">
-                                                %{dept.activeRate}
+                                                {formatMinutes(dept.dailyNormalDept)}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-right font-semibold text-amber-600">
+                                                %{dept.otNormalPctDept}
+                                            </td>
+                                            <td className={`px-3 py-2.5 text-right font-bold rounded ${dept.attendanceRateAvg >= 95 ? 'text-emerald-600 bg-emerald-50/50' : dept.attendanceRateAvg >= 85 ? 'text-amber-600 bg-amber-50/50' : 'text-red-600 bg-red-50/50'}`}>
+                                                %{dept.attendanceRateAvg}
                                             </td>
                                         </tr>
                                     );
@@ -897,7 +1053,13 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         {analytics.projectedBalance >= 0 ? '+' : ''}{formatMinutes(Math.abs(analytics.projectedBalance))}
                                     </td>
                                     <td className="px-3 py-2.5 text-right font-bold text-slate-800">
-                                        %{analytics.count > 0 ? Math.round((analytics.onlineCount / analytics.count) * 100) : 0}
+                                        {formatMinutes(analytics.dailyAvgNormalMin)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right font-bold text-amber-600">
+                                        %{analytics.otNormalPercent}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right font-bold text-slate-800">
+                                        %{analytics.avgAttendanceRate}
                                     </td>
                                 </tr>
                             </tfoot>
@@ -1333,6 +1495,77 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 </div>
             )}
 
+            {/* ═══════ SECTION 8.5: Weekend OT + Meal Correlation ═══════ */}
+            {analytics.weekendOTData.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <AnalyticsCard
+                        title="Hafta Sonu vs Hafta Ici OT"
+                        subtitle="En cok OT yapan 10 kisi (hafta ici / hafta sonu)"
+                        icon={Calendar}
+                        className="lg:col-span-2"
+                    >
+                        <div className="h-[320px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={analytics.weekendOTData}
+                                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                                    barCategoryGap="20%"
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                                        axisLine={{ stroke: '#e2e8f0' }}
+                                        tickLine={false}
+                                        interval={0}
+                                        angle={-35}
+                                        textAnchor="end"
+                                        height={60}
+                                    />
+                                    <YAxis
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tickFormatter={(v) => `${Math.round(v / 60)}s`}
+                                    />
+                                    <Tooltip content={<CustomTooltip formatter={(v) => formatMinutes(v)} />} />
+                                    <Legend
+                                        wrapperStyle={{ fontSize: 11, fontWeight: 600 }}
+                                        iconType="circle"
+                                        iconSize={8}
+                                    />
+                                    <Bar dataKey="H.Ici OT" name="Hafta Ici OT" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="H.Sonu OT" name="Hafta Sonu OT" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </AnalyticsCard>
+
+                    <div className="space-y-3">
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                            <p className="text-[10px] text-blue-400 font-semibold uppercase">Hafta Ici OT</p>
+                            <p className="text-lg font-bold text-blue-600">{formatMinutes(analytics.totalWeekdayOTMin)}</p>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                            <p className="text-[10px] text-amber-400 font-semibold uppercase">Hafta Sonu OT</p>
+                            <p className="text-lg font-bold text-amber-600">{formatMinutes(analytics.totalWeekendOTMin)}</p>
+                        </div>
+                        <div className="bg-violet-50 border border-violet-100 rounded-xl p-4">
+                            <p className="text-[10px] text-violet-400 font-semibold uppercase">H.Sonu / Toplam</p>
+                            <p className="text-lg font-bold text-violet-600">%{analytics.weekendOTRatio}</p>
+                        </div>
+                        <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-4">
+                            <p className="text-[10px] text-cyan-400 font-semibold uppercase flex items-center gap-1">
+                                <UtensilsCrossed size={10} />
+                                OT'de Yemek
+                            </p>
+                            <p className="text-lg font-bold text-cyan-600">%{analytics.otMealRate}</p>
+                            <p className="text-[10px] text-cyan-400">{analytics.totalOTMealOverlap}/{analytics.totalOTDays} gun</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ═══════ SECTION 9: Performance Ranking Table ═══════ */}
             <AnalyticsCard
                 title="Performans Siralamasi"
@@ -1358,6 +1591,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Net Bakiye</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Tahmini</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Izin</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katilim%</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">H.Sonu OT</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-cyan-400 uppercase tracking-wider">Yemek/OT</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1369,7 +1605,6 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <td className="px-3 py-2 font-bold text-slate-400">{idx + 1}</td>
                                         <td className="px-3 py-2">
                                             <div className="flex items-center gap-2">
-                                                {person.is_online && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                                                 <span className="font-bold text-slate-700">{person.employee_name}</span>
                                             </div>
                                             {person.job_title && (
@@ -1400,6 +1635,21 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         </td>
                                         <td className="px-3 py-2 text-right font-semibold text-violet-600 tabular-nums">
                                             {person.annual_leave_balance != null ? `${person.annual_leave_balance}g` : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 text-right">
+                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
+                                                (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>
+                                                %{Math.round(person.attendance_rate || 100)}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">
+                                            {(person.ot_weekend_minutes || 0) > 0 ? formatMinutes(person.ot_weekend_minutes) : <span className="text-slate-300">&mdash;</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-right font-semibold text-cyan-600 tabular-nums">
+                                            {(person.ot_days_total || 0) > 0 ? `%${Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100)}` : <span className="text-slate-300">&mdash;</span>}
                                         </td>
                                     </tr>
                                 );
@@ -1563,6 +1813,74 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         </ResponsiveContainer>
                     </div>
                 </AnalyticsCard>
+            )}
+
+            {/* ═══════ SECTION 11.5: Leave Usage Rates ═══════ */}
+            {analytics.leaveByDept.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <AnalyticsCard
+                        title="Departman Bazli Izin Kullanim Orani"
+                        subtitle="Her departmanin yillik izin kullanim yuzdesi"
+                        icon={Palmtree}
+                    >
+                        <div className="h-[280px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={analytics.leaveByDept}
+                                    layout="vertical"
+                                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                                    barCategoryGap="30%"
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                                    <XAxis
+                                        type="number"
+                                        domain={[0, 100]}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        unit="%"
+                                    />
+                                    <YAxis
+                                        dataKey="name"
+                                        type="category"
+                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        width={80}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 11 }}
+                                        formatter={(v) => `%${v}`}
+                                    />
+                                    <Bar dataKey="usage" name="Kullanim %" radius={[0, 4, 4, 0]}>
+                                        {analytics.leaveByDept.map((entry, i) => (
+                                            <Cell
+                                                key={i}
+                                                fill={entry.usage <= 50 ? '#10b981' : entry.usage <= 80 ? '#f59e0b' : '#ef4444'}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </AnalyticsCard>
+
+                    <div className="space-y-3">
+                        <div className="bg-violet-50 border border-violet-100 rounded-xl p-5">
+                            <p className="text-[10px] text-violet-400 font-semibold uppercase">Ort. Kullanim</p>
+                            <p className="text-2xl font-bold text-violet-600">%{analytics.avgLeaveUsage}</p>
+                            <p className="text-[10px] text-violet-400 mt-1">Ekip geneli ortalama izin kullanim orani</p>
+                        </div>
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
+                            <p className="text-[10px] text-indigo-400 font-semibold uppercase">Toplam Kullanilan</p>
+                            <p className="text-2xl font-bold text-indigo-600">{analytics.totalLeaveUsed} gun</p>
+                        </div>
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5">
+                            <p className="text-[10px] text-emerald-400 font-semibold uppercase">Kalan Bakiye</p>
+                            <p className="text-2xl font-bold text-emerald-600">{analytics.totalLeaveRemaining} gun</p>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* ═══════ SECTION 12: Spotlight Cards ═══════ */}
@@ -1749,7 +2067,6 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-[10px] font-bold text-slate-300 tabular-nums w-5">#{idx + 1}</span>
-                                            {person.is_online && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />}
                                             <p className="text-xs font-bold text-slate-800 truncate">{person.employee_name}</p>
                                         </div>
                                         <p className="text-[10px] text-slate-400 truncate ml-5">{person.department || '-'} · {person.job_title || '-'}</p>
@@ -1759,26 +2076,45 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     </span>
                                 </div>
 
-                                {/* OT Source Badges */}
-                                {personOTTotal > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2">
-                                        {(person.ot_intended_minutes || 0) > 0 && (
-                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700">
-                                                Planli {formatMinutes(person.ot_intended_minutes)}
-                                            </span>
-                                        )}
-                                        {(person.ot_potential_minutes || 0) > 0 && (
-                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700">
-                                                Algilanan {formatMinutes(person.ot_potential_minutes)}
-                                            </span>
-                                        )}
-                                        {(person.ot_manual_minutes || 0) > 0 && (
-                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 text-violet-700">
-                                                Manuel {formatMinutes(person.ot_manual_minutes)}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
+                                {/* Badges Row */}
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                    {/* Attendance Rate Badge */}
+                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
+                                        (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
+                                        'bg-red-100 text-red-700'
+                                    }`}>
+                                        Katilim %{Math.round(person.attendance_rate || 100)}
+                                    </span>
+                                    {/* Weekend OT Badge */}
+                                    {(person.ot_weekend_minutes || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700">
+                                            H.Sonu {formatMinutes(person.ot_weekend_minutes)}
+                                        </span>
+                                    )}
+                                    {/* OT Source Badges */}
+                                    {(person.ot_intended_minutes || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700">
+                                            Planli {formatMinutes(person.ot_intended_minutes)}
+                                        </span>
+                                    )}
+                                    {(person.ot_potential_minutes || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600">
+                                            Algilanan {formatMinutes(person.ot_potential_minutes)}
+                                        </span>
+                                    )}
+                                    {(person.ot_manual_minutes || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 text-violet-700">
+                                            Manuel {formatMinutes(person.ot_manual_minutes)}
+                                        </span>
+                                    )}
+                                    {/* OT Meal Rate Badge */}
+                                    {(person.ot_days_total || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-100 text-cyan-700">
+                                            Yemek/OT %{Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100)}
+                                        </span>
+                                    )}
+                                </div>
 
                                 {/* Metrics grid */}
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] mb-2">
