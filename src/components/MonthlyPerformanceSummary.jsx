@@ -91,6 +91,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 otPotentialPct: otBreakdownTotal > 0 ? (otPotentialSec / otBreakdownTotal) * 100 : 0,
                 hasOtBreakdown: otBreakdownTotal > 0,
 
+                // Projected totals (approved + pending + potential)
+                projectedWorkHours: ((netWorkSec + otPendingSec + otPotentialSec) / 3600).toFixed(1),
+                pProjected: targetSec > 0 ? Math.min(100, ((netWorkSec + otPendingSec + otPotentialSec) / targetSec) * 100) : 0,
+                pPending: targetSec > 0 ? Math.min(100 - (Math.min(100, (netWorkSec / targetSec) * 100)), (otPendingSec / targetSec) * 100) : 0,
+                pPotential: targetSec > 0 ? Math.min(100 - (Math.min(100, ((netWorkSec + otPendingSec) / targetSec) * 100)), (otPotentialSec / targetSec) * 100) : 0,
+
                 // Fiscal month from backend (not JS Date)
                 fiscalMonth: periodSummary.fiscal_month || (new Date().getMonth() + 1),
 
@@ -209,27 +215,48 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 <div className="relative z-10 pt-6 border-t border-slate-100">
                     <div className="flex justify-between items-center mb-3">
                         <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
-                            Toplam Efor (Mesai Dahil)
+                            Toplam Efor (Onaylı Mesai Dahil)
                             {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                         </span>
                         <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.netWorkHours} / {stats.targetHours} sa</span>
                     </div>
-                    {/* ENHANCED BAR */}
+                    {/* ENHANCED BAR with ghost projected sections */}
                     <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
-                        {/* Background Marker for Target */}
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-slate-300 left-[100%] z-0"></div>
-
+                        {/* Approved total (solid) */}
                         <div
                             className={`h-full transition-all duration-1000 relative z-10 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.5)]'}`}
                             style={{ width: `${stats.pTotal}%` }}
                         >
-                            {/* Shine Effect */}
                             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent"></div>
                         </div>
+                        {/* Pending ghost (amber striped) */}
+                        {stats.pPending > 0 && (
+                            <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-50"
+                                style={{ left: `${stats.pTotal}%`, width: `${stats.pPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 3px, #f59e0b 3px, #f59e0b 6px)' }} />
+                        )}
+                        {/* Potential ghost (gray striped) */}
+                        {stats.pPotential > 0 && (
+                            <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-40"
+                                style={{ left: `${stats.pTotal + stats.pPending}%`, width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #94a3b8 3px, #94a3b8 6px)' }} />
+                        )}
                     </div>
-                    <p className="text-[10px] font-medium text-slate-400 mt-2">
-                        Normal çalışma süresi ve fazla mesailerin toplamının hedefe oranı.
-                    </p>
+                    {/* Summary row below bar */}
+                    <div className="flex items-center justify-between mt-2 px-1">
+                        <div className="flex items-center gap-3 text-[10px] font-bold">
+                            <span className="text-slate-600">Onaylı: <span className="font-black">{stats.netWorkHours} sa</span></span>
+                            {parseFloat(stats.otPendingHours) > 0 && (
+                                <span className="text-amber-600">+ Bekleyen: <span className="font-black">{stats.otPendingHours} sa</span></span>
+                            )}
+                            {parseFloat(stats.otPotentialHours) > 0 && (
+                                <span className="text-slate-500">+ Potansiyel: <span className="font-black">{stats.otPotentialHours} sa</span></span>
+                            )}
+                        </div>
+                        {(parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) && (
+                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100">
+                                Potansiyel Dahil: {stats.projectedWorkHours} sa
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* 3. OT Breakdown Bar */}
