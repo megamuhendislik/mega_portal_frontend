@@ -288,6 +288,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 <div className="mb-8">
                                     <div className="flex justify-between items-end mb-3 px-1">
                                         <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PUANTAJ GRAFİĞİ</span>
+                                        <div className="flex flex-wrap gap-3 text-[9px] font-bold uppercase tracking-wide">
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span><span className="text-slate-500">Normal</span></span>
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block"></span><span className="text-slate-500">Onaylı</span></span>
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 1px, #f59e0b 1px, #f59e0b 2px)' }}></span><span className="text-slate-500">Bekleyen</span></span>
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 1px, #94a3b8 1px, #94a3b8 2px)' }}></span><span className="text-slate-500">Potansiyel</span></span>
+                                        </div>
                                     </div>
 
                                     <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
@@ -302,22 +308,34 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             const completed = m.completed;
                                             const balance = m.balance;
 
-                                            // Percentages
-                                            let pctCompleted = 0;
-                                            let pctOvertime = 0;
+                                            // OT Breakdown (from OvertimeRequest aggregation)
+                                            const otApprovedSec = m.ot_approved || 0;
+                                            const otPendingSec = m.ot_pending || 0;
+                                            let otPotentialSec = m.ot_potential || 0;
+                                            if (otApprovedSec + otPendingSec + otPotentialSec === 0 && m.overtime > 0) {
+                                                otPotentialSec = m.overtime;
+                                            }
+                                            const otTotalSec = otApprovedSec + otPendingSec + otPotentialSec;
+
+                                            // Bar percentages (everything fits within 100%)
+                                            const totalForBar = Math.max(target, completed + otTotalSec) || 1;
+                                            let pctNormal = 0;
                                             let pctMissing = 0;
+                                            let pctOtApproved = 0;
+                                            let pctOtPending = 0;
+                                            let pctOtPotential = 0;
 
                                             if (target > 0) {
-                                                pctCompleted = Math.min(100, (completed / target) * 100);
-                                                if (completed > target) {
-                                                    pctOvertime = ((completed - target) / target) * 100;
-                                                } else {
-                                                    // Calculate Missing % relative to Target
-                                                    pctMissing = ((target - completed) / target) * 100;
+                                                pctNormal = (Math.min(completed, target) / totalForBar) * 100;
+                                                pctMissing = completed < target ? ((target - completed) / totalForBar) * 100 : 0;
+                                                if (otTotalSec > 0) {
+                                                    pctOtApproved = (otApprovedSec / totalForBar) * 100;
+                                                    pctOtPending = (otPendingSec / totalForBar) * 100;
+                                                    pctOtPotential = (otPotentialSec / totalForBar) * 100;
                                                 }
                                             } else if (completed > 0) {
-                                                pctCompleted = 100;
-                                                pctOvertime = 20;
+                                                pctNormal = 80;
+                                                pctOtApproved = 20;
                                             }
 
                                             // Colors
@@ -326,7 +344,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                             const balanceHours = (balance / 3600).toFixed(1);
                                             // Cumulative from reduced breakdown
-                                            const cumulativeHours = m.cumulativeBalance ? (m.cumulativeBalance / 3600).toFixed(1) : '0.0';
+                                            const cumulativeHours = m.cumulativeBalance || '0.0';
                                             const isCumulativePos = m.cumulativeBalance >= 0;
 
                                             return (
@@ -335,36 +353,43 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 ${isFuture ? 'opacity-30' : 'hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1'}`}
                                                 >
                                                     {/* Normal Work Bar (Indigo) */}
-                                                    <div
-                                                        className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
-                                                        style={{ height: `${pctCompleted}%` }}
-                                                    ></div>
+                                                    <div className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
+                                                        style={{ height: `${pctNormal}%` }} />
+
+                                                    {/* OT Approved (Emerald) */}
+                                                    {pctOtApproved > 0 && (
+                                                        <div className="absolute left-0 w-full bg-emerald-400 transition-all duration-1000 group-hover:bg-emerald-500"
+                                                            style={{ bottom: `${pctNormal}%`, height: `${pctOtApproved}%` }} />
+                                                    )}
+
+                                                    {/* OT Pending (Amber striped) */}
+                                                    {pctOtPending > 0 && (
+                                                        <div className="absolute left-0 w-full transition-all duration-1000"
+                                                            style={{ bottom: `${pctNormal + pctOtApproved}%`, height: `${pctOtPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 2px, #f59e0b 2px, #f59e0b 4px)' }} />
+                                                    )}
+
+                                                    {/* OT Potential (Gray striped) */}
+                                                    {pctOtPotential > 0 && (
+                                                        <div className="absolute left-0 w-full transition-all duration-1000"
+                                                            style={{ bottom: `${pctNormal + pctOtApproved + pctOtPending}%`, height: `${pctOtPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 2px, #94a3b8 2px, #94a3b8 4px)' }} />
+                                                    )}
+
+                                                    {/* Target reference line (when OT extends above normal) */}
+                                                    {otTotalSec > 0 && target > 0 && totalForBar > target && (
+                                                        <div className="absolute left-0 w-full z-20 pointer-events-none" style={{ bottom: `${(target / totalForBar) * 100}%` }}>
+                                                            <div className="w-full border-t border-dashed border-white/60" />
+                                                        </div>
+                                                    )}
 
                                                     {/* Missing Bar (Rose Striped) - Only for Past/Current */}
                                                     {(isPast || isCurrentMonth) && pctMissing > 0 && (
-                                                        <div
-                                                            className="absolute left-0 w-full bg-rose-400/20"
+                                                        <div className="absolute left-0 w-full bg-rose-400/20 transition-all duration-1000"
                                                             style={{
-                                                                bottom: `${pctCompleted}%`,
+                                                                bottom: `${pctNormal + pctOtApproved + pctOtPending + pctOtPotential}%`,
                                                                 height: `${pctMissing}%`,
                                                                 backgroundImage: 'linear-gradient(45deg, rgba(244, 63, 94, 0.1) 25%, transparent 25%, transparent 50%, rgba(244, 63, 94, 0.1) 50%, rgba(244, 63, 94, 0.1) 75%, transparent 75%, transparent)',
                                                                 backgroundSize: '4px 4px'
-                                                            }}
-                                                        ></div>
-                                                    )}
-
-                                                    {/* Overtime Bar (Emerald) */}
-                                                    {pctOvertime > 0 && (
-                                                        <div
-                                                            className="absolute w-full bg-emerald-400 transition-all duration-1000 shadow-sm group-hover:bg-emerald-500"
-                                                            style={{
-                                                                bottom: '100%',
-                                                                height: `${Math.min(pctOvertime, 50)}%`,
-                                                                maxHeight: '40px'
-                                                            }}
-                                                        >
-                                                            {/* Label for Overtime if huge */}
-                                                        </div>
+                                                            }} />
                                                     )}
 
                                                     {/* Label Inside */}
@@ -401,10 +426,27 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                 <span className="text-slate-400">Gerçekleşen:</span>
                                                                 <span className="font-mono font-bold text-indigo-400">{((Math.min(completed, target)) / 3600).toFixed(1)} sa</span>
                                                             </div>
-                                                            {balance > 0 && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-emerald-400 font-bold">Ek Mesai:</span>
-                                                                    <span className="font-mono font-bold text-white">{(balance / 3600).toFixed(1)} sa</span>
+                                                            {(otApprovedSec > 0 || otPendingSec > 0 || otPotentialSec > 0) && (
+                                                                <div className="space-y-1.5 pt-1">
+                                                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Ek Mesai Detayı</div>
+                                                                    {otApprovedSec > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span><span className="text-emerald-400">Onaylı:</span></span>
+                                                                            <span className="font-mono font-bold text-emerald-300">{(otApprovedSec / 3600).toFixed(1)} sa</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {otPendingSec > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span><span className="text-amber-400">Bekleyen:</span></span>
+                                                                            <span className="font-mono font-bold text-amber-300">{(otPendingSec / 3600).toFixed(1)} sa</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {otPotentialSec > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span><span className="text-slate-400">Potansiyel:</span></span>
+                                                                            <span className="font-mono font-bold text-slate-300">{(otPotentialSec / 3600).toFixed(1)} sa</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                             <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
@@ -448,7 +490,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     <th className="px-4 py-4 text-center">Hedef</th>
                                                     <th className="px-4 py-4 text-center">Normal Çalışma</th>
                                                     <th className="px-4 py-4 text-center text-rose-500">Eksik</th>
-                                                    <th className="px-4 py-4 text-center text-emerald-500">Ek Mesai</th>
+                                                    <th className="px-4 py-4 text-center text-emerald-500">Ek Mesai <span className="text-[8px] text-slate-400 font-normal">(O/B/P)</span></th>
                                                     <th className="px-4 py-4 text-right">Net Bakiye</th>
                                                 </tr>
                                             </thead>
@@ -467,7 +509,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
                                                         const balanceH = (m.balance / 3600).toFixed(1);
                                                         // Cumulative Balance Logic
-                                                        const cumulativeBalanceH = (m.cumulativeBalance / 3600).toFixed(1);
+                                                        const cumulativeBalanceH = m.cumulativeBalance || '0.0';
                                                         const isCumulativePositive = m.cumulativeBalance >= 0;
 
                                                         return (
@@ -481,8 +523,18 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                 <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
                                                                     {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
                                                                 </td>
-                                                                <td className="px-4 py-4 text-center font-mono font-bold text-emerald-500">
-                                                                    {parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}
+                                                                <td className="px-4 py-4 text-center">
+                                                                    {(m.ot_approved || 0) + (m.ot_pending || 0) + (m.ot_potential || 0) > 0 ? (
+                                                                        <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold">
+                                                                            <span className="text-emerald-600">{((m.ot_approved || 0) / 3600).toFixed(1)}</span>
+                                                                            <span className="text-slate-300">/</span>
+                                                                            <span className="text-amber-600">{((m.ot_pending || 0) / 3600).toFixed(1)}</span>
+                                                                            <span className="text-slate-300">/</span>
+                                                                            <span className="text-slate-500">{((m.ot_potential || 0) / 3600).toFixed(1)}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="font-mono font-bold text-emerald-500">{parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}</span>
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right">
                                                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isCumulativePositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>

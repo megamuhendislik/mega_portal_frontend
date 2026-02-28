@@ -231,13 +231,13 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                                 <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
                                 <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
                             </pattern>
-                            <pattern id="striped-pending" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-                                <rect width="6" height="6" fill="#fef3c7" />
-                                <line x1="0" y1="0" x2="0" y2="6" stroke="#f59e0b" strokeWidth="1.5" />
+                            <pattern id="striped-pending" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                                <rect width="8" height="8" fill="#fde68a" />
+                                <line x1="0" y1="0" x2="0" y2="8" stroke="#d97706" strokeWidth="3" />
                             </pattern>
-                            <pattern id="striped-potential" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
-                                <rect width="6" height="6" fill="#f1f5f9" />
-                                <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="1.5" />
+                            <pattern id="striped-potential" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(-45)">
+                                <rect width="8" height="8" fill="#e2e8f0" />
+                                <line x1="0" y1="0" x2="0" y2="8" stroke="#64748b" strokeWidth="3" />
                             </pattern>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -249,6 +249,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                             labelStyle={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
                             cursor={{ fill: '#f8fafc', cursor: 'pointer' }}
                         />
+                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '4px', fontSize: '10px' }} />
                         {/* Dynamic Target Line */}
                         <Line
                             type="step"
@@ -421,13 +422,13 @@ const YearlyView = ({ data }) => {
                             <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
                             <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
                         </pattern>
-                        <pattern id="striped-pending-y" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-                            <rect width="6" height="6" fill="#fef3c7" />
-                            <line x1="0" y1="0" x2="0" y2="6" stroke="#f59e0b" strokeWidth="1.5" />
+                        <pattern id="striped-pending-y" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                            <rect width="8" height="8" fill="#fde68a" />
+                            <line x1="0" y1="0" x2="0" y2="8" stroke="#d97706" strokeWidth="3" />
                         </pattern>
-                        <pattern id="striped-potential-y" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
-                            <rect width="6" height="6" fill="#f1f5f9" />
-                            <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="1.5" />
+                        <pattern id="striped-potential-y" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(-45)">
+                            <rect width="8" height="8" fill="#e2e8f0" />
+                            <line x1="0" y1="0" x2="0" y2="8" stroke="#64748b" strokeWidth="3" />
                         </pattern>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
