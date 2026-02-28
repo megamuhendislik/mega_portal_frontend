@@ -18,6 +18,11 @@ import {
     CloudArrowDownIcon,
     ExclamationCircleIcon,
     MapPinIcon,
+    BellIcon,
+    CogIcon,
+    ServerIcon,
+    ArchiveBoxIcon,
+    UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -37,6 +42,11 @@ const STAGES = [
     { id: 14, name: 'Mola Off-Day & Parçalı Mesai', icon: PauseCircleIcon, color: 'rose', description: '63 test — Off-day/tatil mola kuralları (break=0, potential=0), live-status is_off_day doğruluğu (hafta sonu/tatil/normal gün), parçalı OT segment gruplama (≤30dk merge, >30dk ayrı), POTENTIAL net süre, claim-potential V3 (overtime_request_id, overlap kontrolü), claimable endpoint V3 (bireysel POTENTIAL, segments), today_summary endpoint off-day break_allowance=0 & is_off_day flag' },
     { id: 15, name: 'Şirket Dışı Görev v2', icon: MapPinIcon, color: 'purple', description: '45 test — Model yeni alanlar (lokasyon, ulaşım, konaklama), onay sonrası mesai (vardiya içi=DUTY, dışı=OT PENDING), off-day görev→OT, çok günlü görev, OT ilişkilendirme, serializer/API, tarih validasyonları' },
     { id: 16, name: 'Mali Dönem OT Eşlemesi', icon: CalendarDaysIcon, color: 'indigo', description: '15 test — get_cumulative_stats() OT breakdown mali dönem eşlemesi (26-25 kuralı), mali ay sınır testleri (25 Şub→ay 2, 26 Şub→ay 3), çoklu statü (APPROVED/PENDING/POTENTIAL), boş veri güvenliği, Stats endpoint YEARLY/MONTHLY scope mali dönem filtresi' },
+    { id: 17, name: 'Bildirim & Dashboard & Canlı Durum', icon: BellIcon, color: 'pink', description: '44 test — Bildirim CRUD (listeleme, okundu işaretle, toplu okundu, IDOR koruması), Dashboard endpoint (özet, takım analizi, mazeret izni, diag-monthly), Live Status (vardiya bilgisi, mola, off-day, IDOR), Sistem Ayarları (CRUD, attendance_start_date, apply-start-date, yetki kontrolü)' },
+    { id: 18, name: 'Takvim & Mali Dönem Yönetimi', icon: CalendarIcon, color: 'lime', description: '35 test — FiscalCalendar CRUD (oluşturma, güncelleme, silme, çalışan atama, dönem üretme, kilitleme, yeniden hesaplama), ScheduleTemplate (CRUD, haftalık program, öğle saati, varsayılan şablon), DayTemplateAssignment (tekli/toplu atama, silme, filtre), Mali Dönem Kilitleme (Attendance/OT immutability, API lock/unlock, 26-25 tarih doğruluğu)' },
+    { id: 19, name: 'Yemek Sipariş & Program & Geri Bildirim', icon: ClipboardDocumentCheckIcon, color: 'fuchsia', description: '35 test — MealRequest (CRUD, sipariş verme, iptal, admin işlemleri, tarih filtresi, statü akışı), Program Yönetimi (CRUD, üye ekleme/çıkarma, erişim listesi, cihaz toggle), Geri Bildirim (gönderme, admin yanıt/çözüm/silme, kategori, statü akışı, IDOR koruması)' },
+    { id: 20, name: 'Celery Görev Mantığı', icon: CogIcon, color: 'stone', description: '30 test — Gece yarısı sıfırlama (açık vardiya kapatma, hesaplanmış/onaylı koruma, midnight split), Devamsızlık kontrolü (gelmeme=ABSENT, giriş var=değil, tatil/izin=değil), OT Atama Expire (2 mali ay kuralı, CLAIMED koruması, sınır testleri), Talep Zaman Kilidi (kilitli dönemde immutability, OT/Attendance/CardlessEntry)' },
+    { id: 21, name: 'Aylık Özet & Arşiv & Vekalet', icon: ArchiveBoxIcon, color: 'emerald', description: '35 test — MonthlyWorkSummary (arşivlenmiş kayıt dahil etme, completed/overtime/missing/remaining hesaplama, kümülatif bakiye zinciri, DB persist, izin günü sayımı), Toplu Yeniden Hesaplama endpoint (yetki, response formatı), Vekalet Sistemi (CRUD, aktif/expired filtreleme, tarih validasyonu, kendine vekalet engeli, çakışma kontrolü), Onay Hiyerarşisi (PRIMARY/SECONDARY bulucu, eskalayon, circular koruma, departman/reports_to fallback)' },
 ];
 
 export default function SpecTestsTab() {
