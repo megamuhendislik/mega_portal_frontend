@@ -40,6 +40,7 @@ import BreakFixTab from './system-health/BreakFixTab';
 import RequestAnalysisTab from './system-health/RequestAnalysisTab';
 import CardDiagnosticsTab from './system-health/CardDiagnosticsTab';
 import OvertimeAuditTab from './system-health/OvertimeAuditTab';
+import DataInspectionTab from './system-health/DataInspectionTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -112,6 +113,7 @@ export default function SystemHealth() {
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
                         { id: 'org_audit', name: 'Org Röntgen', icon: BuildingOfficeIcon },
                         { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
+                        { id: 'data_inspection', name: 'Veri İnceleme', icon: MagnifyingGlassCircleIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -156,6 +158,7 @@ export default function SystemHealth() {
                 {activeTab === 'system_reset' && <SystemResetTab />}
                 {activeTab === 'org_audit' && <OrgAuditTab />}
                 {activeTab === 'password_reset' && <PasswordResetTab />}
+                {activeTab === 'data_inspection' && <DataInspectionTab />}
             </div>
 
         </div>
