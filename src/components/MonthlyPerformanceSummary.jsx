@@ -344,7 +344,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                     <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.annualTargetHours}</span>
                                     <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">Gerçekleşen: <span className="font-bold text-indigo-600">{stats.cumulative.ytdTargetHours}</span> sa (YTD)</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Gerçekleşen: <span className="font-bold text-indigo-600">{stats.cumulative.ytdCompletedHours}</span> sa (YTD)</p>
                             </div>
 
                             {/* 3. YTD Completed */}
