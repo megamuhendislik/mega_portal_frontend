@@ -50,9 +50,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             // OT Breakdown from cumulative current month data
             const _otFm = periodSummary.fiscal_month || (new Date().getMonth() + 1);
             const _otBd = (periodSummary.cumulative?.breakdown || []).find(b => b.month === _otFm);
-            const otApprovedSec = _otBd?.ot_approved || 0;
-            const otPendingSec = _otBd?.ot_pending || 0;
-            const otPotentialSec = _otBd?.ot_potential || 0;
+            let otApprovedSec = _otBd?.ot_approved || 0;
+            let otPendingSec = _otBd?.ot_pending || 0;
+            let otPotentialSec = _otBd?.ot_potential || 0;
+            // Fallback: if no OvertimeRequest records but attendance has overtime,
+            // show attendance overtime as approved (system-calculated)
+            if (otApprovedSec + otPendingSec + otPotentialSec === 0 && overtimeSec > 0) {
+                otApprovedSec = overtimeSec;
+            }
             const otBreakdownTotal = otApprovedSec + otPendingSec + otPotentialSec;
 
             return {
