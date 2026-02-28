@@ -419,30 +419,115 @@ function EmployeeCard({ emp }) {
     );
 }
 
+function PaginationControls({ pagination, onPageChange, loading }) {
+    if (!pagination || pagination.total_pages <= 1) return null;
+    const { page, total_pages, total_employees, page_size } = pagination;
+    const start = (page - 1) * page_size + 1;
+    const end = Math.min(page * page_size, total_employees);
+
+    const pages = [];
+    const maxVisible = 5;
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+    let endPage = Math.min(total_pages, startPage + maxVisible - 1);
+    if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+    for (let i = startPage; i <= endPage; i++) pages.push(i);
+
+    return (
+        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
+            <span className="text-xs text-gray-500">
+                {start}–{end} / {total_employees} çalışan (Sayfa {page}/{total_pages})
+            </span>
+            <div className="flex items-center gap-1">
+                <button
+                    onClick={() => onPageChange(1)}
+                    disabled={page === 1 || loading}
+                    className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    ««
+                </button>
+                <button
+                    onClick={() => onPageChange(page - 1)}
+                    disabled={page === 1 || loading}
+                    className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    «
+                </button>
+                {startPage > 1 && <span className="text-xs text-gray-400 px-1">...</span>}
+                {pages.map(p => (
+                    <button
+                        key={p}
+                        onClick={() => onPageChange(p)}
+                        disabled={loading}
+                        className={`px-2.5 py-1 text-xs rounded border ${
+                            p === page
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'border-gray-200 hover:bg-gray-50'
+                        } disabled:cursor-not-allowed`}
+                    >
+                        {p}
+                    </button>
+                ))}
+                {endPage < total_pages && <span className="text-xs text-gray-400 px-1">...</span>}
+                <button
+                    onClick={() => onPageChange(page + 1)}
+                    disabled={page === total_pages || loading}
+                    className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    »
+                </button>
+                <button
+                    onClick={() => onPageChange(total_pages)}
+                    disabled={page === total_pages || loading}
+                    className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    »»
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function DataInspectionTab() {
     const [data, setData] = useState(null);
+    const [globalStats, setGlobalStats] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [days, setDays] = useState(30);
     const [employeeFilter, setEmployeeFilter] = useState('');
     const [searchText, setSearchText] = useState('');
     const [includeInactive, setIncludeInactive] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
 
-    const fetchData = useCallback(async () => {
+    const fetchPage = useCallback(async (page = 1) => {
         setLoading(true);
         setError(null);
         try {
-            const params = { days };
+            const params = { days, page, page_size: 10 };
             if (employeeFilter) params.employee_id = employeeFilter;
             if (includeInactive) params.include_inactive = 'true';
             const res = await api.get('/system/health-check/data-inspection/', { params });
             setData(res.data);
+            setCurrentPage(page);
+            // Global stats sadece ilk sayfada gelir
+            if (res.data.global_stats) {
+                setGlobalStats(res.data.global_stats);
+            }
         } catch (err) {
             setError(err.response?.data?.error || err.message);
         } finally {
             setLoading(false);
         }
     }, [days, employeeFilter, includeInactive]);
+
+    const handleScan = useCallback(() => {
+        setGlobalStats(null);
+        setCurrentPage(1);
+        fetchPage(1);
+    }, [fetchPage]);
+
+    const handlePageChange = useCallback((page) => {
+        fetchPage(page);
+    }, [fetchPage]);
 
     const filteredEmployees = data?.employees?.filter(emp => {
         if (!searchText) return true;
@@ -503,7 +588,7 @@ export default function DataInspectionTab() {
                             Pasifler dahil
                         </label>
                         <button
-                            onClick={fetchData}
+                            onClick={handleScan}
                             disabled={loading}
                             className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
                         >
@@ -524,37 +609,42 @@ export default function DataInspectionTab() {
             {data && (
                 <>
                     {/* Global Stats */}
-                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Genel İstatistikler ({data.date_range?.from} → {data.date_range?.to})</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-                            {[
-                                { label: 'Çalışan', value: data.total_employees_scanned, color: 'indigo' },
-                                { label: 'Devam', value: data.global_stats?.total_attendance_records, color: 'blue' },
-                                { label: 'Geçiş', value: data.global_stats?.total_gate_events, color: 'cyan' },
-                                { label: 'Ek Mesai', value: data.global_stats?.total_ot_requests, color: 'orange' },
-                                { label: 'İzin', value: data.global_stats?.total_leave_requests, color: 'green' },
-                                { label: 'Yemek', value: data.global_stats?.total_meal_requests, color: 'yellow' },
-                                { label: 'Kartsız', value: data.global_stats?.total_cardless_requests, color: 'purple' },
-                            ].map(s => (
-                                <div key={s.label} className={`bg-${s.color}-50 rounded-lg p-3 text-center`}>
-                                    <div className={`text-2xl font-bold text-${s.color}-700`}>{s.value || 0}</div>
-                                    <div className={`text-xs text-${s.color}-600`}>{s.label}</div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {data.global_stats?.ot_status_distribution && Object.keys(data.global_stats.ot_status_distribution).length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                <span className="text-xs text-gray-500">EK Mesai Durumları:</span>
-                                {Object.entries(data.global_stats.ot_status_distribution).map(([status, count]) => (
-                                    <span key={status} className="flex items-center gap-1">
-                                        <StatusBadge status={status} />
-                                        <span className="text-xs text-gray-600 font-mono">{count}</span>
-                                    </span>
+                    {globalStats && (
+                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-3">Genel İstatistikler ({data.date_range?.from} → {data.date_range?.to})</h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+                                {[
+                                    { label: 'Çalışan', value: data.total_employees_scanned, color: 'indigo' },
+                                    { label: 'Devam', value: globalStats.total_attendance_records, color: 'blue' },
+                                    { label: 'Geçiş', value: globalStats.total_gate_events, color: 'cyan' },
+                                    { label: 'Ek Mesai', value: globalStats.total_ot_requests, color: 'orange' },
+                                    { label: 'İzin', value: globalStats.total_leave_requests, color: 'green' },
+                                    { label: 'Yemek', value: globalStats.total_meal_requests, color: 'yellow' },
+                                    { label: 'Kartsız', value: globalStats.total_cardless_requests, color: 'purple' },
+                                ].map(s => (
+                                    <div key={s.label} className={`bg-${s.color}-50 rounded-lg p-3 text-center`}>
+                                        <div className={`text-2xl font-bold text-${s.color}-700`}>{s.value || 0}</div>
+                                        <div className={`text-xs text-${s.color}-600`}>{s.label}</div>
+                                    </div>
                                 ))}
                             </div>
-                        )}
-                    </div>
+
+                            {globalStats.ot_status_distribution && Object.keys(globalStats.ot_status_distribution).length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <span className="text-xs text-gray-500">EK Mesai Durumları:</span>
+                                    {Object.entries(globalStats.ot_status_distribution).map(([status, count]) => (
+                                        <span key={status} className="flex items-center gap-1">
+                                            <StatusBadge status={status} />
+                                            <span className="text-xs text-gray-600 font-mono">{count}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Pagination top */}
+                    <PaginationControls pagination={data.pagination} onPageChange={handlePageChange} loading={loading} />
 
                     {/* Search */}
                     <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
@@ -567,6 +657,7 @@ export default function DataInspectionTab() {
                         />
                         <div className="mt-1 text-xs text-gray-400">
                             {filteredEmployees.length} / {data.employees?.length || 0} çalışan gösteriliyor
+                            {data.pagination && ` (Sayfa ${data.pagination.page}/${data.pagination.total_pages})`}
                         </div>
                     </div>
 
@@ -576,6 +667,9 @@ export default function DataInspectionTab() {
                             <EmployeeCard key={emp.id} emp={emp} />
                         ))}
                     </div>
+
+                    {/* Pagination bottom */}
+                    <PaginationControls pagination={data.pagination} onPageChange={handlePageChange} loading={loading} />
                 </>
             )}
 
