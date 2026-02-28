@@ -47,6 +47,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 if ((log.late_seconds || 0) > 0) lateCount++;
             });
 
+            // OT Breakdown from cumulative current month data
+            const _otFm = periodSummary.fiscal_month || (new Date().getMonth() + 1);
+            const _otBd = (periodSummary.cumulative?.breakdown || []).find(b => b.month === _otFm);
+            const otApprovedSec = _otBd?.ot_approved || 0;
+            const otPendingSec = _otBd?.ot_pending || 0;
+            const otPotentialSec = _otBd?.ot_potential || 0;
+            const otBreakdownTotal = otApprovedSec + otPendingSec + otPotentialSec;
+
             return {
                 targetHours: (targetSec / 3600).toFixed(1),
                 completedHours: (realizedSec / 3600).toFixed(1),
@@ -72,6 +80,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pRemaining,
                 pTotal, // For Bar 2
                 lateCount,
+
+                // OT Breakdown
+                otApprovedHours: (otApprovedSec / 3600).toFixed(1),
+                otPendingHours: (otPendingSec / 3600).toFixed(1),
+                otPotentialHours: (otPotentialSec / 3600).toFixed(1),
+                otTotalHours: (otBreakdownTotal / 3600).toFixed(1),
+                otApprovedPct: otBreakdownTotal > 0 ? (otApprovedSec / otBreakdownTotal) * 100 : 0,
+                otPendingPct: otBreakdownTotal > 0 ? (otPendingSec / otBreakdownTotal) * 100 : 0,
+                otPotentialPct: otBreakdownTotal > 0 ? (otPotentialSec / otBreakdownTotal) * 100 : 0,
+                hasOtBreakdown: otBreakdownTotal > 0,
 
                 // Fiscal month from backend (not JS Date)
                 fiscalMonth: periodSummary.fiscal_month || (new Date().getMonth() + 1),
@@ -145,8 +163,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             {/* Header / Target Overview */}
             <div className="flex items-end justify-between px-2">
                 <div>
-                    <h4 className="font-bold text-slate-800 text-lg tracking-tight">Normal Mesai Hedefi</h4>
-                    <p className="text-sm text-slate-500 font-medium">Planlanan dönem mesaisinin gerçekleşme durumu.</p>
+                    <h4 className="font-bold text-slate-800 text-lg tracking-tight">Aylık Mesai Durumu</h4>
+                    <p className="text-sm text-slate-500 font-medium">Normal çalışma ve fazla mesai detaylı dökümü.</p>
                 </div>
                 <div className="text-right">
                     <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.targetHours}</span>
@@ -213,6 +231,44 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         Normal çalışma süresi ve fazla mesailerin toplamının hedefe oranı.
                     </p>
                 </div>
+
+                {/* 3. OT Breakdown Bar */}
+                {stats.hasOtBreakdown && (
+                    <div className="relative z-10 pt-6 border-t border-slate-100">
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Fazla Mesai Dağılımı</span>
+                            <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
+                                <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Onaylı</span>
+                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>Bekleyen</span>
+                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span>Potansiyel</span>
+                            </div>
+                        </div>
+                        <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
+                            {stats.otApprovedPct > 0 && (
+                                <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.4)] relative group"
+                                    style={{ width: `${stats.otApprovedPct}%` }}>
+                                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                </div>
+                            )}
+                            {stats.otPendingPct > 0 && (
+                                <div className="h-full transition-all duration-1000 relative"
+                                    style={{ width: `${stats.otPendingPct}%`, background: 'repeating-linear-gradient(45deg, #fde68a, #fde68a 3px, #d97706 3px, #d97706 6px)' }} />
+                            )}
+                            {stats.otPotentialPct > 0 && (
+                                <div className="h-full transition-all duration-1000 relative"
+                                    style={{ width: `${stats.otPotentialPct}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #64748b 3px, #64748b 6px)' }} />
+                            )}
+                        </div>
+                        <div className="flex justify-between text-xs font-bold mt-2 px-1">
+                            <span className="text-emerald-600">{stats.otApprovedHours} sa</span>
+                            <span className="text-amber-600">{stats.otPendingHours} sa</span>
+                            <span className="text-slate-500">{stats.otPotentialHours} sa</span>
+                        </div>
+                        <div className="text-right mt-1">
+                            <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">Toplam: {stats.otTotalHours} sa</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 3. Cumulative / YTD Bar */}
