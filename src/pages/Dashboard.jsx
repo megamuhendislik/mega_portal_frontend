@@ -204,10 +204,10 @@ const Dashboard = () => {
                 />
                 <StatCard
                     title="KALAN MOLA"
-                    value={`${formatMin(Math.max(0, (todaySummary?.break_allowance || 0) - (todaySummary?.break_used || 0)))} dk`}
-                    subValue={`Kullanılan: ${formatMin(todaySummary?.break_used)} / Hak: ${formatMin(todaySummary?.break_allowance || 0)} dk`}
+                    value={todaySummary?.is_off_day ? 'Tatil' : `${formatMin(Math.max(0, (todaySummary?.break_allowance || 0) - (todaySummary?.break_used || 0)))} dk`}
+                    subValue={todaySummary?.is_off_day ? 'Bugün tatil günü' : `Kullanılan: ${formatMin(todaySummary?.break_used)} / Hak: ${formatMin(todaySummary?.break_allowance || 0)} dk`}
                     icon={Coffee}
-                    color="amber"
+                    color={todaySummary?.is_off_day ? 'gray' : 'amber'}
                 />
                 <StatCard
                     title="ANLIK FAZLA MESAİ"
