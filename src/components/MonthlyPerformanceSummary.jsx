@@ -264,43 +264,49 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     </div>
                 </div>
 
-                {/* 3. OT Breakdown Bar */}
-                {stats.hasOtBreakdown && (
-                    <div className="relative z-10 pt-6 border-t border-slate-100">
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Fazla Mesai Dağılımı</span>
-                            <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
-                                <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Onaylı</span>
-                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>Bekleyen</span>
-                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span>Potansiyel</span>
-                            </div>
-                        </div>
-                        <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
-                            {stats.otApprovedPct > 0 && (
-                                <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.4)] relative group"
-                                    style={{ width: `${stats.otApprovedPct}%` }}>
-                                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                </div>
-                            )}
-                            {stats.otPendingPct > 0 && (
-                                <div className="h-full transition-all duration-1000 relative"
-                                    style={{ width: `${stats.otPendingPct}%`, background: 'repeating-linear-gradient(45deg, #fde68a, #fde68a 3px, #d97706 3px, #d97706 6px)' }} />
-                            )}
-                            {stats.otPotentialPct > 0 && (
-                                <div className="h-full transition-all duration-1000 relative"
-                                    style={{ width: `${stats.otPotentialPct}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #64748b 3px, #64748b 6px)' }} />
-                            )}
-                        </div>
-                        <div className="flex justify-between text-xs font-bold mt-2 px-1">
-                            <span className="text-emerald-600">{stats.otApprovedHours} sa</span>
-                            <span className="text-amber-600">{stats.otPendingHours} sa</span>
-                            <span className="text-slate-500">{stats.otPotentialHours} sa</span>
-                        </div>
-                        <div className="text-right mt-1">
-                            <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">Toplam: {stats.otTotalHours} sa</span>
+                {/* 3. OT Breakdown Bar — always visible */}
+                <div className="relative z-10 pt-6 border-t border-slate-100">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Fazla Mesai Dağılımı</span>
+                        <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
+                            <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Onaylı</span>
+                            <span className="flex items-center gap-1.5 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>Bekleyen</span>
+                            <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span>Potansiyel</span>
                         </div>
                     </div>
-                )}
+                    {stats.hasOtBreakdown ? (
+                        <>
+                            <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
+                                {stats.otApprovedPct > 0 && (
+                                    <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.4)] relative group"
+                                        style={{ width: `${stats.otApprovedPct}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                )}
+                                {stats.otPendingPct > 0 && (
+                                    <div className="h-full transition-all duration-1000 relative"
+                                        style={{ width: `${stats.otPendingPct}%`, background: 'repeating-linear-gradient(45deg, #fde68a, #fde68a 3px, #d97706 3px, #d97706 6px)' }} />
+                                )}
+                                {stats.otPotentialPct > 0 && (
+                                    <div className="h-full transition-all duration-1000 relative"
+                                        style={{ width: `${stats.otPotentialPct}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #64748b 3px, #64748b 6px)' }} />
+                                )}
+                            </div>
+                            <div className="flex justify-between text-xs font-bold mt-2 px-1">
+                                <span className="text-emerald-600">{stats.otApprovedHours} sa</span>
+                                <span className="text-amber-600">{stats.otPendingHours} sa</span>
+                                <span className="text-slate-500">{stats.otPotentialHours} sa</span>
+                            </div>
+                            <div className="text-right mt-1">
+                                <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">Toplam: {stats.otTotalHours} sa</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Bu dönem fazla mesai kaydı yok</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* 3. Cumulative / YTD Bar */}
@@ -612,17 +618,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center">
-                                                                    {(m.ot_approved || 0) + (m.ot_pending || 0) + (m.ot_potential || 0) > 0 ? (
-                                                                        <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold">
-                                                                            <span className="text-emerald-600">{((m.ot_approved || 0) / 3600).toFixed(1)}</span>
-                                                                            <span className="text-slate-300">/</span>
-                                                                            <span className="text-amber-600">{((m.ot_pending || 0) / 3600).toFixed(1)}</span>
-                                                                            <span className="text-slate-300">/</span>
-                                                                            <span className="text-slate-500">{((m.ot_potential || 0) / 3600).toFixed(1)}</span>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="font-mono font-bold text-emerald-500">{parseFloat(overtimeH) > 0 ? `+${overtimeH}` : '-'}</span>
-                                                                    )}
+                                                                    <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold">
+                                                                        <span className="text-emerald-600">{((m.ot_approved || 0) / 3600).toFixed(1)}</span>
+                                                                        <span className="text-slate-300">/</span>
+                                                                        <span className="text-amber-600">{((m.ot_pending || 0) / 3600).toFixed(1)}</span>
+                                                                        <span className="text-slate-300">/</span>
+                                                                        <span className="text-slate-500">{((m.ot_potential || 0) / 3600).toFixed(1)}</span>
+                                                                    </div>
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right">
                                                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isCumulativePositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
