@@ -36,6 +36,7 @@ const STAGES = [
     { id: 13, name: 'İzin Formu Validasyon & Preview', icon: ClipboardDocumentCheckIcon, color: 'violet', description: '37 test — İzin türü filtreleme (ANNUAL_LEAVE + EXCUSE_LEAVE), mazeret izni tarih validasyonu (yıl içi + 2 mali dönem geriye), mali dönem sınır testleri (26/25 geçişi), excuse-balance API (recent_requests, bakiye preview, sıralama), oluşturma validasyonları, yıllık izin bakiye kontrolleri' },
     { id: 14, name: 'Mola Off-Day & Parçalı Mesai', icon: PauseCircleIcon, color: 'rose', description: '63 test — Off-day/tatil mola kuralları (break=0, potential=0), live-status is_off_day doğruluğu (hafta sonu/tatil/normal gün), parçalı OT segment gruplama (≤30dk merge, >30dk ayrı), POTENTIAL net süre, claim-potential V3 (overtime_request_id, overlap kontrolü), claimable endpoint V3 (bireysel POTENTIAL, segments), today_summary endpoint off-day break_allowance=0 & is_off_day flag' },
     { id: 15, name: 'Şirket Dışı Görev v2', icon: MapPinIcon, color: 'purple', description: '45 test — Model yeni alanlar (lokasyon, ulaşım, konaklama), onay sonrası mesai (vardiya içi=DUTY, dışı=OT PENDING), off-day görev→OT, çok günlü görev, OT ilişkilendirme, serializer/API, tarih validasyonları' },
+    { id: 16, name: 'Mali Dönem OT Eşlemesi', icon: CalendarDaysIcon, color: 'indigo', description: '15 test — get_cumulative_stats() OT breakdown mali dönem eşlemesi (26-25 kuralı), mali ay sınır testleri (25 Şub→ay 2, 26 Şub→ay 3), çoklu statü (APPROVED/PENDING/POTENTIAL), boş veri güvenliği, Stats endpoint YEARLY/MONTHLY scope mali dönem filtresi' },
 ];
 
 export default function SpecTestsTab() {
@@ -189,7 +190,7 @@ export default function SpecTestsTab() {
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        12 aşamalı otomatik test — target_spec.md gereksinimlerini doğrular
+                        16 aşamalı otomatik test — target_spec.md gereksinimlerini doğrular
                     </p>
                 </div>
                 <button
