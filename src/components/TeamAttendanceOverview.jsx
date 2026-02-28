@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { User, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, ArrowUpRight, ArrowDownRight, LayoutList, LayoutGrid } from 'lucide-react';
+import { User, Users, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, ArrowUpRight, ArrowDownRight, LayoutList, LayoutGrid, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 
 const StatusBadge = ({ status, isOnLeave, leaveStatus }) => {
@@ -54,6 +54,97 @@ const StackedProgressBar = ({ completed, missing, remaining, target }) => {
 
             {/* Remaining */}
             <div style={{ width: `${pR}%` }} className="h-full bg-slate-300" title={`Kalan: ${r} sa`} />
+        </div>
+    );
+};
+
+const GroupAverageRow = ({ children, depth = 1 }) => {
+    if (!children || children.length === 0) return null;
+    const count = children.length;
+
+    const avgTarget = children.reduce((a, c) => a + parseFloat(c.monthTarget || 0), 0) / count;
+    const avgCompleted = children.reduce((a, c) => a + parseFloat(c.summaryCompleted || 0), 0) / count;
+    const avgMissing = children.reduce((a, c) => a + parseFloat(c.summaryMissing || 0), 0) / count;
+    const avgRemaining = children.reduce((a, c) => a + parseFloat(c.summaryRemaining || 0), 0) / count;
+    const avgBalance = children.reduce((a, c) => a + parseFloat(c.summaryNetBalance || 0), 0) / count;
+    const avgTotalWork = children.reduce((a, c) => a + parseFloat(c.summaryTotalWork || 0), 0) / count;
+    const avgTodayMin = Math.round(children.reduce((a, c) => a + (c.totalTodayMinutes || 0), 0) / count);
+
+    // Günlük ortalama eksik: aylık ortalama eksik / ayda çalışılan gün
+    // Yaklaşık: aylık hedef / 22 iş günü = günlük hedef, missing / geçen iş günü sayısı
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    // Basit yaklaşım: 26-25 mali dönem, geçen iş günü ≈ (gün - hafta sonu sayısı)
+    const elapsedWorkDays = Math.max(1, Math.round(dayOfMonth * 5 / 7));
+    const dailyAvgMissing = avgMissing / elapsedWorkDays;
+
+    const isPositive = avgBalance >= 0;
+
+    return (
+        <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-b border-slate-200 border-t border-dashed">
+            <div className="grid grid-cols-12 gap-4 items-center p-3">
+                {/* Col 1: Label */}
+                <div className="col-span-4 flex items-center gap-3" style={{ paddingLeft: `${depth * 32}px` }}>
+                    <div className="w-6 shrink-0" />
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <Users size={14} className="text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                        <h4 className="font-bold text-blue-700 text-xs leading-tight">
+                            Ekip Ortalaması ({count} kişi)
+                        </h4>
+                        {dailyAvgMissing > 0.01 && (
+                            <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
+                                <TrendingDown size={9} />
+                                Günlük ort. eksik: {dailyAvgMissing.toFixed(1)} sa
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Col 2: Avg Today */}
+                <div className="col-span-2 flex flex-col justify-center">
+                    <span className="text-[10px] font-semibold text-blue-500 uppercase tracking-wider">Bugün Ort.</span>
+                    <div className="flex items-baseline gap-1 text-xs">
+                        <span className="font-bold text-slate-700">{Math.floor(avgTodayMin / 60)}</span>
+                        <span className="text-slate-500">sa</span>
+                        <span className="font-bold text-slate-700">{avgTodayMin % 60}</span>
+                        <span className="text-slate-500">dk</span>
+                    </div>
+                </div>
+
+                {/* Col 3: Avg Progress Bar */}
+                <div className="col-span-3">
+                    <div className="flex justify-between text-[10px] text-slate-500 mb-1 px-1">
+                        <span>Ort. Hedef: <b className="text-slate-700">{avgTarget.toFixed(0)}</b> sa</span>
+                        {avgMissing > 0.01 && (
+                            <span>Ort. Eksik: <b className="text-red-500">{avgMissing.toFixed(1)}</b> sa</span>
+                        )}
+                    </div>
+                    <StackedProgressBar
+                        completed={avgCompleted.toFixed(1)}
+                        missing={avgMissing.toFixed(1)}
+                        remaining={avgRemaining.toFixed(1)}
+                        target={avgTarget.toFixed(1)}
+                    />
+                </div>
+
+                {/* Col 4: Avg Net Balance */}
+                <div className="col-span-1 text-right">
+                    <div className={clsx("font-bold text-base leading-none mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
+                        {isPositive ? '+' : ''}{avgBalance.toFixed(1)}
+                    </div>
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wide font-medium">ort.</span>
+                </div>
+
+                {/* Col 5: Avg Total Work */}
+                <div className="col-span-2 text-right pr-2">
+                    <div className="font-bold text-slate-800 text-base leading-none mb-1">
+                        {avgTotalWork.toFixed(1)}
+                    </div>
+                    <div className="text-[9px] text-blue-500 uppercase tracking-wide font-medium">ort. saat</div>
+                </div>
+            </div>
         </div>
     );
 };
@@ -195,6 +286,8 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                             toggleExpand={toggleExpand}
                         />
                     ))}
+                    {/* Group Average Row */}
+                    <GroupAverageRow children={node.children} depth={depth + 1} />
                 </>
             )}
         </>
@@ -331,6 +424,84 @@ const PerformanceTableView = ({ teamData }) => {
                             );
                         })}
                     </tbody>
+                    {/* Footer: Team Average Row */}
+                    {sortedData.length > 0 && (() => {
+                        const cnt = sortedData.length;
+                        const avgBalance = sortedData.reduce((a, c) => a + parseFloat(c.summaryNetBalance || 0), 0) / cnt;
+                        const avgWorked = sortedData.reduce((a, c) => a + parseFloat(c.monthWorkedHours || 0), 0) / cnt;
+                        const avgTarget = sortedData.reduce((a, c) => a + parseFloat(c.monthTarget || 0), 0) / cnt;
+                        const avgMissing = sortedData.reduce((a, c) => a + parseFloat(c.summaryMissing || 0), 0) / cnt;
+                        const avgBreakMin = sortedData.reduce((a, c) => a + parseFloat(c.totalBreakMinutes || 0), 0) / cnt;
+                        const avgWorkMin = avgWorked * 60;
+                        const avgActiveTime = avgWorkMin + avgBreakMin;
+                        const avgBreakRatio = avgActiveTime > 0 ? ((avgBreakMin / avgActiveTime) * 100).toFixed(1) : '0.0';
+                        const avgLateCount = (sortedData.reduce((a, c) => a + (c.totalLateCount || 0), 0) / cnt).toFixed(1);
+                        const avgLateMin = Math.round(sortedData.reduce((a, c) => a + (c.totalLateMinutes || 0), 0) / cnt);
+                        const isPos = avgBalance >= 0;
+
+                        // Günlük ortalama eksik
+                        const dayOfMonth = new Date().getDate();
+                        const elapsedWorkDays = Math.max(1, Math.round(dayOfMonth * 5 / 7));
+                        const dailyAvgMissing = avgMissing / elapsedWorkDays;
+
+                        return (
+                            <tfoot className="bg-gradient-to-r from-blue-50 to-slate-50 border-t-2 border-blue-200">
+                                <tr>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                <Users size={14} className="text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-blue-700 text-sm">Ekip Ortalaması ({cnt})</p>
+                                                {dailyAvgMissing > 0.01 && (
+                                                    <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
+                                                        <TrendingDown size={9} />
+                                                        Günlük ort. eksik: {dailyAvgMissing.toFixed(1)} sa
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <span className={clsx("font-bold text-sm", isPos ? "text-emerald-600" : "text-red-500")}>
+                                            {isPos ? '+' : ''}{avgBalance.toFixed(1)} sa
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-sm font-bold text-blue-700">{avgWorked.toFixed(1)}</td>
+                                    <td className="px-4 py-3 text-right text-sm text-slate-500">{avgTarget.toFixed(0)}</td>
+                                    <td className="px-4 py-3 text-right">
+                                        <span className="text-sm font-bold text-slate-700">{avgBreakRatio}%</span>
+                                        <span className="text-xs text-slate-400 ml-1">({Math.round(avgBreakMin)}dk)</span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-sm font-bold text-slate-700">{avgLateCount}</td>
+                                    <td className="px-4 py-3 text-right text-sm text-red-500 font-medium">
+                                        {avgLateMin > 0 ? `${avgLateMin} dk` : '-'}
+                                    </td>
+                                </tr>
+                                {avgMissing > 0.01 && (
+                                    <tr className="bg-red-50/50">
+                                        <td colSpan={7} className="px-4 py-2">
+                                            <div className="flex items-center gap-4 text-xs">
+                                                <span className="font-semibold text-red-600 flex items-center gap-1.5">
+                                                    <TrendingDown size={12} />
+                                                    Aylık Ort. Eksik: {avgMissing.toFixed(1)} sa/kişi
+                                                </span>
+                                                <span className="text-slate-400">|</span>
+                                                <span className="font-semibold text-red-500">
+                                                    Günlük Ort. Eksik: {dailyAvgMissing.toFixed(1)} sa/kişi
+                                                </span>
+                                                <span className="text-slate-400">|</span>
+                                                <span className="text-slate-500">
+                                                    Toplam Ekip Eksik: {(avgMissing * cnt).toFixed(0)} sa
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tfoot>
+                        );
+                    })()}
                 </table>
             </div>
         </div>
