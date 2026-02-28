@@ -199,7 +199,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             efficiency: (s.monthly_required || 0) > 0 ? Math.round(((s.total_worked || 0) / s.monthly_required) * 100) : 0,
             dailyMissing: Math.round((s.total_missing || 0) / elapsedWorkDays),
             projected: elapsedWorkDays > 0 ? Math.round((s.monthly_deviation || 0) + ((s.monthly_deviation || 0) / elapsedWorkDays) * remainingWorkDays) : 0,
-        })).sort((a, b) => (b.monthly_net_balance || 0) - (a.monthly_net_balance || 0));
+        })).sort((a, b) => (a.total_missing || 0) - (b.total_missing || 0));
 
         // Performance chart data (top 20)
         const performanceData = [...scopedStats]
@@ -238,9 +238,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             { name: 'Negatif', value: negativeBalance, color: '#ef4444' },
         ].filter(d => d.value > 0);
 
-        // Spotlight
-        const bestPerformer = ranked[0];
-        const worstPerformer = ranked[ranked.length - 1];
+        // Spotlight — ranked is sorted by total_missing ASC, so [0]=least missing, [last]=most missing
+        const leastMissing = ranked[0];
+        const mostMissing = ranked[ranked.length - 1];
         const mostOT = [...scopedStats].sort((a, b) => (b.total_overtime || 0) - (a.total_overtime || 0))[0];
         const mostEfficient = [...ranked].sort((a, b) => b.efficiency - a.efficiency)[0];
 
@@ -294,7 +294,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             positiveBalance, negativeBalance, zeroBalance,
             departments, ranked, performanceData, comparisonData,
             workDistribution, balanceDist,
-            bestPerformer, worstPerformer, mostOT, mostEfficient,
+            leastMissing, mostMissing, mostOT, mostEfficient,
             leaveData,
             highOTRisk, highMissingRisk, criticalBalanceRisk,
             radarData,
@@ -957,7 +957,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 9: Performance Ranking Table ═══════ */}
             <AnalyticsCard
                 title="Performans Siralamasi"
-                subtitle={`Net bakiyeye gore siralama (${analytics.ranked.length} kisi)`}
+                subtitle={`Eksik sureye gore siralama — en az eksik en ustte (${analytics.ranked.length} kisi)`}
                 icon={Award}
             >
                 <div className="overflow-x-auto">
@@ -970,13 +970,12 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Calisma</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Hedef</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Verim %</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">OT</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Eksik</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Sapma</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Gunluk Eksik</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">F. Mesai</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Kayip</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Gnl. Eksik</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Net Bakiye</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Tahmini</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Bakiye</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Izin Bakiye</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Izin</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1003,20 +1002,19 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                                 %{person.efficiency}
                                             </span>
                                         </td>
-                                        <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">{formatMinutes(person.total_overtime || 0)}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-red-500 tabular-nums">{formatMinutes(person.total_missing || 0)}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">{(person.total_overtime || 0) > 0 ? formatMinutes(person.total_overtime) : <span className="text-slate-300">&mdash;</span>}</td>
+                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${(person.total_missing || 0) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                            {(person.total_missing || 0) > 0 ? formatMinutes(person.total_missing) : <span className="text-emerald-500">0</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-right font-semibold text-slate-600 tabular-nums">{formatMinutes(person.dailyMissing)}</td>
                                         <td className={`px-3 py-2 text-right font-bold tabular-nums ${(person.monthly_deviation || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                             {(person.monthly_deviation || 0) >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.monthly_deviation || 0))}
                                         </td>
-                                        <td className="px-3 py-2 text-right font-semibold text-slate-600 tabular-nums">{formatMinutes(person.dailyMissing)}</td>
                                         <td className={`px-3 py-2 text-right font-bold tabular-nums ${person.projected >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                             {person.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.projected))}
                                         </td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-red-500' : 'text-slate-400'}`}>
-                                            {balance > 0 ? '+' : ''}{formatMinutes(Math.abs(balance))}
-                                        </td>
                                         <td className="px-3 py-2 text-right font-semibold text-violet-600 tabular-nums">
-                                            {person.annual_leave_balance != null ? `${person.annual_leave_balance} gun` : '-'}
+                                            {person.annual_leave_balance != null ? `${person.annual_leave_balance}g` : '-'}
                                         </td>
                                     </tr>
                                 );
@@ -1184,21 +1182,26 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
             {/* ═══════ SECTION 12: Spotlight Cards ═══════ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Best Balance */}
-                {analytics.bestPerformer && (
+                {/* Least Missing */}
+                {analytics.leastMissing && (
                     <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white">
                         <div className="absolute top-3 right-3 opacity-20">
-                            <TrendingUp size={48} />
+                            <Award size={48} />
                         </div>
                         <div className="relative">
-                            <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Yuksek Bakiye</p>
-                            <p className="text-lg font-bold truncate">{analytics.bestPerformer.employee_name}</p>
-                            <p className="text-emerald-200 text-xs mt-0.5">{analytics.bestPerformer.department || '-'}</p>
-                            <div className="mt-3 flex items-center gap-2">
-                                <span className="text-2xl font-black tabular-nums">
-                                    {formatMinutes(Math.abs(analytics.bestPerformer.monthly_net_balance || 0))}
-                                </span>
-                                <TrendingUp size={16} className="text-emerald-200" />
+                            <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Az Eksik</p>
+                            <p className="text-lg font-bold truncate">{analytics.leastMissing.employee_name}</p>
+                            <p className="text-emerald-200 text-xs mt-0.5">{analytics.leastMissing.department || '-'}</p>
+                            <div className="mt-3 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-emerald-200">Eksik:</span>
+                                    <span className="text-xl font-black tabular-nums">
+                                        {(analytics.leastMissing.total_missing || 0) > 0 ? formatMinutes(analytics.leastMissing.total_missing) : '0'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-emerald-200 text-[10px]">
+                                    <span>Verimlilik: %{analytics.leastMissing.efficiency || 0}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1224,21 +1227,26 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     </div>
                 )}
 
-                {/* Worst Balance */}
-                {analytics.worstPerformer && (
+                {/* Most Missing */}
+                {analytics.mostMissing && (
                     <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-red-500 to-rose-700 text-white">
                         <div className="absolute top-3 right-3 opacity-20">
-                            <TrendingDown size={48} />
+                            <AlertTriangle size={48} />
                         </div>
                         <div className="relative">
-                            <p className="text-red-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Dusuk Bakiye</p>
-                            <p className="text-lg font-bold truncate">{analytics.worstPerformer.employee_name}</p>
-                            <p className="text-red-200 text-xs mt-0.5">{analytics.worstPerformer.department || '-'}</p>
-                            <div className="mt-3 flex items-center gap-2">
-                                <span className="text-2xl font-black tabular-nums">
-                                    {formatMinutes(Math.abs(analytics.worstPerformer.monthly_net_balance || 0))}
-                                </span>
-                                <TrendingDown size={16} className="text-red-200" />
+                            <p className="text-red-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Cok Eksik</p>
+                            <p className="text-lg font-bold truncate">{analytics.mostMissing.employee_name}</p>
+                            <p className="text-red-200 text-xs mt-0.5">{analytics.mostMissing.department || '-'}</p>
+                            <div className="mt-3 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-red-200">Eksik:</span>
+                                    <span className="text-xl font-black tabular-nums">
+                                        {formatMinutes(analytics.mostMissing.total_missing || 0)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-red-200 text-[10px]">
+                                    <span>Verimlilik: %{analytics.mostMissing.efficiency || 0}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1276,8 +1284,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         {analytics.departments.map((dept, i) => {
                             const dEff = dept.required > 0 ? Math.round((dept.worked / dept.required) * 100) : 0;
                             const dAvgWorked = dept.count > 0 ? Math.round(dept.worked / dept.count) : 0;
+                            const dAvgOT = dept.count > 0 ? Math.round(dept.ot / dept.count) : 0;
                             const dAvgMissing = dept.count > 0 ? Math.round(dept.missing / dept.count) : 0;
-                            const dActiveRate = dept.count > 0 ? Math.round((dept.online / dept.count) * 100) : 0;
+                            const dAvgDeviation = dept.count > 0 ? Math.round(dept.deviation / dept.count) : 0;
                             return (
                                 <button
                                     key={dept.name}
@@ -1288,33 +1297,32 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <div className="flex items-center gap-2">
                                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: DEPT_COLORS[i % DEPT_COLORS.length] }} />
                                             <span className="text-xs font-bold text-slate-800">{dept.name}</span>
+                                            <span className="text-[10px] text-slate-400">{dept.count} kisi</span>
                                         </div>
                                         <ArrowRight size={12} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                                         <div className="flex justify-between">
-                                            <span className="text-slate-400">Kisi</span>
-                                            <span className="font-bold text-slate-600">{dept.count}</span>
-                                        </div>
-                                        <div className="flex justify-between">
                                             <span className="text-slate-400">Verim</span>
                                             <span className={`font-bold ${dEff >= 95 ? 'text-emerald-600' : dEff >= 80 ? 'text-amber-600' : 'text-red-600'}`}>%{dEff}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-slate-400">Ort. Calisma</span>
+                                            <span className="text-slate-400">Ort. Mesai</span>
                                             <span className="font-bold text-indigo-600">{formatMinutes(dAvgWorked)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-slate-400">Ort. Eksik</span>
-                                            <span className="font-bold text-red-500">{formatMinutes(dAvgMissing)}</span>
+                                            <span className="text-red-400 font-semibold">Ort. Eksik</span>
+                                            <span className={`font-bold ${dAvgMissing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{formatMinutes(dAvgMissing)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-slate-400">Aktif</span>
-                                            <span className="font-bold text-cyan-600">%{dActiveRate}</span>
+                                            <span className="text-slate-400">Ort. F.M.</span>
+                                            <span className="font-bold text-amber-600">{dAvgOT > 0 ? formatMinutes(dAvgOT) : '\u2014'}</span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400">Poz. Bakiye</span>
-                                            <span className="font-bold text-emerald-600">{dept.positiveBalance}/{dept.count}</span>
+                                        <div className="flex justify-between col-span-2 pt-1 border-t border-slate-200/50">
+                                            <span className="text-slate-400">Net Bakiye</span>
+                                            <span className={`font-bold ${dAvgDeviation >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {dAvgDeviation >= 0 ? '+' : ''}{formatMinutes(Math.abs(dAvgDeviation))}
+                                            </span>
                                         </div>
                                     </div>
                                 </button>
@@ -1327,35 +1335,38 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 14: Individual Performance Cards ═══════ */}
             <AnalyticsCard
                 title="Bireysel Performans Kartlari"
-                subtitle={`Her calisan icin detayli performans ozeti (${analytics.ranked.length} kisi)`}
+                subtitle={`Eksik sureye gore siralama (${analytics.ranked.length} kisi)`}
                 icon={UserCheck}
             >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {analytics.ranked.map((person, idx) => {
-                        const balance = person.monthly_net_balance || 0;
+                        const missing = person.total_missing || 0;
+                        const deviation = person.monthly_deviation || 0;
                         const effBadge = getEfficiencyBadge(person.efficiency);
+                        const missingLevel = missing === 0 ? 'none' : missing < 60 ? 'low' : missing < 300 ? 'medium' : 'high';
+                        const borderCls = {
+                            none: 'border-emerald-200/60 bg-gradient-to-br from-white to-emerald-50/30',
+                            low: 'border-blue-200/60 bg-gradient-to-br from-white to-blue-50/30',
+                            medium: 'border-amber-200/60 bg-gradient-to-br from-white to-amber-50/30',
+                            high: 'border-red-200/60 bg-gradient-to-br from-white to-red-50/30',
+                        }[missingLevel];
                         return (
                             <div
                                 key={person.employee_id || idx}
-                                className={`p-4 rounded-xl border transition-all hover:shadow-md ${
-                                    balance > 0
-                                        ? 'bg-gradient-to-br from-white to-emerald-50/50 border-emerald-200/60'
-                                        : balance < 0
-                                            ? 'bg-gradient-to-br from-white to-red-50/50 border-red-200/60'
-                                            : 'bg-white border-slate-200/80'
-                                }`}
+                                className={`p-4 rounded-xl border transition-all hover:shadow-md ${borderCls}`}
                             >
                                 {/* Header */}
                                 <div className="flex items-start justify-between mb-2">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-bold text-slate-300 tabular-nums w-5">#{idx + 1}</span>
                                             {person.is_online && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />}
                                             <p className="text-xs font-bold text-slate-800 truncate">{person.employee_name}</p>
                                         </div>
-                                        <p className="text-[10px] text-slate-400 truncate">{person.job_title || person.department || '-'}</p>
+                                        <p className="text-[10px] text-slate-400 truncate ml-5">{person.department || '-'} · {person.job_title || '-'}</p>
                                     </div>
                                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ml-2 ${effBadge.cls}`}>
-                                        %{person.efficiency} {effBadge.label}
+                                        %{person.efficiency}
                                     </span>
                                 </div>
 
@@ -1366,40 +1377,38 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <span className="font-bold text-indigo-600 tabular-nums">{formatMinutes(person.total_worked || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-slate-400">Hedef</span>
-                                        <span className="font-bold text-slate-500 tabular-nums">{formatMinutes(person.monthly_required || 0)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
                                         <span className="text-slate-400">F. Mesai</span>
-                                        <span className="font-bold text-amber-600 tabular-nums">{formatMinutes(person.total_overtime || 0)}</span>
+                                        <span className="font-bold text-amber-600 tabular-nums">{(person.total_overtime || 0) > 0 ? formatMinutes(person.total_overtime) : '\u2014'}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-slate-400">Eksik</span>
-                                        <span className="font-bold text-red-500 tabular-nums">{formatMinutes(person.total_missing || 0)}</span>
+                                        <span className="text-red-400 font-semibold">Kayip</span>
+                                        <span className={`font-bold tabular-nums ${missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{missing > 0 ? formatMinutes(missing) : '0'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">Gnl. Eksik</span>
                                         <span className="font-bold text-slate-600 tabular-nums">{formatMinutes(person.dailyMissing)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Tahmini</span>
-                                        <span className={`font-bold tabular-nums ${person.projected >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {person.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.projected))}
-                                        </span>
-                                    </div>
                                 </div>
 
-                                {/* Balance bar */}
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-500 ${balance > 0 ? 'bg-emerald-500' : balance < 0 ? 'bg-red-500' : 'bg-slate-300'}`}
-                                            style={{ width: `${Math.min(100, Math.abs(person.efficiency))}%` }}
-                                        />
+                                {/* Net Bakiye bar + value */}
+                                <div className="pt-2 border-t border-slate-100/80">
+                                    <div className="flex items-center justify-between text-[10px] mb-1">
+                                        <span className="text-slate-400 font-semibold">Net Bakiye</span>
+                                        <span className={`font-bold tabular-nums ${deviation >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            {deviation >= 0 ? '+' : ''}{formatMinutes(Math.abs(deviation))}
+                                        </span>
                                     </div>
-                                    <span className={`text-[10px] font-bold tabular-nums whitespace-nowrap ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                        {balance > 0 ? '+' : ''}{formatMinutes(Math.abs(balance))}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${deviation >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                                                style={{ width: `${Math.min(100, Math.abs(person.efficiency))}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-slate-400 font-semibold tabular-nums">
+                                            %{person.efficiency}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Leave info */}
@@ -1428,7 +1437,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 </div>
                 <div className="flex flex-wrap items-center gap-6">
                     <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Toplam Calisan</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">Calisan</p>
                         <p className="text-sm font-bold text-white tabular-nums">{analytics.count}</p>
                     </div>
                     <div className="text-center">
@@ -1444,15 +1453,19 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.totalMissing)}</p>
                     </div>
                     <div className="text-center">
+                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Eksik/Kisi</p>
+                        <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.avgMissing)}</p>
+                    </div>
+                    <div className="text-center">
                         <p className="text-[10px] text-slate-400 font-semibold">Ort. Verim</p>
                         <p className={`text-sm font-bold tabular-nums ${analytics.efficiency >= 95 ? 'text-emerald-400' : analytics.efficiency >= 80 ? 'text-amber-400' : 'text-red-400'}`}>
                             %{analytics.efficiency}
                         </p>
                     </div>
                     <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Tahmini Ay Sonu</p>
-                        <p className={`text-sm font-bold tabular-nums ${analytics.projectedBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {analytics.projectedBalance >= 0 ? '+' : ''}{formatMinutes(Math.abs(analytics.projectedBalance))}
+                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Net Bakiye</p>
+                        <p className={`text-sm font-bold tabular-nums ${analytics.avgDeviation >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {analytics.avgDeviation >= 0 ? '+' : ''}{formatMinutes(Math.abs(analytics.avgDeviation))}
                         </p>
                     </div>
                 </div>
