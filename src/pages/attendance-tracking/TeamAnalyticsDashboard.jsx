@@ -64,13 +64,15 @@ const AnalyticsCard = ({ title, subtitle, icon: Icon, children, className = '' }
 const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
     if (!person) return null;
 
-    const efficiency = person.efficiency || 0;
+    const completed = person.completed_minutes || person.total_worked || 0;
+    const pastTarget = person.past_target_minutes || person.monthly_required || 0;
+    const efficiency = person.efficiency || (pastTarget > 0 ? Math.round((completed / pastTarget) * 100) : 0);
     const totalWorked = person.total_worked || 0;
     const target = person.monthly_required || 0;
     const missing = person.total_missing || 0;
     const deviation = person.monthly_deviation || 0;
     const otTotal = person.total_overtime || 0;
-    const dailyAvgNormal = elapsedWorkDays > 0 ? Math.round((totalWorked - otTotal) / elapsedWorkDays) : 0;
+    const dailyAvgNormal = elapsedWorkDays > 0 ? Math.round(completed / elapsedWorkDays) : 0;
     const dailyAvgTotal = elapsedWorkDays > 0 ? Math.round(totalWorked / elapsedWorkDays) : 0;
 
     // OT source
@@ -127,11 +129,13 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="bg-indigo-50 rounded-xl p-3">
                                 <p className="text-[10px] text-indigo-400 font-semibold">Normal Calisma</p>
-                                <p className="text-lg font-bold text-indigo-600">{formatMinutes(totalWorked)}</p>
+                                <p className="text-lg font-bold text-indigo-600">{formatMinutes(completed)}</p>
+                                {otTotal > 0 && <p className="text-[10px] text-indigo-300">+{formatMinutes(otTotal)} OT</p>}
                             </div>
                             <div className="bg-slate-50 rounded-xl p-3">
-                                <p className="text-[10px] text-slate-400 font-semibold">Hedef</p>
-                                <p className="text-lg font-bold text-slate-600">{formatMinutes(target)}</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">Hedef (bugunedek)</p>
+                                <p className="text-lg font-bold text-slate-600">{formatMinutes(pastTarget)}</p>
+                                <p className="text-[10px] text-slate-300">Ay: {formatMinutes(target)}</p>
                             </div>
                             <div className={`${efficiency >= 95 ? 'bg-emerald-50' : efficiency >= 80 ? 'bg-amber-50' : 'bg-red-50'} rounded-xl p-3`}>
                                 <p className="text-[10px] text-slate-400 font-semibold">Verimlilik</p>
@@ -385,24 +389,27 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
         // Totals
         const totalWorked = filteredStats.reduce((a, c) => a + (c.total_worked || 0), 0);
+        const totalCompleted = filteredStats.reduce((a, c) => a + (c.completed_minutes || c.total_worked || 0), 0); // Normal work (no OT)
         const totalOT = filteredStats.reduce((a, c) => a + (c.total_overtime || 0), 0);
         const totalMissing = filteredStats.reduce((a, c) => a + (c.total_missing || 0), 0);
         const totalRequired = filteredStats.reduce((a, c) => a + (c.monthly_required || 0), 0);
+        const totalPastTarget = filteredStats.reduce((a, c) => a + (c.past_target_minutes || c.monthly_required || 0), 0);
         const onlineCount = filteredStats.filter(s => s.is_online).length;
+
+        // Work days from backend (accurate fiscal period days) with fallback
+        const _sample = filteredStats[0] || {};
+        const elapsedWorkDays = Math.max(1, _sample.elapsed_work_days || Math.round(new Date().getDate() * 5 / 7));
+        const totalWorkDaysInMonth = _sample.total_work_days || 22;
+        const remainingWorkDays = Math.max(0, _sample.remaining_work_days ?? (totalWorkDaysInMonth - elapsedWorkDays));
 
         // Averages
         const avgWorked = Math.round(totalWorked / count);
         const avgOT = Math.round(totalOT / count);
         const avgMissing = Math.round(totalMissing / count);
         const avgRequired = Math.round(totalRequired / count);
-        const efficiency = totalRequired > 0 ? Math.round((totalWorked / totalRequired) * 100) : 0;
 
-        // Work days calculation
-        const today = new Date();
-        const dayOfMonth = today.getDate();
-        const elapsedWorkDays = Math.max(1, Math.round(dayOfMonth * 5 / 7));
-        const totalWorkDaysInMonth = 22;
-        const remainingWorkDays = Math.max(0, totalWorkDaysInMonth - elapsedWorkDays);
+        // EFFICIENCY: completed (normal work) vs past_target (pro-rated to today)
+        const efficiency = totalPastTarget > 0 ? Math.round((totalCompleted / totalPastTarget) * 100) : 0;
 
         // Daily average missing per person
         const dailyAvgMissing = Math.round(totalMissing / count / elapsedWorkDays);
@@ -421,12 +428,14 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const deptMap = {};
         filteredStats.forEach(s => {
             const dept = s.department || 'Bilinmiyor';
-            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, worked: 0, ot: 0, missing: 0, required: 0, online: 0, deviation: 0, positiveBalance: 0 };
+            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, worked: 0, completed: 0, ot: 0, missing: 0, required: 0, pastTarget: 0, online: 0, deviation: 0, positiveBalance: 0 };
             deptMap[dept].count++;
             deptMap[dept].worked += (s.total_worked || 0);
+            deptMap[dept].completed += (s.completed_minutes || s.total_worked || 0);
             deptMap[dept].ot += (s.total_overtime || 0);
             deptMap[dept].missing += (s.total_missing || 0);
             deptMap[dept].required += (s.monthly_required || 0);
+            deptMap[dept].pastTarget += (s.past_target_minutes || s.monthly_required || 0);
             deptMap[dept].deviation += (s.monthly_deviation || 0);
             if (s.is_online) deptMap[dept].online++;
             if ((s.monthly_net_balance || 0) > 0) deptMap[dept].positiveBalance++;
@@ -434,12 +443,16 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const departments = Object.values(deptMap).sort((a, b) => b.count - a.count);
 
         // Per-person computed fields
-        const ranked = [...filteredStats].map(s => ({
-            ...s,
-            efficiency: (s.monthly_required || 0) > 0 ? Math.round(((s.total_worked || 0) / s.monthly_required) * 100) : 0,
-            dailyMissing: Math.round((s.total_missing || 0) / elapsedWorkDays),
-            projected: elapsedWorkDays > 0 ? Math.round((s.monthly_deviation || 0) + ((s.monthly_deviation || 0) / elapsedWorkDays) * remainingWorkDays) : 0,
-        })).sort((a, b) => (a.total_missing || 0) - (b.total_missing || 0));
+        const ranked = [...filteredStats].map(s => {
+            const pCompleted = s.completed_minutes || s.total_worked || 0;
+            const pPastTarget = s.past_target_minutes || s.monthly_required || 0;
+            return {
+                ...s,
+                efficiency: pPastTarget > 0 ? Math.round((pCompleted / pPastTarget) * 100) : 0,
+                dailyMissing: Math.round((s.total_missing || 0) / elapsedWorkDays),
+                projected: elapsedWorkDays > 0 ? Math.round((s.monthly_deviation || 0) + ((s.monthly_deviation || 0) / elapsedWorkDays) * remainingWorkDays) : 0,
+            };
+        }).sort((a, b) => (a.total_missing || 0) - (b.total_missing || 0));
 
         // Performance chart data (top 20)
         const performanceData = [...filteredStats]
@@ -508,9 +521,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             return axes.map(axis => {
                 const row = { axis };
                 departments.slice(0, 6).forEach(dept => {
-                    const dEff = dept.required > 0 ? (dept.worked / dept.required) * 100 : 0;
-                    const dOT = dept.required > 0 ? (dept.ot / dept.required) * 100 : 0;
-                    const dMiss = dept.required > 0 ? 100 - (dept.missing / dept.required) * 100 : 100;
+                    const dEff = dept.pastTarget > 0 ? (dept.completed / dept.pastTarget) * 100 : 0;
+                    const dOT = dept.pastTarget > 0 ? (dept.ot / dept.pastTarget) * 100 : 0;
+                    const dMiss = dept.pastTarget > 0 ? 100 - (dept.missing / dept.pastTarget) * 100 : 100;
                     const dOnline = dept.count > 0 ? (dept.online / dept.count) * 100 : 0;
                     const dPosBal = dept.count > 0 ? (dept.positiveBalance / dept.count) * 100 : 0;
 
@@ -545,9 +558,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const otNormalRatio = totalWorked > 0 ? Math.round((totalOT / totalWorked) * 100) : 0;
 
         return {
-            count, totalWorked, totalOT, totalMissing, totalRequired, onlineCount,
+            count, totalWorked, totalCompleted, totalOT, totalMissing, totalRequired, totalPastTarget, onlineCount,
             avgWorked, avgOT, avgMissing, avgRequired, efficiency,
-            dailyAvgMissing, projectedBalance, avgDeviation, elapsedWorkDays, remainingWorkDays,
+            dailyAvgMissing, projectedBalance, avgDeviation, elapsedWorkDays, totalWorkDaysInMonth, remainingWorkDays,
             positiveBalance, negativeBalance, zeroBalance,
             departments, ranked, performanceData, comparisonData,
             workDistribution, balanceDist,
@@ -590,7 +603,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
     const sortedDepartments = useMemo(() => {
         if (!analytics?.departments) return [];
         const depts = [...analytics.departments].map(dept => {
-            const dEff = dept.required > 0 ? Math.round((dept.worked / dept.required) * 100) : 0;
+            const dEff = dept.pastTarget > 0 ? Math.round((dept.completed / dept.pastTarget) * 100) : 0;
             const avgWorkedDept = dept.count > 0 ? Math.round(dept.worked / dept.count) : 0;
             const avgOTDept = dept.count > 0 ? Math.round(dept.ot / dept.count) : 0;
             const avgMissingDept = dept.count > 0 ? Math.round(dept.missing / dept.count) : 0;
@@ -729,7 +742,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 <KpiCard
                     label="Ekip Verimi"
                     value={`%${analytics.efficiency}`}
-                    subValue={`Hedef: ${formatMinutes(analytics.avgRequired)}/kisi`}
+                    subValue={`${analytics.elapsedWorkDays}/${analytics.totalWorkDaysInMonth || 22} is gunu`}
                     icon={Target}
                     color={analytics.efficiency >= 95 ? 'emerald' : analytics.efficiency >= 80 ? 'amber' : 'red'}
                 />
@@ -1654,7 +1667,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {analytics.departments.map((dept, i) => {
-                            const dEff = dept.required > 0 ? Math.round((dept.worked / dept.required) * 100) : 0;
+                            const dEff = dept.pastTarget > 0 ? Math.round((dept.completed / dept.pastTarget) * 100) : 0;
                             const dAvgWorked = dept.count > 0 ? Math.round(dept.worked / dept.count) : 0;
                             const dAvgOT = dept.count > 0 ? Math.round(dept.ot / dept.count) : 0;
                             const dAvgMissing = dept.count > 0 ? Math.round(dept.missing / dept.count) : 0;
@@ -1723,7 +1736,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                             high: 'border-red-200/60 bg-gradient-to-br from-white to-red-50/30',
                         }[missingLevel];
                         const personOTTotal = (person.ot_intended_minutes || 0) + (person.ot_potential_minutes || 0) + (person.ot_manual_minutes || 0);
-                        const personOTNormalRatio = (person.total_worked || 0) > 0 ? Math.round(((person.total_overtime || 0) / person.total_worked) * 100) : 0;
+                        const personCompleted = person.completed_minutes || person.total_worked || 0;
+                        const personOTNormalRatio = personCompleted > 0 ? Math.round(((person.total_overtime || 0) / personCompleted) * 100) : 0;
                         return (
                             <div
                                 key={person.employee_id || idx}
