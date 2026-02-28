@@ -231,6 +231,14 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                                 <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
                                 <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
                             </pattern>
+                            <pattern id="striped-pending" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                                <rect width="6" height="6" fill="#fef3c7" />
+                                <line x1="0" y1="0" x2="0" y2="6" stroke="#f59e0b" strokeWidth="1.5" />
+                            </pattern>
+                            <pattern id="striped-potential" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
+                                <rect width="6" height="6" fill="#f1f5f9" />
+                                <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="1.5" />
+                            </pattern>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 10, fill: '#94a3b8' }} dy={5} />
@@ -264,11 +272,31 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                             onClick={(data) => onDateClick && onDateClick(data.date)}
                         />
                         <Bar
-                            dataKey="overtime"
+                            dataKey="ot_approved"
                             stackId="a"
                             fill="#10b981"
+                            radius={[0, 0, 0, 0]}
+                            name="Onaylı Mesai"
+                            onClick={(data) => onDateClick && onDateClick(data.date)}
+                        />
+                        <Bar
+                            dataKey="ot_pending"
+                            stackId="a"
+                            fill="url(#striped-pending)"
+                            stroke="#f59e0b"
+                            strokeWidth={1}
+                            radius={[0, 0, 0, 0]}
+                            name="Bekleyen Mesai"
+                            onClick={(data) => onDateClick && onDateClick(data.date)}
+                        />
+                        <Bar
+                            dataKey="ot_potential"
+                            stackId="a"
+                            fill="url(#striped-potential)"
+                            stroke="#94a3b8"
+                            strokeWidth={1}
                             radius={[4, 4, 0, 0]}
-                            name="Ek Mesai"
+                            name="Potansiyel Mesai"
                             onClick={(data) => onDateClick && onDateClick(data.date)}
                         />
                         <Bar
@@ -337,10 +365,30 @@ const TrendView = ({ data, xKey, unit = 'sa', showBreaks }) => {
                     />
                     <Line
                         type="monotone"
-                        dataKey="overtime"
-                        name="Ort. Ek Mesai"
+                        dataKey="ot_approved"
+                        name="Onaylı Mesai"
                         stroke="#10B981"
                         strokeWidth={3}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 6 }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="ot_pending"
+                        name="Bekleyen Mesai"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        strokeDasharray="6 3"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 6 }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="ot_potential"
+                        name="Potansiyel Mesai"
+                        stroke="#94a3b8"
+                        strokeWidth={2}
+                        strokeDasharray="3 3"
                         dot={{ r: 3 }}
                         activeDot={{ r: 6 }}
                     />
@@ -373,6 +421,14 @@ const YearlyView = ({ data }) => {
                             <rect width="4" height="8" transform="translate(0,0)" fill="#f43f5e" opacity="0.1" />
                             <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth="2" />
                         </pattern>
+                        <pattern id="striped-pending-y" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                            <rect width="6" height="6" fill="#fef3c7" />
+                            <line x1="0" y1="0" x2="0" y2="6" stroke="#f59e0b" strokeWidth="1.5" />
+                        </pattern>
+                        <pattern id="striped-potential-y" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
+                            <rect width="6" height="6" fill="#f1f5f9" />
+                            <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="1.5" />
+                        </pattern>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }} dy={10} />
@@ -389,8 +445,8 @@ const YearlyView = ({ data }) => {
                     {/* Bars */}
                     <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" />
                     <Bar yAxisId="left" dataKey="ot_approved" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} name="Onaylı Mesai (Sa)" />
-                    <Bar yAxisId="left" dataKey="ot_pending" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} name="Bekleyen Mesai (Sa)" />
-                    <Bar yAxisId="left" dataKey="ot_potential" stackId="a" fill="#94a3b8" radius={[4, 4, 0, 0]} name="Potansiyel Mesai (Sa)" />
+                    <Bar yAxisId="left" dataKey="ot_pending" stackId="a" fill="url(#striped-pending-y)" stroke="#f59e0b" strokeWidth={1} radius={[0, 0, 0, 0]} name="Bekleyen Mesai (Sa)" />
+                    <Bar yAxisId="left" dataKey="ot_potential" stackId="a" fill="url(#striped-potential-y)" stroke="#94a3b8" strokeWidth={1} radius={[4, 4, 0, 0]} name="Potansiyel Mesai (Sa)" />
                     <Bar yAxisId="left" dataKey="missing" stackId="a" fill="url(#striped-year)" stroke="#f43f5e" strokeWidth={1} radius={[4, 4, 0, 0]} name="Eksik (Sa)" />
 
                     {/* Cumulative Line */}
@@ -441,16 +497,21 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear()
                         name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }),
                         normal: m.normal_hours,
                         overtime: m.overtime_hours,
+                        ot_approved: m.ot_approved_hours || 0,
+                        ot_pending: m.ot_pending_hours || 0,
+                        ot_potential: m.ot_potential_hours || 0,
                         missing: m.missing_hours,
                         cumulative_net_hours: m.cumulative_net_hours
                     }));
                     setYearlyData(mapped);
                 } else if (scope === 'MONTHLY') {
-                    // API returns { label: "1. Hafta", normal: ..., overtime: ... }
                     const mapped = res.data.map(w => ({
                         name: w.label,
                         normal: w.normal,
                         overtime: w.overtime,
+                        ot_approved: w.ot_approved || 0,
+                        ot_pending: w.ot_pending || 0,
+                        ot_potential: w.ot_potential || 0,
                         break: w.break
                     }));
                     setMonthlyTrendData(mapped);
