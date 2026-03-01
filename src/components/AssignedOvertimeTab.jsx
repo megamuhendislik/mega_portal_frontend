@@ -186,8 +186,8 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                         </div>
                     )}
 
-                    {/* Segment bilgisi (V3 parçalı mesai) */}
-                    {type === 'potential' && item.start_time && item.end_time && (
+                    {/* Segment bilgisi (V3 parçalı mesai) — skip zero-duration */}
+                    {type === 'potential' && item.start_time && item.end_time && item.start_time !== item.end_time && item.actual_overtime_seconds > 0 && (
                         <div className="flex items-center gap-2 text-[11px] text-purple-700 mb-1.5">
                             <Clock size={10} />
                             <span className="font-bold">{item.start_time} – {item.end_time}</span>

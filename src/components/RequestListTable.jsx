@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
     ArrowUpDown, Calendar, Clock, CheckCircle2, XCircle, AlertCircle,
     FileText, Utensils, CreditCard, ChevronRight, User, MoreHorizontal,
-    Check, X, Eye, Edit2, Trash2, ArrowRight, ArrowRightLeft, Users
+    Check, X, Eye, Edit2, Trash2, ArrowRight, ArrowRightLeft, Users,
+    LogIn, LogOut
 } from 'lucide-react';
 
 const SourceBadge = ({ source, principalName }) => {
@@ -239,7 +240,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     ➜ {formatDate(req.end_date)}
                                                 </span>
                                             )}
-                                            {req.type === 'OVERTIME' && (req.start_time || req.end_time) && (
+                                            {req.type === 'OVERTIME' && req.start_time && req.end_time && formatTime(req.start_time) !== formatTime(req.end_time) && (
                                                 <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit mt-0.5">
                                                     <Clock size={10} />
                                                     {formatTime(req.start_time)} - {formatTime(req.end_time)}
@@ -326,6 +327,18 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     </span>
                                                 )}
                                             </div>
+                                            {/* OT Attendance Logs (giriş/çıkış bilgisi) */}
+                                            {req.type === 'OVERTIME' && req.attendance_logs && req.attendance_logs.length > 0 && (
+                                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                                                    {req.attendance_logs.map((log, li) => (
+                                                        <span key={li} className="text-[11px] text-slate-500 flex items-center gap-1">
+                                                            <LogIn size={9} className="text-emerald-500" />{log.check_in || '—'}
+                                                            <span className="text-slate-300">→</span>
+                                                            <LogOut size={9} className="text-red-400" />{log.check_out || '—'}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                             {/* Reason */}
                                             {(req.reason || req.description) && (
                                                 <p className="text-sm text-slate-600 line-clamp-2 leading-snug" title={req.reason || req.description}>
