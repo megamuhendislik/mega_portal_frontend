@@ -861,10 +861,10 @@ export const OvertimeRequestForm = ({
 //   mealForm, setMealForm
 // ============================================================
 export const MealRequestForm = ({ mealForm, setMealForm }) => {
-    // Tarih sınırları: 2 hafta geri, 2 gün ileri
+    // Tarih sınırları: 2 mali ay geri (~75 gün), 2 gün ileri (backend ile uyumlu)
     const today = new Date();
     const minDate = new Date(today);
-    minDate.setDate(minDate.getDate() - 14);
+    minDate.setDate(minDate.getDate() - 75);
     const maxDate = new Date(today);
     maxDate.setDate(maxDate.getDate() + 2);
     const minStr = minDate.toISOString().split('T')[0];
@@ -876,7 +876,7 @@ export const MealRequestForm = ({ mealForm, setMealForm }) => {
                 <Check className="shrink-0 mt-0.5" size={18} />
                 <div>
                     <h4 className="font-bold">Otomatik Onay</h4>
-                    <p className="mt-1">Yemek talepleriniz için yönetici onayı gerekmez. Talebiniz direkt olarak idari işlere iletilecektir.</p>
+                    <p className="mt-1">Yemek talepleriniz için yönetici onayı gerekmez. Talebiniz direkt olarak sipariş sorumlusuna iletilecektir.</p>
                 </div>
             </div>
 
@@ -899,11 +899,13 @@ export const MealRequestForm = ({ mealForm, setMealForm }) => {
                 <textarea
                     required
                     rows="3"
+                    maxLength={1000}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none font-medium text-slate-700"
                     placeholder="Örn: Vejetaryen menü, Diyet kola vb."
                     value={mealForm.description}
                     onChange={e => setMealForm({ ...mealForm, description: e.target.value })}
                 ></textarea>
+                <p className="text-xs text-slate-400 mt-1 text-right">{mealForm.description?.length || 0}/1000</p>
             </div>
         </div>
     );
