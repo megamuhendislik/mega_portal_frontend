@@ -78,18 +78,18 @@ api.interceptors.response.use(
 
                 api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
 
-                // Refresh permissions after token refresh
-                try {
-                    const meResponse = await axios.get(`${baseURL}/employees/me/`, {
-                        headers: { Authorization: `Bearer ${access}` }
-                    });
-                    window.dispatchEvent(new CustomEvent('permissions-refreshed', { detail: meResponse.data }));
-                } catch (permErr) {
-                    console.warn('Permission refresh after token refresh failed:', permErr);
-                }
-
+                // Release queued requests immediately before permission refresh
                 processQueue(null, access);
                 isRefreshing = false;
+
+                // Fire-and-forget permission refresh (don't block queued requests)
+                axios.get(`${baseURL}/employees/me/`, {
+                    headers: { Authorization: `Bearer ${access}` }
+                }).then(meResponse => {
+                    window.dispatchEvent(new CustomEvent('permissions-refreshed', { detail: meResponse.data }));
+                }).catch(permErr => {
+                    console.warn('Permission refresh after token refresh failed:', permErr);
+                });
 
                 originalRequest.headers['Authorization'] = `Bearer ${access}`;
                 return api(originalRequest);

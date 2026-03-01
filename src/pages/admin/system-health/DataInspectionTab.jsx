@@ -621,12 +621,16 @@ export default function DataInspectionTab() {
                                     { label: 'İzin', value: globalStats.total_leave_requests, color: 'green' },
                                     { label: 'Yemek', value: globalStats.total_meal_requests, color: 'yellow' },
                                     { label: 'Kartsız', value: globalStats.total_cardless_requests, color: 'purple' },
-                                ].map(s => (
-                                    <div key={s.label} className={`bg-${s.color}-50 rounded-lg p-3 text-center`}>
-                                        <div className={`text-2xl font-bold text-${s.color}-700`}>{s.value || 0}</div>
-                                        <div className={`text-xs text-${s.color}-600`}>{s.label}</div>
+                                ].map(s => {
+                                    const diBgMap = { blue: 'bg-blue-50', cyan: 'bg-cyan-50', orange: 'bg-orange-50', green: 'bg-green-50', yellow: 'bg-yellow-50', purple: 'bg-purple-50' };
+                                    const diTextMap = { blue: 'text-blue-700', cyan: 'text-cyan-700', orange: 'text-orange-700', green: 'text-green-700', yellow: 'text-yellow-700', purple: 'text-purple-700' };
+                                    const diSubMap = { blue: 'text-blue-600', cyan: 'text-cyan-600', orange: 'text-orange-600', green: 'text-green-600', yellow: 'text-yellow-600', purple: 'text-purple-600' };
+                                    return (
+                                    <div key={s.label} className={`${diBgMap[s.color] || 'bg-gray-50'} rounded-lg p-3 text-center`}>
+                                        <div className={`text-2xl font-bold ${diTextMap[s.color] || 'text-gray-700'}`}>{s.value || 0}</div>
+                                        <div className={`text-xs ${diSubMap[s.color] || 'text-gray-600'}`}>{s.label}</div>
                                     </div>
-                                ))}
+                                );})}
                             </div>
 
                             {globalStats.ot_status_distribution && Object.keys(globalStats.ot_status_distribution).length > 0 && (

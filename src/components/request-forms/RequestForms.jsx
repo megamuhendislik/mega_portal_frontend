@@ -1212,14 +1212,23 @@ export const ExternalDutyForm = ({
 
     // -- Step 7: Özet --
     const Step7 = () => {
-        const SummaryCard = ({ title, icon: Icon, children, color = 'purple' }) => (
-            <div className={`p-4 rounded-xl border border-${color}-100 bg-${color}-50/30`}>
-                <h4 className={`text-sm font-bold text-${color}-700 mb-2 flex items-center gap-2`}>
-                    <Icon size={16} /> {title}
-                </h4>
-                <div className="space-y-1 text-sm text-slate-700">{children}</div>
-            </div>
-        );
+        const summaryColorMap = {
+            purple: { border: 'border-purple-100', bg: 'bg-purple-50/30', text: 'text-purple-700' },
+            blue:   { border: 'border-blue-100',   bg: 'bg-blue-50/30',   text: 'text-blue-700' },
+            green:  { border: 'border-green-100',  bg: 'bg-green-50/30',  text: 'text-green-700' },
+            amber:  { border: 'border-amber-100',  bg: 'bg-amber-50/30',  text: 'text-amber-700' },
+        };
+        const SummaryCard = ({ title, icon: Icon, children, color = 'purple' }) => {
+            const sc = summaryColorMap[color] || summaryColorMap.purple;
+            return (
+                <div className={`p-4 rounded-xl border ${sc.border} ${sc.bg}`}>
+                    <h4 className={`text-sm font-bold ${sc.text} mb-2 flex items-center gap-2`}>
+                        <Icon size={16} /> {title}
+                    </h4>
+                    <div className="space-y-1 text-sm text-slate-700">{children}</div>
+                </div>
+            );
+        };
         const SummaryRow = ({ label, value }) => value ? (
             <div className="flex justify-between">
                 <span className="text-slate-500">{label}</span>

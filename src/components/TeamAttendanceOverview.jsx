@@ -345,16 +345,19 @@ const PerformanceTableView = ({ teamData }) => {
     };
 
     // Header Helper
-    const Th = ({ k, label, align = 'left' }) => (
-        <th
-            className={`px-4 py-3 text-${align} text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-50`}
-            onClick={() => requestSort(k)}
-        >
-            <div className={`flex items-center justify-${align === 'right' ? 'end' : 'start'}`}>
-                {label} {getSortIcon(k)}
-            </div>
-        </th>
-    );
+    const Th = ({ k, label, align = 'left' }) => {
+        const alignMap = { left: 'text-left', right: 'text-right', center: 'text-center' };
+        return (
+            <th
+                className={`px-4 py-3 ${alignMap[align] || 'text-left'} text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-50`}
+                onClick={() => requestSort(k)}
+            >
+                <div className={`flex items-center ${align === 'right' ? 'justify-end' : 'justify-start'}`}>
+                    {label} {getSortIcon(k)}
+                </div>
+            </th>
+        );
+    };
 
     return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

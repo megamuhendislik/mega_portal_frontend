@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Play, CheckCircle, XCircle, AlertCircle, Monitor, Activity } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import api from '../services/api';
+import useSmartPolling from '../hooks/useSmartPolling';
 
 const ServiceControl = () => {
     const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
@@ -13,20 +14,16 @@ const ServiceControl = () => {
     const [message, setMessage] = useState('');
     const [logs, setLogs] = useState([]);
 
-    useEffect(() => {
-        const fetchLogs = async () => {
-            try {
-                const response = await api.get('/service-logs/');
-                setLogs(response.data?.results || response.data || []);
-            } catch (error) {
-                console.error("Log fetch error:", error);
-            }
-        };
-
-        const interval = setInterval(fetchLogs, 3000);
-        fetchLogs();
-        return () => clearInterval(interval);
+    const fetchLogs = useCallback(async () => {
+        try {
+            const response = await api.get('/service-logs/');
+            setLogs(response.data?.results || response.data || []);
+        } catch (error) {
+            console.error("Log fetch error:", error);
+        }
     }, []);
+
+    useSmartPolling(fetchLogs, 5000);
 
     const handleRecalculate = async () => {
         setLoading(true);

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Clock, Calendar, Users, User, Filter, Download
 } from 'lucide-react';
@@ -85,7 +85,7 @@ const Attendance = () => {
         if (!user) return;
         const canViewTeam = user.user?.is_superuser || user.has_team;
         setHasTeam(canViewTeam);
-        if (activeTab === 'my_attendance') {
+        if (activeTab === 'my_attendance' && !selectedEmployeeId) {
             setSelectedEmployeeId(user.employee?.id || user.id);
         }
     };
@@ -116,7 +116,8 @@ const Attendance = () => {
     // Consolidated loading for initial render
     const isLoading = isPeriodLoading && !logs.length;
 
-    const fetchPeriodData = async () => {
+    const fetchPeriodData = useCallback(async () => {
+        if (!selectedEmployeeId || !startDate || !endDate) return;
         // Only show loading if we have no data yet (first load)
         if (!logs.length) setIsPeriodLoading(true);
         try {
@@ -132,9 +133,10 @@ const Attendance = () => {
             setIsPeriodLoading(false);
             setLoading(false);
         }
-    };
+    }, [selectedEmployeeId, startDate, endDate]);
 
-    const fetchDailyData = async () => {
+    const fetchDailyData = useCallback(async () => {
+        if (!selectedEmployeeId) return;
         if (activeTab !== 'my_attendance' && activeTab !== 'team_detail') return;
 
         // Only show loading on first load
@@ -148,7 +150,7 @@ const Attendance = () => {
         } finally {
             setIsDailyLoading(false);
         }
-    };
+    }, [selectedEmployeeId, selectedDate, viewScope, activeTab]);
 
     // --- EFFECT: Load Period Data ---
     useEffect(() => {
@@ -157,14 +159,14 @@ const Attendance = () => {
                 fetchPeriodData();
             }
         }
-    }, [selectedEmployeeId, startDate, endDate]);
+    }, [fetchPeriodData, activeTab]);
 
     // --- EFFECT: Load Daily Summary ---
     useEffect(() => {
         if (selectedEmployeeId) {
             fetchDailyData();
         }
-    }, [selectedDate, selectedEmployeeId, viewScope]);
+    }, [fetchDailyData]);
 
     const handleTeamMemberClick = (id) => {
         setSelectedEmployeeId(id);

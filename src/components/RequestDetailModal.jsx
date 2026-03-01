@@ -50,7 +50,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
     if (lockDateStr) {
       lockDate = new Date(lockDateStr + 'T23:59:59');
-      if (today > lockDate) isLocked = true;
+      if (today >= lockDate) isLocked = true;
     } else {
       // Fallback: event_date + 60 days (eski mantik, backend lock_date yoksa)
       const eventDate = new Date(request.start_date || request.date);

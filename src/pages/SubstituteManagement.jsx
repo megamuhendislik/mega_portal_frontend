@@ -65,9 +65,8 @@ const SubstituteManagement = () => {
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
-
   const getStatus = (d) => {
+    const today = new Date().toISOString().split('T')[0];
     if (!d.is_active) return 'passive';
     if (d.valid_from > today) return 'future';
     if (d.valid_to < today) return 'expired';
@@ -75,12 +74,19 @@ const SubstituteManagement = () => {
   };
 
   const stats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
     const all = delegations;
+    const getStatusLocal = (d) => {
+      if (!d.is_active) return 'passive';
+      if (d.valid_from > today) return 'future';
+      if (d.valid_to < today) return 'expired';
+      return 'active';
+    };
     return {
-      active: all.filter(d => getStatus(d) === 'active').length,
-      future: all.filter(d => getStatus(d) === 'future').length,
-      expired: all.filter(d => getStatus(d) === 'expired').length,
-      passive: all.filter(d => getStatus(d) === 'passive').length,
+      active: all.filter(d => getStatusLocal(d) === 'active').length,
+      future: all.filter(d => getStatusLocal(d) === 'future').length,
+      expired: all.filter(d => getStatusLocal(d) === 'expired').length,
+      passive: all.filter(d => getStatusLocal(d) === 'passive').length,
       total: all.length
     };
   }, [delegations]);

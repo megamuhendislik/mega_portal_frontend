@@ -5,24 +5,36 @@ import {
 } from 'lucide-react';
 import RequestListTable from '../../components/RequestListTable';
 
-const FilterChip = ({ active, onClick, label, icon, count, color = 'blue' }) => (
-    <button
-        onClick={onClick}
-        className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all duration-200 outline-none ${
-            active
-                ? `bg-${color}-50 text-${color}-700 ring-1 ring-${color}-200 shadow-sm`
-                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-        }`}
-    >
-        {icon && <span className={active ? `text-${color}-600` : 'text-slate-400'}>{icon}</span>}
-        {label}
-        {count > 0 && (
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${active ? 'bg-white/60' : 'bg-slate-100 text-slate-500'}`}>
-                {count}
-            </span>
-        )}
-    </button>
-);
+const filterChipColors = {
+    blue:    { bg50: 'bg-blue-50',    text700: 'text-blue-700',    ring200: 'ring-blue-200',    text600: 'text-blue-600' },
+    amber:   { bg50: 'bg-amber-50',   text700: 'text-amber-700',   ring200: 'ring-amber-200',   text600: 'text-amber-600' },
+    emerald: { bg50: 'bg-emerald-50', text700: 'text-emerald-700', ring200: 'ring-emerald-200', text600: 'text-emerald-600' },
+    purple:  { bg50: 'bg-purple-50',  text700: 'text-purple-700',  ring200: 'ring-purple-200',  text600: 'text-purple-600' },
+    red:     { bg50: 'bg-red-50',     text700: 'text-red-700',     ring200: 'ring-red-200',     text600: 'text-red-600' },
+    slate:   { bg50: 'bg-slate-50',   text700: 'text-slate-700',   ring200: 'ring-slate-200',   text600: 'text-slate-600' },
+};
+
+const FilterChip = ({ active, onClick, label, icon, count, color = 'blue' }) => {
+    const c = filterChipColors[color] || filterChipColors.blue;
+    return (
+        <button
+            onClick={onClick}
+            className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all duration-200 outline-none ${
+                active
+                    ? `${c.bg50} ${c.text700} ring-1 ${c.ring200} shadow-sm`
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+            }`}
+        >
+            {icon && <span className={active ? c.text600 : 'text-slate-400'}>{icon}</span>}
+            {label}
+            {count > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${active ? 'bg-white/60' : 'bg-slate-100 text-slate-500'}`}>
+                    {count}
+                </span>
+            )}
+        </button>
+    );
+};
 
 const StatCard = ({ label, value, icon, color }) => (
     <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 group">

@@ -294,10 +294,26 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                                             handleChange('tags', newTags);
                                         }}
                                         className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${isSelected
-                                            ? `bg-${tag.color}-100 text-${tag.color}-700 border-${tag.color}-200 shadow-sm`
+                                            ? 'shadow-sm'
                                             : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
                                             }`}
-                                        style={isSelected ? { backgroundColor: tag.color === 'blue' ? '#dbeafe' : undefined, color: tag.color === 'blue' ? '#1e40af' : undefined } : {}}
+                                        style={isSelected ? (() => {
+                                            const tagColorMap = {
+                                                blue:    { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' },
+                                                red:     { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' },
+                                                green:   { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
+                                                amber:   { bg: '#fef3c7', text: '#a16207', border: '#fde68a' },
+                                                purple:  { bg: '#f3e8ff', text: '#7e22ce', border: '#e9d5ff' },
+                                                emerald: { bg: '#d1fae5', text: '#047857', border: '#a7f3d0' },
+                                                orange:  { bg: '#ffedd5', text: '#c2410c', border: '#fed7aa' },
+                                                slate:   { bg: '#f1f5f9', text: '#334155', border: '#e2e8f0' },
+                                                cyan:    { bg: '#cffafe', text: '#0e7490', border: '#a5f3fc' },
+                                                violet:  { bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe' },
+                                                indigo:  { bg: '#e0e7ff', text: '#4338ca', border: '#c7d2fe' },
+                                            };
+                                            const tc = tagColorMap[tag.color] || tagColorMap.blue;
+                                            return { backgroundColor: tc.bg, color: tc.text, borderColor: tc.border };
+                                        })() : {}}
                                     >
                                         {tag.name}
                                     </button>

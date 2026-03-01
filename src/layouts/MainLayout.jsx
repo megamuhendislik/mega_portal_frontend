@@ -57,20 +57,24 @@ const MainLayout = () => {
     const [liveStatus, setLiveStatus] = useState(null);
 
     // Profile Reminder Popup (DB-backed via ui_preferences)
-    const [showProfileReminder, setShowProfileReminder] = useState(() => {
-        return !user?.ui_preferences?.profile_reminder_dismissed;
-    });
+    const [showProfileReminder, setShowProfileReminder] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            setShowProfileReminder(!user?.ui_preferences?.profile_reminder_dismissed);
+        }
+    }, [user]);
 
     // Handle Resize
     useEffect(() => {
         const handleResize = () => {
             const mobile = window.innerWidth < 768;
             setIsMobile(mobile);
-            if (!mobile && !isSidebarOpen) {
-                setIsSidebarOpen(true); // Auto open on desktop if closed
-            } else if (mobile && isSidebarOpen) {
-                setIsSidebarOpen(false); // Auto close on mobile resize
-            }
+            setIsSidebarOpen(prev => {
+                if (!mobile && !prev) return true;
+                if (mobile && prev) return false;
+                return prev;
+            });
         };
 
         window.addEventListener('resize', handleResize);

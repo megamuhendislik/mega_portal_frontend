@@ -465,7 +465,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         // Totals
         const totalWorked = filteredStats.reduce((a, c) => a + (c.total_worked || 0), 0);
         const totalCompleted = filteredStats.reduce((a, c) => a + (c.completed_minutes || c.total_worked || 0), 0); // Normal work (no OT)
-        const totalOT = filteredStats.reduce((a, c) => a + (c.total_overtime || 0), 0);
+        // OT: Use approved OT requests (intended+potential+manual) as primary source,
+        // fallback to MWS total_overtime if request data unavailable
+        const totalOTFromRequests = filteredStats.reduce((a, c) => a + (c.ot_intended_minutes || 0) + (c.ot_potential_minutes || 0) + (c.ot_manual_minutes || 0), 0);
+        const totalOTFromMWS = filteredStats.reduce((a, c) => a + (c.total_overtime || 0), 0);
+        const totalOT = totalOTFromRequests > 0 ? totalOTFromRequests : totalOTFromMWS;
         const totalMissing = filteredStats.reduce((a, c) => a + (c.total_missing || 0), 0);
         const totalRequired = filteredStats.reduce((a, c) => a + (c.monthly_required || 0), 0);
         const totalPastTarget = filteredStats.reduce((a, c) => a + (c.past_target_minutes || c.monthly_required || 0), 0);
@@ -493,9 +497,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const dailyAvgDeviation = elapsedWorkDays > 0 ? avgDeviation / elapsedWorkDays : 0;
         const projectedBalance = Math.round(avgDeviation + dailyAvgDeviation * remainingWorkDays);
 
-        // Balance distribution
-        const positiveBalance = filteredStats.filter(s => (s.monthly_net_balance || 0) > 0).length;
-        const negativeBalance = filteredStats.filter(s => (s.monthly_net_balance || 0) < 0).length;
+        // Balance distribution: completed vs past_target (deviation-based)
+        const totalDeviation = filteredStats.reduce((a, c) => a + (c.monthly_deviation || 0), 0);
+        const positiveBalance = filteredStats.filter(s => (s.monthly_deviation || 0) > 0).length;
+        const negativeBalance = filteredStats.filter(s => (s.monthly_deviation || 0) < 0).length;
         const zeroBalance = count - positiveBalance - negativeBalance;
 
         // Department breakdown (for "Tum Ekibim" tab)
@@ -506,7 +511,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             deptMap[dept].count++;
             deptMap[dept].worked += (s.total_worked || 0);
             deptMap[dept].completed += (s.completed_minutes || s.total_worked || 0);
-            deptMap[dept].ot += (s.total_overtime || 0);
+            // OT: use approved OT requests (intended+potential+manual) for accuracy
+            const _empOT = (s.ot_intended_minutes || 0) + (s.ot_potential_minutes || 0) + (s.ot_manual_minutes || 0);
+            deptMap[dept].ot += _empOT > 0 ? _empOT : (s.total_overtime || 0);
             deptMap[dept].missing += (s.total_missing || 0);
             deptMap[dept].required += (s.monthly_required || 0);
             deptMap[dept].pastTarget += (s.past_target_minutes || s.monthly_required || 0);
@@ -516,7 +523,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             deptMap[dept].weekdayOT += (s.ot_weekday_minutes || 0);
             deptMap[dept].leaveUsed += (s.annual_leave_used || 0);
             deptMap[dept].leaveTotal += ((s.annual_leave_entitlement || 0) > 0 ? (s.annual_leave_entitlement || 0) : 0);
-            if ((s.monthly_net_balance || 0) > 0) deptMap[dept].positiveBalance++;
+            if ((s.monthly_deviation || 0) > 0) deptMap[dept].positiveBalance++;
         });
         const departments = Object.values(deptMap).sort((a, b) => b.count - a.count);
 
@@ -540,19 +547,20 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 name: (s.employee_name || '').split(' ').slice(0, 2).join(' '),
                 fullName: s.employee_name,
                 worked: s.total_worked || 0,
-                overtime: s.total_overtime || 0,
+                overtime: ((s.ot_intended_minutes || 0) + (s.ot_potential_minutes || 0) + (s.ot_manual_minutes || 0)) || (s.total_overtime || 0),
                 missing: s.total_missing || 0,
                 target: s.monthly_required || 0,
             }));
 
-        // OT vs Missing comparison
+        // OT vs Missing comparison (use approved OT requests)
+        const _getPersonOT = (s) => ((s.ot_intended_minutes || 0) + (s.ot_potential_minutes || 0) + (s.ot_manual_minutes || 0)) || (s.total_overtime || 0);
         const comparisonData = [...filteredStats]
-            .filter(s => (s.total_overtime || 0) > 0 || (s.total_missing || 0) > 0)
-            .sort((a, b) => (b.total_overtime || 0) - (a.total_overtime || 0))
+            .filter(s => _getPersonOT(s) > 0 || (s.total_missing || 0) > 0)
+            .sort((a, b) => _getPersonOT(b) - _getPersonOT(a))
             .slice(0, 15)
             .map(s => ({
                 name: (s.employee_name || '').split(' ').slice(0, 2).join(' '),
-                'Fazla Mesai': s.total_overtime || 0,
+                'Fazla Mesai': _getPersonOT(s),
                 'Eksik Zaman': -(s.total_missing || 0),
             }));
 
@@ -588,10 +596,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             }))
             .sort((a, b) => a.remaining - b.remaining);
 
-        // Risk detection
-        const highOTRisk = filteredStats.filter(s => (s.total_overtime || 0) > 900); // > 15 saat
+        // Risk detection (use approved OT + deviation-based balance)
+        const highOTRisk = filteredStats.filter(s => _getPersonOT(s) > 900); // > 15 saat
         const highMissingRisk = filteredStats.filter(s => (s.monthly_required || 0) > 0 && (s.total_missing || 0) > (s.monthly_required * 0.2));
-        const criticalBalanceRisk = filteredStats.filter(s => (s.monthly_net_balance || 0) < -600); // < -10 saat
+        const criticalBalanceRisk = filteredStats.filter(s => (s.monthly_deviation || 0) < -600); // < -10 saat
 
         // Radar data for departments (only for "Tum Ekibim")
         const radarData = departments.length > 1 ? (() => {
@@ -699,7 +707,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         return {
             count, totalWorked, totalCompleted, totalOT, totalMissing, totalRequired, totalPastTarget,
             avgWorked, avgOT, avgMissing, avgRequired, efficiency,
-            dailyAvgMissing, projectedBalance, avgDeviation, elapsedWorkDays, totalWorkDaysInMonth, remainingWorkDays,
+            dailyAvgMissing, projectedBalance, avgDeviation, totalDeviation, elapsedWorkDays, totalWorkDaysInMonth, remainingWorkDays,
             positiveBalance, negativeBalance, zeroBalance,
             departments, ranked, performanceData, comparisonData,
             workDistribution, balanceDist,
@@ -937,11 +945,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     color={analytics.avgAttendanceRate >= 95 ? 'emerald' : analytics.avgAttendanceRate >= 85 ? 'amber' : 'red'}
                 />
                 <KpiCard
-                    label="Pozitif Bakiye"
-                    value={`${analytics.positiveBalance}/${analytics.count}`}
-                    subValue={`%${Math.round((analytics.positiveBalance / analytics.count) * 100)} orani`}
+                    label="Bakiye Durumu"
+                    value={`${analytics.positiveBalance}P / ${analytics.negativeBalance}N`}
+                    subValue={`Ort: ${analytics.avgDeviation >= 0 ? '+' : ''}${formatMinutes(Math.abs(analytics.avgDeviation))}`}
                     icon={TrendingUp}
-                    color="emerald"
+                    color={analytics.positiveBalance >= analytics.negativeBalance ? 'emerald' : 'red'}
                 />
             </div>
 
@@ -1598,7 +1606,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         </thead>
                         <tbody>
                             {analytics.ranked.map((person, idx) => {
-                                const balance = person.monthly_net_balance || 0;
+                                const balance = person.monthly_deviation || 0;
                                 const effBadge = getEfficiencyBadge(person.efficiency);
                                 return (
                                     <tr key={person.employee_id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => setDetailPerson(person)}>
@@ -1619,7 +1627,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                                 %{person.efficiency}
                                             </span>
                                         </td>
-                                        <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">{(person.total_overtime || 0) > 0 ? formatMinutes(person.total_overtime) : <span className="text-slate-300">&mdash;</span>}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">{(() => { const _pOT = ((person.ot_intended_minutes || 0) + (person.ot_potential_minutes || 0) + (person.ot_manual_minutes || 0)) || (person.total_overtime || 0); return _pOT > 0 ? formatMinutes(_pOT) : <span className="text-slate-300">&mdash;</span>; })()}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-indigo-500 tabular-nums">{(person.ot_intended_minutes || 0) > 0 ? formatMinutes(person.ot_intended_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-amber-500 tabular-nums">{(person.ot_potential_minutes || 0) > 0 ? formatMinutes(person.ot_potential_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-violet-500 tabular-nums">{(person.ot_manual_minutes || 0) > 0 ? formatMinutes(person.ot_manual_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
@@ -1757,7 +1765,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 {analytics.criticalBalanceRisk.map((s, i) => (
                                     <div key={i} className="flex items-center justify-between text-[11px] py-1 px-2 bg-white/60 rounded-lg">
                                         <span className="font-semibold text-violet-900">{s.employee_name}</span>
-                                        <span className="font-bold text-violet-700">{formatMinutes(Math.abs(s.monthly_net_balance || 0))}</span>
+                                        <span className="font-bold text-violet-700">-{formatMinutes(Math.abs(s.monthly_deviation || 0))}</span>
                                     </div>
                                 ))}
                             </div>

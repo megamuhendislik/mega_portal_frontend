@@ -31,10 +31,18 @@ const ManagerAssignmentSection = ({
 }) => {
     const isPrimary = type === 'primary';
 
-    // Renk şeması
+    // Renk şeması — static class names for Tailwind JIT
     const colors = isPrimary
-        ? { bg: 'blue-50/50', border: 'blue-100', ring: 'blue-500', text: 'blue-600', hoverBg: 'blue-100', addBg: 'blue-50', label: 'blue-700' }
-        : { bg: 'emerald-50/50', border: 'emerald-100', ring: 'emerald-500', text: 'emerald-600', hoverBg: 'emerald-100', addBg: 'emerald-50', label: 'emerald-700' };
+        ? {
+            iconText: 'text-blue-600', labelText: 'text-blue-700',
+            btnText: 'text-blue-600', btnHoverText: 'text-blue-700', btnBg: 'bg-blue-50', btnBorder: 'border-blue-100', btnHoverBg: 'hover:bg-blue-100',
+            rowBg: 'bg-blue-50/50', rowBorder: 'border-blue-100', inputRing: 'focus:ring-blue-500',
+          }
+        : {
+            iconText: 'text-emerald-600', labelText: 'text-emerald-700',
+            btnText: 'text-emerald-600', btnHoverText: 'text-emerald-700', btnBg: 'bg-emerald-50', btnBorder: 'border-emerald-100', btnHoverBg: 'hover:bg-emerald-100',
+            rowBg: 'bg-emerald-50/50', rowBorder: 'border-emerald-100', inputRing: 'focus:ring-emerald-500',
+          };
 
     const label = isPrimary ? 'Birincil Yöneticiler' : 'İkincil Yöneticiler';
     const helpText = isPrimary
@@ -138,8 +146,8 @@ const ManagerAssignmentSection = ({
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                    <Icon size={16} className={`text-${colors.text}`} />
-                    <label className={`block text-sm font-semibold text-${colors.label}`}>
+                    <Icon size={16} className={colors.iconText} />
+                    <label className={`block text-sm font-semibold ${colors.labelText}`}>
                         {label}
                         {isPrimary && !isBoardMember && (
                             <span className="text-red-500 ml-1">*</span>
@@ -150,7 +158,7 @@ const ManagerAssignmentSection = ({
                     <button
                         type="button"
                         onClick={addRow}
-                        className={`text-xs font-bold text-${colors.text} hover:text-${colors.label} flex items-center gap-1 bg-${colors.addBg} px-2 py-1 rounded-lg border border-${colors.border} hover:bg-${colors.hoverBg} transition-colors`}
+                        className={`text-xs font-bold ${colors.btnText} hover:${colors.btnHoverText} flex items-center gap-1 ${colors.btnBg} px-2 py-1 rounded-lg border ${colors.btnBorder} ${colors.btnHoverBg} transition-colors`}
                     >
                         <Plus size={12} /> Ekle
                     </button>
@@ -179,7 +187,7 @@ const ManagerAssignmentSection = ({
                         return (
                             <div
                                 key={idx}
-                                className={`flex gap-2 items-start p-2 bg-${colors.bg} rounded-xl border ${hasError && showValidation ? 'border-red-300' : `border-${colors.border}`}`}
+                                className={`flex gap-2 items-start p-2 ${colors.rowBg} rounded-xl border ${hasError && showValidation ? 'border-red-300' : colors.rowBorder}`}
                             >
                                 {/* Yönetici */}
                                 <div className="flex-1 min-w-0">
@@ -190,7 +198,7 @@ const ManagerAssignmentSection = ({
                                         value={entry.manager_id || ''}
                                         onChange={e => handleManagerChange(idx, e.target.value)}
                                         disabled={disabled}
-                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-${colors.ring} outline-none ${rowErrors.manager_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
+                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.manager_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
                                     >
                                         <option value="">Seçiniz...</option>
                                         {availableManagers.map(m => (
@@ -218,7 +226,7 @@ const ManagerAssignmentSection = ({
                                         value={entry.department_id || ''}
                                         onChange={e => handleFieldChange(idx, 'department_id', e.target.value)}
                                         disabled={disabled}
-                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-${colors.ring} outline-none ${rowErrors.department_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
+                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.department_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
                                     >
                                         <option value="">Seçiniz...</option>
                                         {departments.map(d => (
@@ -235,7 +243,7 @@ const ManagerAssignmentSection = ({
                                         value={entry.job_position_id || ''}
                                         onChange={e => handleFieldChange(idx, 'job_position_id', e.target.value)}
                                         disabled={disabled}
-                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-${colors.ring} outline-none ${rowErrors.job_position_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
+                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.job_position_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
                                     >
                                         <option value="">Seçiniz...</option>
                                         {jobPositions.map(p => (

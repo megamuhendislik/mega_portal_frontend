@@ -47,6 +47,8 @@ const STAGES = [
     { id: 19, name: 'Yemek Sipariş & Program & Geri Bildirim', icon: ClipboardDocumentCheckIcon, color: 'fuchsia', description: '35 test — MealRequest (CRUD, sipariş verme, iptal, admin işlemleri, tarih filtresi, statü akışı), Program Yönetimi (CRUD, üye ekleme/çıkarma, erişim listesi, cihaz toggle), Geri Bildirim (gönderme, admin yanıt/çözüm/silme, kategori, statü akışı, IDOR koruması)' },
     { id: 20, name: 'Celery Görev Mantığı', icon: CogIcon, color: 'stone', description: '30 test — Gece yarısı sıfırlama (açık vardiya kapatma, hesaplanmış/onaylı koruma, midnight split), Devamsızlık kontrolü (gelmeme=ABSENT, giriş var=değil, tatil/izin=değil), OT Atama Expire (2 mali ay kuralı, CLAIMED koruması, sınır testleri), Talep Zaman Kilidi (kilitli dönemde immutability, OT/Attendance/CardlessEntry)' },
     { id: 21, name: 'Aylık Özet & Arşiv & Vekalet', icon: ArchiveBoxIcon, color: 'emerald', description: '35 test — MonthlyWorkSummary (arşivlenmiş kayıt dahil etme, completed/overtime/missing/remaining hesaplama, kümülatif bakiye zinciri, DB persist, izin günü sayımı), Toplu Yeniden Hesaplama endpoint (yetki, response formatı), Vekalet Sistemi (CRUD, aktif/expired filtreleme, tarih validasyonu, kendine vekalet engeli, çakışma kontrolü), Onay Hiyerarşisi (PRIMARY/SECONDARY bulucu, eskalayon, circular koruma, departman/reports_to fallback)' },
+    { id: 22, name: 'Ekip Analizi v3.0', icon: UserGroupIcon, color: 'cyan', description: '30 test — Dashboard stats endpoint yeni alanlar (attendance_rate, absent_days, ot_weekend/weekday minutes, meal_total/ordered, ot_meal_overlap, ot_days_total), katılım oranı hesaplama, hafta sonu/içi OT ayrımı, yemek korelasyonu, PENDING/CANCELLED filtreleme, multi-department izolasyon, veri tutarlılığı, E2E detaylı loglama' },
+    { id: 23, name: 'Bug Fix Validasyonları', icon: WrenchScrewdriverIcon, color: 'red', description: '36 test — TC maskeleme (KVKK), yetki gizleme, FiscalPeriod read-only, OT durum geçişleri (VALID_TRANSITIONS, override), izin workflow (çift onay engeli, atomik rollback, avans limit, 2 mali ay iptal), employee freeze/unfreeze, mali dönem config (SystemSettings, fallback, takvim kilidi), özet tutarlılığı (tek sync, fiscal eşleme), misc fix (singleton pk, DRF hata, self-manager engeli, yemek geçişleri, auto_close status), cross manager (SECONDARY görünürlük)' },
 ];
 
 export default function SpecTestsTab() {
@@ -386,7 +388,7 @@ export default function SpecTestsTab() {
                         >
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                    <stage.icon className={`w-5 h-5 text-${stage.color}-600`} />
+                                    <stage.icon className={`w-5 h-5 ${{ blue: 'text-blue-600', amber: 'text-amber-600', emerald: 'text-emerald-600', purple: 'text-purple-600', red: 'text-red-600', indigo: 'text-indigo-600', cyan: 'text-cyan-600', orange: 'text-orange-600', green: 'text-green-600', violet: 'text-violet-600', rose: 'text-rose-600', teal: 'text-teal-600', pink: 'text-pink-600', slate: 'text-slate-600', yellow: 'text-yellow-600', lime: 'text-lime-600' }[stage.color] || 'text-gray-600'}`} />
                                     <h3 className="font-bold text-gray-800">Aşama {stage.id}</h3>
                                 </div>
                                 <button
@@ -395,7 +397,7 @@ export default function SpecTestsTab() {
                                     className={`text-xs px-3 py-1 rounded-md font-medium transition-all ${
                                         loading
                                             ? 'bg-gray-100 text-gray-400'
-                                            : `bg-${stage.color}-100 text-${stage.color}-700 hover:bg-${stage.color}-200`
+                                            : `${{ blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200', amber: 'bg-amber-100 text-amber-700 hover:bg-amber-200', emerald: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200', purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200', red: 'bg-red-100 text-red-700 hover:bg-red-200', indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200', cyan: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200', orange: 'bg-orange-100 text-orange-700 hover:bg-orange-200', green: 'bg-green-100 text-green-700 hover:bg-green-200', violet: 'bg-violet-100 text-violet-700 hover:bg-violet-200', rose: 'bg-rose-100 text-rose-700 hover:bg-rose-200', teal: 'bg-teal-100 text-teal-700 hover:bg-teal-200', pink: 'bg-pink-100 text-pink-700 hover:bg-pink-200', slate: 'bg-slate-100 text-slate-700 hover:bg-slate-200', yellow: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200', lime: 'bg-lime-100 text-lime-700 hover:bg-lime-200' }[stage.color] || 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
                                     }`}
                                 >
                                     {isRunning ? (

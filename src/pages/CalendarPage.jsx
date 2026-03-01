@@ -50,9 +50,7 @@ const CalendarPage = () => {
     const [showWorkEvents, setShowWorkEvents] = useState(false);
 
     useEffect(() => {
-        // If in year mode, maybe fetch broad range or just specific buckets?
-        // For simplicity, we fetch the current view's range when in CALENDAR mode.
-        if (mode === 'CALENDAR') {
+        if (mode === 'CALENDAR' || mode === 'YEAR') {
             fetchCalendarData();
         }
     }, [currentDate, calendarView, showWorkEvents, mode]);
@@ -273,19 +271,9 @@ const CalendarPage = () => {
     }, []);
 
     const CustomToolbar = (toolbar) => {
-        const goToBack = () => {
-            toolbar.onNavigate('PREV');
-            setCurrentDate(moment(toolbar.date).subtract(1, calendarView === 'month' ? 'month' : 'week').toDate());
-        };
-        const goToNext = () => {
-            toolbar.onNavigate('NEXT');
-            setCurrentDate(moment(toolbar.date).add(1, calendarView === 'month' ? 'month' : 'week').toDate());
-        };
-        const goToToday = () => {
-            const now = new Date();
-            toolbar.onNavigate('TODAY');
-            setCurrentDate(now);
-        };
+        const goToBack = () => { toolbar.onNavigate('PREV'); };
+        const goToNext = () => { toolbar.onNavigate('NEXT'); };
+        const goToToday = () => { toolbar.onNavigate('TODAY'); };
 
         const title = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(toolbar.date);
 

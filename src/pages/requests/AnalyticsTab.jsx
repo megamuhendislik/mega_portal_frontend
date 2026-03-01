@@ -103,11 +103,11 @@ const PersonalAnalytics = ({ subordinates, loading: parentLoading }) => {
             {/* Type breakdown cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { key: 'leave', label: 'İzin', icon: <FileText size={18} />, color: 'blue' },
-                    { key: 'overtime', label: 'Fazla Mesai', icon: <Clock size={18} />, color: 'amber' },
-                    { key: 'meal', label: 'Yemek', icon: <Utensils size={18} />, color: 'emerald' },
-                    { key: 'cardless', label: 'Kartsız Giriş', icon: <CreditCard size={18} />, color: 'purple' },
-                ].map(({ key, label, icon, color }) => {
+                    { key: 'leave', label: 'İzin', icon: <FileText size={18} />, bg: 'bg-blue-50', text: 'text-blue-600' },
+                    { key: 'overtime', label: 'Fazla Mesai', icon: <Clock size={18} />, bg: 'bg-amber-50', text: 'text-amber-600' },
+                    { key: 'meal', label: 'Yemek', icon: <Utensils size={18} />, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+                    { key: 'cardless', label: 'Kartsız Giriş', icon: <CreditCard size={18} />, bg: 'bg-purple-50', text: 'text-purple-600' },
+                ].map(({ key, label, icon, bg, text }) => {
                     const s = data.summary?.[key] || {};
                     const total = s.total || 0;
                     const approved = s.approved || 0;
@@ -116,7 +116,7 @@ const PersonalAnalytics = ({ subordinates, loading: parentLoading }) => {
                     return (
                         <div key={key} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                             <div className="flex items-center gap-2 mb-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-${color}-50 text-${color}-600`}>{icon}</div>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${bg} ${text}`}>{icon}</div>
                                 <span className="text-sm font-bold text-slate-700">{label}</span>
                                 <span className="ml-auto text-xl font-black text-slate-800">{total}</span>
                             </div>

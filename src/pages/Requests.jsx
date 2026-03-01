@@ -210,6 +210,7 @@ const Requests = () => {
             if (req.type === 'LEAVE') url = `/leave/requests/${req.id}/approve_reject/`;
             else if (req.type === 'OVERTIME') url = `/overtime-requests/${req.id}/approve_reject/`;
             else if (req.type === 'CARDLESS_ENTRY' || req.type === 'CARDLESS') url = `/cardless-entry-requests/${req.id}/approve/`;
+            else if (req.type === 'MEAL') url = `/meal-requests/${req.id}/toggle_order/`;
             if (url) { await api.post(url, { action: 'approve', notes: notes || 'Onaylandı' }); fetchData(); }
         } catch (e) { alert('İşlem başarısız'); }
     };
@@ -221,6 +222,7 @@ const Requests = () => {
             if (req.type === 'LEAVE') url = `/leave/requests/${req.id}/approve_reject/`;
             else if (req.type === 'OVERTIME') url = `/overtime-requests/${req.id}/approve_reject/`;
             else if (req.type === 'CARDLESS_ENTRY' || req.type === 'CARDLESS') url = `/cardless-entry-requests/${req.id}/reject/`;
+            else if (req.type === 'MEAL') url = `/meal-requests/${req.id}/reject/`;
             if (url) { await api.post(url, { action: 'reject', reason }); fetchData(); }
         } catch (e) { alert('İşlem başarısız'); }
     };

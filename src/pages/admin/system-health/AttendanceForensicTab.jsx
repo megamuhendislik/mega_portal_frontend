@@ -226,12 +226,15 @@ export default function AttendanceForensicTab() {
                             { label: 'Servis Logları', count: data.counts.service_logs, color: 'blue' },
                             { label: 'Talepler', count: data.counts.related_requests, color: 'violet' },
                             { label: 'Anomaliler', count: data.counts.anomalies, color: data.counts.anomalies > 0 ? 'red' : 'gray' },
-                        ].map(c => (
-                            <div key={c.label} className={`bg-white rounded-xl border p-4 text-center border-${c.color}-100`}>
-                                <div className={`text-2xl font-black text-${c.color}-600`}>{c.count}</div>
+                        ].map(c => {
+                            const forensicBorderMap = { indigo: 'border-indigo-100', emerald: 'border-emerald-100', blue: 'border-blue-100', violet: 'border-violet-100', red: 'border-red-100', gray: 'border-gray-100' };
+                            const forensicTextMap = { indigo: 'text-indigo-600', emerald: 'text-emerald-600', blue: 'text-blue-600', violet: 'text-violet-600', red: 'text-red-600', gray: 'text-gray-600' };
+                            return (
+                            <div key={c.label} className={`bg-white rounded-xl border p-4 text-center ${forensicBorderMap[c.color] || 'border-gray-100'}`}>
+                                <div className={`text-2xl font-black ${forensicTextMap[c.color] || 'text-gray-600'}`}>{c.count}</div>
                                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{c.label}</div>
                             </div>
-                        ))}
+                        );})}
                     </div>
 
                     {/* Anomalies Alert */}

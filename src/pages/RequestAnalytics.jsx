@@ -768,13 +768,13 @@ export default function RequestAnalytics() {
                                         </div>
                                         <div className="flex gap-2 flex-wrap">
                                             {[
-                                                { key: 'leave', label: 'Izin', color: 'blue' },
-                                                { key: 'overtime', label: 'Mesai', color: 'amber' },
-                                                { key: 'meal', label: 'Yemek', color: 'emerald' },
-                                                { key: 'cardless', label: 'Kartsiz', color: 'violet' },
-                                            ].map(({ key, label, color }) => (
+                                                { key: 'leave', label: 'Izin', bg: 'bg-blue-50', text: 'text-blue-700' },
+                                                { key: 'overtime', label: 'Mesai', bg: 'bg-amber-50', text: 'text-amber-700' },
+                                                { key: 'meal', label: 'Yemek', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+                                                { key: 'cardless', label: 'Kartsiz', bg: 'bg-violet-50', text: 'text-violet-700' },
+                                            ].map(({ key, label, bg, text }) => (
                                                 (role[key] || 0) > 0 && (
-                                                    <span key={key} className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-${color}-50 text-${color}-700`}>
+                                                    <span key={key} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${bg} ${text}`}>
                                                         {role[key]} {label}
                                                     </span>
                                                 )
@@ -920,7 +920,9 @@ export default function RequestAnalytics() {
                                                 <span className="text-[11px] font-medium text-slate-600">{d.name}</span>
                                                 <span className="text-[11px] font-bold text-slate-700">{d.value}</span>
                                             </div>
-                                            <ProgressBar value={d.value} max={data.assignment_stats.total || 1} color={`bg-[${d.color}]`} height="h-1.5" />
+                                            <div className="w-full bg-slate-100 rounded-full overflow-hidden h-1.5">
+                                                <div className="rounded-full transition-all duration-500 h-1.5" style={{ width: `${Math.min((d.value / (data.assignment_stats.total || 1)) * 100, 100)}%`, backgroundColor: d.color }} />
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

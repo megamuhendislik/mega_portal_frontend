@@ -28,12 +28,23 @@ import ProgramManagement from './pages/admin/ProgramManagement';
 import Feedback from './pages/Feedback';
 
 const lazyRetry = (importFn) =>
-  React.lazy(() =>
-    importFn().catch(() => {
-      window.location.reload();
-      return new Promise(() => {});
-    })
-  );
+  React.lazy(() => {
+    const key = 'lazy-retry-' + importFn.toString().slice(0, 50);
+    const hasRefreshed = JSON.parse(sessionStorage.getItem(key) || 'false');
+    return importFn()
+      .then((component) => {
+        sessionStorage.removeItem(key);
+        return component;
+      })
+      .catch((error) => {
+        if (!hasRefreshed) {
+          sessionStorage.setItem(key, 'true');
+          window.location.reload();
+          return new Promise(() => {});
+        }
+        throw error;
+      });
+  });
 
 const RequestAnalytics = lazyRetry(() => import('./pages/RequestAnalytics'));
 const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));

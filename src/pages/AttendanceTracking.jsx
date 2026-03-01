@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Clock, AlertCircle, Users, Activity,
     Search, ArrowUpRight, ArrowDownRight, RefreshCw,
@@ -210,18 +210,25 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     };
 
     // Sort Logic
-    const sortedStats = [...filteredStats].sort((a, b) => {
+    const sortedStats = useMemo(() => {
+        const stats = [...filteredStats];
         if (hierarchySort && hierarchyData.length > 0) {
             const order = getHierarchyOrder();
-            const idxA = order.indexOf(a.employee_id);
-            const idxB = order.indexOf(b.employee_id);
-            return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+            stats.sort((a, b) => {
+                const idxA = order.indexOf(a.employee_id);
+                const idxB = order.indexOf(b.employee_id);
+                return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+            });
+        } else {
+            stats.sort((a, b) => {
+                if (sortMode === 'OT_DESC') return (b.total_overtime || 0) - (a.total_overtime || 0);
+                if (sortMode === 'MISSING_DESC') return (b.total_missing || 0) - (a.total_missing || 0);
+                if (sortMode === 'NORMAL_DESC') return (b.total_worked || 0) - (a.total_worked || 0);
+                return (a.employee_name || '').localeCompare(b.employee_name || '', 'tr');
+            });
         }
-        if (sortMode === 'OT_DESC') return (b.total_overtime || 0) - (a.total_overtime || 0);
-        if (sortMode === 'MISSING_DESC') return (b.total_missing || 0) - (a.total_missing || 0);
-        if (sortMode === 'NORMAL_DESC') return (b.total_worked || 0) - (a.total_worked || 0);
-        return (a.employee_name || '').localeCompare(b.employee_name || '', 'tr');
-    });
+        return stats;
+    }, [filteredStats, hierarchySort, hierarchyData, sortMode]);
 
     // --- HIERARCHY HELPERS ---
 

@@ -99,7 +99,7 @@ const NotificationBell = () => {
     const markAsRead = async (id) => {
         try {
             await api.post(`/notifications/${id}/mark_read/`);
-            setNotifications(notifications.map(n =>
+            setNotifications(prev => prev.map(n =>
                 n.id === id ? { ...n, is_read: true } : n
             ));
             setUnreadCount(prev => Math.max(0, prev - 1));

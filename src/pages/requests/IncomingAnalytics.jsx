@@ -114,6 +114,7 @@ const IncomingAnalytics = () => {
                             { key: 'overtime', label: 'Fazla Mesai', color: 'amber' },
                             { key: 'cardless', label: 'Kartsız Giriş', color: 'purple' },
                         ].map(({ key, label, color }) => {
+                            const barColorMap = { blue: 'bg-blue-400', amber: 'bg-amber-400', emerald: 'bg-emerald-400', purple: 'bg-purple-400' };
                             const t = data.by_type?.[key] || {};
                             const total = t.total || 0;
                             const maxTotal = Math.max(...Object.values(data.by_type || {}).map(v => v?.total || 0), 1);
@@ -121,7 +122,7 @@ const IncomingAnalytics = () => {
                                 <div key={key} className="flex items-center gap-3">
                                     <span className="w-24 text-sm font-medium text-slate-600">{label}</span>
                                     <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden">
-                                        <div className={`h-full bg-${color}-400 rounded-lg flex items-center justify-end pr-2`}
+                                        <div className={`h-full ${barColorMap[color] || 'bg-blue-400'} rounded-lg flex items-center justify-end pr-2`}
                                             style={{ width: `${Math.max((total / maxTotal) * 100, 5)}%` }}>
                                             <span className="text-[10px] font-bold text-white">{total}</span>
                                         </div>

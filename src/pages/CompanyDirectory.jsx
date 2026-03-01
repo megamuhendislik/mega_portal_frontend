@@ -37,6 +37,7 @@ const CompanyDirectory = () => {
     const [lastRefresh, setLastRefresh] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const searchTimerRef = useRef(null);
+    const isInitialMount = useRef(true);
 
     const fetchDirectory = useCallback(async (isBackground = false) => {
         try {
@@ -73,8 +74,9 @@ const CompanyDirectory = () => {
         fetchDepts();
     }, []);
 
-    // Debounced search
+    // Debounced search (skip initial mount to avoid double fetch)
     useEffect(() => {
+        if (isInitialMount.current) { isInitialMount.current = false; return; }
         if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
         searchTimerRef.current = setTimeout(() => fetchDirectory(), 300);
         return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
