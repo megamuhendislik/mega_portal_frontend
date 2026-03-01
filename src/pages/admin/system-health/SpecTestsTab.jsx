@@ -23,6 +23,10 @@ import {
     ServerIcon,
     ArchiveBoxIcon,
     UserGroupIcon,
+    ChartBarIcon,
+    BoltIcon,
+    ExclamationTriangleIcon,
+    RocketLaunchIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -49,6 +53,10 @@ const STAGES = [
     { id: 21, name: 'Aylık Özet & Arşiv & Vekalet', icon: ArchiveBoxIcon, color: 'emerald', description: '35 test — MonthlyWorkSummary (arşivlenmiş kayıt dahil etme, completed/overtime/missing/remaining hesaplama, kümülatif bakiye zinciri, DB persist, izin günü sayımı), Toplu Yeniden Hesaplama endpoint (yetki, response formatı), Vekalet Sistemi (CRUD, aktif/expired filtreleme, tarih validasyonu, kendine vekalet engeli, çakışma kontrolü), Onay Hiyerarşisi (PRIMARY/SECONDARY bulucu, eskalayon, circular koruma, departman/reports_to fallback)' },
     { id: 22, name: 'Ekip Analizi v3.0', icon: UserGroupIcon, color: 'cyan', description: '30 test — Dashboard stats endpoint yeni alanlar (attendance_rate, absent_days, ot_weekend/weekday minutes, meal_total/ordered, ot_meal_overlap, ot_days_total), katılım oranı hesaplama, hafta sonu/içi OT ayrımı, yemek korelasyonu, PENDING/CANCELLED filtreleme, multi-department izolasyon, veri tutarlılığı, E2E detaylı loglama' },
     { id: 23, name: 'Bug Fix Validasyonları', icon: WrenchScrewdriverIcon, color: 'red', description: '36 test — TC maskeleme (KVKK), yetki gizleme, FiscalPeriod read-only, OT durum geçişleri (VALID_TRANSITIONS, override), izin workflow (çift onay engeli, atomik rollback, avans limit, 2 mali ay iptal), employee freeze/unfreeze, mali dönem config (SystemSettings, fallback, takvim kilidi), özet tutarlılığı (tek sync, fiscal eşleme), misc fix (singleton pk, DRF hata, self-manager engeli, yemek geçişleri, auto_close status), cross manager (SECONDARY görünürlük)' },
+    { id: 24, name: 'Kapsamlı Entegrasyon & Performans', icon: RocketLaunchIcon, color: 'blue', description: '42 test — Rapor üretimi (XLSX/PDF export, yetki, parametre validasyonu), Talep Analitiği (kişisel/ekip/kapsamlı analytics, aylık trend, onay oranı), Ekip Talepleri (pending list, tür dağılımı), Çalışan API (company directory, me endpoint, freeze/unfreeze, managers/subordinates), Departman (hiyerarşi, CRUD, full-debug), Performans (bulk query, tutarlılık)' },
+    { id: 25, name: 'Rapor & Analitik Üretimi', icon: ChartBarIcon, color: 'fuchsia', description: '35 test — Kapsamlı analitik (overview, aylık trend, ekip/departman/rol kırılımı, OT-yemek korelasyonu, haftalık pattern), Gelen talepler (admin/manager scope, tür sayıları, POTENTIAL hariç), Ekip genel bakışı (çalışan bazlı onay oranı), Dashboard stats ileri seviye (katılım oranı, OT hafta sonu/içi, mali dönem scope), Takvim etkinlikleri' },
+    { id: 26, name: 'Toplu İşlem & Async Görevler', icon: BoltIcon, color: 'yellow', description: '45 test — Toplu OT atama (bulk_create, yetki, duplicate, validasyon), Toplu yeniden hesaplama (tarih aralığı, çalışan filtresi, kilitli dönem), Fazla mesai planlama (oluşturma, onay/red, my-pending, yetki), Uygun onaylayıcılar API, Günlük program override (CRUD, recalc trigger, kilitli dönem), Servis logları (erişim, sayfalama, filtre)' },
+    { id: 27, name: 'Sınır Durumları & Edge Cases', icon: ExclamationTriangleIcon, color: 'rose', description: '35 test — Mali dönem sınır (25/26 geçişi, kilit, OT/izin period eşleme), Çalışan edge cases (takvim yok, departman yok, manager yok, frozen, inactive), Devam kaydı edge cases (çıkış yok, aynı gün çoklu, sıfır süre, uzun vardiya, tatil günü, kilitli dönem, durum geçişi), OT-İzin çakışma senaryoları, Veri bütünlüğü (aylık özet tutarlılığı, süre doğruluğu, cascade koruma, unique constraint)' },
 ];
 
 export default function SpecTestsTab() {
