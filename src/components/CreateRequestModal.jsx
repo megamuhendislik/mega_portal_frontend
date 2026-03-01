@@ -511,7 +511,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         } catch (err) {
             console.error('Error creating request:', err);
             const data = err.response?.data;
-            const errorMsg = data?.detail || data?.error || data?.balance?.[0] || data?.balance || data?.date?.[0] || data?.date || 'Talep oluşturulurken bir hata oluştu.';
+            const errorMsg = data?.detail || data?.error || data?.non_field_errors?.[0] || data?.check_in_time?.[0] || data?.check_out_time?.[0] || data?.balance?.[0] || data?.balance || data?.date?.[0] || data?.date || 'Talep oluşturulurken bir hata oluştu.';
             setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
         } finally {
             setLoading(false);
@@ -926,7 +926,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <button
                             form="requestForm"
                             type="submit"
-                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL')}
+                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL')}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :

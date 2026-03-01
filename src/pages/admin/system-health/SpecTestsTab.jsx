@@ -27,6 +27,7 @@ import {
     BoltIcon,
     ExclamationTriangleIcon,
     RocketLaunchIcon,
+    CreditCardIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -58,6 +59,7 @@ const STAGES = [
     { id: 26, name: 'Toplu İşlem & Async Görevler', icon: BoltIcon, color: 'yellow', description: '45 test — Toplu OT atama (bulk_create, yetki, duplicate, validasyon), Toplu yeniden hesaplama (tarih aralığı, çalışan filtresi, kilitli dönem), Fazla mesai planlama (oluşturma, onay/red, my-pending, yetki), Uygun onaylayıcılar API, Günlük program override (CRUD, recalc trigger, kilitli dönem), Servis logları (erişim, sayfalama, filtre)' },
     { id: 27, name: 'Sınır Durumları & Edge Cases', icon: ExclamationTriangleIcon, color: 'rose', description: '35 test — Mali dönem sınır (25/26 geçişi, kilit, OT/izin period eşleme), Çalışan edge cases (takvim yok, departman yok, manager yok, frozen, inactive), Devam kaydı edge cases (çıkış yok, aynı gün çoklu, sıfır süre, uzun vardiya, tatil günü, kilitli dönem, durum geçişi), OT-İzin çakışma senaryoları, Veri bütünlüğü (aylık özet tutarlılığı, süre doğruluğu, cascade koruma, unique constraint)' },
     { id: 28, name: 'Yemek Talebi Overhaul', icon: ClipboardDocumentCheckIcon, color: 'emerald', description: '25 test — Status guard (PENDING-only update/delete, ORDERED/DELIVERED/CANCELLED engeli), OT-Meal auto-link (FK, onay sonrası eşleme, iptal hariç, farklı gün hariç, serializer, readonly), Birleşik bildirim (PAGE_MEAL_ORDERS, consolidation, self-bildirim engeli, link/type), Incoming tab izolasyon (meal kaldırma, OT korunma), Tarih validasyonu (bugün, +1/+2 gün, +3 engel, -1 gün, uzak geçmiş engel)' },
+    { id: 29, name: 'Kartsız Giriş Overhaul', icon: CreditCardIcon, color: 'purple', description: '25 test — Off-day/tatil reddi (Cumartesi, Pazar, resmi tatil), Vardiya sınır kontrolü (erken giriş, geç çıkış engeli, tam/kısmi mesai), Saat validasyonu (çıkış>giriş), Duplikat engeli (PENDING bloklar, REJECTED serbest), Tarih limiti (gelecek engel, 2 mali dönem geriye), Onay→Attendance override+recalculate (oluşturma, güncelleme, alanlar, durum, sadece PENDING), Red→Attendance yok, Kendi onay engeli, AUTO_APPROVE, schedule-info endpoint (mesai/off-day/tatil), Bildirim (oluşturma+onay)' },
 ];
 
 export default function SpecTestsTab() {

@@ -1373,15 +1373,26 @@ export const CardlessEntryForm = ({
     <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
         <div>
             <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-            <input
-                required
-                type="date"
-                value={cardlessEntryForm.date}
-                onChange={e => {
-                    setCardlessEntryForm({ ...cardlessEntryForm, date: e.target.value, check_in_time: '', check_out_time: '' });
-                }}
-                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
-            />
+            {(() => {
+                const today = new Date();
+                const maxDate = today.toISOString().split('T')[0];
+                const minD = new Date();
+                minD.setDate(minD.getDate() - 75);
+                const minDate = minD.toISOString().split('T')[0];
+                return (
+                    <input
+                        required
+                        type="date"
+                        value={cardlessEntryForm.date}
+                        min={minDate}
+                        max={maxDate}
+                        onChange={e => {
+                            setCardlessEntryForm({ ...cardlessEntryForm, date: e.target.value, check_in_time: '', check_out_time: '' });
+                        }}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                    />
+                );
+            })()}
         </div>
 
         {/* Schedule info banner */}
@@ -1418,7 +1429,7 @@ export const CardlessEntryForm = ({
                     value={cardlessEntryForm.check_in_time}
                     min={scheduleStart || undefined}
                     max={scheduleEnd || undefined}
-                    disabled={!isCardlessWorkDay}
+                    disabled={!isCardlessWorkDay || cardlessScheduleLoading}
                     onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_in_time: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -1431,12 +1442,19 @@ export const CardlessEntryForm = ({
                     value={cardlessEntryForm.check_out_time}
                     min={scheduleStart || undefined}
                     max={scheduleEnd || undefined}
-                    disabled={!isCardlessWorkDay}
+                    disabled={!isCardlessWorkDay || cardlessScheduleLoading}
                     onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_out_time: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
             </div>
         </div>
+
+        {cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2">
+                <AlertCircle size={16} className="text-amber-500 shrink-0" />
+                <span className="text-sm font-medium text-amber-700">Çıkış saati giriş saatinden sonra olmalıdır.</span>
+            </div>
+        )}
 
         <div>
             <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
