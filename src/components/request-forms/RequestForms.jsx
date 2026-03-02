@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText } from 'lucide-react';
 
 // ============================================================
 // LeaveRequestForm
@@ -922,23 +922,48 @@ export const ExternalDutyForm = ({
     duration,
     approverDropdown,
 }) => {
-    const [currentStep, setCurrentStep] = useState(1);
-    const TOTAL_STEPS = 7;
+    const [currentStep, setCurrentStep] = useState(0);
 
-    const steps = [
-        { num: 1, label: 'Tarih & Saat', icon: CalendarDays },
-        { num: 2, label: 'Lokasyon', icon: MapPin },
-        { num: 3, label: 'Görev Detayı', icon: Briefcase },
-        { num: 4, label: 'Ulaşım', icon: Car },
-        { num: 5, label: 'Konaklama', icon: Building2 },
-        { num: 6, label: 'Bütçe & Belge', icon: Wallet },
-        { num: 7, label: 'Özet', icon: Check },
-    ];
+    // Step definitions (all possible steps)
+    const ALL_STEPS = {
+        0: { id: 0, label: 'Görev Tipi', icon: Briefcase },
+        1: { id: 1, label: 'Tarih & Saat', icon: CalendarDays },
+        2: { id: 2, label: 'Lokasyon', icon: MapPin },
+        3: { id: 3, label: 'Görev Detayı', icon: FileText },
+        4: { id: 4, label: 'Ulaşım', icon: Car },
+        5: { id: 5, label: 'Konaklama', icon: Building2 },
+        6: { id: 6, label: 'Bütçe & Belge', icon: Wallet },
+        7: { id: 7, label: 'Özet', icon: Check },
+    };
 
-    const goNext = () => setCurrentStep(s => Math.min(s + 1, TOTAL_STEPS));
-    const goPrev = () => setCurrentStep(s => Math.max(s - 1, 1));
+    // Which steps are active per duty category
+    const STEP_MAP = {
+        REMOTE_WORK:     [0, 1, 3, 7],
+        SITE_VISIT:      [0, 1, 2, 3, 4, 5, 6, 7],
+        CUSTOMER_VISIT:  [0, 1, 2, 3, 4, 5, 6, 7],
+        TRAINING:        [0, 1, 2, 3, 7],
+        MEETING:         [0, 1, 2, 3, 7],
+        OTHER:           [0, 1, 2, 3, 4, 5, 6, 7],
+        '':              [0],
+    };
+
+    const taskType = externalDutyForm.task_type || '';
+    const activeStepIds = STEP_MAP[taskType] || STEP_MAP[''];
+    const activeSteps = activeStepIds.map(id => ALL_STEPS[id]);
+    const currentStepIndex = activeStepIds.indexOf(currentStep);
+    const TOTAL_ACTIVE = activeSteps.length;
+
+    const goNext = () => {
+        const idx = activeStepIds.indexOf(currentStep);
+        if (idx < activeStepIds.length - 1) setCurrentStep(activeStepIds[idx + 1]);
+    };
+    const goPrev = () => {
+        const idx = activeStepIds.indexOf(currentStep);
+        if (idx > 0) setCurrentStep(activeStepIds[idx - 1]);
+    };
 
     const taskTypeLabels = {
+        REMOTE_WORK: 'Evden Çalışma',
         SITE_VISIT: 'Saha Ziyareti',
         TRAINING: 'Eğitim',
         MEETING: 'Toplantı',
@@ -958,6 +983,87 @@ export const ExternalDutyForm = ({
         INNER_CITY: 'Şehir İçi',
         OUT_OF_CITY: 'Şehir Dışı',
     };
+
+    // -- Step 0: Görev Tipi Seçimi --
+    const dutyCategories = [
+        {
+            key: 'REMOTE_WORK',
+            label: 'Evden Çalışma',
+            desc: 'Uzaktan / evden çalışma kaydı',
+            icon: Home,
+            color: 'emerald',
+        },
+        {
+            key: 'FIELD',
+            label: 'Saha Görevi',
+            desc: 'Müşteri ziyareti, saha kontrolü vb.',
+            icon: MapPin,
+            color: 'purple',
+        },
+        {
+            key: 'EVENT',
+            label: 'Toplantı / Eğitim',
+            desc: 'Dış toplantı veya eğitim katılımı',
+            icon: Users,
+            color: 'blue',
+        },
+    ];
+
+    const handleDutyCategorySelect = (category) => {
+        let newTaskType = '';
+        if (category === 'REMOTE_WORK') newTaskType = 'REMOTE_WORK';
+        else if (category === 'FIELD') newTaskType = 'SITE_VISIT';
+        else if (category === 'EVENT') newTaskType = 'MEETING';
+
+        setExternalDutyForm({ ...externalDutyForm, task_type: newTaskType });
+        // Jump to next step after selection
+        const nextSteps = STEP_MAP[newTaskType] || [0];
+        if (nextSteps.length > 1) setCurrentStep(nextSteps[1]);
+    };
+
+    const getSelectedCategory = () => {
+        const t = externalDutyForm.task_type;
+        if (t === 'REMOTE_WORK') return 'REMOTE_WORK';
+        if (['SITE_VISIT', 'CUSTOMER_VISIT', 'OTHER'].includes(t)) return 'FIELD';
+        if (['TRAINING', 'MEETING'].includes(t)) return 'EVENT';
+        return '';
+    };
+
+    const colorMap = {
+        emerald: { card: 'border-emerald-200 bg-emerald-50/50', active: 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 shadow-lg shadow-emerald-100', icon: 'text-emerald-600', text: 'text-emerald-700' },
+        purple:  { card: 'border-purple-200 bg-purple-50/50',  active: 'border-purple-500 bg-purple-50 ring-2 ring-purple-200 shadow-lg shadow-purple-100',  icon: 'text-purple-600',  text: 'text-purple-700' },
+        blue:    { card: 'border-blue-200 bg-blue-50/50',    active: 'border-blue-500 bg-blue-50 ring-2 ring-blue-200 shadow-lg shadow-blue-100',    icon: 'text-blue-600',    text: 'text-blue-700' },
+    };
+
+    const Step0 = () => (
+        <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            <div className="bg-purple-50 p-4 rounded-xl flex items-start gap-3 text-purple-800 text-sm border border-purple-100">
+                <Briefcase className="shrink-0 mt-0.5" size={18} />
+                <div>
+                    <h4 className="font-bold">Görev Tipi Seçin</h4>
+                    <p className="mt-1">Görev tipine göre form adımları otomatik olarak ayarlanacaktır.</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {dutyCategories.map(cat => {
+                    const CatIcon = cat.icon;
+                    const selected = getSelectedCategory() === cat.key;
+                    const cm = colorMap[cat.color];
+                    return (
+                        <button key={cat.key} type="button"
+                            onClick={() => handleDutyCategorySelect(cat.key)}
+                            className={`p-5 rounded-xl border-2 text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                                selected ? cm.active : `${cm.card} hover:shadow-md`
+                            }`}>
+                            <CatIcon size={28} className={cm.icon} />
+                            <h4 className={`font-bold mt-3 ${cm.text}`}>{cat.label}</h4>
+                            <p className="text-xs text-slate-500 mt-1">{cat.desc}</p>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 
     // -- Step 1: Tarih & Saat --
     const Step1 = () => (
@@ -1042,28 +1148,44 @@ export const ExternalDutyForm = ({
         </div>
     );
 
-    // -- Step 3: Görev Detayı --
+    // -- Step 3: Görev Detayı (adapts to task_type) --
     const Step3 = () => (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+            {/* Sub-type dropdown — only for FIELD category */}
+            {['SITE_VISIT', 'CUSTOMER_VISIT', 'OTHER'].includes(externalDutyForm.task_type) && (
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Alt Türü <span className="text-red-500">*</span></label>
+                    <select value={externalDutyForm.task_type}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, task_type: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700">
+                        <option value="SITE_VISIT">Saha Ziyareti</option>
+                        <option value="CUSTOMER_VISIT">Müşteri Ziyareti</option>
+                        <option value="OTHER">Diğer</option>
+                    </select>
+                </div>
+            )}
+            {/* Sub-type dropdown for EVENT category */}
+            {['TRAINING', 'MEETING'].includes(externalDutyForm.task_type) && (
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Etkinlik Türü <span className="text-red-500">*</span></label>
+                    <select value={externalDutyForm.task_type}
+                        onChange={e => setExternalDutyForm({ ...externalDutyForm, task_type: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700">
+                        <option value="MEETING">Toplantı</option>
+                        <option value="TRAINING">Eğitim</option>
+                    </select>
+                </div>
+            )}
             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Türü <span className="text-red-500">*</span></label>
-                <select value={externalDutyForm.task_type}
-                    onChange={e => setExternalDutyForm({ ...externalDutyForm, task_type: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-slate-700">
-                    <option value="">Seçiniz...</option>
-                    <option value="SITE_VISIT">Saha Ziyareti</option>
-                    <option value="TRAINING">Eğitim</option>
-                    <option value="MEETING">Toplantı</option>
-                    <option value="CUSTOMER_VISIT">Müşteri Ziyareti</option>
-                    <option value="OTHER">Diğer</option>
-                </select>
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Görev Açıklaması <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                    {externalDutyForm.task_type === 'REMOTE_WORK' ? 'Yapılacak İş Açıklaması' : 'Görev Açıklaması'} <span className="text-red-500">*</span>
+                </label>
                 <textarea required rows="4" value={externalDutyForm.duty_description}
                     onChange={e => setExternalDutyForm({ ...externalDutyForm, duty_description: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700"
-                    placeholder="Görevin detaylı açıklamasını yazınız..." />
+                    placeholder={externalDutyForm.task_type === 'REMOTE_WORK'
+                        ? 'Evden çalışma süresince yapılacak işleri yazınız...'
+                        : 'Görevin detaylı açıklamasını yazınız...'} />
             </div>
             <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">İletişim Telefonu</label>
@@ -1072,6 +1194,21 @@ export const ExternalDutyForm = ({
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
                     placeholder="Örn: 0532 123 45 67" />
             </div>
+            {/* Approver + Substitute — shown here for REMOTE_WORK & EVENT (they skip Step 6) */}
+            {['REMOTE_WORK', 'TRAINING', 'MEETING'].includes(externalDutyForm.task_type) && (
+                <>
+                    {approverDropdown}
+                    <div className="flex items-center gap-2 p-3 bg-purple-50/50 rounded-xl border border-purple-100 transition-all hover:bg-purple-50">
+                        <input type="checkbox" id="send_to_sub_duty_v3"
+                            checked={externalDutyForm.send_to_substitute}
+                            onChange={e => setExternalDutyForm({ ...externalDutyForm, send_to_substitute: e.target.checked })}
+                            className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer" />
+                        <label htmlFor="send_to_sub_duty_v3" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+                            Vekil yöneticiye de gönder
+                        </label>
+                    </div>
+                </>
+            )}
         </div>
     );
 
@@ -1212,13 +1349,14 @@ export const ExternalDutyForm = ({
         </div>
     );
 
-    // -- Step 7: Özet --
+    // -- Step 7: Özet (adapts to task_type) --
     const Step7 = () => {
         const summaryColorMap = {
             purple: { border: 'border-purple-100', bg: 'bg-purple-50/30', text: 'text-purple-700' },
             blue:   { border: 'border-blue-100',   bg: 'bg-blue-50/30',   text: 'text-blue-700' },
             green:  { border: 'border-green-100',  bg: 'bg-green-50/30',  text: 'text-green-700' },
             amber:  { border: 'border-amber-100',  bg: 'bg-amber-50/30',  text: 'text-amber-700' },
+            emerald:{ border: 'border-emerald-100', bg: 'bg-emerald-50/30', text: 'text-emerald-700' },
         };
         const SummaryCard = ({ title, icon: Icon, children, color = 'purple' }) => {
             const sc = summaryColorMap[color] || summaryColorMap.purple;
@@ -1238,28 +1376,37 @@ export const ExternalDutyForm = ({
             </div>
         ) : null;
 
+        const isRemote = externalDutyForm.task_type === 'REMOTE_WORK';
+        const isEvent = ['TRAINING', 'MEETING'].includes(externalDutyForm.task_type);
+
         return (
             <div className="space-y-4 animate-in slide-in-from-right-8 duration-300">
-                <div className="bg-purple-50 p-3 rounded-xl border border-purple-100 text-center">
-                    <h4 className="text-sm font-bold text-purple-700">Görev Özeti</h4>
-                    <p className="text-xs text-purple-600 mt-0.5">Bilgileri kontrol edip formu gönderebilirsiniz</p>
+                <div className={`p-3 rounded-xl border text-center ${isRemote ? 'bg-emerald-50 border-emerald-100' : 'bg-purple-50 border-purple-100'}`}>
+                    <h4 className={`text-sm font-bold ${isRemote ? 'text-emerald-700' : 'text-purple-700'}`}>
+                        {isRemote ? 'Evden Çalışma Özeti' : isEvent ? 'Toplantı/Eğitim Özeti' : 'Görev Özeti'}
+                    </h4>
+                    <p className={`text-xs mt-0.5 ${isRemote ? 'text-emerald-600' : 'text-purple-600'}`}>Bilgileri kontrol edip formu gönderebilirsiniz</p>
                 </div>
+                <SummaryCard title="Görev Tipi" icon={Briefcase} color={isRemote ? 'emerald' : 'purple'}>
+                    <SummaryRow label="Tür" value={taskTypeLabels[externalDutyForm.task_type] || ''} />
+                </SummaryCard>
                 <SummaryCard title="Tarih & Saat" icon={CalendarDays}>
                     <SummaryRow label="Tarih" value={`${externalDutyForm.start_date} - ${externalDutyForm.end_date}`} />
                     <SummaryRow label="Saat" value={externalDutyForm.start_time && externalDutyForm.end_time ? `${externalDutyForm.start_time} - ${externalDutyForm.end_time}` : ''} />
                     <SummaryRow label="Süre" value={duration ? `${duration} Gün` : ''} />
                 </SummaryCard>
-                <SummaryCard title="Lokasyon" icon={MapPin}>
-                    <SummaryRow label="Şehir" value={`${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim()} />
-                    <SummaryRow label="Adres" value={externalDutyForm.duty_address} />
-                    <SummaryRow label="Firma" value={externalDutyForm.duty_company} />
-                </SummaryCard>
-                <SummaryCard title="Görev Detayı" icon={Briefcase}>
-                    <SummaryRow label="Görev Türü" value={taskTypeLabels[externalDutyForm.task_type] || ''} />
+                {!isRemote && (
+                    <SummaryCard title="Lokasyon" icon={MapPin}>
+                        <SummaryRow label="Şehir" value={`${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim()} />
+                        <SummaryRow label="Adres" value={externalDutyForm.duty_address} />
+                        <SummaryRow label="Firma" value={externalDutyForm.duty_company} />
+                    </SummaryCard>
+                )}
+                <SummaryCard title={isRemote ? 'Çalışma Detayı' : 'Görev Detayı'} icon={FileText}>
                     <SummaryRow label="Açıklama" value={externalDutyForm.duty_description} />
                     <SummaryRow label="Telefon" value={externalDutyForm.contact_phone} />
                 </SummaryCard>
-                {externalDutyForm.needs_transportation && (
+                {!isRemote && !isEvent && externalDutyForm.needs_transportation && (
                     <SummaryCard title="Ulaşım" icon={Car}>
                         <SummaryRow label="Tür" value={transportTypeLabels[externalDutyForm.transport_type] || ''} />
                         <SummaryRow label="Plaka" value={externalDutyForm.transport_plate} />
@@ -1267,24 +1414,27 @@ export const ExternalDutyForm = ({
                         <SummaryRow label="Not" value={externalDutyForm.transport_description} />
                     </SummaryCard>
                 )}
-                {externalDutyForm.needs_accommodation && (
+                {!isRemote && !isEvent && externalDutyForm.needs_accommodation && (
                     <SummaryCard title="Konaklama" icon={Building2}>
                         <SummaryRow label="Yer" value={externalDutyForm.accommodation_name} />
                         <SummaryRow label="Gece" value={externalDutyForm.accommodation_nights > 0 ? `${externalDutyForm.accommodation_nights} gece` : ''} />
                         <SummaryRow label="Not" value={externalDutyForm.accommodation_notes} />
                     </SummaryCard>
                 )}
-                <SummaryCard title="Bütçe & Onay" icon={Wallet}>
-                    <SummaryRow label="Bütçe" value={externalDutyForm.budget_amount ? `${externalDutyForm.budget_amount} TL` : ''} />
-                    <SummaryRow label="Görev Yeri" value={tripTypeLabels[externalDutyForm.trip_type] || ''} />
-                    <SummaryRow label="Vekil" value={externalDutyForm.send_to_substitute ? 'Evet' : 'Hayır'} />
-                </SummaryCard>
+                {!isRemote && !isEvent && (
+                    <SummaryCard title="Bütçe & Onay" icon={Wallet}>
+                        <SummaryRow label="Bütçe" value={externalDutyForm.budget_amount ? `${externalDutyForm.budget_amount} TL` : ''} />
+                        <SummaryRow label="Görev Yeri" value={tripTypeLabels[externalDutyForm.trip_type] || ''} />
+                        <SummaryRow label="Vekil" value={externalDutyForm.send_to_substitute ? 'Evet' : 'Hayır'} />
+                    </SummaryCard>
+                )}
             </div>
         );
     };
 
     const renderStep = () => {
         switch (currentStep) {
+            case 0: return Step0();
             case 1: return Step1();
             case 2: return Step2();
             case 3: return Step3();
@@ -1292,7 +1442,7 @@ export const ExternalDutyForm = ({
             case 5: return Step5();
             case 6: return Step6();
             case 7: return Step7();
-            default: return Step1();
+            default: return Step0();
         }
     };
 
@@ -1300,12 +1450,12 @@ export const ExternalDutyForm = ({
         <div className="space-y-5">
             {/* Step Indicator Pills */}
             <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                {steps.map((s) => {
+                {activeSteps.map((s, idx) => {
                     const StepIcon = s.icon;
-                    const isActive = currentStep === s.num;
-                    const isDone = currentStep > s.num;
+                    const isActive = currentStep === s.id;
+                    const isDone = currentStepIndex > idx;
                     return (
-                        <button key={s.num} type="button" onClick={() => setCurrentStep(s.num)}
+                        <button key={s.id} type="button" onClick={() => setCurrentStep(s.id)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                                 isActive
                                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200 scale-105'
@@ -1315,7 +1465,7 @@ export const ExternalDutyForm = ({
                             }`}>
                             {isDone ? <Check size={12} /> : <StepIcon size={12} />}
                             <span className="hidden sm:inline">{s.label}</span>
-                            <span className="sm:hidden">{s.num}</span>
+                            <span className="sm:hidden">{idx + 1}</span>
                         </button>
                     );
                 })}
@@ -1324,7 +1474,7 @@ export const ExternalDutyForm = ({
             {/* Progress Bar */}
             <div className="w-full bg-slate-200 rounded-full h-1.5">
                 <div className="bg-purple-600 h-1.5 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }} />
+                    style={{ width: `${((currentStepIndex + 1) / TOTAL_ACTIVE) * 100}%` }} />
             </div>
 
             {/* Step Content */}
@@ -1334,15 +1484,15 @@ export const ExternalDutyForm = ({
 
             {/* Navigation Buttons */}
             <div className="flex justify-between pt-2">
-                <button type="button" onClick={goPrev} disabled={currentStep === 1}
+                <button type="button" onClick={goPrev} disabled={currentStepIndex <= 0}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                        currentStep === 1
+                        currentStepIndex <= 0
                             ? 'text-slate-300 cursor-not-allowed'
                             : 'text-purple-700 bg-purple-50 hover:bg-purple-100 active:scale-95'
                     }`}>
                     <ChevronLeft size={16} /> Geri
                 </button>
-                {currentStep < TOTAL_STEPS && (
+                {currentStepIndex < TOTAL_ACTIVE - 1 && currentStep !== 0 && (
                     <button type="button" onClick={goNext}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
                         İleri <ChevronRightIcon size={16} />
