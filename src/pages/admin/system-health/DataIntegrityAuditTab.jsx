@@ -68,24 +68,38 @@ const StatCard = ({ label, value, color, sub }) => (
     </div>
 );
 
-const ActionBadge = ({ action }) => {
-    if (action === 'fixed') {
+const ActionBadge = ({ fixAction, fixable, mode }) => {
+    if (mode === 'fix' && fixable) {
         return (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
-                Duzeltildi
-            </span>
+            <div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                    Duzeltildi
+                </span>
+                {fixAction && (
+                    <div className="text-[10px] text-green-600 mt-0.5">{fixAction}</div>
+                )}
+            </div>
         );
     }
     return (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-            Sadece Tarama
-        </span>
+        <div>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                fixable
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}>
+                {fixable ? 'Duzelt. (fix mod)' : 'Manuel Inceleme'}
+            </span>
+            {fixAction && (
+                <div className="text-[10px] text-gray-400 mt-0.5">{fixAction}</div>
+            )}
+        </div>
     );
 };
 
 // ─── Category Card ──────────────────────────────────────────────────────────
 
-const CategoryCard = ({ categoryKey, categoryData }) => {
+const CategoryCard = ({ categoryKey, categoryData, auditMode }) => {
     const [expanded, setExpanded] = useState(false);
     const label = CATEGORY_LABELS[categoryKey] || categoryKey;
     const { severity, count, fixed, issues } = categoryData;
@@ -116,22 +130,34 @@ const CategoryCard = ({ categoryKey, categoryData }) => {
             </button>
             {expanded && (
                 <div className="px-5 pb-4 border-t border-gray-100 pt-3">
+                    {categoryData.error && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-xs text-red-700">
+                            <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" />
+                            Hata: {categoryData.error}
+                        </div>
+                    )}
                     {issues && issues.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                                 <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
+                                    <tr className="border-b border-gray-200 bg-gray-50/50">
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-8">
+                                            #
+                                        </th>
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
                                             Calisan
                                         </th>
-                                        <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
                                             Tarih
                                         </th>
-                                        <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
-                                            Detay
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]" style={{minWidth: '320px'}}>
+                                            Sorun Detayi
                                         </th>
-                                        <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
-                                            Islem
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]" style={{minWidth: '180px'}}>
+                                            Duzeltme Islemi
+                                        </th>
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-16">
+                                            Kayit ID
                                         </th>
                                     </tr>
                                 </thead>
@@ -139,26 +165,40 @@ const CategoryCard = ({ categoryKey, categoryData }) => {
                                     {issues.map((issue, idx) => (
                                         <tr
                                             key={idx}
-                                            className="border-b border-gray-50 hover:bg-gray-50/50"
+                                            className={`border-b border-gray-100 hover:bg-blue-50/30 ${
+                                                issue.fixable === false ? 'bg-amber-50/20' : ''
+                                            }`}
                                         >
-                                            <td className="py-2 px-2 text-gray-700 whitespace-nowrap">
-                                                <span className="font-bold text-gray-800">
+                                            <td className="py-2.5 px-2 text-gray-400 font-mono text-[10px]">
+                                                {idx + 1}
+                                            </td>
+                                            <td className="py-2.5 px-2 text-gray-700 whitespace-nowrap">
+                                                <div className="font-bold text-gray-800 text-xs">
                                                     {issue.employee_name}
+                                                </div>
+                                                <div className="text-[10px] text-gray-400">
+                                                    ID: {issue.employee_id}
+                                                </div>
+                                            </td>
+                                            <td className="py-2.5 px-2 text-gray-700 whitespace-nowrap">
+                                                <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                                                    {issue.date || '-'}
                                                 </span>
-                                                {issue.employee_id && (
-                                                    <span className="text-gray-400 ml-1 text-[10px]">
-                                                        #{issue.employee_id}
-                                                    </span>
-                                                )}
                                             </td>
-                                            <td className="py-2 px-2 text-gray-700 whitespace-nowrap">
-                                                <span className="font-mono">{issue.date || '-'}</span>
+                                            <td className="py-2.5 px-2 text-gray-700">
+                                                <div className="text-xs leading-relaxed">
+                                                    {issue.description || issue.detail || '-'}
+                                                </div>
                                             </td>
-                                            <td className="py-2 px-2 text-gray-700 max-w-md">
-                                                <span className="text-xs">{issue.detail}</span>
+                                            <td className="py-2.5 px-2">
+                                                <ActionBadge
+                                                    fixAction={issue.fix_action}
+                                                    fixable={issue.fixable}
+                                                    mode={auditMode}
+                                                />
                                             </td>
-                                            <td className="py-2 px-2 whitespace-nowrap">
-                                                <ActionBadge action={issue.action} />
+                                            <td className="py-2.5 px-2 text-gray-400 font-mono text-[10px]">
+                                                {issue.id || '-'}
                                             </td>
                                         </tr>
                                     ))}
@@ -372,7 +412,7 @@ export default function DataIntegrityAuditTab() {
             {results && (
                 <>
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                         <StatCard
                             label="Toplam Sorun"
                             value={results.total_issues || 0}
@@ -381,11 +421,31 @@ export default function DataIntegrityAuditTab() {
                                     ? 'bg-red-50 border-red-100 text-red-700'
                                     : 'bg-green-50 border-green-100 text-green-700'
                             }
+                            sub={results.total_issues > 0 ? `${categoriesWithIssues.length} kategoride` : 'Temiz'}
+                        />
+                        <StatCard
+                            label="Otomatik Duzelt."
+                            value={results.summary?.fixable || 0}
+                            color="bg-amber-50 border-amber-100 text-amber-700"
+                            sub="fix modu ile duzeltilir"
+                        />
+                        <StatCard
+                            label="Manuel Inceleme"
+                            value={results.summary?.manual_review || 0}
+                            color="bg-slate-50 border-slate-100 text-slate-700"
+                            sub="elle kontrol gerekir"
+                        />
+                        <StatCard
+                            label="Duzeltilen"
+                            value={totalFixed}
+                            color={totalFixed > 0 ? 'bg-green-50 border-green-100 text-green-700' : 'bg-gray-50 border-gray-100 text-gray-500'}
+                            sub={results.mode === 'fix' ? 'bu calistirmada' : 'tarama modu'}
                         />
                         <StatCard
                             label="Gecen Sure"
                             value={`${(results.elapsed_seconds || 0).toFixed(2)}s`}
                             color="bg-blue-50 border-blue-100 text-blue-700"
+                            sub={results.summary?.date_range ? `${results.summary.date_range.start} ~ ${results.summary.date_range.end}` : ''}
                         />
                         <StatCard
                             label="Mod"
@@ -395,12 +455,7 @@ export default function DataIntegrityAuditTab() {
                                     ? 'bg-amber-50 border-amber-100 text-amber-700'
                                     : 'bg-indigo-50 border-indigo-100 text-indigo-700'
                             }
-                        />
-                        <StatCard
-                            label="Taranan Kategori"
-                            value={Object.keys(results.categories || {}).length}
-                            color="bg-purple-50 border-purple-100 text-purple-700"
-                            sub={totalFixed > 0 ? `${totalFixed} duzeltme yapildi` : undefined}
+                            sub={`${Object.keys(results.categories || {}).length} kategori tarandi`}
                         />
                     </div>
 
@@ -418,7 +473,7 @@ export default function DataIntegrityAuditTab() {
                                         ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[b[1].severity] || 3)
                                 )
                                 .map(([key, data]) => (
-                                    <CategoryCard key={key} categoryKey={key} categoryData={data} />
+                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} />
                                 ))}
                         </div>
                     )}
