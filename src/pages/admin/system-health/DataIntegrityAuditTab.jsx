@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ShieldCheckIcon,
     ArrowPathIcon,
@@ -41,6 +42,15 @@ const SEVERITY_LABELS = {
     MEDIUM: 'Orta',
     LOW: 'Dusuk',
 };
+
+function useBodyScrollLock(active) {
+    useEffect(() => {
+        if (!active) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [active]);
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -227,8 +237,8 @@ const LogContent = ({ log }) => {
 
 const DetailLogModal = ({ data, logs, onClose }) => {
     const [activeTab, setActiveTab] = useState(0);
+    useBodyScrollLock(true);
 
-    // Determine mode
     const isBulk = Array.isArray(logs) && logs.length > 0;
     const items = isBulk ? logs : (data ? [data] : []);
 
@@ -236,8 +246,8 @@ const DetailLogModal = ({ data, logs, onClose }) => {
 
     const current = items[activeTab] || items[0];
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/50" onClick={onClose}>
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-black/50" onClick={onClose}>
             <div
                 className="bg-gray-50 shadow-2xl w-full max-w-5xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden"
                 onClick={e => e.stopPropagation()}
@@ -289,13 +299,122 @@ const DetailLogModal = ({ data, logs, onClose }) => {
                     <LogContent log={current} />
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
+    );
+};
+
+// ─── Fix Report Modal ────────────────────────────────────────────────────────
+
+const FixReportModal = ({ results, onClose }) => {
+    useBodyScrollLock(true);
+
+    if (!results || results.mode !== 'fix') return null;
+
+    const actionLog = results.action_log || [];
+    const totalFixed = Object.values(results.categories || {}).reduce((s, c) => s + (c.fixed || 0), 0);
+    const totalIssues = results.total_issues || 0;
+
+    // Group actions by category
+    const grouped = {};
+    for (const entry of actionLog) {
+        const cat = entry.category || 'diger';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(entry);
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-black/50" onClick={onClose}>
+            <div
+                className="bg-gray-50 shadow-2xl w-full max-w-4xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white rounded-t-2xl shrink-0">
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                            <WrenchScrewdriverIcon className="w-4 h-4 text-green-600" />
+                            Duzeltme Raporu
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            {totalIssues} sorun bulundu, {totalFixed} duzeltildi
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                        <XMarkIcon className="w-5 h-5 text-gray-500" />
+                    </button>
+                </div>
+
+                {/* Summary Bar */}
+                <div className="px-5 py-3 border-b border-gray-200 bg-white shrink-0">
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className="text-xs text-gray-600">Sorun: <strong>{totalIssues}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-green-500" />
+                            <span className="text-xs text-gray-600">Duzeltilen: <strong>{totalFixed}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-xs text-gray-600">Manuel: <strong>{totalIssues - totalFixed}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <ClockIcon className="w-3.5 h-3.5 text-gray-400" />
+                            <span className="text-xs text-gray-600">{results.elapsed_seconds}s</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Log */}
+                <div className="flex-1 overflow-y-auto p-5 min-h-0">
+                    {actionLog.length === 0 ? (
+                        <div className="text-center py-8">
+                            <CheckCircleIcon className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">Duzeltme yapilmadi (tum sorunlar manuel inceleme gerektiriyor)</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {Object.entries(grouped).map(([cat, actions]) => (
+                                <div key={cat}>
+                                    <h4 className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-t-lg border border-gray-200 flex items-center gap-2">
+                                        <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-bold">
+                                            {actions.length}
+                                        </span>
+                                        {CATEGORY_LABELS[cat] || cat}
+                                    </h4>
+                                    <div className="border border-t-0 border-gray-200 rounded-b-lg bg-white divide-y divide-gray-100">
+                                        {actions.map((a, i) => (
+                                            <div key={i} className="px-3 py-2 text-xs flex items-start gap-3">
+                                                <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[9px] font-bold">
+                                                    ✓
+                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-gray-800">{a.detail}</div>
+                                                    <div className="text-[10px] text-gray-400 mt-0.5 flex gap-3 flex-wrap">
+                                                        <span>{a.employee_name}</span>
+                                                        <span className="font-mono">{a.date}</span>
+                                                        <span className="font-mono text-gray-300">{a.target}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
     );
 };
 
 // ─── Category Card ──────────────────────────────────────────────────────────
 
-const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog }) => {
+const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFixCategory, fixLoading }) => {
     const [expanded, setExpanded] = useState(false);
     const label = CATEGORY_LABELS[categoryKey] || categoryKey;
     const { severity, count, fixed, issues } = categoryData;
@@ -418,6 +537,22 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog }) => 
                     ) : (
                         <p className="text-sm text-gray-400 py-4 text-center">Bu kategoride sorun yok.</p>
                     )}
+                    {auditMode !== 'fix' && categoryData.issues?.some(i => i.fixable) && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => onFixCategory?.(categoryKey)}
+                                disabled={fixLoading}
+                                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                            >
+                                {fixLoading ? (
+                                    <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <WrenchScrewdriverIcon className="w-3.5 h-3.5" />
+                                )}
+                                Bu Kategoriyi Duzelt
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -433,6 +568,8 @@ export default function DataIntegrityAuditTab() {
     const [detailLog, setDetailLog] = useState(null);    // single log
     const [bulkLogs, setBulkLogs] = useState(null);      // array of logs
     const [loadingDetail, setLoadingDetail] = useState(false);
+    const [fixReport, setFixReport] = useState(null);
+    const [fixLoading, setFixLoading] = useState(false);
 
     // Filters
     const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
@@ -451,13 +588,15 @@ export default function DataIntegrityAuditTab() {
 
     const runAudit = async (mode) => {
         if (mode === 'fix') {
-            if (
-                !window.confirm(
-                    'DIKKAT: Bu islem veritabanindaki verileri degistirecektir.\n\nDuzeltme modunu calistirmak istediginize emin misiniz?'
-                )
-            ) {
-                return;
-            }
+            const fixableCount = results
+                ? Object.values(results.categories || {}).reduce(
+                    (s, c) => s + (c.issues || []).filter(i => i.fixable).length, 0
+                ) : 0;
+            if (!window.confirm(
+                `DIKKAT: Bu islem veritabanindaki verileri degistirecektir.\n\n` +
+                `${fixableCount > 0 ? fixableCount + ' sorun otomatik duzeltilecek.' : 'Duzeltme modu calistirilacak.'}\n\n` +
+                `Devam etmek istiyor musunuz?`
+            )) return;
         }
 
         if (selectedCategories.length === 0) {
@@ -479,6 +618,9 @@ export default function DataIntegrityAuditTab() {
             }
             const res = await api.post('/system/health-check/data-integrity-audit/', body);
             setResults(res.data);
+            if (mode === 'fix') {
+                setFixReport(res.data);
+            }
         } catch (err) {
             setError(err.response?.data?.error || err.response?.data?.detail || 'Denetim calistirilamadi');
         } finally {
@@ -533,6 +675,43 @@ export default function DataIntegrityAuditTab() {
             setLoadingDetail(false);
         }
     }, [results]);
+
+    const fixCategory = useCallback(async (categoryKey) => {
+        const catData = results?.categories?.[categoryKey];
+        const fixableCount = (catData?.issues || []).filter(i => i.fixable).length;
+        if (!window.confirm(
+            `"${CATEGORY_LABELS[categoryKey] || categoryKey}" kategorisindeki ` +
+            `${fixableCount} sorun duzeltilecek.\n\nDevam?`
+        )) return;
+
+        setFixLoading(true);
+        setError(null);
+        try {
+            const body = {
+                mode: 'fix',
+                categories: [categoryKey],
+                date_from: dateFrom,
+                date_to: dateTo,
+            };
+            if (employeeId) body.employee_id = Number(employeeId);
+            const res = await api.post('/system/health-check/data-integrity-audit/', body);
+            setFixReport(res.data);
+            // Re-scan to refresh results
+            const scanBody = {
+                mode: 'scan',
+                categories: selectedCategories,
+                date_from: dateFrom,
+                date_to: dateTo,
+            };
+            if (employeeId) scanBody.employee_id = Number(employeeId);
+            const scanRes = await api.post('/system/health-check/data-integrity-audit/', scanBody);
+            setResults(scanRes.data);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Duzeltme basarisiz');
+        } finally {
+            setFixLoading(false);
+        }
+    }, [results, dateFrom, dateTo, employeeId, selectedCategories]);
 
     const closeModal = useCallback(() => {
         setDetailLog(null);
@@ -753,7 +932,7 @@ export default function DataIntegrityAuditTab() {
                                         ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[b[1].severity] || 3)
                                 )
                                 .map(([key, data]) => (
-                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} />
+                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} onFixCategory={fixCategory} fixLoading={fixLoading} />
                                 ))}
                         </div>
                     )}
@@ -796,14 +975,19 @@ export default function DataIntegrityAuditTab() {
                 <DetailLogModal data={detailLog} logs={bulkLogs} onClose={closeModal} />
             )}
 
+            {fixReport && (
+                <FixReportModal results={fixReport} onClose={() => setFixReport(null)} />
+            )}
+
             {/* Loading overlay */}
-            {loadingDetail && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            {loadingDetail && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
                     <div className="bg-white rounded-xl shadow-xl px-6 py-4 flex items-center gap-3">
                         <ArrowPathIcon className="w-5 h-5 animate-spin text-indigo-600" />
                         <span className="text-sm font-bold text-gray-700">Detay logu yukleniyor...</span>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Empty state */}
