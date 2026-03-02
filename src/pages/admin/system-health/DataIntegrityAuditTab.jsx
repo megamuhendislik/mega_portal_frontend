@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     ShieldCheckIcon,
     ArrowPathIcon,
@@ -9,6 +9,8 @@ import {
     MagnifyingGlassIcon,
     WrenchScrewdriverIcon,
     ClockIcon,
+    DocumentMagnifyingGlassIcon,
+    XMarkIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
@@ -98,9 +100,146 @@ const ActionBadge = ({ fixAction, fixable, mode }) => {
     );
 };
 
+// ─── Detail Log Modal ───────────────────────────────────────────────────────
+
+const DetailLogModal = ({ data, onClose }) => {
+    if (!data) return null;
+    const { employee_name, employee_id, date, day_rules, gate_events, attendance_records, ot_requests, analysis } = data;
+
+    const Section = ({ title, children }) => (
+        <div className="mb-4">
+            <h4 className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-t-lg border border-gray-200">{title}</h4>
+            <div className="border border-t-0 border-gray-200 rounded-b-lg p-3 bg-white text-xs">{children}</div>
+        </div>
+    );
+
+    const KV = ({ k, v, warn }) => (
+        <div className="flex gap-2 py-0.5">
+            <span className="text-gray-500 font-medium min-w-[140px]">{k}:</span>
+            <span className={warn ? 'text-red-600 font-bold' : 'text-gray-800 font-mono'}>{String(v ?? '-')}</span>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8" onClick={onClose}>
+            <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-4xl mx-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white rounded-t-2xl">
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-800">Detay Logu</h3>
+                        <p className="text-xs text-gray-500">{employee_name} (ID: {employee_id}) — {date}</p>
+                    </div>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg"><XMarkIcon className="w-5 h-5 text-gray-500" /></button>
+                </div>
+                <div className="p-5 max-h-[75vh] overflow-y-auto space-y-1">
+                    {/* Analysis */}
+                    <Section title="Analiz Sonucu">
+                        {(analysis || []).map((a, i) => (
+                            <div key={i} className={`py-1 ${a.startsWith('⚠') ? 'text-red-700 font-bold' : a.startsWith('✓') ? 'text-green-700' : 'text-gray-800'}`}>{a}</div>
+                        ))}
+                    </Section>
+
+                    {/* Day Rules */}
+                    <Section title="Gun Kurallari">
+                        {day_rules && Object.entries(day_rules).map(([k, v]) => <KV key={k} k={k} v={v} />)}
+                    </Section>
+
+                    {/* Gate Events */}
+                    <Section title={`Kapi Gecis Kayitlari (${data.gate_event_count || 0})`}>
+                        {gate_events && gate_events.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-[11px]">
+                                    <thead><tr className="border-b bg-gray-50">
+                                        <th className="text-left py-1 px-2 font-bold">ID</th>
+                                        <th className="text-left py-1 px-2 font-bold">UTC</th>
+                                        <th className="text-left py-1 px-2 font-bold">Istanbul</th>
+                                        <th className="text-left py-1 px-2 font-bold">Yon</th>
+                                        <th className="text-left py-1 px-2 font-bold">Kapi</th>
+                                    </tr></thead>
+                                    <tbody>{gate_events.map((ge, i) => (
+                                        <tr key={i} className="border-b border-gray-100">
+                                            <td className="py-1 px-2 font-mono">{ge.id || ge.event_id}</td>
+                                            <td className="py-1 px-2 font-mono">{ge.timestamp_utc}</td>
+                                            <td className="py-1 px-2 font-mono font-bold">{ge.timestamp_istanbul}</td>
+                                            <td className="py-1 px-2">{ge.direction}</td>
+                                            <td className="py-1 px-2">{ge.gate_name}</td>
+                                        </tr>
+                                    ))}</tbody>
+                                </table>
+                            </div>
+                        ) : <span className="text-gray-400">Kayit yok</span>}
+                    </Section>
+
+                    {/* Attendance Records */}
+                    <Section title={`Mesai Kayitlari (${data.attendance_count || 0})`}>
+                        {attendance_records && attendance_records.length > 0 ? attendance_records.map((att, i) => (
+                            <div key={i} className="border border-gray-200 rounded-lg p-3 mb-2 bg-gray-50/50">
+                                <div className="font-bold text-gray-700 mb-1">Attendance #{att.att_id} — {att.status} ({att.source})</div>
+                                <div className="grid grid-cols-2 gap-x-4">
+                                    <KV k="Giris (UTC)" v={att.check_in_utc} />
+                                    <KV k="Giris (Istanbul)" v={att.check_in_istanbul} />
+                                    <KV k="Cikis (UTC)" v={att.check_out_utc} />
+                                    <KV k="Cikis (Istanbul)" v={att.check_out_istanbul} />
+                                    <KV k="Ham sure" v={`${att.raw_minutes} dk`} />
+                                    <KV k="Ogle dususu" v={`${att.lunch_overlap_minutes} dk`} />
+                                    <KV k="Duzeltilmis ham" v={`${att.adjusted_raw_minutes} dk`} />
+                                    <KV k="Kayitli toplam" v={`${att.total_minutes} dk`} warn={Math.abs(att.adjusted_raw_minutes - att.total_minutes) > 35} />
+                                    <KV k="Normal" v={`${att.normal_minutes} dk`} />
+                                    <KV k="Fazla mesai" v={`${att.overtime_minutes} dk`} />
+                                    <KV k="Mola" v={att.break_seconds != null ? `${Math.round(att.break_seconds/60)} dk` : '-'} />
+                                    <KV k="Potansiyel mola" v={att.potential_break_seconds != null ? `${Math.round(att.potential_break_seconds/60)} dk` : '-'} />
+                                    <KV k="Kilitli" v={att.is_locked ? 'Evet' : 'Hayir'} />
+                                    <KV k="Olusturulma" v={att.created_at} />
+                                </div>
+                            </div>
+                        )) : <span className="text-gray-400">Kayit yok</span>}
+                    </Section>
+
+                    {/* OT Requests */}
+                    <Section title={`Ek Mesai Talepleri (${data.ot_count || 0})`}>
+                        {ot_requests && ot_requests.length > 0 ? ot_requests.map((ot, i) => (
+                            <div key={i} className={`border rounded-lg p-3 mb-2 ${
+                                ot.status === 'POTENTIAL' ? 'border-amber-300 bg-amber-50/50' :
+                                ot.status === 'PENDING' ? 'border-blue-300 bg-blue-50/50' :
+                                ot.status === 'APPROVED' ? 'border-green-300 bg-green-50/50' :
+                                'border-gray-200 bg-gray-50/50'
+                            }`}>
+                                <div className="font-bold text-gray-700 mb-1">
+                                    OT #{ot.ot_id} — {ot.status} ({ot.source_type})
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4">
+                                    <KV k="Baslangic" v={ot.start_time} />
+                                    <KV k="Bitis" v={ot.end_time} />
+                                    <KV k="Ham aralik" v={`${ot.raw_span_minutes} dk`} />
+                                    <KV k="Kayitli sure" v={`${ot.duration_minutes} dk`} />
+                                    <KV k="Aralik-Sure farki" v={`${ot.span_vs_duration_diff_min} dk`} warn={ot.span_vs_duration_diff_min > 5} />
+                                    <KV k="Sebep" v={ot.reason} />
+                                    <KV k="Manuel" v={ot.is_manual ? 'Evet' : 'Hayir'} />
+                                    <KV k="Atama ID" v={ot.assignment_id} />
+                                    <KV k="Attendance ID" v={ot.attendance_id} />
+                                    <KV k="Onaylayan" v={ot.target_approver} />
+                                    <KV k="Onaycı Yonetici" v={ot.approval_manager} />
+                                    <KV k="Onay Tarihi" v={ot.approval_date} />
+                                    <KV k="Olusturulma" v={ot.created_at} />
+                                    <KV k="Guncelleme" v={ot.updated_at} />
+                                    {ot.segments && ot.segments.length > 0 && (
+                                        <div className="col-span-2">
+                                            <span className="text-gray-500 font-medium">Segmentler: </span>
+                                            <span className="font-mono">{ot.segments.map(s => `${s.start}-${s.end}`).join(', ')}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )) : <span className="text-gray-400">Kayit yok</span>}
+                    </Section>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ─── Category Card ──────────────────────────────────────────────────────────
 
-const CategoryCard = ({ categoryKey, categoryData, auditMode }) => {
+const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog }) => {
     const [expanded, setExpanded] = useState(false);
     const label = CATEGORY_LABELS[categoryKey] || categoryKey;
     const { severity, count, fixed, issues } = categoryData;
@@ -160,6 +299,9 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode }) => {
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-16">
                                             Kayit ID
                                         </th>
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-12">
+                                            Log
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -201,6 +343,17 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode }) => {
                                             <td className="py-2.5 px-2 text-gray-400 font-mono text-[10px]">
                                                 {issue.id || '-'}
                                             </td>
+                                            <td className="py-2.5 px-2">
+                                                {issue.employee_id && issue.date && (
+                                                    <button
+                                                        onClick={() => onDetailLog?.(issue.employee_id, issue.date)}
+                                                        className="p-1 hover:bg-indigo-100 rounded-lg transition-colors"
+                                                        title="Detay Logu"
+                                                    >
+                                                        <DocumentMagnifyingGlassIcon className="w-4 h-4 text-indigo-500" />
+                                                    </button>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -221,6 +374,8 @@ export default function DataIntegrityAuditTab() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [results, setResults] = useState(null);
+    const [detailLog, setDetailLog] = useState(null);
+    const [loadingDetail, setLoadingDetail] = useState(false);
 
     // Filters
     const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
@@ -273,6 +428,21 @@ export default function DataIntegrityAuditTab() {
             setLoading(false);
         }
     };
+
+    const fetchDetailLog = useCallback(async (empId, date) => {
+        setLoadingDetail(true);
+        try {
+            const res = await api.post('/system/health-check/data-integrity-detail-log/', {
+                employee_id: empId,
+                date: date,
+            });
+            setDetailLog(res.data);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Detay logu alinamadi');
+        } finally {
+            setLoadingDetail(false);
+        }
+    }, []);
 
     const totalFixed = results
         ? Object.values(results.categories || {}).reduce((sum, cat) => sum + (cat.fixed || 0), 0)
@@ -474,7 +644,7 @@ export default function DataIntegrityAuditTab() {
                                         ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[b[1].severity] || 3)
                                 )
                                 .map(([key, data]) => (
-                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} />
+                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} />
                                 ))}
                         </div>
                     )}
@@ -510,6 +680,17 @@ export default function DataIntegrityAuditTab() {
                         </div>
                     )}
                 </>
+            )}
+
+            {/* Detail Log Modal */}
+            {detailLog && <DetailLogModal data={detailLog} onClose={() => setDetailLog(null)} />}
+            {loadingDetail && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                    <div className="bg-white rounded-xl shadow-xl px-6 py-4 flex items-center gap-3">
+                        <ArrowPathIcon className="w-5 h-5 animate-spin text-indigo-600" />
+                        <span className="text-sm font-bold text-gray-700">Detay logu yukleniyor...</span>
+                    </div>
+                </div>
             )}
 
             {/* Empty state */}
