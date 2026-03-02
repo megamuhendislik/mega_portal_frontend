@@ -22,6 +22,7 @@ const CATEGORY_LABELS = {
     status_anomaly: 'Durum Anomalisi',
     missing_attendance: 'Eksik Mesai Kaydi',
     fiscal_integrity: 'Mali Donem Butunlugu',
+    timezone_diagnostics: 'Saat Dilimi Tanilama',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
