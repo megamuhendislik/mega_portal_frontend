@@ -9,7 +9,7 @@ import AgendaEventModal from '../components/AgendaEventModal';
 import DayDetailModal from '../components/DayDetailModal';
 import useInterval from '../hooks/useInterval';
 import FiscalCalendarView from '../components/FiscalCalendarView'; // Imported
-import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft, Settings } from 'lucide-react'; // Added Settings icon
+import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft, Settings, CalendarCheck, ClipboardList } from 'lucide-react';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -46,14 +46,30 @@ const CalendarPage = () => {
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [selectedEventData, setSelectedEventData] = useState(null);
 
-    // Filter Toggle
+    // Filter Toggles
     const [showWorkEvents, setShowWorkEvents] = useState(false);
+    const [showOTAssignments, setShowOTAssignments] = useState(false);
+    const [showOTRequests, setShowOTRequests] = useState(false);
+
+    // Managed employees (for OT assignment)
+    const [managedEmployees, setManagedEmployees] = useState([]);
+    const isManager = managedEmployees.length > 0;
+
+    useEffect(() => {
+        const fetchManaged = async () => {
+            try {
+                const res = await api.get('/employees/subordinates/');
+                setManagedEmployees(res.data || []);
+            } catch { /* not a manager, empty list */ }
+        };
+        fetchManaged();
+    }, []);
 
     useEffect(() => {
         if (mode === 'CALENDAR' || mode === 'YEAR') {
             fetchCalendarData();
         }
-    }, [currentDate, calendarView, showWorkEvents, mode]);
+    }, [currentDate, calendarView, showWorkEvents, showOTAssignments, showOTRequests, mode]);
 
     // Live Updates (Every 60s) - Only active in Calendar mode to save resources?
     // Or keep it active if we want indicators on Year view (optional complexity).
@@ -85,7 +101,11 @@ const CalendarPage = () => {
                 end = mDate.clone().add(1, 'day').format('YYYY-MM-DD');
             }
 
-            const response = await api.get(`/calendar-events/?start=${start}&end=${end}`);
+            let url = `/calendar-events/?start=${start}&end=${end}`;
+            if (showOTAssignments) url += '&include_ot_assignments=true';
+            if (showOTRequests) url += '&include_ot_requests=true';
+
+            const response = await api.get(url);
 
             const rawEvents = response.data || [];
             const parsedEvents = [];
@@ -101,8 +121,10 @@ const CalendarPage = () => {
 
                 const isWorkEvent = ['ATTENDANCE', 'LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(evt.type);
                 const isPersonal = evt.type === 'PERSONAL';
+                const isOTAssignment = evt.type === 'OVERTIME_ASSIGNMENT';
+                const isOTRequest = evt.type === 'OVERTIME_REQUEST';
 
-                if (evt.status === 'HOLIDAY' || isPersonal || (showWorkEvents && isWorkEvent)) {
+                if (evt.status === 'HOLIDAY' || isPersonal || (showWorkEvents && isWorkEvent) || isOTAssignment || isOTRequest) {
                     parsedEvents.push({
                         ...evt,
                         start: eventStart,
@@ -138,6 +160,16 @@ const CalendarPage = () => {
 
         if (event.status === 'HOLIDAY') {
             backgroundColor = '#ef4444';
+        }
+
+        if (event.type === 'OVERTIME_ASSIGNMENT') {
+            backgroundColor = '#8b5cf6';
+            borderColor = '#7c3aed';
+        }
+
+        if (event.type === 'OVERTIME_REQUEST') {
+            backgroundColor = event.status === 'APPROVED' ? '#22c55e' : '#f59e0b';
+            borderColor = event.status === 'APPROVED' ? '#16a34a' : '#d97706';
         }
 
         return {
@@ -305,13 +337,29 @@ const CalendarPage = () => {
                     </span>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                     <button
                         onClick={() => setShowWorkEvents(!showWorkEvents)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showWorkEvents ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
                         <Briefcase size={16} />
                         {showWorkEvents ? 'İş Planı Açık' : 'İş Planı Gizli'}
+                    </button>
+
+                    <button
+                        onClick={() => setShowOTAssignments(!showOTAssignments)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showOTAssignments ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                    >
+                        <CalendarCheck size={16} />
+                        Ek Mesai Görevleri
+                    </button>
+
+                    <button
+                        onClick={() => setShowOTRequests(!showOTRequests)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showOTRequests ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                    >
+                        <ClipboardList size={16} />
+                        Ek Mesai Talepleri
                     </button>
 
                     <button
@@ -331,6 +379,8 @@ const CalendarPage = () => {
             <div className="flex items-center gap-1.5 overflow-hidden">
                 {event.type === 'PERSONAL' && event.is_shared && <Users size={12} className="shrink-0 opacity-80" />}
                 {event.type === 'PERSONAL' && !event.is_shared && <Lock size={12} className="shrink-0 opacity-70" />}
+                {event.type === 'OVERTIME_ASSIGNMENT' && <CalendarCheck size={12} className="shrink-0 opacity-90" />}
+                {event.type === 'OVERTIME_REQUEST' && <ClipboardList size={12} className="shrink-0 opacity-90" />}
                 {event.reminders?.on_event && <Bell size={10} className="shrink-0" />}
                 <span className="truncate">{event.title}</span>
             </div>
@@ -467,6 +517,20 @@ const CalendarPage = () => {
                 <div className="flex items-center gap-2 ml-auto border-l pl-4 border-slate-100">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                     <span className="text-slate-600 font-medium">İş Kaydı</span>
+                </div>
+            )}
+            {showOTAssignments && (
+                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
+                    <span className="text-slate-600 font-medium">Ek Mesai Görevi</span>
+                </div>
+            )}
+            {showOTRequests && (
+                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span className="text-slate-600 font-medium">Ek Mesai Talebi</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ml-2"></span>
+                    <span className="text-slate-600 font-medium">Onaylı</span>
                 </div>
             )}
         </div>
@@ -629,6 +693,8 @@ const CalendarPage = () => {
                     onClose={() => setShowDayDetail(false)}
                     onAddEvent={handleDayDetailAdd}
                     onEditEvent={handleDayDetailEdit}
+                    isManager={isManager}
+                    managedEmployees={managedEmployees}
                 />
             )}
 

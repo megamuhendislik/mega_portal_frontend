@@ -1555,6 +1555,29 @@ const Employees = () => {
                 (emp.title || '').toLocaleLowerCase('tr-TR').includes(searchLower);
         };
 
+        // Check if a department (or any of its sub-departments) has matching employees
+        const deptHasMatch = (dept) => {
+            if (!searchTerm && !departmentFilter) return true;
+            // Department filter check
+            if (departmentFilter && dept.id !== parseInt(departmentFilter)) {
+                // Check if any child department matches
+                const childMatch = (dept.children || []).some(child => deptHasMatch(child));
+                if (!childMatch) return false;
+                return true;
+            }
+            if (!searchTerm) return true;
+            // Check employees in this department
+            const empMatch = (dept.employees || []).some(emp => {
+                if (emp.type === 'group' && emp.employees) {
+                    return emp.employees.some(sub => matchesSearch(sub));
+                }
+                return matchesSearch(emp);
+            });
+            if (empMatch) return true;
+            // Check child departments recursively
+            return (dept.children || []).some(child => deptHasMatch(child));
+        };
+
         // Toggle collapse
         const toggleNode = (nodeId) => {
             setCollapsedNodes(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
@@ -1640,8 +1663,11 @@ const Employees = () => {
 
         // Render a department node in the tree
         const renderDepartmentNode = (dept, depth = 0, parentKey = '') => {
+            // Skip departments with no matching employees when filtering
+            if ((searchTerm || departmentFilter) && !deptHasMatch(dept)) return [];
+
             const nodeKey = `dept-${parentKey}-${dept.id}`;
-            const isCollapsed = collapsedNodes[nodeKey];
+            const isCollapsed = (searchTerm || departmentFilter) ? false : collapsedNodes[nodeKey]; // Auto-expand when searching
             const empCount = (dept.employees || []).length;
             const childDeptCount = (dept.children || []).length;
             const hasContent = empCount > 0 || childDeptCount > 0;
@@ -1742,9 +1768,19 @@ const Employees = () => {
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        {searchTerm && (
+                        <select
+                            value={departmentFilter}
+                            onChange={e => setDepartmentFilter(e.target.value)}
+                            className="h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium text-sm min-w-[180px]"
+                        >
+                            <option value="">Tüm Departmanlar</option>
+                            {departments.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </select>
+                        {(searchTerm || departmentFilter) && (
                             <button
-                                onClick={() => setSearchTerm('')}
+                                onClick={() => { setSearchTerm(''); setDepartmentFilter(''); }}
                                 className="h-12 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold flex items-center gap-1.5 transition-all text-sm shrink-0"
                             >
                                 <X size={16} /> Temizle

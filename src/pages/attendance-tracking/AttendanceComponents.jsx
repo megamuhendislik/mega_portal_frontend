@@ -3,7 +3,7 @@ import {
     Activity,
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon,
-    CalendarPlus
+    CalendarPlus, CalendarCheck
 } from 'lucide-react';
 import moment from 'moment';
 
@@ -64,6 +64,25 @@ export const EmployeeAttendanceRow = ({
                             {isManager && nodeStats && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold shrink-0 tabular-nums">
                                     {nodeStats.count} kişi
+                                </span>
+                            )}
+                            {s.today_ot_assignment?.has_assignment && (
+                                <span className="group/ot relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200 shrink-0 cursor-default">
+                                    <CalendarCheck size={11} />
+                                    Ek Mesai
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/ot:block w-56 p-2.5 bg-slate-800 text-white text-[11px] font-medium rounded-lg shadow-xl z-50 pointer-events-none">
+                                        <span className="block font-bold text-orange-300 mb-1">Ek Mesai Ataması</span>
+                                        {s.today_ot_assignment.assigned_by_name && (
+                                            <span className="block">Atayan: {s.today_ot_assignment.assigned_by_name}</span>
+                                        )}
+                                        {s.today_ot_assignment.task_description && (
+                                            <span className="block mt-0.5">Görev: {s.today_ot_assignment.task_description}</span>
+                                        )}
+                                        {s.today_ot_assignment.max_hours > 0 && (
+                                            <span className="block mt-0.5">Maks: {s.today_ot_assignment.max_hours} saat</span>
+                                        )}
+                                        <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-slate-800" />
+                                    </span>
                                 </span>
                             )}
                         </div>
