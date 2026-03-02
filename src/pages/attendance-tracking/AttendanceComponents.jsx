@@ -114,7 +114,7 @@ export const EmployeeAttendanceRow = ({
                     <div className="flex flex-col items-center gap-0.5">
                         {(s.today_ot_approved || 0) > 0 && <span className="text-[10px] font-bold text-emerald-600 tabular-nums">{formatMinutes(s.today_ot_approved)}</span>}
                         {(s.today_ot_pending || 0) > 0 && <span className="text-[10px] font-bold text-amber-500 tabular-nums">{formatMinutes(s.today_ot_pending)}</span>}
-                        {(s.today_ot_potential || 0) > 0 && <span className="text-[10px] font-semibold text-slate-400 tabular-nums">{formatMinutes(s.today_ot_potential)}</span>}
+                        {(s.today_ot_potential || 0) > 0 && !(s.today_ot_pending || 0) && !(s.today_ot_approved || 0) && <span className="text-[10px] font-semibold text-slate-400 tabular-nums">{formatMinutes(s.today_ot_potential)}</span>}
                         {!(s.today_ot_approved || s.today_ot_pending || s.today_ot_potential) && <span className="text-xs font-bold text-amber-600 tabular-nums">+{formatMinutes(s.today_overtime)}</span>}
                     </div>
                 ) : <Dash />}
@@ -309,8 +309,14 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             <div className="text-base font-bold text-amber-700 tabular-nums">{formatMinutes(employee.today_ot_pending || 0)}</div>
                         </div>
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center">
-                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Potansiyel</div>
-                            <div className="text-base font-bold text-slate-600 tabular-nums">{formatMinutes(employee.today_ot_potential || 0)}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                                {(employee.today_ot_pending || 0) > 0 ? 'Talep Edildi' : 'Potansiyel'}
+                            </div>
+                            <div className="text-base font-bold text-slate-600 tabular-nums">
+                                {(employee.today_ot_pending || 0) > 0 || (employee.today_ot_approved || 0) > 0
+                                    ? '—'
+                                    : formatMinutes(employee.today_ot_potential || 0)}
+                            </div>
                         </div>
                     </div>
 
