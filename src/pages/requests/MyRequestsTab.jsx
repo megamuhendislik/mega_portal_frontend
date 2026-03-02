@@ -64,6 +64,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [mealRequests, setMealRequests] = useState([]);
     const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
+    const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
     const [currentUserInfo, setCurrentUserInfo] = useState({ name: '', department: '' });
     const [loading, setLoading] = useState(true);
 
@@ -98,6 +99,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
             if (meRes.status === 'fulfilled') {
                 const me = meRes.value.data;
+                setCurrentUserEmployeeId(me.id);
                 setCurrentUserInfo({
                     name: me.full_name || `${me.first_name || ''} ${me.last_name || ''}`.trim(),
                     department: me.department_name || me.department?.name || '',
@@ -220,24 +222,31 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     // --- Combined & filtered data ---
 
     const allMyRequests = useMemo(() => {
+        // Helper: check if a request belongs to the current user
+        const isMyRequest = (r) => {
+            if (!currentUserEmployeeId) return true; // fallback if ID not loaded yet
+            const empId = typeof r.employee === 'object' ? r.employee?.id : r.employee;
+            return empId === currentUserEmployeeId;
+        };
+
         const items = [];
         const myInfo = { employee_name: currentUserInfo?.name || '', employee_department: currentUserInfo?.department || '' };
-        requests.forEach(r => items.push({
+        requests.filter(isMyRequest).forEach(r => items.push({
             ...r, ...myInfo, _type: 'LEAVE', type: 'LEAVE',
             _sortDate: r.start_date || r.created_at,
             leave_type_name: r.leave_type_name || requestTypes.find(t => t.id === r.request_type)?.name || r.request_type_detail?.name || '',
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
             approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
-        overtimeRequests.forEach(r => items.push({
+        overtimeRequests.filter(isMyRequest).forEach(r => items.push({
             ...r, ...myInfo, _type: 'OVERTIME', type: 'OVERTIME',
             _sortDate: r.date || r.created_at,
             onResubmit: () => handleResubmitOvertime(r),
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
             approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
-        mealRequests.forEach(r => items.push({ ...r, ...myInfo, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
-        cardlessEntryRequests.forEach(r => items.push({
+        mealRequests.filter(isMyRequest).forEach(r => items.push({ ...r, ...myInfo, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
+        cardlessEntryRequests.filter(isMyRequest).forEach(r => items.push({
             ...r, ...myInfo, _type: 'CARDLESS_ENTRY', type: 'CARDLESS_ENTRY',
             _sortDate: r.date || r.created_at,
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
@@ -245,7 +254,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
-    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes, currentUserInfo, handleResubmitOvertime]);
+    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes, currentUserInfo, currentUserEmployeeId, handleResubmitOvertime]);
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
