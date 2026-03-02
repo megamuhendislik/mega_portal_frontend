@@ -26,7 +26,7 @@ const SourceBadge = ({ source, principalName }) => {
     );
 };
 
-const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true, showApproverColumn = true, showSourceBadge = false }) => {
+const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit, onDelete, showEmployeeColumn = true, showApproverColumn = true, showSourceBadge = false, claimPotentialRenderer }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -418,6 +418,9 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             >
                                                 <Eye size={16} />
                                             </button>
+
+                                            {/* Claim Potential */}
+                                            {claimPotentialRenderer && claimPotentialRenderer(req)}
 
                                             {/* Owner Actions */}
                                             {onEdit && (req.status === 'PENDING' || req.status === 'POTENTIAL') && (

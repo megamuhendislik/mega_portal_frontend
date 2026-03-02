@@ -5,6 +5,7 @@ import {
     TrendingUp, Layers, FileText, Utensils, CreditCard, Briefcase
 } from 'lucide-react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import IncomingAnalytics from './IncomingAnalytics';
 import TeamOvertimeAnalytics from '../../components/TeamOvertimeAnalytics';
 
@@ -341,9 +342,33 @@ const TeamAnalytics = () => {
     );
 };
 
-// ===== Main AnalyticsTab =====
-const AnalyticsTab = ({ subordinates, loading, isManager }) => {
+// ===== Main AnalyticsTab (self-contained) =====
+const AnalyticsTab = ({ refreshTrigger }) => {
+    const { hasPermission } = useAuth();
     const [activeSubTab, setActiveSubTab] = useState('personal');
+    const [subordinates, setSubordinates] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [subsRes] = await Promise.allSettled([
+                    api.get('/employees/subordinates/'),
+                ]);
+                if (subsRes.status === 'fulfilled') {
+                    setSubordinates(subsRes.value.data?.results || subsRes.value.data || []);
+                }
+            } catch (err) {
+                console.error('AnalyticsTab fetch error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [refreshTrigger]);
+
+    const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || subordinates.length > 0;
 
     return (
         <div className="space-y-0 animate-in fade-in">

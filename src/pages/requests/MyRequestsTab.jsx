@@ -1,9 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
-    CheckCircle2, XCircle, AlertCircle
+    CheckCircle2, XCircle, AlertCircle, Zap
 } from 'lucide-react';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import RequestListTable from '../../components/RequestListTable';
+import CreateRequestModal from '../../components/CreateRequestModal';
+import RequestDetailModal from '../../components/RequestDetailModal';
 
 const filterChipColors = {
     blue:    { bg50: 'bg-blue-50',    text700: 'text-blue-700',    ring200: 'ring-blue-200',    text600: 'text-blue-600' },
@@ -50,14 +55,169 @@ const StatCard = ({ label, value, icon, color }) => (
     </div>
 );
 
-const MyRequestsTab = ({
-    requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes,
-    loading, handleDeleteRequest, handleEditOvertimeClick,
-    handleResubmitOvertime, handleViewDetails, setShowCreateModal, currentUserInfo
-}) => {
+const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
+    const { user } = useAuth();
+
+    // Data states
+    const [requests, setRequests] = useState([]);
+    const [overtimeRequests, setOvertimeRequests] = useState([]);
+    const [mealRequests, setMealRequests] = useState([]);
+    const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
+    const [requestTypes, setRequestTypes] = useState([]);
+    const [currentUserInfo, setCurrentUserInfo] = useState({ name: '', department: '' });
+    const [loading, setLoading] = useState(true);
+
+    // UI states
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
-    const [showPotential, setShowPotential] = useState(false);
+    const [showPotential, setShowPotential] = useState(true);
+    const [claimingId, setClaimingId] = useState(null);
+
+    // Modal states
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createModalInitialData, setCreateModalInitialData] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [selectedRequestType, setSelectedRequestType] = useState(null);
+    const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
+    const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
+
+    // Fetch all data
+    const fetchData = useCallback(async () => {
+        try {
+            const results = await Promise.allSettled([
+                api.get('/employees/me/'),
+                api.get('/leave/requests/'),
+                api.get('/leave/types/'),
+                api.get('/overtime-requests/'),
+                api.get('/meal-requests/'),
+                api.get('/cardless-entry-requests/'),
+            ]);
+
+            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes] = results;
+
+            if (meRes.status === 'fulfilled') {
+                const me = meRes.value.data;
+                setCurrentUserInfo({
+                    name: me.full_name || `${me.first_name || ''} ${me.last_name || ''}`.trim(),
+                    department: me.department_name || me.department?.name || '',
+                });
+            }
+            if (leaveRes.status === 'fulfilled') {
+                setRequests(leaveRes.value.data.results || leaveRes.value.data);
+            }
+            if (typesRes.status === 'fulfilled') {
+                setRequestTypes(typesRes.value.data.results || typesRes.value.data);
+            }
+            if (otRes.status === 'fulfilled') {
+                setOvertimeRequests(otRes.value.data.results || otRes.value.data);
+            }
+            if (mealRes.status === 'fulfilled') {
+                setMealRequests(mealRes.value.data.results || mealRes.value.data);
+            }
+            if (cardlessRes.status === 'fulfilled') {
+                setCardlessEntryRequests(cardlessRes.value.data.results || cardlessRes.value.data);
+            }
+        } catch (e) {
+            console.error('MyRequestsTab fetchData error:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Initial fetch
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    // Refresh when refreshTrigger changes
+    useEffect(() => {
+        if (refreshTrigger !== undefined && refreshTrigger > 0) {
+            fetchData();
+        }
+    }, [refreshTrigger, fetchData]);
+
+    // Notify parent when data changes
+    const notifyParent = useCallback(() => {
+        if (onDataChange) onDataChange();
+    }, [onDataChange]);
+
+    // --- Handlers ---
+
+    const handleDeleteRequest = useCallback(async (r) => {
+        if (!window.confirm('Bu talebi silmek istediginize emin misiniz?')) return;
+        const t = r.type || r._type;
+        try {
+            if (t === 'LEAVE') await api.delete(`/leave/requests/${r.id}/`);
+            else if (t === 'OVERTIME') await api.delete(`/overtime-requests/${r.id}/`);
+            else if (t === 'MEAL') await api.delete(`/meal-requests/${r.id}/`);
+            else if (t === 'CARDLESS_ENTRY') await api.delete(`/cardless-entry-requests/${r.id}/`);
+            await fetchData();
+            notifyParent();
+        } catch (e) {
+            alert(e.response?.data?.error || e.response?.data?.detail || 'Silme islemi basarisiz oldu.');
+        }
+    }, [fetchData, notifyParent]);
+
+    const handleEditOvertimeClick = useCallback((r) => {
+        setEditOvertimeForm({
+            id: r.id,
+            start_time: r.start_time ? r.start_time.substring(0, 5) : '',
+            end_time: r.end_time ? r.end_time.substring(0, 5) : '',
+            reason: r.reason || '',
+        });
+        setShowEditOvertimeModal(true);
+    }, []);
+
+    const handleEditOvertimeSubmit = useCallback(async (e) => {
+        e.preventDefault();
+        try {
+            await api.patch(`/overtime-requests/${editOvertimeForm.id}/`, {
+                start_time: editOvertimeForm.start_time,
+                end_time: editOvertimeForm.end_time,
+                reason: editOvertimeForm.reason,
+            });
+            setShowEditOvertimeModal(false);
+            await fetchData();
+            notifyParent();
+        } catch (e) {
+            alert(e.response?.data?.error || e.response?.data?.detail || 'Duzenleme basarisiz oldu.');
+        }
+    }, [editOvertimeForm, fetchData, notifyParent]);
+
+    const handleResubmitOvertime = useCallback((r) => {
+        setCreateModalInitialData({ type: 'OVERTIME', data: r });
+        setShowCreateModal(true);
+    }, []);
+
+    const handleViewDetails = useCallback((r, t) => {
+        setSelectedRequest(r);
+        setSelectedRequestType(t);
+        setShowDetailModal(true);
+    }, []);
+
+    const handleClaimPotential = useCallback(async (req) => {
+        setClaimingId(req.id);
+        try {
+            await api.post('/overtime-requests/claim-potential/', {
+                overtime_request_id: req.id,
+                reason: 'Talep edildi',
+            });
+            await fetchData();
+            notifyParent();
+        } catch (e) {
+            alert(e.response?.data?.error || e.response?.data?.detail || 'Talep islemi basarisiz oldu.');
+        } finally {
+            setClaimingId(null);
+        }
+    }, [fetchData, notifyParent]);
+
+    const handleCreateSuccess = useCallback((approverName) => {
+        fetchData();
+        notifyParent();
+    }, [fetchData, notifyParent]);
+
+    // --- Combined & filtered data ---
 
     const allMyRequests = useMemo(() => {
         const items = [];
@@ -85,7 +245,7 @@ const MyRequestsTab = ({
         }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
-    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes, currentUserInfo]);
+    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes, currentUserInfo, handleResubmitOvertime]);
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
@@ -114,6 +274,23 @@ const MyRequestsTab = ({
         };
     }, [allMyRequests]);
 
+    // Custom onEdit that routes OVERTIME to edit modal, others to view
+    const handleEdit = useCallback((req) => {
+        if (req._type === 'OVERTIME' || req.type === 'OVERTIME') {
+            handleEditOvertimeClick(req);
+        }
+    }, [handleEditOvertimeClick]);
+
+    // Wrap onViewDetails to also add claim action for POTENTIAL OT
+    const wrappedRequests = useMemo(() => {
+        return filtered.map(r => {
+            if (r._type === 'OVERTIME' && r.status === 'POTENTIAL') {
+                return { ...r, _claimAction: () => handleClaimPotential(r), _claiming: claimingId === r.id };
+            }
+            return r;
+        });
+    }, [filtered, handleClaimPotential, claimingId]);
+
     if (loading) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
@@ -124,25 +301,39 @@ const MyRequestsTab = ({
 
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="İzin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" />
-                <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" />
-                <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" />
-                <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
+            {/* Header with Yeni Talep button */}
+            <div className="flex items-center justify-between">
+                <div />
+                <button
+                    onClick={() => { setCreateModalInitialData(null); setShowCreateModal(true); }}
+                    className="group bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-2xl font-bold shadow-xl shadow-slate-200 transition-all flex items-center gap-2 active:scale-95 text-sm"
+                >
+                    <Plus size={18} className="group-hover:rotate-90 transition-transform" />
+                    Yeni Talep
+                </button>
             </div>
 
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="Izin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" />
+                <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" />
+                <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" />
+                <StatCard label="Kartsiz Giris" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
+            </div>
+
+            {/* Filter Chips */}
             <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex flex-wrap gap-2">
-                    <FilterChip active={typeFilter === 'ALL'} onClick={() => setTypeFilter('ALL')} label="Tümü" count={counts.all} color="slate" />
-                    <FilterChip active={typeFilter === 'LEAVE'} onClick={() => setTypeFilter('LEAVE')} label="İzin" icon={<Calendar size={14} />} count={counts.leave} color="blue" />
+                    <FilterChip active={typeFilter === 'ALL'} onClick={() => setTypeFilter('ALL')} label="Tumu" count={counts.all} color="slate" />
+                    <FilterChip active={typeFilter === 'LEAVE'} onClick={() => setTypeFilter('LEAVE')} label="Izin" icon={<Calendar size={14} />} count={counts.leave} color="blue" />
                     <FilterChip active={typeFilter === 'OVERTIME'} onClick={() => setTypeFilter('OVERTIME')} label="Mesai" icon={<Clock size={14} />} count={counts.overtime} color="amber" />
                     <FilterChip active={typeFilter === 'MEAL'} onClick={() => setTypeFilter('MEAL')} label="Yemek" icon={<Utensils size={14} />} count={counts.meal} color="emerald" />
-                    <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsız" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
+                    <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsiz" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tümü" color="slate" />
+                    <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tumu" color="slate" />
                     <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
-                    <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onaylı" count={counts.approved} color="emerald" />
+                    <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onayli" count={counts.approved} color="emerald" />
                     <FilterChip active={statusFilter === 'REJECTED'} onClick={() => setStatusFilter('REJECTED')} label="Red" count={counts.rejected} color="red" />
                     <div className="h-8 w-px bg-slate-200 mx-1 self-center hidden sm:block" />
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
@@ -152,28 +343,120 @@ const MyRequestsTab = ({
                 </div>
             </div>
 
+            {/* Request List or Empty State */}
             {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                     <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
                         <Search size={40} className="text-slate-300" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-800">Talep Bulunamadı</h3>
-                    <p className="text-slate-500 max-w-sm mt-2 text-sm">Seçili kriterlere uygun talep yok.</p>
-                    <button onClick={() => setShowCreateModal(true)} className="mt-8 px-6 py-3 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-xl font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
-                        <Plus size={18} /> Yeni Talep Oluştur
+                    <h3 className="text-xl font-bold text-slate-800">Talep Bulunamadi</h3>
+                    <p className="text-slate-500 max-w-sm mt-2 text-sm">Secili kriterlere uygun talep yok.</p>
+                    <button onClick={() => { setCreateModalInitialData(null); setShowCreateModal(true); }} className="mt-8 px-6 py-3 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-xl font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
+                        <Plus size={18} /> Yeni Talep Olustur
                     </button>
                 </div>
             ) : (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {/* Potential OT claim buttons row */}
+                    {wrappedRequests.some(r => r._claimAction) && (
+                        <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
+                            <p className="text-xs font-bold text-purple-700 mb-2 flex items-center gap-1.5">
+                                <AlertCircle size={14} />
+                                Potansiyel fazla mesai tespitleriniz var. Talep etmek icin satirdaki butonu kullanin.
+                            </p>
+                        </div>
+                    )}
                     <RequestListTable
-                        requests={filtered}
+                        requests={wrappedRequests}
                         onViewDetails={handleViewDetails}
-                        onEdit={handleEditOvertimeClick}
+                        onEdit={handleEdit}
                         onDelete={handleDeleteRequest}
                         showEmployeeColumn={false}
+                        claimPotentialRenderer={(req) => {
+                            if (!req._claimAction) return null;
+                            return (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); req._claimAction(); }}
+                                    disabled={req._claiming}
+                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                    title="Bu potansiyel mesaiyi talep et"
+                                >
+                                    <Zap size={12} />
+                                    {req._claiming ? 'Isleniyor...' : 'Talep Et'}
+                                </button>
+                            );
+                        }}
                     />
                 </div>
             )}
+
+            {/* Create Request Modal */}
+            <CreateRequestModal
+                isOpen={showCreateModal}
+                onClose={() => { setShowCreateModal(false); setCreateModalInitialData(null); }}
+                onSuccess={handleCreateSuccess}
+                requestTypes={requestTypes}
+                initialData={createModalInitialData}
+            />
+
+            {/* Edit Overtime Modal */}
+            {showEditOvertimeModal && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+                        <h3 className="text-xl font-bold text-slate-900">Mesai Duzenle</h3>
+                        <form onSubmit={handleEditOvertimeSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Baslangic</label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={editOvertimeForm.start_time}
+                                        onChange={e => setEditOvertimeForm(prev => ({ ...prev, start_time: e.target.value }))}
+                                        className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Bitis</label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={editOvertimeForm.end_time}
+                                        onChange={e => setEditOvertimeForm(prev => ({ ...prev, end_time: e.target.value }))}
+                                        className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold"
+                                    />
+                                </div>
+                            </div>
+                            <textarea
+                                required
+                                rows="3"
+                                value={editOvertimeForm.reason}
+                                onChange={e => setEditOvertimeForm(prev => ({ ...prev, reason: e.target.value }))}
+                                className="w-full p-3 bg-slate-50 rounded-xl border-none resize-none"
+                                placeholder="Aciklama"
+                            />
+                            <div className="flex gap-2 pt-2">
+                                <button type="button" onClick={() => setShowEditOvertimeModal(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">
+                                    Iptal
+                                </button>
+                                <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30">
+                                    Kaydet
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Request Detail Modal */}
+            <RequestDetailModal
+                isOpen={showDetailModal}
+                onClose={() => { setShowDetailModal(false); setSelectedRequest(null); }}
+                request={selectedRequest}
+                requestType={selectedRequestType}
+                onUpdate={() => { fetchData(); notifyParent(); }}
+            />
         </div>
     );
 };
