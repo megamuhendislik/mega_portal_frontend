@@ -511,7 +511,21 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         } catch (err) {
             console.error('Error creating request:', err);
             const data = err.response?.data;
-            const errorMsg = data?.detail || data?.error || data?.non_field_errors?.[0] || data?.check_in_time?.[0] || data?.check_out_time?.[0] || data?.balance?.[0] || data?.balance || data?.date?.[0] || data?.date || 'Talep oluşturulurken bir hata oluştu.';
+            // Extract error from all possible backend field names
+            const errorMsg = data?.detail || data?.error || data?.non_field_errors?.[0]
+                || data?.check_in_time?.[0] || data?.check_out_time?.[0]
+                || data?.balance?.[0] || data?.balance
+                || data?.date?.[0] || data?.date
+                || data?.start_date?.[0] || data?.start_date
+                || data?.end_date?.[0] || data?.end_date
+                || data?.request_type?.[0] || data?.request_type
+                || data?.reason?.[0] || data?.reason
+                || data?.destination?.[0]
+                || data?.start_time?.[0] || data?.end_time?.[0]
+                || data?.time?.[0] || data?.time
+                || data?.document?.[0]
+                || err.message
+                || 'Talep oluşturulurken bir hata oluştu.';
             setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
         } finally {
             setLoading(false);
