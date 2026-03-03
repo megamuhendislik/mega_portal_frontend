@@ -209,13 +209,49 @@ const Dashboard = () => {
                     icon={Coffee}
                     color={todaySummary?.is_off_day ? 'gray' : 'amber'}
                 />
-                <StatCard
-                    title="FAZLA MESAİ"
-                    value={`${formatMin(todaySummary?.overtime_approved)} dk`}
-                    subValue={`Onaylı: ${formatMin(todaySummary?.overtime_approved)} / Bekleyen: ${formatMin(todaySummary?.overtime_pending)} / Potansiyel: ${formatMin(todaySummary?.overtime_potential)} dk`}
-                    icon={Zap}
-                    color="emerald"
-                />
+                <div className="col-span-1 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">FAZLA MESAİ</p>
+                        <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                            <Zap size={16} />
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-1">
+                        <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                            {formatMin(todaySummary?.overtime_approved)}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">dk onaylı</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium mb-3">
+                        Bekleyen: {formatMin(todaySummary?.overtime_pending)} / Potansiyel: {formatMin(todaySummary?.overtime_potential)} dk
+                    </p>
+
+                    {/* Weekly OT Progress */}
+                    {todaySummary?.weekly_ot_limit_hours > 0 && (
+                        <div className="pt-2 border-t border-slate-50">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-[9px] font-bold text-amber-500 uppercase">HAFTALIK LİMİT</span>
+                                <span className={`text-[9px] font-bold ${
+                                    todaySummary?.weekly_ot_is_over_limit ? 'text-red-600' :
+                                    (todaySummary?.weekly_ot_used_hours / todaySummary?.weekly_ot_limit_hours) > 0.7 ? 'text-amber-600' :
+                                    'text-emerald-600'
+                                }`}>
+                                    {todaySummary?.weekly_ot_used_hours || 0}/{todaySummary?.weekly_ot_limit_hours} sa
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${
+                                        todaySummary?.weekly_ot_is_over_limit ? 'bg-red-500' :
+                                        (todaySummary?.weekly_ot_used_hours / todaySummary?.weekly_ot_limit_hours) > 0.7 ? 'bg-amber-400' :
+                                        'bg-emerald-500'
+                                    }`}
+                                    style={{ width: `${Math.min(100, ((todaySummary?.weekly_ot_used_hours || 0) / todaySummary?.weekly_ot_limit_hours) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* 4. Unified Leave Card — Annual + Excuse side by side */}
                 <div className="col-span-1 md:col-span-2 lg:col-span-2 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all duration-300 relative overflow-hidden">

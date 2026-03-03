@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Activity,
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
@@ -6,6 +6,7 @@ import {
     CalendarPlus, CalendarCheck
 } from 'lucide-react';
 import moment from 'moment';
+import api from '../../services/api';
 
 export const formatMinutes = (minutes) => {
     if (!minutes) return '0s 0dk';
@@ -258,6 +259,18 @@ export const HierarchyGroupRow = ({
    EmployeeDetailModal
    ───────────────────────────────────────────── */
 export const EmployeeDetailModal = ({ employee, onClose }) => {
+    const [weeklyOtData, setWeeklyOtData] = useState(null);
+
+    useEffect(() => {
+        if (employee?.employee_id) {
+            api.get(`/attendance/overtime-requests/weekly-ot-status/?employee_id=${employee.employee_id}`)
+                .then(res => setWeeklyOtData(res.data))
+                .catch(() => setWeeklyOtData(null));
+        } else {
+            setWeeklyOtData(null);
+        }
+    }, [employee?.employee_id]);
+
     if (!employee) return null;
 
     return (
@@ -319,6 +332,32 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Weekly OT Limit */}
+                    {weeklyOtData && !weeklyOtData.is_unlimited && (
+                        <div className="p-3 rounded-xl border border-slate-100 bg-slate-50">
+                            <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Mesai Limiti (Son 7 Gün)</span>
+                                <span className={`text-[10px] font-bold ${
+                                    weeklyOtData.is_over_limit ? 'text-red-600' :
+                                    (weeklyOtData.used_hours / weeklyOtData.limit_hours) > 0.7 ? 'text-amber-600' :
+                                    'text-emerald-600'
+                                }`}>
+                                    {weeklyOtData.used_hours}/{weeklyOtData.limit_hours} sa
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${
+                                        weeklyOtData.is_over_limit ? 'bg-red-500' :
+                                        (weeklyOtData.used_hours / weeklyOtData.limit_hours) > 0.7 ? 'bg-amber-400' :
+                                        'bg-emerald-500'
+                                    }`}
+                                    style={{ width: `${Math.min(100, (weeklyOtData.used_hours / weeklyOtData.limit_hours) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Timeline */}
                     <div>

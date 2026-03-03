@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle
+    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle, Clock
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -50,6 +50,7 @@ const EmployeeDetail = () => {
         shift_start: '', shift_end: '',
         lunch_start: '12:30', lunch_end: '13:30',
         uses_service: false, service_tolerance_minutes: 0,
+        weekly_ot_limit_hours: 30,
 
         // Permissions
         roles: [], direct_permissions: [],
@@ -135,6 +136,7 @@ const EmployeeDetail = () => {
                 lunch_end: emp.lunch_end || '13:30',
                 uses_service: emp.uses_service || false,
                 service_tolerance_minutes: emp.service_tolerance_minutes || 0,
+                weekly_ot_limit_hours: emp.weekly_ot_limit_hours ?? 30,
                 weekly_schedule: emp.weekly_schedule || {},
 
                 roles: emp.roles.map(r => r.id),
@@ -659,6 +661,33 @@ const EmployeeDetail = () => {
                                                 <p className="text-xs text-slate-400 mt-1">Boş bırakılırsa takvim ayarı kullanılır</p>
                                             </div>
                                         )}
+
+                                        {/* Weekly OT Limit */}
+                                        <div className="md:col-span-2 pt-4 border-t border-slate-100 mt-2">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="p-1.5 rounded-lg bg-amber-50">
+                                                    <Clock size={16} className="text-amber-600" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-sm font-medium text-slate-700">Haftalık Ek Mesai Limiti</span>
+                                                    <p className="text-xs text-slate-400">Son 7 günde (rolling window) yapılabilecek maks. ek mesai saati. 0 = sınırsız.</p>
+                                                </div>
+                                            </div>
+                                            <div className="max-w-xs">
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="168"
+                                                        step="0.5"
+                                                        value={formData.weekly_ot_limit_hours ?? 30}
+                                                        onChange={e => setFormData(prev => ({ ...prev, weekly_ot_limit_hours: e.target.value ? parseFloat(e.target.value) : 0 }))}
+                                                        className="w-full p-2 pr-12 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">SAAT</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 

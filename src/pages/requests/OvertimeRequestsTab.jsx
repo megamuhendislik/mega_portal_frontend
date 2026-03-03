@@ -101,9 +101,10 @@ const SectionHeader = ({ icon, title, count, children }) => (
 );
 
 // MODALS
-const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading }) => {
+const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, weeklyOtStatus }) => {
     const [reason, setReason] = useState('');
     if (!isOpen) return null;
+    const isOverLimit = weeklyOtStatus?.is_over_limit;
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-fade-in">
@@ -112,13 +113,32 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading }) => 
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>
                 {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+
+                {/* Weekly OT Limit Warning */}
+                {weeklyOtStatus && !weeklyOtStatus.is_unlimited && (
+                    <div className={`px-3 py-2 rounded-xl text-sm font-medium border ${
+                        isOverLimit
+                            ? 'bg-red-50 border-red-200 text-red-700'
+                            : 'bg-amber-50 border-amber-200 text-amber-700'
+                    }`}>
+                        <p className="font-bold text-xs mb-0.5">
+                            Haftal\u0131k Mesai: {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} saat
+                        </p>
+                        {isOverLimit ? (
+                            <p className="text-xs">Son 7 g\u00fcnde ek mesai limitinize ula\u015ft\u0131n\u0131z. Yeni talep olu\u015fturamazs\u0131n\u0131z.</p>
+                        ) : (
+                            <p className="text-xs">Kalan: {weeklyOtStatus.remaining_hours} saat</p>
+                        )}
+                    </div>
+                )}
+
                 <textarea rows="3" value={reason} onChange={e => setReason(e.target.value)}
                     placeholder="A\u00e7\u0131klama (opsiyonel)..." className="input-field resize-none" />
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazge\u00e7</button>
-                    <button onClick={() => { onSubmit(reason); setReason(''); }} disabled={loading}
+                    <button onClick={() => { onSubmit(reason); setReason(''); }} disabled={loading || isOverLimit}
                         className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all">
-                        {loading ? 'G\u00f6nderiliyor...' : 'Talep Et'}
+                        {loading ? 'G\u00f6nderiliyor...' : isOverLimit ? 'Limit Dolu' : 'Talep Et'}
                     </button>
                 </div>
             </div>
@@ -126,16 +146,23 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading }) => 
     );
 };
 
-const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading }) => {
+const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading, fetchWeeklyOtStatus, weeklyOtStatus }) => {
     const [form, setForm] = useState({ date: '', start_time: '', end_time: '', reason: '' });
     const [error, setError] = useState('');
+    const isOverLimit = weeklyOtStatus?.is_over_limit;
 
     if (!isOpen) return null;
+
+    const handleDateChange = (newDate) => {
+        setForm(prev => ({ ...prev, date: newDate }));
+        if (newDate && fetchWeeklyOtStatus) fetchWeeklyOtStatus(newDate);
+    };
 
     const handleSubmit = () => {
         if (!form.date || !form.start_time || !form.end_time) { setError('T\u00fcm alanlar\u0131 doldurunuz.'); return; }
         if (form.end_time <= form.start_time) { setError('Biti\u015f saati ba\u015flang\u0131\u00e7tan b\u00fcy\u00fck olmal\u0131.'); return; }
         if (!form.reason.trim()) { setError('A\u00e7\u0131klama giriniz.'); return; }
+        if (isOverLimit) { setError('Haftal\u0131k ek mesai limitinize ula\u015ft\u0131n\u0131z.'); return; }
         setError('');
         onSubmit(form);
     };
@@ -154,10 +181,29 @@ const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading }) => {
                     <button onClick={handleClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>
                 {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-sm font-medium">{error}</div>}
+
+                {/* Weekly OT Limit Warning */}
+                {weeklyOtStatus && !weeklyOtStatus.is_unlimited && (
+                    <div className={`px-3 py-2 rounded-xl text-sm font-medium border ${
+                        isOverLimit
+                            ? 'bg-red-50 border-red-200 text-red-700'
+                            : 'bg-amber-50 border-amber-200 text-amber-700'
+                    }`}>
+                        <p className="font-bold text-xs mb-0.5">
+                            Haftal\u0131k Mesai: {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} saat
+                        </p>
+                        {isOverLimit ? (
+                            <p className="text-xs">Son 7 g\u00fcnde ek mesai limitinize ula\u015ft\u0131n\u0131z.</p>
+                        ) : (
+                            <p className="text-xs">Kalan: {weeklyOtStatus.remaining_hours} saat</p>
+                        )}
+                    </div>
+                )}
+
                 <div className="grid grid-cols-3 gap-3">
                     <div>
                         <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
-                        <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="input-field" />
+                        <input type="date" value={form.date} onChange={e => handleDateChange(e.target.value)} className="input-field" />
                     </div>
                     <div>
                         <label className="text-xs font-bold text-slate-500 mb-1 block">Ba\u015flang\u0131\u00e7</label>
@@ -175,10 +221,10 @@ const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading }) => {
                 </div>
                 <div className="flex gap-2">
                     <button onClick={handleClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazge\u00e7</button>
-                    <button onClick={handleSubmit} disabled={loading}
+                    <button onClick={handleSubmit} disabled={loading || isOverLimit}
                         className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                         {loading ? <Loader2 size={14} className="animate-spin" /> : <PenLine size={14} />}
-                        {loading ? 'G\u00f6nderiliyor...' : 'Talep Olu\u015ftur'}
+                        {loading ? 'G\u00f6nderiliyor...' : isOverLimit ? 'Limit Dolu' : 'Talep Olu\u015ftur'}
                     </button>
                 </div>
             </div>
@@ -308,6 +354,21 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [teamAssignments, setTeamAssignments] = useState([]);
     const [teamMembers, setTeamMembers] = useState([]);
 
+    // Weekly OT Limit
+    const [weeklyOtStatus, setWeeklyOtStatus] = useState(null);
+
+    const fetchWeeklyOtStatus = useCallback(async (refDate) => {
+        try {
+            const params = refDate ? `?reference_date=${refDate}` : '';
+            const res = await api.get(`/attendance/overtime-requests/weekly-ot-status/${params}`);
+            setWeeklyOtStatus(res.data);
+        } catch (err) {
+            console.error('Weekly OT status fetch error:', err);
+        }
+    }, []);
+
+    useEffect(() => { fetchWeeklyOtStatus(); }, [fetchWeeklyOtStatus]);
+
     // Modals
     const [claimModal, setClaimModal] = useState({ open: false, type: null, target: null, title: '', subtitle: '' });
     const [cancelModal, setCancelModal] = useState({ open: false, target: null });
@@ -346,7 +407,22 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     api.get('/employees/', { params: { page_size: 200 } }),
                 ];
                 const mgrResults = await Promise.allSettled(mgrCalls);
-                if (mgrResults[0].status === 'fulfilled') setTeamAssignments(mgrResults[0].value.data);
+                let rawAssignments = [];
+                if (mgrResults[0].status === 'fulfilled') {
+                    rawAssignments = mgrResults[0].value.data;
+                    // Enrich team assignments with weekly OT status
+                    const enriched = await Promise.all(
+                        (Array.isArray(rawAssignments) ? rawAssignments : []).map(async (a) => {
+                            try {
+                                const res = await api.get(`/attendance/overtime-requests/weekly-ot-status/?employee_id=${a.employee}&reference_date=${a.date}`);
+                                return { ...a, _weeklyOtStatus: res.data };
+                            } catch {
+                                return a;
+                            }
+                        })
+                    );
+                    setTeamAssignments(enriched);
+                }
                 if (mgrResults[1].status === 'fulfilled') {
                     const d = mgrResults[1].value.data;
                     setTeamMembers(Array.isArray(d) ? d : (d.results || []));
@@ -477,11 +553,14 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 <div className="space-y-2">
                                     {visibleIntended.map((item, i) => (
                                         <ClaimableCard key={`i-${i}`} item={item} type="intended"
-                                            onClaim={() => setClaimModal({
-                                                open: true, type: 'INTENDED', target: item,
-                                                title: 'Planl\u0131 Mesai Talep Et',
-                                                subtitle: `${formatDateTurkish(item.date)} - ${item.claimable_hours || item.actual_overtime_hours} saat`,
-                                            })} />
+                                            onClaim={() => {
+                                                fetchWeeklyOtStatus(item.date);
+                                                setClaimModal({
+                                                    open: true, type: 'INTENDED', target: item,
+                                                    title: 'Planl\u0131 Mesai Talep Et',
+                                                    subtitle: `${formatDateTurkish(item.date)} - ${item.claimable_hours || item.actual_overtime_hours} saat`,
+                                                });
+                                            }} />
                                     ))}
                                 </div>
                             </div>
@@ -497,11 +576,14 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 <div className="space-y-2">
                                     {claimableData.potential.map((item, i) => (
                                         <ClaimableCard key={`p-${i}`} item={item} type="potential"
-                                            onClaim={() => setClaimModal({
-                                                open: true, type: 'POTENTIAL', target: item,
-                                                title: 'Algilanan Mesai Talep Et',
-                                                subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}-${item.end_time})` : ''} - ${item.actual_overtime_hours} saat`,
-                                            })} />
+                                            onClaim={() => {
+                                                fetchWeeklyOtStatus(item.date);
+                                                setClaimModal({
+                                                    open: true, type: 'POTENTIAL', target: item,
+                                                    title: 'Algilanan Mesai Talep Et',
+                                                    subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}-${item.end_time})` : ''} - ${item.actual_overtime_hours} saat`,
+                                                });
+                                            }} />
                                     ))}
                                 </div>
                             </div>
@@ -582,7 +664,21 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 <tbody>
                                     {teamAssignments.map(a => (
                                         <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                            <td className="py-3 px-3 font-medium text-slate-700">{a.employee_name}</td>
+                                            <td className="py-3 px-3">
+                                                <div className="font-medium text-slate-700">{a.employee_name}</div>
+                                                {a._weeklyOtStatus && !a._weeklyOtStatus.is_unlimited && (
+                                                    <div className={`mt-1 px-2 py-1 rounded-lg text-[10px] font-bold inline-block ${
+                                                        a._weeklyOtStatus.is_over_limit
+                                                            ? 'bg-red-50 text-red-600 border border-red-200'
+                                                            : (a._weeklyOtStatus.used_hours / a._weeklyOtStatus.limit_hours) > 0.7
+                                                                ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                                                                : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                                    }`}>
+                                                        Haftal\u0131k Mesai: {a._weeklyOtStatus.used_hours}/{a._weeklyOtStatus.limit_hours} sa
+                                                        {a._weeklyOtStatus.is_over_limit && ' \u2014 L\u0130M\u0130T A\u015eILMI\u015e'}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="py-3 px-3 text-slate-600">{formatDateShort(a.date)}</td>
                                             <td className="py-3 px-3 text-slate-600">{a.max_duration_hours} sa</td>
                                             <td className="py-3 px-3"><AssignmentStatusBadge status={a.status} /></td>
@@ -611,6 +707,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 onClose={() => setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' })}
                 onSubmit={handleClaim}
                 loading={actionLoading}
+                weeklyOtStatus={weeklyOtStatus}
             />
             <CancelConfirmModal
                 isOpen={cancelModal.open}
@@ -624,6 +721,8 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 onClose={() => setShowManualModal(false)}
                 onSubmit={handleManualSubmit}
                 loading={actionLoading}
+                fetchWeeklyOtStatus={fetchWeeklyOtStatus}
+                weeklyOtStatus={weeklyOtStatus}
             />
             {isManager && (
                 <CreateAssignmentModal
