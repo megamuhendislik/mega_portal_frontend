@@ -111,10 +111,10 @@ const ExpandedRowContent = ({ record }) => {
             <div className="flex-1">
                 <h4 className="text-sm font-semibold mb-2 text-gray-700">
                     <FileTextOutlined className="mr-1" />
-                    CSV Kart Okuyucu Olaylar&#305;
+                    CSV Kart Okuyucu Olayları
                 </h4>
                 {csvEvents.length === 0 ? (
-                    <p className="text-xs text-gray-400">Olay bulunamad&#305;.</p>
+                    <p className="text-xs text-gray-400">Olay bulunamadı.</p>
                 ) : (
                     <Table
                         dataSource={csvEvents}
@@ -133,7 +133,7 @@ const ExpandedRowContent = ({ record }) => {
                                 ),
                             },
                             {
-                                title: 'Y\u00F6n',
+                                title: 'Yön',
                                 dataIndex: 'direction',
                                 key: 'direction',
                                 width: 100,
@@ -161,19 +161,19 @@ const ExpandedRowContent = ({ record }) => {
             <div className="flex-1">
                 <h4 className="text-sm font-semibold mb-2 text-gray-700">
                     <ToolOutlined className="mr-1" />
-                    Sistem Mesai Detay&#305;
+                    Sistem Mesai Detayı
                 </h4>
                 {!record.has_attendance ? (
                     <Alert
                         type="warning"
                         showIcon
-                        message="Bu tarih i\u00E7in sistemde mesai kayd\u0131 bulunamad\u0131."
+                        message="Bu tarih için sistemde mesai kaydı bulunamadı."
                         className="text-xs"
                     />
                 ) : (
                     <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="bg-gray-50 rounded p-2">
-                            <span className="text-gray-500">Toplam S\u00FCre:</span>
+                            <span className="text-gray-500">Toplam Süre:</span>
                             <span className="ml-2 font-semibold">
                                 {sysDetails.total_hours != null
                                     ? formatHours(sysDetails.total_hours)
@@ -193,7 +193,7 @@ const ExpandedRowContent = ({ record }) => {
                             <span className="ml-2 font-semibold">{sysDetails.status || '-'}</span>
                         </div>
                         <div className="bg-gray-50 rounded p-2">
-                            <span className="text-gray-500">Kay&#305;t ID:</span>
+                            <span className="text-gray-500">Kayıt ID:</span>
                             <span className="ml-2 font-mono">{sysDetails.attendance_id || '-'}</span>
                         </div>
                     </div>
@@ -254,7 +254,7 @@ export default function PdksCompareTab() {
 
     const handleCompare = async () => {
         if (!file) {
-            message.warning('L\u00FCtfen \u00F6nce bir CSV dosyas\u0131 se\u00E7in.');
+            message.warning('Lütfen önce bir CSV dosyası seçin.');
             return;
         }
         const formData = new FormData();
@@ -269,14 +269,14 @@ export default function PdksCompareTab() {
             });
             setResults(res.data);
             message.success(
-                `Kar\u015F\u0131la\u015Ft\u0131rma tamamland\u0131: ${res.data.matches?.length || 0} g\u00FCn i\u015Flendi.`
+                `Karşılaştırma tamamlandı: ${res.data.matches?.length || 0} gün işlendi.`
             );
         } catch (e) {
             const errMsg =
                 e.response?.data?.error ||
                 e.response?.data?.detail ||
                 e.message;
-            message.error('Kar\u015F\u0131la\u015Ft\u0131rma hatas\u0131: ' + errMsg);
+            message.error('Karşılaştırma hatası: ' + errMsg);
         } finally {
             setComparing(false);
         }
@@ -284,27 +284,27 @@ export default function PdksCompareTab() {
 
     const handleFix = () => {
         if (selectedRows.length === 0) {
-            message.warning('L\u00FCtfen d\u00FCzeltilecek kay\u0131tlar\u0131 se\u00E7in.');
+            message.warning('Lütfen düzeltilecek kayıtları seçin.');
             return;
         }
 
         Modal.confirm({
-            title: 'PDKS Verisi ile D\u00FCzeltme Onay\u0131',
+            title: 'PDKS Verisi ile Düzeltme Onayı',
             icon: <ExclamationCircleOutlined />,
             content: (
                 <div className="mt-2 text-sm">
                     <p>
-                        <strong>{selectedRows.length}</strong> g\u00FCn i\u00E7in kart giri\u015F/\u00E7\u0131k\u0131\u015F
-                        verileri g\u00FCncellenecek ve mesai yeniden hesaplanacak.
+                        <strong>{selectedRows.length}</strong> gün için kart giriş/çıkış
+                        verileri güncellenecek ve mesai yeniden hesaplanacak.
                     </p>
                     <p className="mt-2 text-gray-500">
-                        Mevcut ek mesai talepleri silinmeyecek, sadece s\u00FCreleri ayarlanacakt\u0131r.
+                        Mevcut ek mesai talepleri silinmeyecek, sadece süreleri ayarlanacaktır.
                     </p>
                 </div>
             ),
-            okText: 'D\u00FCzelt',
+            okText: 'Düzelt',
             okButtonProps: { danger: true },
-            cancelText: '\u0130ptal',
+            cancelText: 'İptal',
             onOk: executeFixing,
             width: 480,
         });
@@ -323,7 +323,7 @@ export default function PdksCompareTab() {
         }).filter(Boolean);
 
         if (corrections.length === 0) {
-            message.error('D\u00FCzeltilecek ge\u00E7erli kay\u0131t bulunamad\u0131.');
+            message.error('Düzeltilecek geçerli kayıt bulunamadı.');
             return;
         }
 
@@ -334,9 +334,9 @@ export default function PdksCompareTab() {
             const fixed = res.data.summary?.fixed || 0;
             const failed = res.data.summary?.failed || 0;
             if (failed === 0) {
-                message.success(`${fixed} kay\u0131t ba\u015Far\u0131yla d\u00FCzeltildi.`);
+                message.success(`${fixed} kayıt başarıyla düzeltildi.`);
             } else {
-                message.warning(`${fixed} d\u00FCzeltildi, ${failed} hata olu\u015Ftu.`);
+                message.warning(`${fixed} düzeltildi, ${failed} hata oluştu.`);
             }
             setSelectedRows([]);
         } catch (e) {
@@ -344,7 +344,7 @@ export default function PdksCompareTab() {
                 e.response?.data?.error ||
                 e.response?.data?.detail ||
                 e.message;
-            message.error('D\u00FCzeltme hatas\u0131: ' + errMsg);
+            message.error('Düzeltme hatası: ' + errMsg);
         } finally {
             setFixing(false);
         }
@@ -426,7 +426,7 @@ export default function PdksCompareTab() {
                 render: (v) => formatDate(v),
             },
             {
-                title: 'CSV Giri\u015F',
+                title: 'CSV Giriş',
                 dataIndex: 'csv_check_in',
                 key: 'csv_check_in',
                 width: 100,
@@ -437,7 +437,7 @@ export default function PdksCompareTab() {
                 ),
             },
             {
-                title: 'CSV \u00C7\u0131k\u0131\u015F',
+                title: 'CSV Çıkış',
                 dataIndex: 'csv_check_out',
                 key: 'csv_check_out',
                 width: 100,
@@ -448,7 +448,7 @@ export default function PdksCompareTab() {
                 ),
             },
             {
-                title: 'Sistem Giri\u015F',
+                title: 'Sistem Giriş',
                 dataIndex: 'sys_check_in',
                 key: 'sys_check_in',
                 width: 100,
@@ -469,7 +469,7 @@ export default function PdksCompareTab() {
                 },
             },
             {
-                title: 'Sistem \u00C7\u0131k\u0131\u015F',
+                title: 'Sistem Çıkış',
                 dataIndex: 'sys_check_out',
                 key: 'sys_check_out',
                 width: 100,
@@ -494,9 +494,9 @@ export default function PdksCompareTab() {
                 key: 'status',
                 width: 120,
                 filters: [
-                    { text: 'E\u015Fle\u015Fiyor', value: 'match' },
+                    { text: 'Eşleşiyor', value: 'match' },
                     { text: 'Fark Var', value: 'diff' },
-                    { text: 'Kay\u0131t Yok', value: 'missing' },
+                    { text: 'Kayıt Yok', value: 'missing' },
                 ],
                 onFilter: (value, record) => {
                     if (value === 'match') return record.has_attendance && !record.has_difference;
@@ -508,7 +508,7 @@ export default function PdksCompareTab() {
                     if (!record.has_attendance) {
                         return (
                             <Tag icon={<WarningOutlined />} color="orange">
-                                Kay\u0131t Yok
+                                Kayıt Yok
                             </Tag>
                         );
                     }
@@ -521,7 +521,7 @@ export default function PdksCompareTab() {
                     }
                     return (
                         <Tag icon={<CheckCircleOutlined />} color="green">
-                            E\u015Fle\u015Fiyor
+                            Eşleşiyor
                         </Tag>
                     );
                 },
@@ -571,7 +571,7 @@ export default function PdksCompareTab() {
                 render: (v) => formatDate(v),
             },
             {
-                title: 'Eski Giri\u015F \u2192 Yeni Giri\u015F',
+                title: 'Eski Giriş → Yeni Giriş',
                 key: 'check_in_change',
                 width: 180,
                 render: (_, record) => (
@@ -579,7 +579,7 @@ export default function PdksCompareTab() {
                         <span className="text-red-500 line-through">
                             {formatTime(record.old_check_in)}
                         </span>
-                        <span className="mx-1 text-gray-400">\u2192</span>
+                        <span className="mx-1 text-gray-400">→</span>
                         <span className="text-green-600 font-semibold">
                             {formatTime(record.new_check_in)}
                         </span>
@@ -587,7 +587,7 @@ export default function PdksCompareTab() {
                 ),
             },
             {
-                title: 'Eski \u00C7\u0131k\u0131\u015F \u2192 Yeni \u00C7\u0131k\u0131\u015F',
+                title: 'Eski Çıkış → Yeni Çıkış',
                 key: 'check_out_change',
                 width: 180,
                 render: (_, record) => (
@@ -595,7 +595,7 @@ export default function PdksCompareTab() {
                         <span className="text-red-500 line-through">
                             {formatTime(record.old_check_out)}
                         </span>
-                        <span className="mx-1 text-gray-400">\u2192</span>
+                        <span className="mx-1 text-gray-400">→</span>
                         <span className="text-green-600 font-semibold">
                             {formatTime(record.new_check_out)}
                         </span>
@@ -603,7 +603,7 @@ export default function PdksCompareTab() {
                 ),
             },
             {
-                title: 'Eski S\u00FCre \u2192 Yeni S\u00FCre',
+                title: 'Eski Süre → Yeni Süre',
                 key: 'duration_change',
                 width: 180,
                 render: (_, record) => {
@@ -614,14 +614,14 @@ export default function PdksCompareTab() {
                     return (
                         <span className="font-mono text-xs">
                             <span className="text-gray-500">{fmt(oldDur)}</span>
-                            <span className="mx-1 text-gray-400">\u2192</span>
+                            <span className="mx-1 text-gray-400">→</span>
                             <span className="font-semibold">{fmt(newDur)}</span>
                         </span>
                     );
                 },
             },
             {
-                title: 'OT De\u011Fi\u015Fim',
+                title: 'OT Değişim',
                 key: 'ot_change',
                 width: 160,
                 render: (_, record) => {
@@ -638,7 +638,7 @@ export default function PdksCompareTab() {
                                     ) : (
                                         <span>
                                             <span className="text-gray-400">{formatSeconds(adj.old_duration)}</span>
-                                            <span className="mx-1">\u2192</span>
+                                            <span className="mx-1">→</span>
                                             <span className={adj.new_duration === 0 ? 'text-red-500 font-semibold' : 'font-semibold'}>
                                                 {formatSeconds(adj.new_duration)}
                                             </span>
@@ -652,16 +652,16 @@ export default function PdksCompareTab() {
                 },
             },
             {
-                title: 'Sonu\u00E7',
+                title: 'Sonuç',
                 dataIndex: 'status',
                 key: 'fix_status',
                 width: 100,
                 render: (v) => {
                     if (v === 'fixed' || v === 'success') {
-                        return <Tag color="green">D\u00FCzeltildi</Tag>;
+                        return <Tag color="green">Düzeltildi</Tag>;
                     }
                     if (v === 'skipped') {
-                        return <Tag color="default">Atland\u0131</Tag>;
+                        return <Tag color="default">Atlandı</Tag>;
                     }
                     if (v === 'error' || v === 'failed') {
                         return (
@@ -685,12 +685,12 @@ export default function PdksCompareTab() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h3 className="text-base font-semibold text-gray-800 mb-4">
                     <SyncOutlined className="mr-2 text-blue-500" />
-                    PDKS Kart Okuyucu Kar\u015F\u0131la\u015Ft\u0131rma
+                    PDKS Kart Okuyucu Karşılaştırma
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
-                    Kart okuyucu (PDKS) cihaz\u0131ndan al\u0131nan CSV dosyas\u0131n\u0131 y\u00FCkleyerek
-                    sistemdeki mesai kay\u0131tlar\u0131 ile kar\u015F\u0131la\u015Ft\u0131rabilirsiniz. Farkl\u0131l\u0131klar
-                    tespit edildi\u011Finde se\u00E7ip d\u00FCzeltebilirsiniz.
+                    Kart okuyucu (PDKS) cihazından alınan CSV dosyasını yükleyerek
+                    sistemdeki mesai kayıtları ile karşılaştırabilirsiniz. Farklılıklar
+                    tespit edildiğinde seçip düzeltebilirsiniz.
                 </p>
 
                 <Upload.Dragger {...uploadProps} className="mb-4">
@@ -698,10 +698,10 @@ export default function PdksCompareTab() {
                         <InboxOutlined />
                     </p>
                     <p className="ant-upload-text">
-                        CSV dosyas\u0131n\u0131 buraya s\u00FCr\u00FCkleyin veya t\u0131klay\u0131n
+                        CSV dosyasını buraya sürükleyin veya tıklayın
                     </p>
                     <p className="ant-upload-hint">
-                        Sadece .csv dosyalar\u0131 kabul edilir. Dosya PDKS kart okuyucu format\u0131nda olmal\u0131d\u0131r.
+                        Sadece .csv dosyaları kabul edilir. Dosya PDKS kart okuyucu formatında olmalıdır.
                     </p>
                 </Upload.Dragger>
 
@@ -714,11 +714,11 @@ export default function PdksCompareTab() {
                         disabled={!file || comparing}
                         size="large"
                     >
-                        {comparing ? 'Kar\u015F\u0131la\u015Ft\u0131r\u0131l\u0131yor...' : 'Kar\u015F\u0131la\u015Ft\u0131r'}
+                        {comparing ? 'Karşılaştırılıyor...' : 'Karşılaştır'}
                     </Button>
                     {results && (
                         <Button onClick={handleReset} size="large">
-                            S\u0131f\u0131rla
+                            Sıfırla
                         </Button>
                     )}
                 </Space>
@@ -727,7 +727,7 @@ export default function PdksCompareTab() {
             {/* --- Loading overlay --- */}
             {comparing && (
                 <div className="flex items-center justify-center py-12">
-                    <Spin size="large" tip="CSV dosyas\u0131 i\u015Fleniyor ve kar\u015F\u0131la\u015Ft\u0131r\u0131l\u0131yor..." />
+                    <Spin size="large" tip="CSV dosyası işleniyor ve karşılaştırılıyor..." />
                 </div>
             )}
 
@@ -736,7 +736,7 @@ export default function PdksCompareTab() {
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <SummaryCard
-                            title="Toplam G\u00FCn"
+                            title="Toplam Gün"
                             value={summary.total}
                             color="bg-blue-50 border-blue-200"
                             icon={<FileTextOutlined className="text-blue-500" />}
@@ -748,13 +748,13 @@ export default function PdksCompareTab() {
                             icon={<CloseCircleOutlined className="text-red-500" />}
                         />
                         <SummaryCard
-                            title="E\u015Fle\u015Fme"
+                            title="Eşleşme"
                             value={summary.matching}
                             color="bg-green-50 border-green-200"
                             icon={<CheckCircleOutlined className="text-green-500" />}
                         />
                         <SummaryCard
-                            title="Sistemde Kay\u0131t Yok"
+                            title="Sistemde Kayıt Yok"
                             value={summary.noAttendance}
                             color="bg-orange-50 border-orange-200"
                             icon={<WarningOutlined className="text-orange-500" />}
@@ -767,11 +767,11 @@ export default function PdksCompareTab() {
                             type="warning"
                             showIcon
                             icon={<ExclamationCircleOutlined />}
-                            message="E\u015Fle\u015Ftirilemeyen Sicil Numaralar\u0131"
+                            message="Eşleştirilemeyen Sicil Numaraları"
                             description={
                                 <div className="mt-1">
                                     <p className="text-sm mb-2">
-                                        A\u015Fa\u011F\u0131daki sicil numaralar\u0131 sistemde bulunamad\u0131:
+                                        Aşağıdaki sicil numaraları sistemde bulunamadı:
                                     </p>
                                     <div className="flex flex-wrap gap-1">
                                         {results.unmatched_sicil_ids.map((id) => (
@@ -791,7 +791,7 @@ export default function PdksCompareTab() {
                             type="warning"
                             showIcon
                             className="mt-3"
-                            message={`${results.parse_errors.length} sat\u0131r CSV'den ayr\u0131\u015Ft\u0131r\u0131lamad\u0131`}
+                            message={`${results.parse_errors.length} satır CSV'den ayrıştırılamadı`}
                             description={
                                 <div className="mt-1 max-h-32 overflow-y-auto">
                                     <ul className="list-disc pl-4 text-xs">
@@ -819,10 +819,10 @@ export default function PdksCompareTab() {
                                 checked={showOnlyDiff}
                                 onChange={(e) => setShowOnlyDiff(e.target.checked)}
                             >
-                                <span className="text-sm">Sadece Farklar\u0131 G\u00F6ster</span>
+                                <span className="text-sm">Sadece Farkları Göster</span>
                             </Checkbox>
                             <span className="text-xs text-gray-400">
-                                {filteredData.length} / {results.matches.length} kay\u0131t
+                                {filteredData.length} / {results.matches.length} kayıt
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -835,7 +835,7 @@ export default function PdksCompareTab() {
                                     loading={fixing}
                                     disabled={fixing}
                                 >
-                                    Se\u00E7ilenleri D\u00FCzelt ({selectedRows.length})
+                                    Seçilenleri Düzelt ({selectedRows.length})
                                 </Button>
                             )}
                         </div>
@@ -861,16 +861,16 @@ export default function PdksCompareTab() {
                             showSizeChanger: true,
                             pageSizeOptions: ['25', '50', '100', '200'],
                             showTotal: (total, range) =>
-                                `${range[0]}-${range[1]} / ${total} kay\u0131t`,
+                                `${range[0]}-${range[1]} / ${total} kayıt`,
                         }}
                         size="small"
                         bordered
                         scroll={{ x: 1100 }}
                         loading={comparing}
                         locale={{
-                            emptyText: 'Kar\u015F\u0131la\u015Ft\u0131rma sonucu bulunamad\u0131.',
+                            emptyText: 'Karşılaştırma sonucu bulunamadı.',
                             filterConfirm: 'Filtrele',
-                            filterReset: 'S\u0131f\u0131rla',
+                            filterReset: 'Sıfırla',
                         }}
                     />
 
@@ -878,7 +878,7 @@ export default function PdksCompareTab() {
                     <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-300" />
-                            E\u015Fle\u015Fiyor
+                            Eşleşiyor
                         </span>
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300" />
@@ -886,7 +886,7 @@ export default function PdksCompareTab() {
                         </span>
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-300" />
-                            Kay\u0131t Yok
+                            Kayıt Yok
                         </span>
                     </div>
                 </div>
@@ -898,8 +898,8 @@ export default function PdksCompareTab() {
                     type="success"
                     showIcon
                     icon={<CheckCircleOutlined />}
-                    message="T\u00FCm Kay\u0131tlar E\u015Fle\u015Fiyor"
-                    description="CSV dosyas\u0131ndaki t\u00FCm kart okuyucu verileri sistemdeki mesai kay\u0131tlar\u0131 ile e\u015Fle\u015Fmektedir. D\u00FCzeltme yap\u0131lmas\u0131na gerek yoktur."
+                    message="Tüm Kayıtlar Eşleşiyor"
+                    description="CSV dosyasındaki tüm kart okuyucu verileri sistemdeki mesai kayıtları ile eşleşmektedir. Düzeltme yapılmasına gerek yoktur."
                 />
             )}
 
@@ -908,7 +908,7 @@ export default function PdksCompareTab() {
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <h3 className="text-base font-semibold text-gray-800 mb-4">
                         <ToolOutlined className="mr-2 text-green-500" />
-                        D\u00FCzeltme Sonu\u00E7lar\u0131
+                        Düzeltme Sonuçları
                     </h3>
 
                     {/* Fix summary */}
@@ -917,7 +917,7 @@ export default function PdksCompareTab() {
                             <div className="text-2xl font-bold text-green-700">
                                 {fixResults.summary?.fixed || 0}
                             </div>
-                            <div className="text-xs text-green-600 font-medium">D\u00FCzeltildi</div>
+                            <div className="text-xs text-green-600 font-medium">Düzeltildi</div>
                         </div>
                         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                             <div className="text-2xl font-bold text-red-700">
@@ -929,7 +929,7 @@ export default function PdksCompareTab() {
                             <div className="text-2xl font-bold text-gray-700">
                                 {fixResults.summary?.skipped || 0}
                             </div>
-                            <div className="text-xs text-gray-600 font-medium">Atland\u0131</div>
+                            <div className="text-xs text-gray-600 font-medium">Atlandı</div>
                         </div>
                     </div>
 
@@ -961,7 +961,7 @@ export default function PdksCompareTab() {
                             type="error"
                             showIcon
                             className="mt-4"
-                            message="D\u00FCzeltme Hatalar\u0131"
+                            message="Düzeltme Hataları"
                             description={
                                 <ul className="list-disc pl-4 text-xs mt-1">
                                     {fixResults.results.filter(r => r.status === 'failed').map((err, i) => (
