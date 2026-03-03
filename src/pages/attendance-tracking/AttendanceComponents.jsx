@@ -263,7 +263,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
 
     useEffect(() => {
         if (employee?.employee_id) {
-            api.get(`/attendance/overtime-requests/weekly-ot-status/?employee_id=${employee.employee_id}`)
+            api.get(`/overtime-requests/weekly-ot-status/?employee_id=${employee.employee_id}`)
                 .then(res => setWeeklyOtData(res.data))
                 .catch(() => setWeeklyOtData(null));
         } else {
@@ -340,7 +340,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                 <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Mesai Limiti (Son 7 Gün)</span>
                                 <span className={`text-[10px] font-bold ${
                                     weeklyOtData.is_over_limit ? 'text-red-600' :
-                                    (weeklyOtData.used_hours / weeklyOtData.limit_hours) > 0.7 ? 'text-amber-600' :
+                                    (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) > 0.7 ? 'text-amber-600' :
                                     'text-emerald-600'
                                 }`}>
                                     {weeklyOtData.used_hours}/{weeklyOtData.limit_hours} sa
@@ -350,10 +350,10 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                 <div
                                     className={`h-full rounded-full transition-all ${
                                         weeklyOtData.is_over_limit ? 'bg-red-500' :
-                                        (weeklyOtData.used_hours / weeklyOtData.limit_hours) > 0.7 ? 'bg-amber-400' :
+                                        (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) > 0.7 ? 'bg-amber-400' :
                                         'bg-emerald-500'
                                     }`}
-                                    style={{ width: `${Math.min(100, (weeklyOtData.used_hours / weeklyOtData.limit_hours) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) * 100)}%` }}
                                 />
                             </div>
                         </div>

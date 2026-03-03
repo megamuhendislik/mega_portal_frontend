@@ -681,7 +681,7 @@ const EmployeeDetail = () => {
                                                         max="168"
                                                         step="0.5"
                                                         value={formData.weekly_ot_limit_hours ?? 30}
-                                                        onChange={e => setFormData(prev => ({ ...prev, weekly_ot_limit_hours: e.target.value ? parseFloat(e.target.value) : 0 }))}
+                                                        onChange={e => { const val = parseFloat(e.target.value); setFormData(prev => ({ ...prev, weekly_ot_limit_hours: isNaN(val) ? 0 : val })); }}
                                                         className="w-full p-2 pr-12 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
                                                     />
                                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">SAAT</span>

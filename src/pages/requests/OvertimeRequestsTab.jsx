@@ -360,7 +360,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const fetchWeeklyOtStatus = useCallback(async (refDate) => {
         try {
             const params = refDate ? `?reference_date=${refDate}` : '';
-            const res = await api.get(`/attendance/overtime-requests/weekly-ot-status/${params}`);
+            const res = await api.get(`/overtime-requests/weekly-ot-status/${params}`);
             setWeeklyOtStatus(res.data);
         } catch (err) {
             console.error('Weekly OT status fetch error:', err);
@@ -414,7 +414,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     const enriched = await Promise.all(
                         (Array.isArray(rawAssignments) ? rawAssignments : []).map(async (a) => {
                             try {
-                                const res = await api.get(`/attendance/overtime-requests/weekly-ot-status/?employee_id=${a.employee}&reference_date=${a.date}`);
+                                const res = await api.get(`/overtime-requests/weekly-ot-status/?employee_id=${a.employee}&reference_date=${a.date}`);
                                 return { ...a, _weeklyOtStatus: res.data };
                             } catch {
                                 return a;

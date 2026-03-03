@@ -233,7 +233,7 @@ const Dashboard = () => {
                                 <span className="text-[9px] font-bold text-amber-500 uppercase">HAFTALIK LİMİT</span>
                                 <span className={`text-[9px] font-bold ${
                                     todaySummary?.weekly_ot_is_over_limit ? 'text-red-600' :
-                                    (todaySummary?.weekly_ot_used_hours / todaySummary?.weekly_ot_limit_hours) > 0.7 ? 'text-amber-600' :
+                                    (todaySummary?.weekly_ot_used_hours / (todaySummary?.weekly_ot_limit_hours || 1)) > 0.7 ? 'text-amber-600' :
                                     'text-emerald-600'
                                 }`}>
                                     {todaySummary?.weekly_ot_used_hours || 0}/{todaySummary?.weekly_ot_limit_hours} sa
@@ -243,10 +243,10 @@ const Dashboard = () => {
                                 <div
                                     className={`h-full rounded-full transition-all ${
                                         todaySummary?.weekly_ot_is_over_limit ? 'bg-red-500' :
-                                        (todaySummary?.weekly_ot_used_hours / todaySummary?.weekly_ot_limit_hours) > 0.7 ? 'bg-amber-400' :
+                                        (todaySummary?.weekly_ot_used_hours / (todaySummary?.weekly_ot_limit_hours || 1)) > 0.7 ? 'bg-amber-400' :
                                         'bg-emerald-500'
                                     }`}
-                                    style={{ width: `${Math.min(100, ((todaySummary?.weekly_ot_used_hours || 0) / todaySummary?.weekly_ot_limit_hours) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, ((todaySummary?.weekly_ot_used_hours || 0) / (todaySummary?.weekly_ot_limit_hours || 1)) * 100)}%` }}
                                 />
                             </div>
                         </div>
