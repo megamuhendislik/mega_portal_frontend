@@ -286,7 +286,7 @@ export default function PdksCompareTab() {
     const [results, setResults] = useState(null);
     const [fixResults, setFixResults] = useState(null);
     const [selectedRows, setSelectedRows] = useState([]);
-    const [showOnlyDiff, setShowOnlyDiff] = useState(true);
+    const [showOnlyDiff, setShowOnlyDiff] = useState(false);
 
     // -----------------------------------------------------------------------
     // Derived data
@@ -581,6 +581,32 @@ export default function PdksCompareTab() {
                             <span className={`text-xs font-mono ${differs ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
                                 {csvC}/{sysC}
                             </span>
+                        </Tooltip>
+                    );
+                },
+            },
+            {
+                title: 'Toplam Saat',
+                key: 'total_hours',
+                width: 110,
+                align: 'center',
+                render: (_, record) => {
+                    const csvH = record.csv_total_hours || 0;
+                    const sysH = record.sys_total_hours || 0;
+                    const diff = Math.abs(csvH - sysH);
+                    const differs = diff > 0.1;
+                    return (
+                        <Tooltip title={`CSV: ${csvH.toFixed(1)}sa, Sistem: ${sysH.toFixed(1)}sa`}>
+                            <div className="text-xs font-mono leading-tight">
+                                <div className={differs ? 'text-red-600 font-bold' : 'text-gray-600'}>
+                                    {csvH.toFixed(1)}/{sysH.toFixed(1)}
+                                </div>
+                                {differs && (
+                                    <div className="text-[10px] text-orange-500">
+                                        {diff > 0 ? (csvH > sysH ? '+' : '-') : ''}{diff.toFixed(1)}sa
+                                    </div>
+                                )}
+                            </div>
                         </Tooltip>
                     );
                 },
