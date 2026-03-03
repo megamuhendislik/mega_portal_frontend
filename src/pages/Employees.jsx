@@ -26,7 +26,7 @@ const FIELD_TO_STEP = {
     phone: 3, secondary_phone: 3, emergency_contact_name: 3,
     emergency_contact_phone: 3, address: 3, insurance_number: 3,
     work_type: 4, fiscal_calendar: 4, uses_service: 4,
-    service_tolerance_minutes: 4, technical_skills: 4,
+    service_tolerance_minutes: 4, weekly_ot_limit_hours: 4, technical_skills: 4,
     leave_entitlements: 5, annual_leave_balance: 5,
     annual_leave_advance_limit: 5, annual_leave_accrual_rate: 5, hired_date: 5,
     roles: 6, direct_permissions: 6, excluded_permissions: 6, substitutes: 6,
@@ -67,6 +67,7 @@ const INITIAL_FORM_STATE = {
     work_type: 'FULL_TIME',
     uses_service: false, // [NEW] Service Usage
     service_tolerance_minutes: 0,
+    weekly_ot_limit_hours: 30,
     remote_work_days: [], // ['MON', 'WED']
 
     hired_date: new Date().toISOString().split('T')[0],
@@ -650,6 +651,32 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                 </div>
             </div>
 
+            {/* Weekly OT Limit */}
+            <div className="border-t border-slate-100 pt-4 mt-2">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 rounded-lg bg-amber-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div>
+                        <span className="text-sm font-medium text-slate-700">Haftalık Ek Mesai Limiti</span>
+                        <p className="text-xs text-slate-400">Son 7 günde (rolling window) yapılabilecek maks. ek mesai saati. 0 = sınırsız.</p>
+                    </div>
+                </div>
+                <div className="max-w-xs">
+                    <div className="relative">
+                        <input
+                            type="number"
+                            min="0"
+                            max="168"
+                            step="0.5"
+                            value={formData.weekly_ot_limit_hours ?? 30}
+                            onChange={e => { const val = parseFloat(e.target.value); handleChange('weekly_ot_limit_hours', isNaN(val) ? 0 : val); }}
+                            className="w-full p-2 pr-12 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">SAAT</span>
+                    </div>
+                </div>
+            </div>
 
         </div>
     );
@@ -1364,6 +1391,7 @@ const Employees = () => {
                 work_type: data.work_type,
                 uses_service: data.uses_service || false, // [NEW]
                 service_tolerance_minutes: data.service_tolerance_minutes || 0,
+                weekly_ot_limit_hours: data.weekly_ot_limit_hours ?? 30,
                 hired_date: data.hired_date || '',
 
                 // Annual Leave
@@ -1457,6 +1485,7 @@ const Employees = () => {
                 daily_break_allowance: null,
                 // attendance_tolerance_minutes: null, // Allow editing/saving
                 service_tolerance_minutes: cleanPayload.uses_service ? (cleanPayload.service_tolerance_minutes || null) : null,
+                weekly_ot_limit_hours: cleanPayload.weekly_ot_limit_hours ?? 30,
                 weekly_schedule: null, // Force remove any legacy weekly schedule data
                 // assignments is already in cleanPayload
             };
