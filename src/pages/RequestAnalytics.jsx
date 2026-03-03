@@ -373,8 +373,8 @@ export default function RequestAnalytics() {
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
                         <BarChart3 size={32} className="text-slate-300" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadi</h3>
-                    <p className="text-sm text-slate-500 mt-1">Secilen donem icin talep verisi bulunmamaktadir.</p>
+                    <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadı</h3>
+                    <p className="text-sm text-slate-500 mt-1">Seçilen dönem için talep verisi bulunmamaktadır.</p>
                 </div>
             </div>
         );
@@ -447,7 +447,7 @@ export default function RequestAnalytics() {
                     gradient="bg-gradient-to-br from-slate-800 to-slate-900"
                 />
                 <KPICard
-                    title="Onay Orani"
+                    title="Onay Oranı"
                     value={overview.approval_rate != null ? overview.approval_rate.toFixed(1) : '0'}
                     suffix="%"
                     icon={CheckCircle2}
@@ -461,14 +461,14 @@ export default function RequestAnalytics() {
                     gradient="bg-gradient-to-br from-amber-500 to-orange-500"
                 />
                 <KPICard
-                    title="Toplam Izin"
+                    title="Toplam İzin"
                     value={overview.total_leave_days?.toLocaleString('tr-TR') || 0}
-                    suffix="gun"
+                    suffix="gün"
                     icon={Calendar}
                     gradient="bg-gradient-to-br from-blue-500 to-blue-600"
                 />
                 <KPICard
-                    title="Ort. Yanit Suresi"
+                    title="Ort. Yanıt Süresi"
                     value={overview.avg_response_hours != null ? overview.avg_response_hours.toFixed(1) : '-'}
                     suffix="saat"
                     icon={Clock}
@@ -519,7 +519,7 @@ export default function RequestAnalytics() {
             {/* ── 3. Monthly Trend ──────────────────────────────── */}
             <SectionCard
                 title="Aylik Trend"
-                subtitle="Son doneme ait aylik talep dagilimi"
+                subtitle="Son döneme ait aylık talep dağılımı"
                 icon={TrendingUp}
                 iconGradient="bg-gradient-to-br from-blue-500 to-indigo-600"
             >
@@ -548,7 +548,7 @@ export default function RequestAnalytics() {
 
                         {/* Overtime Hours Trend */}
                         <div>
-                            <p className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Mesai Saat & Izin Gun Trendi</p>
+                            <p className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Mesai Saat & İzin Gün Trendi</p>
                             <ResponsiveContainer width="100%" height={280}>
                                 <ComposedChart data={monthlyTrendData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -564,7 +564,7 @@ export default function RequestAnalytics() {
                         </div>
                     </div>
                 ) : (
-                    <EmptyState message="Aylik trend verisi bulunamadi." />
+                    <EmptyState message="Aylık trend verisi bulunamadı." />
                 )}
             </SectionCard>
 
@@ -572,7 +572,7 @@ export default function RequestAnalytics() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Type Distribution */}
                 <SectionCard
-                    title="Talep Turu Dagilimi"
+                    title="Talep Türü Dağılımı"
                     subtitle="Ture gore talep oranlari"
                     icon={PieChartIcon}
                     iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
@@ -610,14 +610,14 @@ export default function RequestAnalytics() {
                             </div>
                         </div>
                     ) : (
-                        <EmptyState message="Talep turu verisi bulunamadi." />
+                        <EmptyState message="Talep türü verisi bulunamadı." />
                     )}
                 </SectionCard>
 
                 {/* Status Distribution */}
                 <SectionCard
-                    title="Onay Durum Dagilimi"
-                    subtitle="Durum bazinda talep dagilimi"
+                    title="Onay Durum Dağılımı"
+                    subtitle="Durum bazında talep dağılımı"
                     icon={CheckCircle2}
                     iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
                 >
@@ -653,14 +653,14 @@ export default function RequestAnalytics() {
                                 ))}
                                 <div className="mt-2 pt-2 border-t border-slate-100">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-slate-500 font-medium">Onay Orani</span>
+                                        <span className="text-xs text-slate-500 font-medium">Onay Oranı</span>
                                         <span className="text-sm font-black text-emerald-600">%{overview.approval_rate?.toFixed(1) || '0'}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <EmptyState message="Durum verisi bulunamadi." />
+                        <EmptyState message="Durum verisi bulunamadı." />
                     )}
                 </SectionCard>
             </div>
@@ -668,7 +668,7 @@ export default function RequestAnalytics() {
             {/* ── 5. Team Analysis ──────────────────────────────── */}
             <SectionCard
                 title="Ekip Analizi"
-                subtitle="Departman, rol ve kisi bazli talep kirilimi"
+                subtitle="Departman, rol ve kişi bazlı talep kırılımı"
                 icon={Users}
                 iconGradient="bg-gradient-to-br from-indigo-500 to-blue-600"
                 collapsible
@@ -682,21 +682,21 @@ export default function RequestAnalytics() {
                         <div>
                             <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                                 <Building2 size={14} className="text-slate-400" />
-                                Departman Kirilimi
+                                Departman Kırılımı
                             </h4>
                             <div className="overflow-x-auto -mx-2">
                                 <table className="w-full min-w-[700px]">
                                     <thead>
                                         <tr className="border-b border-slate-100">
                                             <SortableHeader label="Departman" col="name" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} />
-                                            <SortableHeader label="Kisi" col="employee_count" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
+                                            <SortableHeader label="Kişi" col="employee_count" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
                                             <SortableHeader label="Toplam" col="total" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
-                                            <SortableHeader label="Izin" col="leave" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
+                                            <SortableHeader label="İzin" col="leave" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
                                             <SortableHeader label="Mesai" col="overtime" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
                                             <SortableHeader label="Yemek" col="meal" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
-                                            <SortableHeader label="Kartsiz" col="cardless" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
+                                            <SortableHeader label="Kartsız" col="cardless" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
                                             <SortableHeader label="Mesai Saat" col="overtime_hours" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
-                                            <SortableHeader label="Izin Gun" col="leave_days" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
+                                            <SortableHeader label="İzin Gün" col="leave_days" currentCol={deptSort.col} currentDir={deptSort.dir} onSort={makeSortHandler(deptSort, setDeptSort)} className="text-center" />
                                             <th className="px-3 py-3 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider">Onay %</th>
                                         </tr>
                                     </thead>
@@ -757,21 +757,21 @@ export default function RequestAnalytics() {
                         <div className="pt-4 border-t border-slate-100">
                             <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                                 <Briefcase size={14} className="text-slate-400" />
-                                Rol / Pozisyon Kirilimi
+                                Rol / Pozisyon Kırılımı
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {data.role_breakdown.map((role, i) => (
                                     <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-sm font-bold text-slate-700">{role.role}</span>
-                                            <span className="text-xs text-slate-400 font-medium">{role.employee_count || 0} kisi</span>
+                                            <span className="text-xs text-slate-400 font-medium">{role.employee_count || 0} kişi</span>
                                         </div>
                                         <div className="flex gap-2 flex-wrap">
                                             {[
-                                                { key: 'leave', label: 'Izin', bg: 'bg-blue-50', text: 'text-blue-700' },
+                                                { key: 'leave', label: 'İzin', bg: 'bg-blue-50', text: 'text-blue-700' },
                                                 { key: 'overtime', label: 'Mesai', bg: 'bg-amber-50', text: 'text-amber-700' },
                                                 { key: 'meal', label: 'Yemek', bg: 'bg-emerald-50', text: 'text-emerald-700' },
-                                                { key: 'cardless', label: 'Kartsiz', bg: 'bg-violet-50', text: 'text-violet-700' },
+                                                { key: 'cardless', label: 'Kartsız', bg: 'bg-violet-50', text: 'text-violet-700' },
                                             ].map(({ key, label, bg, text }) => (
                                                 (role[key] || 0) > 0 && (
                                                     <span key={key} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${bg} ${text}`}>
@@ -795,8 +795,8 @@ export default function RequestAnalytics() {
                         <div className="pt-4 border-t border-slate-100">
                             <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                                 <UserCheck size={14} className="text-slate-400" />
-                                Kisi Bazli Kirilim
-                                <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-bold">{data.employee_breakdown.length} kisi</span>
+                                Kişi Bazlı Kırılım
+                                <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-bold">{data.employee_breakdown.length} kişi</span>
                             </h4>
                             <div className="overflow-x-auto -mx-2">
                                 <table className="w-full min-w-[900px]">
@@ -806,13 +806,13 @@ export default function RequestAnalytics() {
                                             <SortableHeader label="Departman" col="department" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} />
                                             <SortableHeader label="Pozisyon" col="role" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} />
                                             <SortableHeader label="Toplam" col="total" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
-                                            <SortableHeader label="Izin" col="leave" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
+                                            <SortableHeader label="İzin" col="leave" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
                                             <SortableHeader label="Mesai" col="overtime" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
                                             <SortableHeader label="Yemek" col="meal" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
-                                            <SortableHeader label="Kartsiz" col="cardless" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
+                                            <SortableHeader label="Kartsız" col="cardless" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
                                             <SortableHeader label="Onay" col="approved" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
                                             <SortableHeader label="Mesai(s)" col="overtime_hours" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
-                                            <SortableHeader label="Izin(g)" col="leave_days" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
+                                            <SortableHeader label="İzin(g)" col="leave_days" currentCol={empSort.col} currentDir={empSort.dir} onSort={makeSortHandler(empSort, setEmpSort)} className="text-center" />
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -859,7 +859,7 @@ export default function RequestAnalytics() {
             {/* ── 6. Overtime Analysis ──────────────────────────── */}
             <SectionCard
                 title="Ek Mesai Analizi"
-                subtitle="Kaynak dagilimi, atama istatistikleri ve haftalik yogunluk"
+                subtitle="Kaynak dağılımı, atama istatistikleri ve haftalık yoğunluk"
                 icon={Zap}
                 iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
                 collapsible
@@ -868,7 +868,7 @@ export default function RequestAnalytics() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Source Distribution Pie */}
                     <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Kaynak Dagilimi</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Kaynak Dağılımı</p>
                         {overtimeSourceData.length > 0 ? (
                             <div>
                                 <ResponsiveContainer width="100%" height={220}>
@@ -900,13 +900,13 @@ export default function RequestAnalytics() {
                                 </div>
                             </div>
                         ) : (
-                            <EmptyState message="Kaynak verisi bulunamadi." />
+                            <EmptyState message="Kaynak verisi bulunamadı." />
                         )}
                     </div>
 
                     {/* Assignment Stats */}
                     <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Atama Istatistikleri</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Atama İstatistikleri</p>
                         {data.assignment_stats ? (
                             <div className="space-y-3">
                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
@@ -949,13 +949,13 @@ export default function RequestAnalytics() {
                                 )}
                             </div>
                         ) : (
-                            <EmptyState message="Atama verisi bulunamadi." />
+                            <EmptyState message="Atama verisi bulunamadı." />
                         )}
                     </div>
 
                     {/* Weekly Heatmap / Pattern for Overtime */}
                     <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Haftalik Mesai Yogunlugu</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Haftalık Mesai Yoğunluğu</p>
                         {weeklyPatternData.length > 0 ? (
                             <div>
                                 <ResponsiveContainer width="100%" height={240}>
@@ -990,7 +990,7 @@ export default function RequestAnalytics() {
                                 </div>
                             </div>
                         ) : (
-                            <EmptyState message="Haftalik veri bulunamadi." />
+                            <EmptyState message="Haftalık veri bulunamadı." />
                         )}
                     </div>
                 </div>
@@ -998,8 +998,8 @@ export default function RequestAnalytics() {
 
             {/* ── 7. Leave Analysis ─────────────────────────────── */}
             <SectionCard
-                title="Izin Analizi"
-                subtitle="Izin turu dagilimi ve kullanim istatistikleri"
+                title="İzin Analizi"
+                subtitle="İzin türü dağılımı ve kullanım istatistikleri"
                 icon={Calendar}
                 iconGradient="bg-gradient-to-br from-blue-500 to-cyan-600"
                 collapsible
@@ -1009,7 +1009,7 @@ export default function RequestAnalytics() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Leave Type Bar Chart */}
                         <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Izin Turu Dagilimi</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">İzin Türü Dağılımı</p>
                             <ResponsiveContainer width="100%" height={Math.max(leaveTypeData.length * 50, 180)}>
                                 <BarChart data={leaveTypeData} layout="vertical" barCategoryGap="20%">
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
@@ -1025,7 +1025,7 @@ export default function RequestAnalytics() {
 
                         {/* Leave Type Detail Cards */}
                         <div className="space-y-3">
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Izin Detaylari</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">İzin Detayları</p>
                             {data.leave_types.map((lt, i) => {
                                 const rate = lt.count > 0 ? ((lt.approved || 0) / lt.count * 100).toFixed(0) : 0;
                                 return (
@@ -1033,13 +1033,13 @@ export default function RequestAnalytics() {
                                         <div>
                                             <p className="text-sm font-bold text-slate-700">{lt.name}</p>
                                             <p className="text-[10px] text-slate-400 mt-0.5">
-                                                {lt.count} talep &middot; {lt.approved} onay &middot; {lt.total_days} gun
+                                                {lt.count} talep &middot; {lt.approved} onay &middot; {lt.total_days} gün
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="text-right">
                                                 <span className="text-lg font-black text-slate-800">{lt.total_days || 0}</span>
-                                                <span className="text-[10px] text-slate-400 font-bold ml-1">gun</span>
+                                                <span className="text-[10px] text-slate-400 font-bold ml-1">gün</span>
                                             </div>
                                             <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                                                 <span className="text-xs font-black text-blue-600">%{rate}</span>
@@ -1051,7 +1051,7 @@ export default function RequestAnalytics() {
                         </div>
                     </div>
                 ) : (
-                    <EmptyState message="Izin turu verisi bulunamadi." />
+                    <EmptyState message="İzin türü verisi bulunamadı." />
                 )}
             </SectionCard>
 
@@ -1059,12 +1059,12 @@ export default function RequestAnalytics() {
             {data.overtime_meal_correlation && data.overtime_meal_correlation.length > 0 && (
                 <SectionCard
                     title="Ek Mesai & Yemek Korelasyonu"
-                    subtitle="Fazla mesai ve yemek talebi arasindaki iliski"
+                    subtitle="Fazla mesai ve yemek talebi arasındaki ilişki"
                     icon={Activity}
                     iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
                     collapsible
                     defaultOpen={false}
-                    badge={`${data.overtime_meal_correlation.length} kisi`}
+                    badge={`${data.overtime_meal_correlation.length} kişi`}
                 >
                     <div className="overflow-x-auto -mx-2">
                         <table className="w-full min-w-[800px]">
@@ -1072,7 +1072,7 @@ export default function RequestAnalytics() {
                                 <tr className="border-b border-slate-100">
                                     <SortableHeader label="Ad Soyad" col="name" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} />
                                     <SortableHeader label="Departman" col="department" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} />
-                                    <SortableHeader label="Mesai Gun" col="overtime_days" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} className="text-center" />
+                                    <SortableHeader label="Mesai Gün" col="overtime_days" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} className="text-center" />
                                     <SortableHeader label="Mesai Saat" col="overtime_hours" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} className="text-center" />
                                     <SortableHeader label="Mesai+Yemek" col="meal_with_ot" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} className="text-center" />
                                     <SortableHeader label="Yemek(Mesaisiz)" col="meal_without_ot" currentCol={corrSort.col} currentDir={corrSort.dir} onSort={makeSortHandler(corrSort, setCorrSort)} className="text-center" />
@@ -1116,19 +1116,19 @@ export default function RequestAnalytics() {
             {/* ── 9. Indirect Requests ──────────────────────────── */}
             {data.indirect_analysis && data.indirect_analysis.subordinate_managers && data.indirect_analysis.subordinate_managers.length > 0 && (
                 <SectionCard
-                    title="Dolayli Talepler"
-                    subtitle={`Alt yoneticiler uzerinden gelen talepler (toplam: ${data.indirect_analysis.total_indirect_requests || 0})`}
+                    title="Dolaylı Talepler"
+                    subtitle={`Alt yöneticiler üzerinden gelen talepler (toplam: ${data.indirect_analysis.total_indirect_requests || 0})`}
                     icon={GitBranch}
                     iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
                     collapsible
                     defaultOpen={false}
-                    badge={`${data.indirect_analysis.subordinate_managers.length} yonetici`}
+                    badge={`${data.indirect_analysis.subordinate_managers.length} yönetici`}
                 >
                     <div className="overflow-x-auto -mx-2">
                         <table className="w-full min-w-[800px]">
                             <thead>
                                 <tr className="border-b border-slate-100">
-                                    <SortableHeader label="Yonetici" col="name" currentCol={indirectSort.col} currentDir={indirectSort.dir} onSort={makeSortHandler(indirectSort, setIndirectSort)} />
+                                    <SortableHeader label="Yönetici" col="name" currentCol={indirectSort.col} currentDir={indirectSort.dir} onSort={makeSortHandler(indirectSort, setIndirectSort)} />
                                     <SortableHeader label="Departman" col="department" currentCol={indirectSort.col} currentDir={indirectSort.dir} onSort={makeSortHandler(indirectSort, setIndirectSort)} />
                                     <SortableHeader label="Ekip" col="direct_reports" currentCol={indirectSort.col} currentDir={indirectSort.dir} onSort={makeSortHandler(indirectSort, setIndirectSort)} className="text-center" />
                                     <SortableHeader label="Gelen Talep" col="requests_received" currentCol={indirectSort.col} currentDir={indirectSort.dir} onSort={makeSortHandler(indirectSort, setIndirectSort)} className="text-center" />
@@ -1175,8 +1175,8 @@ export default function RequestAnalytics() {
 
             {/* ── 10. Weekly Pattern ────────────────────────────── */}
             <SectionCard
-                title="Haftalik Pattern"
-                subtitle="Haftanin gunlerine gore talep yogunlugu"
+                title="Haftalık Pattern"
+                subtitle="Haftanın günlerine göre talep yoğunluğu"
                 icon={BarChart3}
                 iconGradient="bg-gradient-to-br from-teal-500 to-cyan-600"
             >
@@ -1201,7 +1201,7 @@ export default function RequestAnalytics() {
 
                         {/* Heatmap Grid */}
                         <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yogunluk Haritasi</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yoğunluk Haritası</p>
                             <div className="space-y-2">
                                 {weeklyPatternData.map((d, i) => {
                                     const maxVal = Math.max(...weeklyPatternData.map(w => w.Toplam || 0), 1);
@@ -1248,10 +1248,10 @@ export default function RequestAnalytics() {
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-2 border-t border-slate-100 justify-center">
                                 {[
-                                    { label: 'Izin', color: COLORS.leave },
+                                    { label: 'İzin', color: COLORS.leave },
                                     { label: 'Mesai', color: COLORS.overtime },
                                     { label: 'Yemek', color: COLORS.meal },
-                                    { label: 'Kartsiz', color: COLORS.cardless },
+                                    { label: 'Kartsız', color: COLORS.cardless },
                                 ].map((item, i) => (
                                     <span key={i} className="flex items-center gap-1">
                                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -1262,15 +1262,15 @@ export default function RequestAnalytics() {
                         </div>
                     </div>
                 ) : (
-                    <EmptyState message="Haftalik pattern verisi bulunamadi." />
+                    <EmptyState message="Haftalık pattern verisi bulunamadı." />
                 )}
             </SectionCard>
 
             {/* ── Footer ────────────────────────────────────────── */}
             <div className="text-center py-4">
                 <p className="text-[10px] text-slate-400 font-medium">
-                    Son guncelleme: {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    {period && ` | ${period.months} aylik donem`}
+                    Son güncelleme: {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {period && ` | ${period.months} aylık dönem`}
                 </p>
             </div>
         </div>

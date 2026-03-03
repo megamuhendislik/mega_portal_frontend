@@ -245,12 +245,12 @@ const FiscalCalendarView = ({
     };
 
     const handleDeleteOverride = async (override) => {
-        if (!window.confirm(`${moment(override.date).format('DD MMMM YYYY')} tarihindeki ozel ayar silinecek. Emin misiniz?`)) return;
+        if (!window.confirm(`${moment(override.date).format('DD MMMM YYYY')} tarihindeki özel ayar silinecek. Emin misiniz?`)) return;
         try {
             await api.delete(`/attendance/daily-overrides/${override.id}/`);
             await fetchData();
         } catch (error) {
-            alert('Silme hatasi: ' + (error.response?.data?.detail || error.message));
+            alert('Silme hatası: ' + (error.response?.data?.detail || error.message));
         }
     };
 
@@ -405,7 +405,7 @@ const FiscalCalendarView = ({
                             if (override && !override.is_off) {
                                 tooltipText = `${dStr}\nMesai: ${override.start_time?.slice(0,5) || '?'} - ${override.end_time?.slice(0,5) || '?'}`;
                                 if (override.lunch_start && override.lunch_end) {
-                                    tooltipText += `\nOgle: ${override.lunch_start.slice(0,5)} - ${override.lunch_end.slice(0,5)}`;
+                                    tooltipText += `\nÖğle: ${override.lunch_start.slice(0,5)} - ${override.lunch_end.slice(0,5)}`;
                                 }
                                 if (override.description) tooltipText += `\n${override.description}`;
                             } else if (override?.is_off) {
@@ -510,7 +510,7 @@ const FiscalCalendarView = ({
                     <div className="flex items-center gap-3 text-xs text-slate-500">
                         <div className="flex items-center gap-1">
                             <span className="w-2.5 h-2.5 rounded bg-emerald-50 border border-emerald-200 inline-flex items-center justify-center"><Clock size={5} className="text-emerald-600" /></span>
-                            Ozel Mesai
+                            Özel Mesai
                         </div>
                         <div className="flex items-center gap-1">
                             <span className="w-2.5 h-2.5 rounded bg-red-50 border border-red-200"></span>
@@ -551,7 +551,7 @@ const FiscalCalendarView = ({
 
             {/* Calendar Grid */}
             {loading ? (
-                <div className="text-center py-12 text-slate-400">Yukleniyor...</div>
+                <div className="text-center py-12 text-slate-400">Yükleniyor...</div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {months.map(renderMonth)}
@@ -563,16 +563,16 @@ const FiscalCalendarView = ({
                 <div className="mt-6">
                     <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
                         <CalendarIcon size={16} className="text-indigo-600" />
-                        Tanimli Ozel Gunler
+                        Tanımlı Özel Günler
                         {overrideList.length > 0 && (
-                            <span className="text-xs font-normal text-slate-400">({overrideList.length} kayit)</span>
+                            <span className="text-xs font-normal text-slate-400">({overrideList.length} kayıt)</span>
                         )}
                     </h4>
 
                     {overrideList.length === 0 ? (
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
-                            <p className="text-sm text-slate-500">Henuz ozel gun tanimlanmamis.</p>
-                            <p className="text-xs text-slate-400 mt-1">Takvimden bir gune tiklayarak veya "Yeni Ekle" butonu ile baslayabilirsiniz.</p>
+                            <p className="text-sm text-slate-500">Henüz özel gün tanımlanmamış.</p>
+                            <p className="text-xs text-slate-400 mt-1">Takvimden bir güne tıklayarak veya "Yeni Ekle" butonu ile başlayabilirsiniz.</p>
                         </div>
                     ) : (
                         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -582,8 +582,8 @@ const FiscalCalendarView = ({
                                         <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Tarih</th>
                                         <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Durum</th>
                                         <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Saatler</th>
-                                        <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Aciklama</th>
-                                        <th className="text-right px-4 py-2.5 font-bold text-slate-600 text-xs">Islemler</th>
+                                        <th className="text-left px-4 py-2.5 font-bold text-slate-600 text-xs">Açıklama</th>
+                                        <th className="text-right px-4 py-2.5 font-bold text-slate-600 text-xs">İşlemler</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -599,7 +599,7 @@ const FiscalCalendarView = ({
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        <Clock size={10} /> Ozel Mesai
+                                                        <Clock size={10} /> Özel Mesai
                                                     </span>
                                                 )}
                                             </td>
@@ -611,7 +611,7 @@ const FiscalCalendarView = ({
                                                         {ov.start_time?.slice(0,5) || '?'} - {ov.end_time?.slice(0,5) || '?'}
                                                         {ov.lunch_start && ov.lunch_end && (
                                                             <span className="text-slate-400 ml-2 text-xs">
-                                                                (Ogle: {ov.lunch_start.slice(0,5)}-{ov.lunch_end.slice(0,5)})
+                                                                (Öğle: {ov.lunch_start.slice(0,5)}-{ov.lunch_end.slice(0,5)})
                                                             </span>
                                                         )}
                                                     </span>
@@ -625,7 +625,7 @@ const FiscalCalendarView = ({
                                                     <button
                                                         onClick={() => handleDayClick(ov.date)}
                                                         className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                                        title="Duzenle"
+                                                        title="Düzenle"
                                                     >
                                                         <Pencil size={14} />
                                                     </button>

@@ -81,8 +81,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
     const otManual = person.ot_manual_minutes || 0;
     const otSourceTotal = otIntended + otPotential + otManual;
     const otSources = [
-        { name: 'Planli', value: otIntended, count: person.ot_intended_count || 0, color: '#6366f1' },
-        { name: 'Algilanan', value: otPotential, count: person.ot_potential_count || 0, color: '#f59e0b' },
+        { name: 'Planlı', value: otIntended, count: person.ot_intended_count || 0, color: '#6366f1' },
+        { name: 'Algılanan', value: otPotential, count: person.ot_potential_count || 0, color: '#f59e0b' },
         { name: 'Manuel', value: otManual, count: person.ot_manual_count || 0, color: '#8b5cf6' },
     ].filter(d => d.value > 0);
 
@@ -118,7 +118,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
                             'bg-red-100 text-red-700'
                         }`}>
-                            Katilim %{Math.round(person.attendance_rate || 100)}
+                            Katılım %{Math.round(person.attendance_rate || 100)}
                         </span>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
@@ -127,17 +127,17 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                 </div>
 
                 <div className="px-6 py-5 space-y-5">
-                    {/* Calisma Ozeti */}
+                    {/* Çalışma Özeti */}
                     <div>
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Calisma Ozeti</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Çalışma Özeti</h4>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="bg-indigo-50 rounded-xl p-3">
-                                <p className="text-[10px] text-indigo-400 font-semibold">Normal Calisma</p>
+                                <p className="text-[10px] text-indigo-400 font-semibold">Normal Çalışma</p>
                                 <p className="text-lg font-bold text-indigo-600">{formatMinutes(completed)}</p>
                                 {otTotal > 0 && <p className="text-[10px] text-indigo-300">+{formatMinutes(otTotal)} OT</p>}
                             </div>
                             <div className="bg-slate-50 rounded-xl p-3">
-                                <p className="text-[10px] text-slate-400 font-semibold">Hedef (bugunedek)</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">Hedef (bugünedek)</p>
                                 <p className="text-lg font-bold text-slate-600">{formatMinutes(pastTarget)}</p>
                                 <p className="text-[10px] text-slate-300">Ay: {formatMinutes(target)}</p>
                             </div>
@@ -146,36 +146,36 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                                 <p className={`text-lg font-bold ${efficiency >= 95 ? 'text-emerald-600' : efficiency >= 80 ? 'text-amber-600' : 'text-red-600'}`}>%{efficiency}</p>
                             </div>
                             <div className="bg-red-50 rounded-xl p-3">
-                                <p className="text-[10px] text-red-400 font-semibold">Kayip</p>
+                                <p className="text-[10px] text-red-400 font-semibold">Kayıp</p>
                                 <p className="text-lg font-bold text-red-600">{formatMinutes(missing)}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Katilim Durumu */}
+                    {/* Katılım Durumu */}
                     <div>
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Katilim Durumu</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Katılım Durumu</h4>
                         <div className="grid grid-cols-3 gap-3">
                             <div className={`text-center p-3 rounded-xl ${(person.attendance_rate || 100) >= 95 ? 'bg-emerald-50' : (person.attendance_rate || 100) >= 85 ? 'bg-amber-50' : 'bg-red-50'}`}>
-                                <p className="text-[10px] text-slate-400 font-semibold">Katilim Orani</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">Katılım Oranı</p>
                                 <p className={`text-lg font-bold ${(person.attendance_rate || 100) >= 95 ? 'text-emerald-600' : (person.attendance_rate || 100) >= 85 ? 'text-amber-600' : 'text-red-600'}`}>
                                     %{Math.round(person.attendance_rate || 100)}
                                 </p>
                             </div>
                             <div className="text-center p-3 bg-slate-50 rounded-xl">
-                                <p className="text-[10px] text-slate-400 font-semibold">Devam Gunleri</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">Devam Günleri</p>
                                 <p className="text-lg font-bold text-slate-700">{person.attendance_days || 0}</p>
                             </div>
                             <div className="text-center p-3 bg-red-50 rounded-xl">
-                                <p className="text-[10px] text-red-400 font-semibold">Devamsiz Gunler</p>
+                                <p className="text-[10px] text-red-400 font-semibold">Devamsız Günler</p>
                                 <p className="text-lg font-bold text-red-600">{person.absent_days || 0}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Gunluk Ortalamalar */}
+                    {/* Günlük Ortalamalar */}
                     <div>
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Gunluk Ortalamalar</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Günlük Ortalamalar</h4>
                         <div className="grid grid-cols-3 gap-3">
                             <div className="text-center p-3 bg-slate-50 rounded-xl">
                                 <p className="text-[10px] text-slate-400 font-semibold">Gnl. Normal</p>
@@ -186,7 +186,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                                 <p className="text-sm font-bold text-slate-700">{formatMinutes(dailyAvgTotal)}</p>
                             </div>
                             <div className="text-center p-3 bg-slate-50 rounded-xl">
-                                <p className="text-[10px] text-slate-400 font-semibold">Is Gunu</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">İş Günü</p>
                                 <p className="text-sm font-bold text-slate-700">{elapsedWorkDays}</p>
                             </div>
                         </div>
@@ -228,7 +228,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
 
                                 {/* OT/Normal ratio */}
                                 <div className="flex items-center justify-between text-[11px] mb-2">
-                                    <span className="text-slate-400 font-semibold">OT / Normal Orani</span>
+                                    <span className="text-slate-400 font-semibold">OT / Normal Oranı</span>
                                     <span className="font-bold text-amber-600">%{otNormalRatio}</span>
                                 </div>
                                 <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mb-3">
@@ -241,15 +241,15 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                                 {/* OT frequency */}
                                 <div className="bg-amber-50 rounded-xl p-3 text-xs">
                                     <span className="text-amber-700 font-semibold">
-                                        OT Sikligi: {elapsedWorkDays} is gununun {otDays} gunu OT (%{otFreqPct})
+                                        OT Sıklığı: {elapsedWorkDays} iş gününün {otDays} günü OT (%{otFreqPct})
                                     </span>
                                     {otPerDay > 0 && (
-                                        <span className="text-amber-500 ml-2">· Gun basi ort. {formatMinutes(otPerDay)}</span>
+                                        <span className="text-amber-500 ml-2">· Gün başı ort. {formatMinutes(otPerDay)}</span>
                                     )}
                                 </div>
                             </>
                         ) : (
-                            <p className="text-[11px] text-slate-400 italic">Bu donem onaylanmis ek mesai yok</p>
+                            <p className="text-[11px] text-slate-400 italic">Bu dönem onaylanmış ek mesai yok</p>
                         )}
                     </div>
 
@@ -261,15 +261,15 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                                 <div className="text-center p-3 bg-amber-50 rounded-xl">
                                     <p className="text-[10px] text-amber-400 font-semibold">H.Sonu OT</p>
                                     <p className="text-sm font-bold text-amber-600">{formatMinutes(person.ot_weekend_minutes || 0)}</p>
-                                    <p className="text-[10px] text-amber-300">{person.ot_weekend_count || 0} gun</p>
+                                    <p className="text-[10px] text-amber-300">{person.ot_weekend_count || 0} gün</p>
                                 </div>
                                 <div className="text-center p-3 bg-blue-50 rounded-xl">
                                     <p className="text-[10px] text-blue-400 font-semibold">H.Ici OT</p>
                                     <p className="text-sm font-bold text-blue-600">{formatMinutes(person.ot_weekday_minutes || 0)}</p>
-                                    <p className="text-[10px] text-blue-300">{person.ot_weekday_count || 0} gun</p>
+                                    <p className="text-[10px] text-blue-300">{person.ot_weekday_count || 0} gün</p>
                                 </div>
                                 <div className="text-center p-3 bg-violet-50 rounded-xl">
-                                    <p className="text-[10px] text-violet-400 font-semibold">H.Sonu Orani</p>
+                                    <p className="text-[10px] text-violet-400 font-semibold">H.Sonu Oranı</p>
                                     <p className="text-sm font-bold text-violet-600">
                                         %{((person.ot_weekend_minutes || 0) + (person.ot_weekday_minutes || 0)) > 0
                                             ? Math.round((person.ot_weekend_minutes || 0) / ((person.ot_weekend_minutes || 0) + (person.ot_weekday_minutes || 0)) * 100)
@@ -287,14 +287,14 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="text-center p-3 bg-cyan-50 rounded-xl">
                                     <p className="text-[10px] text-cyan-400 font-semibold">Toplam Yemek</p>
-                                    <p className="text-sm font-bold text-cyan-600">{person.meal_ordered || 0} siparis</p>
+                                    <p className="text-sm font-bold text-cyan-600">{person.meal_ordered || 0} sipariş</p>
                                 </div>
                                 <div className="text-center p-3 bg-slate-50 rounded-xl">
                                     <p className="text-[10px] text-slate-400 font-semibold">OT'de Yemek</p>
-                                    <p className="text-sm font-bold text-slate-700">{person.ot_meal_overlap || 0}/{person.ot_days_total || 0} gun</p>
+                                    <p className="text-sm font-bold text-slate-700">{person.ot_meal_overlap || 0}/{person.ot_days_total || 0} gün</p>
                                 </div>
                                 <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                                    <p className="text-[10px] text-emerald-400 font-semibold">OT Yemek Orani</p>
+                                    <p className="text-[10px] text-emerald-400 font-semibold">OT Yemek Oranı</p>
                                     <p className="text-sm font-bold text-emerald-600">
                                         %{(person.ot_days_total || 0) > 0 ? Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100) : 0}
                                     </p>
@@ -303,17 +303,17 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                         </div>
                     )}
 
-                    {/* Izin Durumu */}
+                    {/* İzin Durumu */}
                     {(person.annual_leave_entitlement > 0 || person.annual_leave_used > 0) && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Izin Durumu</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">İzin Durumu</h4>
                             <div className="grid grid-cols-4 gap-2">
                                 <div className="text-center p-2 bg-violet-50 rounded-lg">
                                     <p className="text-[10px] text-violet-400 font-semibold">Hak</p>
                                     <p className="text-sm font-bold text-violet-600">{person.annual_leave_entitlement ?? 0}</p>
                                 </div>
                                 <div className="text-center p-2 bg-slate-50 rounded-lg">
-                                    <p className="text-[10px] text-slate-400 font-semibold">Kullanilan</p>
+                                    <p className="text-[10px] text-slate-400 font-semibold">Kullanılan</p>
                                     <p className="text-sm font-bold text-slate-600">{person.annual_leave_used ?? 0}</p>
                                 </div>
                                 <div className="text-center p-2 bg-emerald-50 rounded-lg">
@@ -568,12 +568,12 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const workDistribution = [
             { name: 'Normal Mesai', value: Math.max(0, totalWorked - totalOT), color: '#6366f1' },
             { name: 'Fazla Mesai', value: totalOT, color: '#f59e0b' },
-            { name: 'Kayip Zaman', value: totalMissing, color: '#ef4444' },
+            { name: 'Kayıp Zaman', value: totalMissing, color: '#ef4444' },
         ].filter(d => d.value > 0);
 
         const balanceDist = [
             { name: 'Pozitif', value: positiveBalance, color: '#10b981' },
-            { name: 'Sifir', value: zeroBalance, color: '#94a3b8' },
+            { name: 'Sıfır', value: zeroBalance, color: '#94a3b8' },
             { name: 'Negatif', value: negativeBalance, color: '#ef4444' },
         ].filter(d => d.value > 0);
 
@@ -603,7 +603,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
         // Radar data for departments (only for "Tum Ekibim")
         const radarData = departments.length > 1 ? (() => {
-            const axes = ['Verimlilik', 'OT Yogunlugu', 'Eksik Dusukl.', 'Katilim', 'Pozitif Bakiye'];
+            const axes = ['Verimlilik', 'OT Yoğunluğu', 'Eksik Düşükl.', 'Katılım', 'Pozitif Bakiye'];
             return axes.map(axis => {
                 const row = { axis };
                 departments.slice(0, 6).forEach(dept => {
@@ -615,9 +615,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
                     let val = 0;
                     if (axis === 'Verimlilik') val = Math.min(100, dEff);
-                    else if (axis === 'OT Yogunlugu') val = Math.min(100, dOT * 5);
-                    else if (axis === 'Eksik Dusukl.') val = Math.max(0, dMiss);
-                    else if (axis === 'Katilim') val = Math.min(100, dAttRate);
+                    else if (axis === 'OT Yoğunluğu') val = Math.min(100, dOT * 5);
+                    else if (axis === 'Eksik Düşükl.') val = Math.max(0, dMiss);
+                    else if (axis === 'Katılım') val = Math.min(100, dAttRate);
                     else if (axis === 'Pozitif Bakiye') val = dPosBal;
 
                     row[dept.name] = Math.round(val);
@@ -636,8 +636,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const totalOTSourceMin = totalOTIntendedMin + totalOTPotentialMin + totalOTManualMin;
 
         const otSourceDistribution = [
-            { name: 'Planli', value: totalOTIntendedMin, count: totalOTIntendedCount, color: '#6366f1' },
-            { name: 'Algilanan', value: totalOTPotentialMin, count: totalOTPotentialCount, color: '#f59e0b' },
+            { name: 'Planlı', value: totalOTIntendedMin, count: totalOTIntendedCount, color: '#6366f1' },
+            { name: 'Algılanan', value: totalOTPotentialMin, count: totalOTPotentialCount, color: '#f59e0b' },
             { name: 'Manuel', value: totalOTManualMin, count: totalOTManualCount, color: '#8b5cf6' },
         ].filter(d => d.value > 0);
 
@@ -786,8 +786,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             <div className="flex items-center justify-center py-20 text-slate-400">
                 <div className="text-center">
                     <BarChart3 size={40} className="mx-auto mb-3 opacity-30" />
-                    <p className="font-semibold">Analiz verileri yuklenemedi</p>
-                    <p className="text-xs mt-1">Ekip uyelerinizin mesai verileri bulunamadi.</p>
+                    <p className="font-semibold">Analiz verileri yüklenemedi</p>
+                    <p className="text-xs mt-1">Ekip üyelerinizin mesai verileri bulunamadı.</p>
                 </div>
             </div>
         );
@@ -808,10 +808,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
     // Efficiency badge helper
     const getEfficiencyBadge = (eff) => {
-        if (eff >= 100) return { label: 'Mukemmel', cls: 'bg-emerald-100 text-emerald-700' };
-        if (eff >= 95) return { label: 'Iyi', cls: 'bg-blue-100 text-blue-700' };
+        if (eff >= 100) return { label: 'Mükemmel', cls: 'bg-emerald-100 text-emerald-700' };
+        if (eff >= 95) return { label: 'İyi', cls: 'bg-blue-100 text-blue-700' };
         if (eff >= 85) return { label: 'Normal', cls: 'bg-amber-100 text-amber-700' };
-        return { label: 'Dusuk', cls: 'bg-red-100 text-red-700' };
+        return { label: 'Düşük', cls: 'bg-red-100 text-red-700' };
     };
 
     return (
@@ -838,7 +838,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         }`}
                     >
                         <Users size={12} className="inline mr-1.5 -mt-0.5" />
-                        Tum Ekibim
+                        Tüm Ekibim
                     </button>
                     {deptList.map((dept, i) => (
                         <button
@@ -872,7 +872,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         }`}
                     >
-                        Tumunu ({scopedStats.length})
+                        Tümünü ({scopedStats.length})
                     </button>
                     {roleList.map(role => {
                         const roleCount = scopedStats.filter(s => s.job_title === role).length;
@@ -898,14 +898,14 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 <KpiCard
                     label="Ekip Verimi"
                     value={`%${analytics.efficiency}`}
-                    subValue={`${analytics.elapsedWorkDays}/${analytics.totalWorkDaysInMonth || 22} is gunu`}
+                    subValue={`${analytics.elapsedWorkDays}/${analytics.totalWorkDaysInMonth || 22} iş günü`}
                     icon={Target}
                     color={analytics.efficiency >= 95 ? 'emerald' : analytics.efficiency >= 80 ? 'amber' : 'red'}
                 />
                 <KpiCard
-                    label="Ort. Calisma"
+                    label="Ort. Çalışma"
                     value={formatMinutes(analytics.avgWorked)}
-                    subValue={`${analytics.count} kisi toplam`}
+                    subValue={`${analytics.count} kişi toplam`}
                     icon={Clock}
                     color="indigo"
                 />
@@ -917,7 +917,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     color="amber"
                 />
                 <KpiCard
-                    label="Ort. Kayip"
+                    label="Ort. Kayıp"
                     value={formatMinutes(analytics.avgMissing)}
                     subValue={`Toplam: ${formatMinutes(analytics.totalMissing)}`}
                     icon={AlertTriangle}
@@ -938,9 +938,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     color={analytics.projectedBalance >= 0 ? 'emerald' : 'red'}
                 />
                 <KpiCard
-                    label="Katilim Orani"
+                    label="Katılım Oranı"
                     value={`%${analytics.avgAttendanceRate}`}
-                    subValue={`${analytics.totalAttendanceDays} devam / ${analytics.totalAbsentDays} devamsiz`}
+                    subValue={`${analytics.totalAttendanceDays} devam / ${analytics.totalAbsentDays} devamsız`}
                     icon={CheckCircle}
                     color={analytics.avgAttendanceRate >= 95 ? 'emerald' : analytics.avgAttendanceRate >= 85 ? 'amber' : 'red'}
                 />
@@ -956,8 +956,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 2: Department Benchmarking Table (only "Tum Ekibim" + multiple depts) ═══════ */}
             {showDeptComparison && (
                 <AnalyticsCard
-                    title="Departman Kiyaslama Tablosu"
-                    subtitle="Departmanlar arasi performans karsilastirmasi"
+                    title="Departman Kıyaslama Tablosu"
+                    subtitle="Departmanlar arası performans karşılaştırması"
                     icon={BarChart3}
                 >
                     <div className="overflow-x-auto">
@@ -966,16 +966,16 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <tr className="border-b border-slate-100">
                                     {[
                                         { key: 'name', label: 'Departman', align: 'left' },
-                                        { key: 'count', label: 'Kisi' },
+                                        { key: 'count', label: 'Kişi' },
                                         { key: 'efficiency', label: 'Verim %' },
-                                        { key: 'avgWorked', label: 'Ort. Calisma' },
+                                        { key: 'avgWorked', label: 'Ort. Çalışma' },
                                         { key: 'avgOT', label: 'Ort. OT' },
                                         { key: 'avgMissing', label: 'Ort. Eksik' },
-                                        { key: 'dailyMissing', label: 'Gunluk Ort. Eksik' },
+                                        { key: 'dailyMissing', label: 'Günlük Ort. Eksik' },
                                         { key: 'projected', label: 'Tahmini Bakiye' },
                                         { key: 'dailyNormalDept', label: 'Gnl.Normal' },
                                         { key: 'otNormalPctDept', label: 'OT/Normal%' },
-                                        { key: 'attendanceRateAvg', label: 'Katilim%' },
+                                        { key: 'attendanceRateAvg', label: 'Katılım%' },
                                     ].map(col => (
                                         <th
                                             key={col.key}
@@ -1079,8 +1079,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 3: Department Radar Chart (only "Tum Ekibim" + multiple depts) ═══════ */}
             {showDeptComparison && analytics.radarData.length > 0 && (
                 <AnalyticsCard
-                    title="Departman Kiyaslama Radari"
-                    subtitle="5 eksende departman performans karsilastirmasi"
+                    title="Departman Kıyaslama Radarı"
+                    subtitle="5 eksende departman performans karşılaştırması"
                     icon={Activity}
                 >
                     <div className="h-[360px]">
@@ -1125,8 +1125,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 4: Daily Trend + Projection ═══════ */}
             {dailyTrend.length > 0 && (
                 <AnalyticsCard
-                    title="Gunluk Trend ve Projeksiyon"
-                    subtitle="Gun bazli ortalama calisma, fazla mesai ve hedef cizgisi (dakika)"
+                    title="Günlük Trend ve Projeksiyon"
+                    subtitle="Gün bazlı ortalama çalışma, fazla mesai ve hedef çizgisi (dakika)"
                     icon={Activity}
                 >
                     <div className="h-[300px]">
@@ -1166,7 +1166,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         strokeDasharray="8 4"
                                         strokeWidth={1.5}
                                         label={{
-                                            value: 'Gunluk Hedef',
+                                            value: 'Günlük Hedef',
                                             position: 'insideTopRight',
                                             fill: '#10b981',
                                             fontSize: 10,
@@ -1183,7 +1183,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <Area
                                     type="monotone"
                                     dataKey="avg_worked"
-                                    name="Ort. Calisma"
+                                    name="Ort. Çalışma"
                                     stroke="#6366f1"
                                     strokeWidth={2}
                                     fill="url(#gradWorkedV2)"
@@ -1206,11 +1206,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     {/* Absent count mini row */}
                     {dailyTrend.some(d => d.absent > 0) && (
                         <div className="flex items-center gap-2 mt-2 px-1">
-                            <span className="text-[10px] font-semibold text-slate-400">Devamsizlik:</span>
+                            <span className="text-[10px] font-semibold text-slate-400">Devamsızlık:</span>
                             <div className="flex gap-1 flex-wrap">
                                 {dailyTrend.filter(d => d.absent > 0).map(d => (
                                     <span key={d.day} className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 font-bold tabular-nums">
-                                        {d.day}. gun: {d.absent}
+                                        {d.day}. gün: {d.absent}
                                     </span>
                                 ))}
                             </div>
@@ -1222,8 +1222,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 5: Weekly Heatmap ═══════ */}
             {heatmapData.length > 0 && (
                 <AnalyticsCard
-                    title="Haftalik Calisma Deseni"
-                    subtitle="Hafta ici gun bazli ortalama calisma yogunlugu"
+                    title="Haftalık Çalışma Deseni"
+                    subtitle="Hafta içi gün bazlı ortalama çalışma yoğunluğu"
                     icon={Calendar}
                 >
                     <div className="space-y-2">
@@ -1245,7 +1245,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <div
                                             key={d}
                                             className={`h-12 rounded-lg flex flex-col items-center justify-center transition-all hover:scale-105 ${getHeatColor(cell.worked)}`}
-                                            title={`${cell.day}. gun: ${formatMinutes(cell.worked)} calisma${cell.absent > 0 ? `, ${cell.absent} devamsiz` : ''}`}
+                                            title={`${cell.day}. gün: ${formatMinutes(cell.worked)} çalışma${cell.absent > 0 ? `, ${cell.absent} devamsız` : ''}`}
                                         >
                                             <span className="text-xs font-bold">{cell.worked > 0 ? formatMinutes(cell.worked) : '-'}</span>
                                             {cell.absent > 0 && (
@@ -1258,7 +1258,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         ))}
                         {/* Legend */}
                         <div className="flex items-center gap-3 mt-3 justify-end">
-                            <span className="text-[9px] text-slate-400 font-semibold">Yogunluk:</span>
+                            <span className="text-[9px] text-slate-400 font-semibold">Yoğunluk:</span>
                             {[
                                 { label: '<4s', cls: 'bg-red-200' },
                                 { label: '4-6s', cls: 'bg-amber-200' },
@@ -1279,8 +1279,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 6: Per-Person Performance Bar ═══════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <AnalyticsCard
-                    title="Kisi Bazli Performans"
-                    subtitle={`Aylik calisma sureleri (${analytics.performanceData.length} kisi)`}
+                    title="Kişi Bazlı Performans"
+                    subtitle={`Aylık çalışma süreleri (${analytics.performanceData.length} kişi)`}
                     icon={BarChart3}
                     className="lg:col-span-2"
                 >
@@ -1314,9 +1314,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     iconType="circle"
                                     iconSize={8}
                                 />
-                                <Bar dataKey="worked" name="Calisma" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="worked" name="Çalışma" fill="#6366f1" radius={[4, 4, 0, 0]} />
                                 <Bar dataKey="overtime" name="Fazla Mesai" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="missing" name="Kayip" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="missing" name="Kayıp" fill="#ef4444" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -1377,7 +1377,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                             width: `${(d.value / analytics.count) * 100}%`,
                                             backgroundColor: d.color,
                                         }}
-                                        title={`${d.name}: ${d.value} kisi`}
+                                        title={`${d.name}: ${d.value} kişi`}
                                     />
                                 ))}
                             </div>
@@ -1399,7 +1399,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     {/* OT vs Missing Diverging Chart (2/3) */}
                     {analytics.comparisonData.length > 0 && (
                         <AnalyticsCard
-                            title="Fazla Mesai ve Kayip Karsilastirmasi"
+                            title="Fazla Mesai ve Kayıp Karşılaştırması"
                             subtitle="Kisi bazli fazla mesai vs eksik zaman"
                             icon={Zap}
                             className="lg:col-span-2"
@@ -1488,7 +1488,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                             </div>
                             <div className="mt-3 pt-3 border-t border-slate-100">
                                 <div className="flex items-center justify-between text-[11px]">
-                                    <span className="text-slate-400 font-semibold">OT / Normal Orani</span>
+                                    <span className="text-slate-400 font-semibold">OT / Normal Oranı</span>
                                     <span className="font-bold text-amber-600">%{analytics.otNormalRatio}</span>
                                 </div>
                                 <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -1508,7 +1508,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <AnalyticsCard
                         title="Hafta Sonu vs Hafta Ici OT"
-                        subtitle="En cok OT yapan 10 kisi (hafta ici / hafta sonu)"
+                        subtitle="En çok OT yapan 10 kişi (hafta içi / hafta sonu)"
                         icon={Calendar}
                         className="lg:col-span-2"
                     >
@@ -1568,7 +1568,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 OT'de Yemek
                             </p>
                             <p className="text-lg font-bold text-cyan-600">%{analytics.otMealRate}</p>
-                            <p className="text-[10px] text-cyan-400">{analytics.totalOTMealOverlap}/{analytics.totalOTDays} gun</p>
+                            <p className="text-[10px] text-cyan-400">{analytics.totalOTMealOverlap}/{analytics.totalOTDays} gün</p>
                         </div>
                     </div>
                 </div>
@@ -1577,7 +1577,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 9: Performance Ranking Table ═══════ */}
             <AnalyticsCard
                 title="Performans Siralamasi"
-                subtitle={`Eksik sureye gore siralama — en az eksik en ustte (${analytics.ranked.length} kisi)`}
+                subtitle={`Eksik süreye göre sıralama — en az eksik en üstte (${analytics.ranked.length} kişi)`}
                 icon={Award}
             >
                 <div className="overflow-x-auto">
@@ -1585,21 +1585,21 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         <thead>
                             <tr className="border-b border-slate-100">
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">#</th>
-                                <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Calisan</th>
+                                <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Çalışan</th>
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Departman</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Calisma</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Çalışma</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Hedef</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Verim %</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">F. Mesai</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-indigo-400 uppercase tracking-wider">Planli</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">Algilanan</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-indigo-400 uppercase tracking-wider">Planlı</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">Algılanan</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-violet-400 uppercase tracking-wider">Manuel</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Kayip</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Kayıp</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Gnl. Eksik</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Net Bakiye</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Tahmini</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Izin</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katilim%</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">İzin</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katılım%</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">H.Sonu OT</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-cyan-400 uppercase tracking-wider">Yemek/OT</th>
                             </tr>
@@ -1715,7 +1715,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     <AlertCircle size={14} className="text-red-600" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-xs font-bold text-red-800">Yuksek Eksik Zaman</p>
+                                    <p className="text-xs font-bold text-red-800">Yüksek Eksik Zaman</p>
                                     <p className="text-[10px] text-red-600">&gt;%20 hedef kaybi</p>
                                 </div>
                             </div>
@@ -1777,8 +1777,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 11: Leave Balance ═══════ */}
             {analytics.leaveData.length > 0 && (
                 <AnalyticsCard
-                    title="Izin Bakiyesi"
-                    subtitle="Yillik izin haklari ve kullanim durumu"
+                    title="İzin Bakiyesi"
+                    subtitle="Yıllık izin hakları ve kullanım durumu"
                     icon={Palmtree}
                 >
                     <div className="h-[300px]">
@@ -1795,7 +1795,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     tick={{ fill: '#94a3b8', fontSize: 10 }}
                                     axisLine={false}
                                     tickLine={false}
-                                    unit=" gun"
+                                    unit=" gün"
                                 />
                                 <YAxis
                                     dataKey="name"
@@ -1807,14 +1807,14 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 />
                                 <Tooltip
                                     contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 11 }}
-                                    formatter={(v) => `${v} gun`}
+                                    formatter={(v) => `${v} gün`}
                                 />
                                 <Legend
                                     wrapperStyle={{ fontSize: 11, fontWeight: 600 }}
                                     iconType="circle"
                                     iconSize={8}
                                 />
-                                <Bar dataKey="used" name="Kullanilan" stackId="leave" fill="#6366f1" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="used" name="Kullanılan" stackId="leave" fill="#6366f1" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="reserved" name="Planlanan" stackId="leave" fill="#a5b4fc" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="remaining" name="Kalan" stackId="leave" fill="#10b981" radius={[0, 4, 4, 0]} />
                             </BarChart>
@@ -1827,7 +1827,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {analytics.leaveByDept.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <AnalyticsCard
-                        title="Departman Bazli Izin Kullanim Orani"
+                        title="Departman Bazlı İzin Kullanım Oranı"
                         subtitle="Her departmanin yillik izin kullanim yuzdesi"
                         icon={Palmtree}
                     >
@@ -1880,12 +1880,12 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                             <p className="text-[10px] text-violet-400 mt-1">Ekip geneli ortalama izin kullanim orani</p>
                         </div>
                         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
-                            <p className="text-[10px] text-indigo-400 font-semibold uppercase">Toplam Kullanilan</p>
-                            <p className="text-2xl font-bold text-indigo-600">{analytics.totalLeaveUsed} gun</p>
+                            <p className="text-[10px] text-indigo-400 font-semibold uppercase">Toplam Kullanılan</p>
+                            <p className="text-2xl font-bold text-indigo-600">{analytics.totalLeaveUsed} gün</p>
                         </div>
                         <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5">
                             <p className="text-[10px] text-emerald-400 font-semibold uppercase">Kalan Bakiye</p>
-                            <p className="text-2xl font-bold text-emerald-600">{analytics.totalLeaveRemaining} gun</p>
+                            <p className="text-2xl font-bold text-emerald-600">{analytics.totalLeaveRemaining} gün</p>
                         </div>
                     </div>
                 </div>
@@ -1945,7 +1945,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                             <AlertTriangle size={48} />
                         </div>
                         <div className="relative">
-                            <p className="text-red-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Cok Eksik</p>
+                            <p className="text-red-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Çok Eksik</p>
                             <p className="text-lg font-bold truncate">{analytics.mostMissing.employee_name}</p>
                             <p className="text-red-200 text-xs mt-0.5">{analytics.mostMissing.department || '-'}</p>
                             <div className="mt-3 space-y-1">
@@ -1987,7 +1987,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 13: Department Mini Cards (only "Tum Ekibim" + multiple depts) ═══════ */}
             {showDeptComparison && (
                 <AnalyticsCard
-                    title="Departman Ozeti"
+                    title="Departman Özeti"
                     subtitle="Her departmanin kompakt ozet karti (tikla: o departmana gec)"
                     icon={Users}
                 >
@@ -2008,7 +2008,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <div className="flex items-center gap-2">
                                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: DEPT_COLORS[i % DEPT_COLORS.length] }} />
                                             <span className="text-xs font-bold text-slate-800">{dept.name}</span>
-                                            <span className="text-[10px] text-slate-400">{dept.count} kisi</span>
+                                            <span className="text-[10px] text-slate-400">{dept.count} kişi</span>
                                         </div>
                                         <ArrowRight size={12} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
                                     </div>
@@ -2046,7 +2046,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {/* ═══════ SECTION 14: Individual Performance Cards ═══════ */}
             <AnalyticsCard
                 title="Bireysel Performans Kartlari"
-                subtitle={`Eksik sureye gore siralama (${analytics.ranked.length} kisi)`}
+                subtitle={`Eksik süreye göre sıralama (${analytics.ranked.length} kişi)`}
                 icon={UserCheck}
             >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -2092,7 +2092,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
                                         'bg-red-100 text-red-700'
                                     }`}>
-                                        Katilim %{Math.round(person.attendance_rate || 100)}
+                                        Katılım %{Math.round(person.attendance_rate || 100)}
                                     </span>
                                     {/* Weekend OT Badge */}
                                     {(person.ot_weekend_minutes || 0) > 0 && (
@@ -2103,12 +2103,12 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     {/* OT Source Badges */}
                                     {(person.ot_intended_minutes || 0) > 0 && (
                                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700">
-                                            Planli {formatMinutes(person.ot_intended_minutes)}
+                                            Planlı {formatMinutes(person.ot_intended_minutes)}
                                         </span>
                                     )}
                                     {(person.ot_potential_minutes || 0) > 0 && (
                                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600">
-                                            Algilanan {formatMinutes(person.ot_potential_minutes)}
+                                            Algılanan {formatMinutes(person.ot_potential_minutes)}
                                         </span>
                                     )}
                                     {(person.ot_manual_minutes || 0) > 0 && (
@@ -2127,7 +2127,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 {/* Metrics grid */}
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] mb-2">
                                     <div className="flex justify-between">
-                                        <span className="text-slate-400">Calisma</span>
+                                        <span className="text-slate-400">Çalışma</span>
                                         <span className="font-bold text-indigo-600 tabular-nums">{formatMinutes(person.total_worked || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
@@ -2135,7 +2135,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <span className="font-bold text-amber-600 tabular-nums">{(person.total_overtime || 0) > 0 ? formatMinutes(person.total_overtime) : '\u2014'}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-red-400 font-semibold">Kayip</span>
+                                        <span className="text-red-400 font-semibold">Kayıp</span>
                                         <span className={`font-bold tabular-nums ${missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{missing > 0 ? formatMinutes(missing) : '0'}</span>
                                     </div>
                                     <div className="flex justify-between">
@@ -2170,10 +2170,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
                                         <span className="text-slate-400 flex items-center gap-1">
                                             <Palmtree size={10} />
-                                            Izin
+                                            İzin
                                         </span>
                                         <span className="font-bold text-violet-600">
-                                            {person.annual_leave_balance ?? 0}/{person.annual_leave_entitlement ?? 0} gun
+                                            {person.annual_leave_balance ?? 0}/{person.annual_leave_entitlement ?? 0} gün
                                         </span>
                                     </div>
                                 )}
@@ -2187,15 +2187,15 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             <div className="bg-slate-800 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                     <Info size={14} className="text-slate-400" />
-                    <span className="text-xs font-bold text-slate-300">Ozet</span>
+                    <span className="text-xs font-bold text-slate-300">Özet</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-6">
                     <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Calisan</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">Çalışan</p>
                         <p className="text-sm font-bold text-white tabular-nums">{analytics.count}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Toplam Calisma</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">Toplam Çalışma</p>
                         <p className="text-sm font-bold text-indigo-400 tabular-nums">{formatMinutes(analytics.totalWorked)}</p>
                     </div>
                     <div className="text-center">
@@ -2207,7 +2207,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.totalMissing)}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Eksik/Kisi</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Eksik/Kişi</p>
                         <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.avgMissing)}</p>
                     </div>
                     <div className="text-center">

@@ -314,12 +314,12 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 {/* Yil Bazli Kesim */}
                 {request.usage_breakdown && Object.keys(request.usage_breakdown).length > 0 && (
                   <div className="pt-2">
-                    <span className="text-xs font-bold text-slate-500 uppercase mb-1 block">Yil Bazli Kesim</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase mb-1 block">Yıl Bazlı Kesim</span>
                     <div className="space-y-1">
                       {Object.entries(request.usage_breakdown).sort(([a], [b]) => a.localeCompare(b)).map(([year, days]) => (
                         <div key={year} className="flex justify-between text-xs bg-indigo-50/50 p-2 rounded-lg border border-indigo-100">
-                          <span className="text-slate-600">{year} yili</span>
-                          <span className="font-bold text-indigo-700">{days} gun</span>
+                          <span className="text-slate-600">{year} yılı</span>
+                          <span className="font-bold text-indigo-700">{days} gün</span>
                         </div>
                       ))}
                     </div>
@@ -333,7 +333,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <div className="bg-blue-50/80 rounded-xl p-4 border border-blue-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Briefcase size={16} className="text-blue-600" />
-                  <h4 className="text-sm font-bold text-blue-700">Calisan Izin Bilgisi</h4>
+                  <h4 className="text-sm font-bold text-blue-700">Çalışan İzin Bilgisi</h4>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-white p-2.5 rounded-lg border border-blue-100">
@@ -341,11 +341,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                     <span className="block font-black text-blue-700 text-lg">{request.employee_annual_leave_balance.remaining}</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-blue-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kullanilan</span>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kullanılan</span>
                     <span className="block font-black text-amber-600 text-lg">{request.employee_annual_leave_balance.used || 0}</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-blue-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Talep Sonrasi</span>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Talep Sonrası</span>
                     <span className={`block font-black text-lg ${
                       (request.employee_annual_leave_balance.remaining - request.total_days) < 0 ? 'text-red-600' : 'text-emerald-600'
                     }`}>{request.employee_annual_leave_balance.remaining - request.total_days}</span>
@@ -355,17 +355,17 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 <div className="flex items-center justify-between text-xs bg-white/60 p-2 rounded-lg">
                   {request.employee_annual_leave_balance.years_of_service !== undefined && (
                     <span className="text-slate-600">
-                      Kidem: <span className="font-bold text-slate-800">{request.employee_annual_leave_balance.years_of_service} Yil</span>
+                      Kıdem: <span className="font-bold text-slate-800">{request.employee_annual_leave_balance.years_of_service} Yıl</span>
                     </span>
                   )}
                   {request.employee_annual_leave_balance.entitlement_tier !== undefined && (
                     <span className="text-slate-600">
-                      Yillik Hak: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.entitlement_tier} Gun</span>
+                      Yıllık Hak: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.entitlement_tier} Gün</span>
                     </span>
                   )}
                   {request.employee_annual_leave_balance.last_leave_date && (
                     <span className="text-slate-600">
-                      Son Izin: <span className="font-bold text-slate-800">{new Date(request.employee_annual_leave_balance.last_leave_date).toLocaleDateString('tr-TR')}</span>
+                      Son İzin: <span className="font-bold text-slate-800">{new Date(request.employee_annual_leave_balance.last_leave_date).toLocaleDateString('tr-TR')}</span>
                     </span>
                   )}
                 </div>
@@ -377,17 +377,17 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <h4 className="text-sm font-bold text-slate-600 mb-2.5 flex items-center gap-1.5">
                   <Calendar size={14} />
-                  Calisanin Son Onayli Izinleri
+                  Çalışanın Son Onaylı İzinleri
                 </h4>
                 <div className="space-y-1.5">
                   {employeeHistory.map((h, i) => (
                     <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-slate-100">
-                      <span className="font-medium text-slate-700">{h.leave_type_name || h.request_type_detail?.name || 'Izin'}</span>
+                      <span className="font-medium text-slate-700">{h.leave_type_name || h.request_type_detail?.name || 'İzin'}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-slate-500">
                           {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                         </span>
-                        <span className="font-bold text-slate-700">{h.total_days} gun</span>
+                        <span className="font-bold text-slate-700">{h.total_days} gün</span>
                       </div>
                     </div>
                   ))}
@@ -434,7 +434,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock size={16} className="text-amber-600" />
-                  <h4 className="text-sm font-bold text-amber-700">Aylik Calisma Ozeti</h4>
+                  <h4 className="text-sm font-bold text-amber-700">Aylık Çalışma Özeti</h4>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
@@ -443,7 +443,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Tamamlanan</span>
-                    <span className="block font-black text-emerald-600 text-lg">{request.employee_monthly_stats.completed_hours}s</span>
+                    <span className="block font-black text-emerald-600 text-lg">{request.employee_monthly_stats.completed_hours} s</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Eksik</span>
@@ -460,13 +460,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-amber-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Calisan Gun</span>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Çalışan Gün</span>
                     <span className="block font-bold text-sm text-slate-700">{request.employee_monthly_stats.worked_days}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs bg-white/60 p-2 rounded-lg border border-amber-100">
                   <span className="text-slate-600">
-                    OT Onayli: <span className="font-bold text-emerald-700">{request.employee_monthly_stats.ot_requests_approved}</span>
+                    OT Onaylı: <span className="font-bold text-emerald-700">{request.employee_monthly_stats.ot_requests_approved}</span>
                   </span>
                   <span className="text-slate-600">
                     OT Bekleyen: <span className="font-bold text-amber-700">{request.employee_monthly_stats.ot_requests_pending}</span>
@@ -575,7 +575,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
             >
               <XCircle size={20} />
-              Izni Iptal Et
+              İzni İptal Et
             </button>
           )}
 
@@ -609,7 +609,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-bold shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FileText size={16} />
-                {downloadLoading ? 'Indiriliyor...' : 'Resmi Form Indir (DOCX)'}
+                {downloadLoading ? 'İndiriliyor...' : 'Resmi Form İndir (DOCX)'}
               </button>
             )}
           </div>
@@ -723,7 +723,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">Izin Iptali</h3>
+              <h3 className="text-lg font-bold text-slate-800">İzin İptali</h3>
               <button onClick={() => { setShowCancelModal(false); setError(''); }} className="text-slate-400 hover:text-slate-600">
                 <X size={20} />
               </button>
@@ -731,7 +731,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start gap-2 text-sm text-red-700">
                 <AlertCircle size={16} className="mt-0.5" />
-                <p>Bu islem onayli izni iptal edecek ve kullanilan izin gunleri iade edilecektir.</p>
+                <p>Bu işlem onaylı izni iptal edecek ve kullanılan izin günleri iade edilecektir.</p>
               </div>
             </div>
             {error && (
@@ -739,22 +739,22 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             )}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Iptal Gerekcesi <span className="text-red-500">*</span>
+                İptal Gerekçesi <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 rows="4"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Iptal gerekcesini yaziniz..."
+                placeholder="İptal gerekçesini yazınız..."
               />
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={() => { setShowCancelModal(false); setError(''); }} className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
-                Vazgec
+                Vazgeç
               </button>
               <button onClick={handleManagerCancel} disabled={cancelLoading} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-                {cancelLoading ? 'Isleniyor...' : 'Iptal Et'}
+                {cancelLoading ? 'İşleniyor...' : 'İptal Et'}
               </button>
             </div>
           </div>

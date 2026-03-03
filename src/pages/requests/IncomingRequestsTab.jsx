@@ -112,7 +112,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             }
             fetchAllData();
         } catch (e) {
-            alert(e.response?.data?.error || 'Islem basarisiz');
+            alert(e.response?.data?.error || 'İşlem başarısız');
         }
     };
 
@@ -128,7 +128,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             }
             fetchAllData();
         } catch (e) {
-            alert(e.response?.data?.error || 'Islem basarisiz');
+            alert(e.response?.data?.error || 'İşlem başarısız');
         }
     };
 
@@ -149,7 +149,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             }
             fetchAllData();
         } catch (e) {
-            alert(e.response?.data?.error || 'Islem basarisiz');
+            alert(e.response?.data?.error || 'İşlem başarısız');
         }
     };
 
@@ -171,7 +171,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             }
             fetchAllData();
         } catch (e) {
-            alert(e.response?.data?.error || 'Islem basarisiz');
+            alert(e.response?.data?.error || 'İşlem başarısız');
         }
     };
 
@@ -198,7 +198,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         _principalName: principalName,
     });
 
-    // --- SUB-TAB 1: Dogrudan Gelen (target_approver = me, PENDING + substitute) ---
+    // --- SUB-TAB 1: Doğrudan Gelen (target_approver = me, PENDING + substitute) ---
     const directIncomingItems = useMemo(() => {
         const items = [];
         const seen = new Set();
@@ -338,7 +338,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                         }`}
                     >
                         <Inbox size={14} />
-                        Dogrudan Gelen
+                        Doğrudan Gelen
                         {directPendingCount > 0 && (
                             <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                                 activeSubTab === 'direct_incoming' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
@@ -369,7 +369,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input
                             type="text"
-                            placeholder="Isim ile ara..."
+                            placeholder="İsim ile ara..."
                             value={searchText}
                             onChange={(e) => setSearchText(e.target.value)}
                             className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -384,7 +384,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                                         typeFilter === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                                     }`}
                                 >
-                                    {t === 'ALL' ? 'Tumu' : t === 'LEAVE' ? 'Izin' : t === 'OVERTIME' ? 'Mesai' : t === 'MEAL' ? 'Yemek' : 'Kartsiz'}
+                                    {t === 'ALL' ? 'Tümü' : t === 'LEAVE' ? 'İzin' : t === 'OVERTIME' ? 'Mesai' : t === 'MEAL' ? 'Yemek' : 'Kartsız'}
                                 </button>
                             ))}
                         </div>
@@ -397,7 +397,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                                             statusFilter === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                                         }`}
                                     >
-                                        {s === 'ALL' ? 'Hepsi' : s === 'PENDING' ? 'Bekleyen' : s === 'APPROVED' ? 'Onayli' : 'Red'}
+                                        {s === 'ALL' ? 'Hepsi' : s === 'PENDING' ? 'Bekleyen' : s === 'APPROVED' ? 'Onaylı' : 'Red'}
                                     </button>
                                 ))}
                             </div>
@@ -415,7 +415,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                     <h3 className="text-lg font-bold text-slate-700">
                         {activeSubTab === 'direct_incoming' ? 'Bekleyen Gelen Talep Yok' : 'Ekip Talebi Yok'}
                     </h3>
-                    <p className="text-sm text-slate-500 mt-1">Secili kriterlere uygun talep bulunmamaktadir.</p>
+                    <p className="text-sm text-slate-500 mt-1">Seçili kriterlere uygun talep bulunmamaktadır.</p>
                 </div>
             ) : (
                 <RequestListTable

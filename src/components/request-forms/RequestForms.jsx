@@ -107,17 +107,17 @@ export const LeaveRequestForm = ({
                         <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                             {entitlementInfo.hired_date && (
                                 <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                    <span className="text-slate-500">Ise Giris:</span>
+                                    <span className="text-slate-500">İşe Giriş:</span>
                                     <span className="font-bold text-slate-700">{new Date(entitlementInfo.hired_date).toLocaleDateString('tr-TR')}</span>
                                 </div>
                             )}
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                <span className="text-slate-500">Kidem:</span>
-                                <span className="font-bold text-slate-700">{entitlementInfo.years_of_service} Yil</span>
+                                <span className="text-slate-500">Kıdem:</span>
+                                <span className="font-bold text-slate-700">{entitlementInfo.years_of_service} Yıl</span>
                             </div>
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                <span className="text-slate-500">Yillik Hak:</span>
-                                <span className="font-bold text-emerald-600">{entitlementInfo.entitlement_tier} Gun</span>
+                                <span className="text-slate-500">Yıllık Hak:</span>
+                                <span className="font-bold text-emerald-600">{entitlementInfo.entitlement_tier} Gün</span>
                             </div>
                         </div>
                     )}
@@ -125,7 +125,7 @@ export const LeaveRequestForm = ({
                     {entitlementInfo?.entitlements?.length > 0 && (
                         <details className="mt-3 bg-white/50 rounded-lg border border-blue-100 overflow-hidden">
                             <summary className="px-3 py-2 text-xs font-bold text-blue-700 cursor-pointer hover:bg-blue-50/50 transition-colors select-none">
-                                Yil Bazli Izin Detayi ({entitlementInfo.entitlements.length} yil)
+                                Yıl Bazlı İzin Detayı ({entitlementInfo.entitlements.length} yıl)
                             </summary>
                             <div className="px-3 pb-3 space-y-1.5">
                                 {entitlementInfo.entitlements.map((ent, i) => (
@@ -133,7 +133,7 @@ export const LeaveRequestForm = ({
                                         <span className="font-bold text-slate-700">{ent.year}</span>
                                         <div className="flex items-center gap-3">
                                             <span className="text-slate-500">Hak: <span className="font-bold text-slate-700">{ent.days_entitled}</span></span>
-                                            <span className="text-slate-500">Kullanilan: <span className="font-bold text-amber-600">{ent.days_used}</span></span>
+                                            <span className="text-slate-500">Kullanılan: <span className="font-bold text-amber-600">{ent.days_used}</span></span>
                                             <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${ent.remaining > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                 {ent.remaining} kalan
                                             </span>
@@ -146,7 +146,7 @@ export const LeaveRequestForm = ({
                     {entitlementInfo && !entitlementInfo.has_entitlement && (
                         <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 p-2 rounded">
                             <AlertCircle size={12} />
-                            Yillik izin hakedis kaydiniz bulunmamaktadir. Lutfen IK ile iletisime gecin.
+                            Yıllık izin hakediş kaydınız bulunmamaktadır. Lütfen İK ile iletişime geçin.
                         </div>
                     )}
                     {isInsufficient && (
@@ -229,7 +229,7 @@ export const LeaveRequestForm = ({
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <h4 className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5">
                         <Clock size={12} />
-                        Son Izin Talepleriniz
+                        Son İzin Talepleriniz
                     </h4>
                     <div className="space-y-1.5">
                         {recentLeaveHistory.map((h, i) => (
@@ -240,19 +240,19 @@ export const LeaveRequestForm = ({
                                         h.status === 'REJECTED' ? 'bg-red-500' :
                                         h.status === 'PENDING' ? 'bg-amber-500' : 'bg-slate-400'
                                     }`} />
-                                    <span className="font-medium text-slate-700 truncate">{h.leave_type_name || h.request_type_detail?.name || 'Izin'}</span>
+                                    <span className="font-medium text-slate-700 truncate">{h.leave_type_name || h.request_type_detail?.name || 'İzin'}</span>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
                                     <span className="text-slate-400">
                                         {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '-'}
                                     </span>
-                                    <span className="text-slate-500 font-bold">{h.total_days} gun</span>
+                                    <span className="text-slate-500 font-bold">{h.total_days} gün</span>
                                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                                         h.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
                                         h.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
                                         h.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
                                     }`}>
-                                        {h.status === 'APPROVED' ? 'Onayli' :
+                                        {h.status === 'APPROVED' ? 'Onaylı' :
                                          h.status === 'REJECTED' ? 'Red' :
                                          h.status === 'PENDING' ? 'Bekliyor' : h.status}
                                     </span>
@@ -428,15 +428,15 @@ export const LeaveRequestForm = ({
                     <div className="space-y-1">
                         {Object.entries(fifoPreview.breakdown).map(([year, days]) => (
                             <div key={year} className="flex justify-between text-xs bg-white/70 p-2 rounded-lg">
-                                <span className="text-slate-600">{year} yilindan</span>
-                                <span className="font-bold text-indigo-700">{days} gun</span>
+                                <span className="text-slate-600">{year} yılından</span>
+                                <span className="font-bold text-indigo-700">{days} gün</span>
                             </div>
                         ))}
                     </div>
                     {fifoPreview.shortfall > 0 && (
                         <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1">
                             <AlertCircle size={12} />
-                            {fifoPreview.shortfall} gun eksik bakiye!
+                            {fifoPreview.shortfall} gün eksik bakiye!
                         </div>
                     )}
                 </div>

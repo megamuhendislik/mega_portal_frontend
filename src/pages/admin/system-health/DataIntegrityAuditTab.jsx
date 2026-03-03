@@ -19,14 +19,14 @@ import api from '../../../services/api';
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS = {
-    ot_overlap: 'OT Cakismasi',
+    ot_overlap: 'OT Çakışması',
     attendance_recalc: 'Mesai Yeniden Hesaplama',
     orphan_requests: 'Sahipsiz Talepler',
-    duration_mismatch: 'Sure Uyumsuzlugu',
+    duration_mismatch: 'Süre Uyumsuzluğu',
     status_anomaly: 'Durum Anomalisi',
-    missing_attendance: 'Eksik Mesai Kaydi',
-    fiscal_integrity: 'Mali Donem Butunlugu',
-    timezone_diagnostics: 'Saat Dilimi Tanilama',
+    missing_attendance: 'Eksik Mesai Kaydı',
+    fiscal_integrity: 'Mali Dönem Bütünlüğü',
+    timezone_diagnostics: 'Saat Dilimi Tanılama',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -38,9 +38,9 @@ const SEVERITY_COLORS = {
 };
 
 const SEVERITY_LABELS = {
-    HIGH: 'Yuksek',
+    HIGH: 'Yüksek',
     MEDIUM: 'Orta',
-    LOW: 'Dusuk',
+    LOW: 'Düşük',
 };
 
 function useBodyScrollLock(active) {
@@ -87,7 +87,7 @@ const ActionBadge = ({ fixAction, fixable, mode }) => {
         return (
             <div>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
-                    Duzeltildi
+                    Düzeltildi
                 </span>
                 {fixAction && (
                     <div className="text-[10px] text-green-600 mt-0.5">{fixAction}</div>
@@ -102,7 +102,7 @@ const ActionBadge = ({ fixAction, fixable, mode }) => {
                     ? 'bg-amber-50 text-amber-700 border-amber-200'
                     : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}>
-                {fixable ? 'Duzelt. (fix mod)' : 'Manuel Inceleme'}
+                {fixable ? 'Düzelt. (fix mod)' : 'Manuel İnceleme'}
             </span>
             {fixAction && (
                 <div className="text-[10px] text-gray-400 mt-0.5">{fixAction}</div>
@@ -140,11 +140,11 @@ const LogContent = ({ log }) => {
                 ))}
             </Section>
 
-            <Section title="Gun Kurallari">
+            <Section title="Gün Kuralları">
                 {day_rules && Object.entries(day_rules).map(([k, v]) => <KV key={k} k={k} v={v} />)}
             </Section>
 
-            <Section title={`Kapi Gecis Kayitlari (${log.gate_event_count || 0})`}>
+            <Section title={`Kapı Geçiş Kayıtları (${log.gate_event_count || 0})`}>
                 {gate_events && gate_events.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-[11px]">
@@ -152,8 +152,8 @@ const LogContent = ({ log }) => {
                                 <th className="text-left py-1 px-2 font-bold">ID</th>
                                 <th className="text-left py-1 px-2 font-bold">UTC</th>
                                 <th className="text-left py-1 px-2 font-bold">Istanbul</th>
-                                <th className="text-left py-1 px-2 font-bold">Yon</th>
-                                <th className="text-left py-1 px-2 font-bold">Kapi</th>
+                                <th className="text-left py-1 px-2 font-bold">Yön</th>
+                                <th className="text-left py-1 px-2 font-bold">Kapı</th>
                             </tr></thead>
                             <tbody>{gate_events.map((ge, i) => (
                                 <tr key={i} className="border-b border-gray-100">
@@ -166,31 +166,31 @@ const LogContent = ({ log }) => {
                             ))}</tbody>
                         </table>
                     </div>
-                ) : <span className="text-gray-400">Kayit yok</span>}
+                ) : <span className="text-gray-400">Kayıt yok</span>}
             </Section>
 
-            <Section title={`Mesai Kayitlari (${log.attendance_count || 0})`}>
+            <Section title={`Mesai Kayıtları (${log.attendance_count || 0})`}>
                 {attendance_records && attendance_records.length > 0 ? attendance_records.map((att, i) => (
                     <div key={i} className="border border-gray-200 rounded-lg p-3 mb-2 bg-gray-50/50">
                         <div className="font-bold text-gray-700 mb-1">Attendance #{att.att_id} — {att.status} ({att.source})</div>
                         <div className="grid grid-cols-2 gap-x-4">
-                            <KV k="Giris (UTC)" v={att.check_in_utc} />
-                            <KV k="Giris (Istanbul)" v={att.check_in_istanbul} />
-                            <KV k="Cikis (UTC)" v={att.check_out_utc} />
-                            <KV k="Cikis (Istanbul)" v={att.check_out_istanbul} />
-                            <KV k="Ham sure" v={`${att.raw_minutes} dk`} />
-                            <KV k="Ogle dususu" v={`${att.lunch_overlap_minutes} dk`} />
-                            <KV k="Duzeltilmis ham" v={`${att.adjusted_raw_minutes} dk`} />
-                            <KV k="Kayitli toplam" v={`${att.total_minutes} dk`} warn={Math.abs(att.adjusted_raw_minutes - att.total_minutes) > 35} />
+                            <KV k="Giriş (UTC)" v={att.check_in_utc} />
+                            <KV k="Giriş (Istanbul)" v={att.check_in_istanbul} />
+                            <KV k="Çıkış (UTC)" v={att.check_out_utc} />
+                            <KV k="Çıkış (Istanbul)" v={att.check_out_istanbul} />
+                            <KV k="Ham süre" v={`${att.raw_minutes} dk`} />
+                            <KV k="Öğle düşüşü" v={`${att.lunch_overlap_minutes} dk`} />
+                            <KV k="Düzeltilmiş ham" v={`${att.adjusted_raw_minutes} dk`} />
+                            <KV k="Kayıtlı toplam" v={`${att.total_minutes} dk`} warn={Math.abs(att.adjusted_raw_minutes - att.total_minutes) > 35} />
                             <KV k="Normal" v={`${att.normal_minutes} dk`} />
                             <KV k="Fazla mesai" v={`${att.overtime_minutes} dk`} />
                             <KV k="Mola" v={att.break_seconds != null ? `${Math.round(att.break_seconds/60)} dk` : '-'} />
                             <KV k="Potansiyel mola" v={att.potential_break_seconds != null ? `${Math.round(att.potential_break_seconds/60)} dk` : '-'} />
-                            <KV k="Kilitli" v={att.is_locked ? 'Evet' : 'Hayir'} />
-                            <KV k="Olusturulma" v={att.created_at} />
+                            <KV k="Kilitli" v={att.is_locked ? 'Evet' : 'Hayır'} />
+                            <KV k="Oluşturulma" v={att.created_at} />
                         </div>
                     </div>
-                )) : <span className="text-gray-400">Kayit yok</span>}
+                )) : <span className="text-gray-400">Kayıt yok</span>}
             </Section>
 
             <Section title={`Ek Mesai Talepleri (${log.ot_count || 0})`}>
@@ -205,20 +205,20 @@ const LogContent = ({ log }) => {
                             OT #{ot.ot_id} — {ot.status} ({ot.source_type})
                         </div>
                         <div className="grid grid-cols-2 gap-x-4">
-                            <KV k="Baslangic" v={ot.start_time} />
-                            <KV k="Bitis" v={ot.end_time} />
-                            <KV k="Ham aralik" v={`${ot.raw_span_minutes} dk`} />
-                            <KV k="Kayitli sure" v={`${ot.duration_minutes} dk`} />
-                            <KV k="Aralik-Sure farki" v={`${ot.span_vs_duration_diff_min} dk`} warn={ot.span_vs_duration_diff_min > 5} />
+                            <KV k="Başlangıç" v={ot.start_time} />
+                            <KV k="Bitiş" v={ot.end_time} />
+                            <KV k="Ham aralık" v={`${ot.raw_span_minutes} dk`} />
+                            <KV k="Kayıtlı süre" v={`${ot.duration_minutes} dk`} />
+                            <KV k="Aralık-Süre farkı" v={`${ot.span_vs_duration_diff_min} dk`} warn={ot.span_vs_duration_diff_min > 5} />
                             <KV k="Sebep" v={ot.reason} />
-                            <KV k="Manuel" v={ot.is_manual ? 'Evet' : 'Hayir'} />
+                            <KV k="Manuel" v={ot.is_manual ? 'Evet' : 'Hayır'} />
                             <KV k="Atama ID" v={ot.assignment_id} />
                             <KV k="Attendance ID" v={ot.attendance_id} />
                             <KV k="Onaylayan" v={ot.target_approver} />
-                            <KV k="Onayci Yonetici" v={ot.approval_manager} />
+                            <KV k="Onayıcı Yönetici" v={ot.approval_manager} />
                             <KV k="Onay Tarihi" v={ot.approval_date} />
-                            <KV k="Olusturulma" v={ot.created_at} />
-                            <KV k="Guncelleme" v={ot.updated_at} />
+                            <KV k="Oluşturulma" v={ot.created_at} />
+                            <KV k="Güncelleme" v={ot.updated_at} />
                             {ot.segments && ot.segments.length > 0 && (
                                 <div className="col-span-2">
                                     <span className="text-gray-500 font-medium">Segmentler: </span>
@@ -227,7 +227,7 @@ const LogContent = ({ log }) => {
                             )}
                         </div>
                     </div>
-                )) : <span className="text-gray-400">Kayit yok</span>}
+                )) : <span className="text-gray-400">Kayıt yok</span>}
             </Section>
         </div>
     );
@@ -257,7 +257,7 @@ const DetailLogModal = ({ data, logs, onClose }) => {
                     <div>
                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                             <DocumentMagnifyingGlassIcon className="w-4 h-4 text-indigo-600" />
-                            {isBulk ? `Toplu Detay Logu (${items.length} kayit)` : 'Detay Logu'}
+                            {isBulk ? `Toplu Detay Logu (${items.length} kayıt)` : 'Detay Logu'}
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">
                             {current.employee_name} (ID: {current.employee_id}) — {current.date}
@@ -334,10 +334,10 @@ const FixReportModal = ({ results, onClose }) => {
                     <div>
                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                             <WrenchScrewdriverIcon className="w-4 h-4 text-green-600" />
-                            Duzeltme Raporu
+                            Düzeltme Raporu
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">
-                            {totalIssues} sorun bulundu, {totalFixed} duzeltildi
+                            {totalIssues} sorun bulundu, {totalFixed} düzeltildi
                         </p>
                     </div>
                     <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
@@ -354,7 +354,7 @@ const FixReportModal = ({ results, onClose }) => {
                         </div>
                         <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-green-500" />
-                            <span className="text-xs text-gray-600">Duzeltilen: <strong>{totalFixed}</strong></span>
+                            <span className="text-xs text-gray-600">Düzeltilen: <strong>{totalFixed}</strong></span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -372,7 +372,7 @@ const FixReportModal = ({ results, onClose }) => {
                     {actionLog.length === 0 ? (
                         <div className="text-center py-8">
                             <CheckCircleIcon className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500">Duzeltme yapilmadi (tum sorunlar manuel inceleme gerektiriyor)</p>
+                            <p className="text-sm text-gray-500">Düzeltme yapılmadı (tüm sorunlar manuel inceleme gerektiriyor)</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -433,7 +433,7 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
                     </span>
                     {fixed > 0 && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
-                            {fixed} duzeltildi
+                            {fixed} düzeltildi
                         </span>
                     )}
                 </div>
@@ -460,19 +460,19 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
                                             #
                                         </th>
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
-                                            Calisan
+                                            Çalışan
                                         </th>
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap">
                                             Tarih
                                         </th>
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]" style={{minWidth: '320px'}}>
-                                            Sorun Detayi
+                                            Sorun Detayı
                                         </th>
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]" style={{minWidth: '180px'}}>
-                                            Duzeltme Islemi
+                                            Düzeltme İşlemi
                                         </th>
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-16">
-                                            Kayit ID
+                                            Kayıt ID
                                         </th>
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-12">
                                             Log
@@ -549,7 +549,7 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
                                 ) : (
                                     <WrenchScrewdriverIcon className="w-3.5 h-3.5" />
                                 )}
-                                Bu Kategoriyi Duzelt
+                                Bu Kategoriyi Düzelt
                             </button>
                         </div>
                     )}
@@ -593,14 +593,14 @@ export default function DataIntegrityAuditTab() {
                     (s, c) => s + (c.issues || []).filter(i => i.fixable).length, 0
                 ) : 0;
             if (!window.confirm(
-                `DIKKAT: Bu islem veritabanindaki verileri degistirecektir.\n\n` +
-                `${fixableCount > 0 ? fixableCount + ' sorun otomatik duzeltilecek.' : 'Duzeltme modu calistirilacak.'}\n\n` +
+                `DİKKAT: Bu işlem veritabanındaki verileri değiştirecektir.\n\n` +
+                `${fixableCount > 0 ? fixableCount + ' sorun otomatik düzeltilecek.' : 'Düzeltme modu çalıştırılacak.'}\n\n` +
                 `Devam etmek istiyor musunuz?`
             )) return;
         }
 
         if (selectedCategories.length === 0) {
-            setError('En az bir kategori secmelisiniz.');
+            setError('En az bir kategori seçmelisiniz.');
             return;
         }
 
@@ -622,7 +622,7 @@ export default function DataIntegrityAuditTab() {
                 setFixReport(res.data);
             }
         } catch (err) {
-            setError(err.response?.data?.error || err.response?.data?.detail || 'Denetim calistirilamadi');
+            setError(err.response?.data?.error || err.response?.data?.detail || 'Denetim çalıştırılamadı');
         } finally {
             setLoading(false);
         }
@@ -639,7 +639,7 @@ export default function DataIntegrityAuditTab() {
             setDetailLog(res.data);
             setBulkLogs(null);
         } catch (err) {
-            setError(err.response?.data?.error || 'Detay logu alinamadi');
+            setError(err.response?.data?.error || 'Detay logu alınamadı');
         } finally {
             setLoadingDetail(false);
         }
@@ -659,7 +659,7 @@ export default function DataIntegrityAuditTab() {
             }
         }
         if (allIssues.length === 0) {
-            setError('Loglanacak sorun bulunamadi.');
+            setError('Loglanacak sorun bulunamadı.');
             return;
         }
         setLoadingDetail(true);
@@ -670,7 +670,7 @@ export default function DataIntegrityAuditTab() {
             setBulkLogs(res.data.logs || []);
             setDetailLog(null);
         } catch (err) {
-            setError(err.response?.data?.error || 'Toplu detay logu alinamadi');
+            setError(err.response?.data?.error || 'Toplu detay logu alınamadı');
         } finally {
             setLoadingDetail(false);
         }
@@ -681,7 +681,7 @@ export default function DataIntegrityAuditTab() {
         const fixableCount = (catData?.issues || []).filter(i => i.fixable).length;
         if (!window.confirm(
             `"${CATEGORY_LABELS[categoryKey] || categoryKey}" kategorisindeki ` +
-            `${fixableCount} sorun duzeltilecek.\n\nDevam?`
+            `${fixableCount} sorun düzeltilecek.\n\nDevam?`
         )) return;
 
         setFixLoading(true);
@@ -707,7 +707,7 @@ export default function DataIntegrityAuditTab() {
             const scanRes = await api.post('/system/health-check/data-integrity-audit/', scanBody);
             setResults(scanRes.data);
         } catch (err) {
-            setError(err.response?.data?.error || 'Duzeltme basarisiz');
+            setError(err.response?.data?.error || 'Düzeltme başarısız');
         } finally {
             setFixLoading(false);
         }
@@ -738,10 +738,10 @@ export default function DataIntegrityAuditTab() {
                     <div>
                         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                             <ShieldCheckIcon className="w-5 h-5 text-indigo-600" />
-                            Veri Butunlugu Denetimi
+                            Veri Bütünlüğü Denetimi
                         </h2>
                         <p className="text-xs text-gray-500 mt-1">
-                            Veritabanindaki tutarsizliklari, cakismalari ve anomalileri tespit eder. Duzeltme modu ile otomatik onarim yapilabilir.
+                            Veritabanındaki tutarsızlıkları, çakışmaları ve anomalileri tespit eder. Düzeltme modu ile otomatik onarım yapılabilir.
                         </p>
                     </div>
                 </div>
@@ -749,7 +749,7 @@ export default function DataIntegrityAuditTab() {
                 {/* Filter Bar */}
                 <div className="mt-4 flex flex-wrap items-end gap-3">
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">Baslangic</label>
+                        <label className="block text-xs text-gray-500 mb-1">Başlangıç</label>
                         <input
                             type="date"
                             value={dateFrom}
@@ -758,7 +758,7 @@ export default function DataIntegrityAuditTab() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">Bitis</label>
+                        <label className="block text-xs text-gray-500 mb-1">Bitiş</label>
                         <input
                             type="date"
                             value={dateTo}
@@ -767,12 +767,12 @@ export default function DataIntegrityAuditTab() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">Calisan ID (opsiyonel)</label>
+                        <label className="block text-xs text-gray-500 mb-1">Çalışan ID (opsiyonel)</label>
                         <input
                             type="number"
                             value={employeeId}
                             onChange={(e) => setEmployeeId(e.target.value)}
-                            placeholder="Bos = Tumu"
+                            placeholder="Boş = Tümü"
                             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-32"
                         />
                     </div>
@@ -799,7 +799,7 @@ export default function DataIntegrityAuditTab() {
                             ) : (
                                 <WrenchScrewdriverIcon className="w-4 h-4" />
                             )}
-                            Duzelt
+                            Düzelt
                         </button>
                     </div>
                 </div>
@@ -812,7 +812,7 @@ export default function DataIntegrityAuditTab() {
                             onClick={selectAllCategories}
                             className="text-[10px] text-indigo-600 hover:underline font-medium"
                         >
-                            Tumunu Sec
+                            Tümünü Seç
                         </button>
                         <span className="text-gray-300">|</span>
                         <button
@@ -869,32 +869,32 @@ export default function DataIntegrityAuditTab() {
                             sub={results.total_issues > 0 ? `${categoriesWithIssues.length} kategoride` : 'Temiz'}
                         />
                         <StatCard
-                            label="Otomatik Duzelt."
+                            label="Otomatik Düzelt."
                             value={results.summary?.fixable || 0}
                             color="bg-amber-50 border-amber-100 text-amber-700"
-                            sub="fix modu ile duzeltilir"
+                            sub="fix modu ile düzeltilir"
                         />
                         <StatCard
-                            label="Manuel Inceleme"
+                            label="Manuel İnceleme"
                             value={results.summary?.manual_review || 0}
                             color="bg-slate-50 border-slate-100 text-slate-700"
                             sub="elle kontrol gerekir"
                         />
                         <StatCard
-                            label="Duzeltilen"
+                            label="Düzeltilen"
                             value={totalFixed}
                             color={totalFixed > 0 ? 'bg-green-50 border-green-100 text-green-700' : 'bg-gray-50 border-gray-100 text-gray-500'}
-                            sub={results.mode === 'fix' ? 'bu calistirmada' : 'tarama modu'}
+                            sub={results.mode === 'fix' ? 'bu çalıştırmada' : 'tarama modu'}
                         />
                         <StatCard
-                            label="Gecen Sure"
+                            label="Geçen Süre"
                             value={`${(results.elapsed_seconds || 0).toFixed(2)}s`}
                             color="bg-blue-50 border-blue-100 text-blue-700"
                             sub={results.summary?.date_range ? `${results.summary.date_range.start} ~ ${results.summary.date_range.end}` : ''}
                         />
                         <StatCard
                             label="Mod"
-                            value={results.mode === 'fix' ? 'Duzeltme' : 'Tarama'}
+                            value={results.mode === 'fix' ? 'Düzeltme' : 'Tarama'}
                             color={
                                 results.mode === 'fix'
                                     ? 'bg-amber-50 border-amber-100 text-amber-700'
@@ -961,9 +961,9 @@ export default function DataIntegrityAuditTab() {
                     {results.total_issues === 0 && (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
                             <CheckCircleIcon className="w-10 h-10 text-green-500 mx-auto mb-2" />
-                            <h3 className="text-sm font-bold text-green-700">Sorun Bulunamadi</h3>
+                            <h3 className="text-sm font-bold text-green-700">Sorun Bulunamadı</h3>
                             <p className="text-xs text-green-600 mt-1">
-                                Taranan tum kategorilerde veri butunlugu saglanmis.
+                                Taranan tüm kategorilerde veri bütünlüğü sağlanmış.
                             </p>
                         </div>
                     )}
@@ -984,7 +984,7 @@ export default function DataIntegrityAuditTab() {
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
                     <div className="bg-white rounded-xl shadow-xl px-6 py-4 flex items-center gap-3">
                         <ArrowPathIcon className="w-5 h-5 animate-spin text-indigo-600" />
-                        <span className="text-sm font-bold text-gray-700">Detay logu yukleniyor...</span>
+                        <span className="text-sm font-bold text-gray-700">Detay logu yükleniyor...</span>
                     </div>
                 </div>,
                 document.body
@@ -994,9 +994,9 @@ export default function DataIntegrityAuditTab() {
             {!results && !loading && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                     <ShieldCheckIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <h3 className="text-sm font-bold text-gray-600">Denetim Baslatilmadi</h3>
+                    <h3 className="text-sm font-bold text-gray-600">Denetim Başlatılmadı</h3>
                     <p className="text-xs text-gray-400 mt-1">
-                        "Tara" butonuna tiklayarak veri butunlugu denetimini baslatin. Sorunlari otomatik onarmak icin "Duzelt" kullanin.
+                        "Tara" butonuna tıklayarak veri bütünlüğü denetimini başlatın. Sorunları otomatik onarmak için "Düzelt" kullanın.
                     </p>
                 </div>
             )}

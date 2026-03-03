@@ -48,7 +48,7 @@ export default function PasswordResetTab() {
                     const json = JSON.parse(text);
                     setError(json.error || json.detail || 'Bilinmeyen hata');
                 } catch {
-                    setError('Sunucu hatasi olustu.');
+                    setError('Sunucu hatası oluştu.');
                 }
             } else {
                 setError(e.response?.data?.error || e.response?.data?.detail || e.message);

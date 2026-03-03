@@ -7,8 +7,8 @@ import {
 import api from '../services/api';
 
 const MONTHS_TR = [
-    'Ocak', 'Subat', 'Mart', 'Nisan', 'Mayis', 'Haziran',
-    'Temmuz', 'Agustos', 'Eylul', 'Ekim', 'Kasim', 'Aralik'
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
 ];
 
 const MONTHS_TR_DISPLAY = [

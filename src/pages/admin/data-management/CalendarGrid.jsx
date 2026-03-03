@@ -166,7 +166,7 @@ export default function CalendarGrid({
                                 <div className="flex gap-0.5 flex-wrap justify-end">
                                     {hasLeave && (
                                         <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-green-100 text-green-700">
-                                            IZIN
+                                            İZİN
                                         </span>
                                     )}
                                     {hasOtReq && (

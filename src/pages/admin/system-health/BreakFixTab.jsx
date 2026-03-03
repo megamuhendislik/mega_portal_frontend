@@ -227,10 +227,10 @@ function GapTable({ gaps }) {
                 <thead className="bg-gray-50">
                     <tr>
                         <th className="px-2 py-1.5 text-left font-medium text-gray-500">#</th>
-                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Baslangic</th>
-                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Bitis</th>
+                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Başlangıç</th>
+                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Bitiş</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">Ham</th>
-                        <th className="px-2 py-1.5 text-right font-medium text-gray-500">Ogle Kesisim</th>
+                        <th className="px-2 py-1.5 text-right font-medium text-gray-500">Öğle Kesişim</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">Net</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">Kredi</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">Kalan Hak</th>
@@ -259,7 +259,7 @@ function GapTable({ gaps }) {
 function RecordsTable({ recordsBefore, recordsAfter }) {
     const maxLen = Math.max(recordsBefore?.length || 0, recordsAfter?.length || 0);
     if (maxLen === 0) {
-        return <div className="text-xs text-gray-400 italic mb-3">Kayit bulunamadi.</div>;
+        return <div className="text-xs text-gray-400 italic mb-3">Kayıt bulunamadı.</div>;
     }
 
     const rows = [];
@@ -271,13 +271,13 @@ function RecordsTable({ recordsBefore, recordsAfter }) {
 
     return (
         <div className="mb-3 overflow-x-auto">
-            <div className="text-xs font-semibold text-gray-600 mb-1">Kayitlar (Once / Sonra)</div>
+            <div className="text-xs font-semibold text-gray-600 mb-1">Kayıtlar (Önce / Sonra)</div>
             <table className="w-full text-xs border border-gray-200 rounded">
                 <thead className="bg-gray-50">
                     <tr>
                         <th className="px-2 py-1.5 text-left font-medium text-gray-500">#</th>
-                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Giris</th>
-                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Cikis</th>
+                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Giriş</th>
+                        <th className="px-2 py-1.5 text-left font-medium text-gray-500">Çıkış</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">Normal</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">F.Mesai</th>
                         <th className="px-2 py-1.5 text-right font-medium text-gray-500">Mola</th>
@@ -433,14 +433,14 @@ function EmployeeSection({ name, dates, filterChanged, filterErrors }) {
                     </span>
                 )}
                 {filterChanged && filteredDates.length === 0 && (
-                    <span className="text-xs text-gray-400 italic">Degisiklik yok</span>
+                    <span className="text-xs text-gray-400 italic">Değişiklik yok</span>
                 )}
             </button>
             {open && (
                 <div className="px-4 pb-3 space-y-2 bg-slate-50/50 border-t border-gray-100">
                     {filteredDates.length === 0 ? (
                         <div className="text-xs text-gray-400 italic py-3 text-center">
-                            {filterChanged ? 'Bu personelde degisen kayit bulunamadi.' : 'Kayit yok.'}
+                            {filterChanged ? 'Bu personelde değişen kayıt bulunamadı.' : 'Kayıt yok.'}
                         </div>
                     ) : (
                         filteredDates.map(d => (
@@ -506,9 +506,9 @@ export default function BreakFixTab() {
 
     const handleStart = async () => {
         if (!confirm(
-            "Bu islem tum personelin puantaj verilerini yeniden hesaplayacak " +
-            "ve detayli tanilama loglarini uretecektir.\n\n" +
-            "Islem uzun surebilir. Devam etmek istiyor musunuz?"
+            "Bu işlem tüm personelin puantaj verilerini yeniden hesaplayacak " +
+            "ve detaylı tanılama loglarını üretecektir.\n\n" +
+            "İşlem uzun sürebilir. Devam etmek istiyor musunuz?"
         )) return;
 
         // Reset state
@@ -689,7 +689,7 @@ export default function BreakFixTab() {
     const handleAbort = () => {
         if (abortRef.current) {
             abortRef.current.abort();
-            addCompactLog('Islem kullanici tarafindan iptal edildi.', 'error', false);
+            addCompactLog('İşlem kullanıcı tarafından iptal edildi.', 'error', false);
         }
     };
 
@@ -708,9 +708,9 @@ export default function BreakFixTab() {
                 <div className="flex items-center gap-4 text-teal-700 bg-teal-50 p-4 rounded-xl border border-teal-200">
                     <ClockIcon className="w-10 h-10 flex-shrink-0" />
                     <div>
-                        <h3 className="text-xl font-bold">Puantaj Yeniden Hesaplama & Tanilama</h3>
+                        <h3 className="text-xl font-bold">Puantaj Yeniden Hesaplama & Tanılama</h3>
                         <p className="text-sm opacity-80 mt-0.5">
-                            Tum personelin giris/cikis verilerini takvim kurallariyla yeniden hesaplar ve detayli loglar uretir.
+                            Tüm personelin giriş/çıkış verilerini takvim kurallarıyla yeniden hesaplar ve detaylı loglar üretir.
                         </p>
                     </div>
                 </div>
@@ -726,7 +726,7 @@ export default function BreakFixTab() {
                             className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white text-sm font-bold rounded-lg shadow-sm transition-all flex items-center gap-2"
                         >
                             <PlayCircleIcon className="w-5 h-5" />
-                            Hesaplamayi Baslat
+                            Hesaplamayı Başlat
                         </button>
                     ) : (
                         <button
@@ -734,7 +734,7 @@ export default function BreakFixTab() {
                             className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all flex items-center gap-2"
                         >
                             <XCircleIcon className="w-5 h-5" />
-                            Iptal Et
+                            İptal Et
                         </button>
                     )}
 
@@ -853,8 +853,8 @@ export default function BreakFixTab() {
                 {!hasAnyData && !loading && (
                     <div className="text-center py-16 text-gray-400">
                         <ClockIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p className="text-sm">"Hesaplamayi Baslat" butonuna tiklayarak tum personelin puantaj verilerini yeniden hesaplayabilirsiniz.</p>
-                        <p className="text-xs mt-2 text-gray-300">Islem surecinde detayli tanilama loglari uretilecektir.</p>
+                        <p className="text-sm">"Hesaplamayı Başlat" butonuna tıklayarak tüm personelin puantaj verilerini yeniden hesaplayabilirsiniz.</p>
+                        <p className="text-xs mt-2 text-gray-300">İşlem sürecinde detaylı tanılama logları üretilecektir.</p>
                     </div>
                 )}
 
@@ -875,7 +875,7 @@ export default function BreakFixTab() {
                                 </div>
                                 <span className="text-gray-400 text-[11px] ml-2">RECALCULATION_LOGS.log</span>
                             </div>
-                            <span className="text-gray-500 text-[10px]">{compactLogs.length} satir</span>
+                            <span className="text-gray-500 text-[10px]">{compactLogs.length} satır</span>
                         </div>
 
                         {/* Log lines */}
@@ -884,7 +884,7 @@ export default function BreakFixTab() {
                                 <TerminalLine key={i} log={log} />
                             ))}
                             {loading && (
-                                <div className="text-green-500 animate-pulse mt-1">_ Isleniyor...</div>
+                                <div className="text-green-500 animate-pulse mt-1">_ İşleniyor...</div>
                             )}
                         </div>
                     </div>
@@ -896,8 +896,8 @@ export default function BreakFixTab() {
                         {employeeNames.length === 0 ? (
                             <div className="text-center py-10 text-gray-400 text-sm">
                                 {loading
-                                    ? 'Detayli veriler yukleniyor...'
-                                    : 'Detayli veri bulunamadi.'
+                                    ? 'Detaylı veriler yükleniyor...'
+                                    : 'Detaylı veri bulunamadı.'
                                 }
                             </div>
                         ) : (
@@ -920,8 +920,8 @@ export default function BreakFixTab() {
                         {employeeNames.length === 0 ? (
                             <div className="text-center py-10 text-gray-400 text-sm">
                                 {loading
-                                    ? 'Detayli veriler yukleniyor...'
-                                    : 'Detayli veri bulunamadi.'
+                                    ? 'Detaylı veriler yükleniyor...'
+                                    : 'Detaylı veri bulunamadı.'
                                 }
                             </div>
                         ) : (
@@ -940,7 +940,7 @@ export default function BreakFixTab() {
                                             className="px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white shadow-sm transition-all"
                                         >
                                             <DocumentTextIcon className="w-4 h-4" />
-                                            TXT Indir
+                                            TXT İndir
                                         </button>
                                         <button
                                             onClick={() => {
@@ -959,7 +959,7 @@ export default function BreakFixTab() {
                                             {copied ? (
                                                 <>
                                                     <ClipboardDocumentCheckIcon className="w-4 h-4" />
-                                                    Kopyalandi!
+                                                    Kopyalandı!
                                                 </>
                                             ) : (
                                                 <>
@@ -986,7 +986,7 @@ export default function BreakFixTab() {
                     <div className="mt-6 p-5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-xl">
                         <div className="flex items-center gap-2 mb-4">
                             <CheckCircleIcon className="w-6 h-6 text-teal-600" />
-                            <h4 className="text-lg font-bold text-teal-800">Islem Tamamlandi</h4>
+                            <h4 className="text-lg font-bold text-teal-800">İşlem Tamamlandı</h4>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="bg-white p-3 rounded-lg border border-teal-100 text-center">
@@ -995,7 +995,7 @@ export default function BreakFixTab() {
                             </div>
                             <div className="bg-white p-3 rounded-lg border border-teal-100 text-center">
                                 <div className="text-2xl font-bold text-blue-700">{finalResult.total_dates ?? '-'}</div>
-                                <div className="text-xs text-blue-600 mt-0.5">Islenen Gun</div>
+                                <div className="text-xs text-blue-600 mt-0.5">İşlenen Gün</div>
                             </div>
                             <div className="bg-white p-3 rounded-lg border border-teal-100 text-center">
                                 <div className={`text-2xl font-bold ${(finalResult.total_errors ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700'}`}>

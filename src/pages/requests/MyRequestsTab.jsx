@@ -147,7 +147,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     // --- Handlers ---
 
     const handleDeleteRequest = useCallback(async (r) => {
-        if (!window.confirm('Bu talebi silmek istediginize emin misiniz?')) return;
+        if (!window.confirm('Bu talebi silmek istediğinize emin misiniz?')) return;
         const t = r.type || r._type;
         try {
             if (t === 'LEAVE') await api.delete(`/leave/requests/${r.id}/`);
@@ -157,7 +157,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             await fetchData();
             notifyParent();
         } catch (e) {
-            alert(e.response?.data?.error || e.response?.data?.detail || 'Silme islemi basarisiz oldu.');
+            alert(e.response?.data?.error || e.response?.data?.detail || 'Silme işlemi başarısız oldu.');
         }
     }, [fetchData, notifyParent]);
 
@@ -183,7 +183,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             await fetchData();
             notifyParent();
         } catch (e) {
-            alert(e.response?.data?.error || e.response?.data?.detail || 'Duzenleme basarisiz oldu.');
+            alert(e.response?.data?.error || e.response?.data?.detail || 'Düzenleme başarısız oldu.');
         }
     }, [editOvertimeForm, fetchData, notifyParent]);
 
@@ -208,7 +208,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             await fetchData();
             notifyParent();
         } catch (e) {
-            alert(e.response?.data?.error || e.response?.data?.detail || 'Talep islemi basarisiz oldu.');
+            alert(e.response?.data?.error || e.response?.data?.detail || 'Talep işlemi başarısız oldu.');
         } finally {
             setClaimingId(null);
         }
@@ -324,25 +324,25 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Izin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" />
+                <StatCard label="İzin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" />
                 <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" />
                 <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" />
-                <StatCard label="Kartsiz Giris" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
+                <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
             </div>
 
             {/* Filter Chips */}
             <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex flex-wrap gap-2">
-                    <FilterChip active={typeFilter === 'ALL'} onClick={() => setTypeFilter('ALL')} label="Tumu" count={counts.all} color="slate" />
-                    <FilterChip active={typeFilter === 'LEAVE'} onClick={() => setTypeFilter('LEAVE')} label="Izin" icon={<Calendar size={14} />} count={counts.leave} color="blue" />
+                    <FilterChip active={typeFilter === 'ALL'} onClick={() => setTypeFilter('ALL')} label="Tümü" count={counts.all} color="slate" />
+                    <FilterChip active={typeFilter === 'LEAVE'} onClick={() => setTypeFilter('LEAVE')} label="İzin" icon={<Calendar size={14} />} count={counts.leave} color="blue" />
                     <FilterChip active={typeFilter === 'OVERTIME'} onClick={() => setTypeFilter('OVERTIME')} label="Mesai" icon={<Clock size={14} />} count={counts.overtime} color="amber" />
                     <FilterChip active={typeFilter === 'MEAL'} onClick={() => setTypeFilter('MEAL')} label="Yemek" icon={<Utensils size={14} />} count={counts.meal} color="emerald" />
-                    <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsiz" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
+                    <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsız" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tumu" color="slate" />
+                    <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tümü" color="slate" />
                     <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
-                    <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onayli" count={counts.approved} color="emerald" />
+                    <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onaylı" count={counts.approved} color="emerald" />
                     <FilterChip active={statusFilter === 'REJECTED'} onClick={() => setStatusFilter('REJECTED')} label="Red" count={counts.rejected} color="red" />
                     <div className="h-8 w-px bg-slate-200 mx-1 self-center hidden sm:block" />
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
@@ -358,10 +358,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
                         <Search size={40} className="text-slate-300" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-800">Talep Bulunamadi</h3>
-                    <p className="text-slate-500 max-w-sm mt-2 text-sm">Secili kriterlere uygun talep yok.</p>
+                    <h3 className="text-xl font-bold text-slate-800">Talep Bulunamadı</h3>
+                    <p className="text-slate-500 max-w-sm mt-2 text-sm">Seçili kriterlere uygun talep yok.</p>
                     <button onClick={() => { setCreateModalInitialData(null); setShowCreateModal(true); }} className="mt-8 px-6 py-3 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-xl font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
-                        <Plus size={18} /> Yeni Talep Olustur
+                        <Plus size={18} /> Yeni Talep Oluştur
                     </button>
                 </div>
             ) : (
@@ -371,7 +371,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                         <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
                             <p className="text-xs font-bold text-purple-700 mb-2 flex items-center gap-1.5">
                                 <AlertCircle size={14} />
-                                Potansiyel fazla mesai tespitleriniz var. Talep etmek icin satirdaki butonu kullanin.
+                                Potansiyel fazla mesai tespitleriniz var. Talep etmek için satırdaki butonu kullanın.
                             </p>
                         </div>
                     )}
@@ -391,7 +391,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                     title="Bu potansiyel mesaiyi talep et"
                                 >
                                     <Zap size={12} />
-                                    {req._claiming ? 'Isleniyor...' : 'Talep Et'}
+                                    {req._claiming ? 'İşleniyor...' : 'Talep Et'}
                                 </button>
                             );
                         }}
@@ -412,11 +412,11 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             {showEditOvertimeModal && ReactDOM.createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-                        <h3 className="text-xl font-bold text-slate-900">Mesai Duzenle</h3>
+                        <h3 className="text-xl font-bold text-slate-900">Mesai Düzenle</h3>
                         <form onSubmit={handleEditOvertimeSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Baslangic</label>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Başlangıç</label>
                                     <input
                                         type="time"
                                         required
@@ -426,7 +426,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Bitis</label>
+                                    <label className="text-xs font-bold text-slate-500 mb-1 block">Bitiş</label>
                                     <input
                                         type="time"
                                         required
@@ -442,11 +442,11 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 value={editOvertimeForm.reason}
                                 onChange={e => setEditOvertimeForm(prev => ({ ...prev, reason: e.target.value }))}
                                 className="w-full p-3 bg-slate-50 rounded-xl border-none resize-none"
-                                placeholder="Aciklama"
+                                placeholder="Açıklama"
                             />
                             <div className="flex gap-2 pt-2">
                                 <button type="button" onClick={() => setShowEditOvertimeModal(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">
-                                    Iptal
+                                    İptal
                                 </button>
                                 <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30">
                                     Kaydet

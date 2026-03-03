@@ -25,21 +25,21 @@ function StatusBadge({ status }) {
     if (status === 'PASS' || status === 'pass') {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                <CheckCircleIcon className="w-3.5 h-3.5" /> Basarili
+                <CheckCircleIcon className="w-3.5 h-3.5" /> Başarılı
             </span>
         );
     }
     if (status === 'FAIL' || status === 'fail') {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                <XCircleIcon className="w-3.5 h-3.5" /> Basarisiz
+                <XCircleIcon className="w-3.5 h-3.5" /> Başarısız
             </span>
         );
     }
     if (status === 'WARNING' || status === 'warning') {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                <ExclamationTriangleIcon className="w-3.5 h-3.5" /> Uyari
+                <ExclamationTriangleIcon className="w-3.5 h-3.5" /> Uyarı
             </span>
         );
     }
@@ -117,9 +117,9 @@ function CollapsibleSection({ id, title, icon: Icon, passed, failed, warnings, t
                     <h3 className="text-base font-bold text-gray-800">{title}</h3>
                 </div>
                 <div className="flex items-center gap-3">
-                    {passed > 0 && <CountBadge count={`${passed} basarili`} color="green" />}
-                    {failed > 0 && <CountBadge count={`${failed} basarisiz`} color="red" />}
-                    {warnings > 0 && <CountBadge count={`${warnings} uyari`} color="amber" />}
+                    {passed > 0 && <CountBadge count={`${passed} başarılı`} color="green" />}
+                    {failed > 0 && <CountBadge count={`${failed} başarısız`} color="red" />}
+                    {warnings > 0 && <CountBadge count={`${warnings} uyarı`} color="amber" />}
                     {total > 0 && <span className="text-xs text-gray-400 ml-1">{total} kontrol</span>}
                     {isOpen ? <ChevronUpIcon className="w-5 h-5 text-gray-400" /> : <ChevronDownIcon className="w-5 h-5 text-gray-400" />}
                 </div>
@@ -136,7 +136,7 @@ function CollapsibleSection({ id, title, icon: Icon, passed, failed, warnings, t
 // ─── Section 1: Takvim Sistemi (calendar_system) ──────────────────────────────
 
 function CalendarSystemSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Takvim sistemi verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Takvim sistemi verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-6">
@@ -146,7 +146,7 @@ function CalendarSystemSection({ data }) {
                     {data.total_employees !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                             <div className="text-2xl font-bold text-blue-700">{data.total_employees}</div>
-                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Calisan</div>
+                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Çalışan</div>
                         </div>
                     )}
                     {data.with_calendar !== undefined && (
@@ -164,7 +164,7 @@ function CalendarSystemSection({ data }) {
                     {data.template_count !== undefined && (
                         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center">
                             <div className="text-2xl font-bold text-indigo-700">{data.template_count}</div>
-                            <div className="text-xs text-indigo-600 font-medium mt-1">Sablon Sayisi</div>
+                            <div className="text-xs text-indigo-600 font-medium mt-1">Şablon Sayısı</div>
                         </div>
                     )}
                 </div>
@@ -174,7 +174,7 @@ function CalendarSystemSection({ data }) {
             {data.employees_without_calendar && data.employees_without_calendar.length > 0 && (
                 <div>
                     <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1">
-                        <XCircleIcon className="w-4 h-4" /> Takvimi Olmayan Calisanlar ({data.employees_without_calendar.length})
+                        <XCircleIcon className="w-4 h-4" /> Takvimi Olmayan Çalışanlar ({data.employees_without_calendar.length})
                     </h4>
                     <div className="overflow-x-auto border border-red-100 rounded-lg">
                         <table className="w-full text-left text-sm">
@@ -229,7 +229,7 @@ function CalendarSystemSection({ data }) {
              data.without_calendar === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum calisanlarin mali takvimleri tanimli.
+                    Tüm çalışanların mali takvimleri tanımlı.
                 </div>
             )}
         </div>
@@ -239,7 +239,7 @@ function CalendarSystemSection({ data }) {
 // ─── Section 2: Ogle Arasi (lunch_break) ──────────────────────────────────────
 
 function LunchBreakSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Ogle arasi verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Öğle arası verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -249,19 +249,19 @@ function LunchBreakSection({ data }) {
                     {data.total_templates !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                             <div className="text-2xl font-bold text-blue-700">{data.total_templates}</div>
-                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Sablon</div>
+                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Şablon</div>
                         </div>
                     )}
                     {data.templates_with_lunch !== undefined && (
                         <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
                             <div className="text-2xl font-bold text-green-700">{data.templates_with_lunch}</div>
-                            <div className="text-xs text-green-600 font-medium mt-1">Ogle Arasi Tanimli</div>
+                            <div className="text-xs text-green-600 font-medium mt-1">Öğle Arası Tanımlı</div>
                         </div>
                     )}
                     {data.templates_without_lunch !== undefined && (
                         <div className={`p-4 rounded-lg border text-center ${data.templates_without_lunch > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
                             <div className={`text-2xl font-bold ${data.templates_without_lunch > 0 ? 'text-amber-700' : 'text-green-700'}`}>{data.templates_without_lunch}</div>
-                            <div className={`text-xs font-medium mt-1 ${data.templates_without_lunch > 0 ? 'text-amber-600' : 'text-green-600'}`}>Tanimsiz</div>
+                            <div className={`text-xs font-medium mt-1 ${data.templates_without_lunch > 0 ? 'text-amber-600' : 'text-green-600'}`}>Tanımsız</div>
                         </div>
                     )}
                 </div>
@@ -294,7 +294,7 @@ function LunchBreakSection({ data }) {
             {(!data.items || data.items.length === 0) && data.templates_without_lunch === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum sablonlarin ogle arasi yapilandirmasi tanimli.
+                    Tüm şablonların öğle arası yapılandırması tanımlı.
                 </div>
             )}
         </div>
@@ -304,7 +304,7 @@ function LunchBreakSection({ data }) {
 // ─── Section 3: Mola Haklari (break_allowance) ───────────────────────────────
 
 function BreakAllowanceSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Mola haklari verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Mola hakları verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -314,19 +314,19 @@ function BreakAllowanceSection({ data }) {
                     {data.total_templates !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                             <div className="text-2xl font-bold text-blue-700">{data.total_templates}</div>
-                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Sablon</div>
+                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Şablon</div>
                         </div>
                     )}
                     {data.templates_with_break !== undefined && (
                         <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
                             <div className="text-2xl font-bold text-green-700">{data.templates_with_break}</div>
-                            <div className="text-xs text-green-600 font-medium mt-1">Mola Hakki Tanimli</div>
+                            <div className="text-xs text-green-600 font-medium mt-1">Mola Hakkı Tanımlı</div>
                         </div>
                     )}
                     {data.templates_without_break !== undefined && (
                         <div className={`p-4 rounded-lg border text-center ${data.templates_without_break > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
                             <div className={`text-2xl font-bold ${data.templates_without_break > 0 ? 'text-amber-700' : 'text-green-700'}`}>{data.templates_without_break}</div>
-                            <div className={`text-xs font-medium mt-1 ${data.templates_without_break > 0 ? 'text-amber-600' : 'text-green-600'}`}>Tanimsiz</div>
+                            <div className={`text-xs font-medium mt-1 ${data.templates_without_break > 0 ? 'text-amber-600' : 'text-green-600'}`}>Tanımsız</div>
                         </div>
                     )}
                 </div>
@@ -359,7 +359,7 @@ function BreakAllowanceSection({ data }) {
             {(!data.items || data.items.length === 0) && data.templates_without_break === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum sablonlarin mola hakki yapilandirmasi tanimli.
+                    Tüm şablonların mola hakkı yapılandırması tanımlı.
                 </div>
             )}
         </div>
@@ -369,7 +369,7 @@ function BreakAllowanceSection({ data }) {
 // ─── Section 4: Tolerans Ayarlari (tolerance) ─────────────────────────────────
 
 function ToleranceSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Tolerans ayarlari verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Tolerans ayarları verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -385,11 +385,11 @@ function ToleranceSection({ data }) {
                                     <ExclamationTriangleIcon className="w-6 h-6 text-amber-600" />
                                 )}
                                 <div className={`text-sm font-bold ${data.late_tolerance_set ? 'text-green-700' : 'text-amber-700'}`}>
-                                    Gec Kalma Toleransi
+                                    Geç Kalma Toleransı
                                 </div>
                             </div>
                             <div className={`text-xs mt-1 ${data.late_tolerance_set ? 'text-green-600' : 'text-amber-600'}`}>
-                                {data.late_tolerance_set ? 'Tanimli' : 'Tanimsiz'}
+                                {data.late_tolerance_set ? 'Tanımlı' : 'Tanımsız'}
                             </div>
                         </div>
                     )}
@@ -406,7 +406,7 @@ function ToleranceSection({ data }) {
                                 </div>
                             </div>
                             <div className={`text-xs mt-1 ${data.service_tolerance_set ? 'text-green-600' : 'text-amber-600'}`}>
-                                {data.service_tolerance_set ? 'Tanimli' : 'Tanimsiz'}
+                                {data.service_tolerance_set ? 'Tanımlı' : 'Tanımsız'}
                             </div>
                         </div>
                     )}
@@ -446,7 +446,7 @@ function ToleranceSection({ data }) {
             {(!data.items || data.items.length === 0) && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tolerans ayarlari kontrolleri basarili.
+                    Tolerans ayarları kontrolleri başarılı.
                 </div>
             )}
         </div>
@@ -456,7 +456,7 @@ function ToleranceSection({ data }) {
 // ─── Section 5: Aylik Hedefler (monthly_targets) ──────────────────────────────
 
 function MonthlyTargetsSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Aylik hedef verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Aylık hedef verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -466,7 +466,7 @@ function MonthlyTargetsSection({ data }) {
                     {data.total_employees !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                             <div className="text-2xl font-bold text-blue-700">{data.total_employees}</div>
-                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Calisan</div>
+                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Çalışan</div>
                         </div>
                     )}
                     {data.with_target !== undefined && (
@@ -484,7 +484,7 @@ function MonthlyTargetsSection({ data }) {
                     {data.current_month !== undefined && (
                         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center">
                             <div className="text-lg font-bold text-indigo-700">{data.current_month}</div>
-                            <div className="text-xs text-indigo-600 font-medium mt-1">Mevcut Donem</div>
+                            <div className="text-xs text-indigo-600 font-medium mt-1">Mevcut Dönem</div>
                         </div>
                     )}
                 </div>
@@ -518,7 +518,7 @@ function MonthlyTargetsSection({ data }) {
             {data.employees_without_target && data.employees_without_target.length > 0 && (
                 <div>
                     <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1">
-                        <XCircleIcon className="w-4 h-4" /> Hedefi Olmayan Calisanlar ({data.employees_without_target.length})
+                        <XCircleIcon className="w-4 h-4" /> Hedefi Olmayan Çalışanlar ({data.employees_without_target.length})
                     </h4>
                     <div className="overflow-x-auto border border-red-100 rounded-lg">
                         <table className="w-full text-left text-sm">
@@ -548,7 +548,7 @@ function MonthlyTargetsSection({ data }) {
              data.without_target === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum calisanlarin aylik hedefleri tanimli.
+                    Tüm çalışanların aylık hedefleri tanımlı.
                 </div>
             )}
         </div>
@@ -558,7 +558,7 @@ function MonthlyTargetsSection({ data }) {
 // ─── Section 6: Mali Donemler (fiscal_periods) ───────────────────────────────
 
 function FiscalPeriodsSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Mali donem verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Mali dönem verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -568,19 +568,19 @@ function FiscalPeriodsSection({ data }) {
                     {data.total_periods !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                             <div className="text-2xl font-bold text-blue-700">{data.total_periods}</div>
-                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Donem</div>
+                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Dönem</div>
                         </div>
                     )}
                     {data.locked_periods !== undefined && (
                         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center">
                             <div className="text-2xl font-bold text-indigo-700">{data.locked_periods}</div>
-                            <div className="text-xs text-indigo-600 font-medium mt-1">Kilitli Donem</div>
+                            <div className="text-xs text-indigo-600 font-medium mt-1">Kilitli Dönem</div>
                         </div>
                     )}
                     {data.unlocked_periods !== undefined && (
                         <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
                             <div className="text-2xl font-bold text-green-700">{data.unlocked_periods}</div>
-                            <div className="text-xs text-green-600 font-medium mt-1">Acik Donem</div>
+                            <div className="text-xs text-green-600 font-medium mt-1">Açık Dönem</div>
                         </div>
                     )}
                     {data.has_gap !== undefined && (
@@ -592,11 +592,11 @@ function FiscalPeriodsSection({ data }) {
                                     <CheckCircleIcon className="w-6 h-6 text-green-600" />
                                 )}
                                 <div className={`text-sm font-bold ${data.has_gap ? 'text-red-700' : 'text-green-700'}`}>
-                                    Sureklilik
+                                    Süreklilik
                                 </div>
                             </div>
                             <div className={`text-xs mt-1 ${data.has_gap ? 'text-red-600' : 'text-green-600'}`}>
-                                {data.has_gap ? 'Bosluk Var' : 'Sorunsuz'}
+                                {data.has_gap ? 'Boşluk Var' : 'Sorunsuz'}
                             </div>
                         </div>
                     )}
@@ -630,7 +630,7 @@ function FiscalPeriodsSection({ data }) {
             {(!data.items || data.items.length === 0) && !data.has_gap && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Mali donem surekliligi ve kilit durumu sorunsuz.
+                    Mali dönem sürekliliği ve kilit durumu sorunsuz.
                 </div>
             )}
         </div>
@@ -640,7 +640,7 @@ function FiscalPeriodsSection({ data }) {
 // ─── Section 7: Celery Gorevleri (celery_tasks) ──────────────────────────────
 
 function CeleryTasksSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Celery gorev verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Celery görev verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -650,25 +650,25 @@ function CeleryTasksSection({ data }) {
                     {data.total_tasks !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                             <div className="text-2xl font-bold text-blue-700">{data.total_tasks}</div>
-                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Gorev</div>
+                            <div className="text-xs text-blue-600 font-medium mt-1">Toplam Görev</div>
                         </div>
                     )}
                     {data.healthy_tasks !== undefined && (
                         <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
                             <div className="text-2xl font-bold text-green-700">{data.healthy_tasks}</div>
-                            <div className="text-xs text-green-600 font-medium mt-1">Saglikli</div>
+                            <div className="text-xs text-green-600 font-medium mt-1">Sağlıklı</div>
                         </div>
                     )}
                     {data.stale_tasks !== undefined && (
                         <div className={`p-4 rounded-lg border text-center ${data.stale_tasks > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                             <div className={`text-2xl font-bold ${data.stale_tasks > 0 ? 'text-red-700' : 'text-green-700'}`}>{data.stale_tasks}</div>
-                            <div className={`text-xs font-medium mt-1 ${data.stale_tasks > 0 ? 'text-red-600' : 'text-green-600'}`}>Bayat Gorev</div>
+                            <div className={`text-xs font-medium mt-1 ${data.stale_tasks > 0 ? 'text-red-600' : 'text-green-600'}`}>Bayat Görev</div>
                         </div>
                     )}
                     {data.stale_records !== undefined && (
                         <div className={`p-4 rounded-lg border text-center ${data.stale_records > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
                             <div className={`text-2xl font-bold ${data.stale_records > 0 ? 'text-amber-700' : 'text-green-700'}`}>{data.stale_records}</div>
-                            <div className={`text-xs font-medium mt-1 ${data.stale_records > 0 ? 'text-amber-600' : 'text-green-600'}`}>Bayat Kayit</div>
+                            <div className={`text-xs font-medium mt-1 ${data.stale_records > 0 ? 'text-amber-600' : 'text-green-600'}`}>Bayat Kayıt</div>
                         </div>
                     )}
                 </div>
@@ -680,8 +680,8 @@ function CeleryTasksSection({ data }) {
                     <table className="w-full text-left text-sm">
                         <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
                             <tr>
-                                <th className="px-4 py-3">Gorev Adi</th>
-                                <th className="px-4 py-3">Son Calisma</th>
+                                <th className="px-4 py-3">Görev Adı</th>
+                                <th className="px-4 py-3">Son Çalışma</th>
                                 <th className="px-4 py-3">Detay</th>
                                 <th className="px-4 py-3 w-[120px]">Durum</th>
                             </tr>
@@ -703,7 +703,7 @@ function CeleryTasksSection({ data }) {
             {(!data.items || data.items.length === 0) && data.stale_tasks === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum Celery gorevleri saglikli calisiyor.
+                    Tüm Celery görevleri sağlıklı çalışıyor.
                 </div>
             )}
         </div>
@@ -714,7 +714,7 @@ function CeleryTasksSection({ data }) {
 
 function SystemConfigSection({ data }) {
     if (!data?.items || data.items.length === 0) {
-        return <p className="text-gray-400 text-sm">Sistem yapilandirma verisi bulunamadi.</p>;
+        return <p className="text-gray-400 text-sm">Sistem yapılandırma verisi bulunamadı.</p>;
     }
 
     return (
@@ -723,8 +723,8 @@ function SystemConfigSection({ data }) {
                 <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
                     <tr>
                         <th className="px-4 py-3">Ayar</th>
-                        <th className="px-4 py-3">Beklenen Deger</th>
-                        <th className="px-4 py-3">Mevcut Deger</th>
+                        <th className="px-4 py-3">Beklenen Değer</th>
+                        <th className="px-4 py-3">Mevcut Değer</th>
                         <th className="px-4 py-3 w-[120px]">Durum</th>
                     </tr>
                 </thead>
@@ -746,7 +746,7 @@ function SystemConfigSection({ data }) {
 // ─── Generic Items Section (fallback) ─────────────────────────────────────────
 
 function GenericItemsSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Veri bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Veri bulunamadı.</p>;
 
     // If it has items array
     if (data.items && data.items.length > 0) {
@@ -777,7 +777,7 @@ function GenericItemsSection({ data }) {
     return (
         <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
             <CheckCircleIcon className="w-5 h-5" />
-            Tum kontroller basarili.
+            Tüm kontroller başarılı.
         </div>
     );
 }
@@ -833,7 +833,7 @@ export default function AttendanceAuditTab() {
             });
             setExpandedSections(autoExpand);
         } catch (err) {
-            setError('Denetim baslatilamadi: ' + (err.response?.data?.error || err.message));
+            setError('Denetim başlatılamadı: ' + (err.response?.data?.error || err.message));
         } finally {
             setLoading(false);
         }
@@ -865,13 +865,13 @@ export default function AttendanceAuditTab() {
     // Section definitions for rendering
     const sectionDefs = [
         { key: 'calendar_system', title: 'Takvim Sistemi', icon: CalendarDaysIcon, Component: CalendarSystemSection },
-        { key: 'lunch_break', title: 'Ogle Arasi', icon: SunIcon, Component: LunchBreakSection },
-        { key: 'break_allowance', title: 'Mola Haklari', icon: PauseCircleIcon, Component: BreakAllowanceSection },
-        { key: 'tolerance', title: 'Tolerans Ayarlari', icon: AdjustmentsHorizontalIcon, Component: ToleranceSection },
-        { key: 'monthly_targets', title: 'Aylik Hedefler', icon: ChartBarSquareIcon, Component: MonthlyTargetsSection },
-        { key: 'fiscal_periods', title: 'Mali Donemler', icon: BanknotesIcon, Component: FiscalPeriodsSection },
-        { key: 'celery_tasks', title: 'Celery Gorevleri', icon: CpuChipIcon, Component: CeleryTasksSection },
-        { key: 'system_config', title: 'Sistem Ayarlari', icon: Cog6ToothIcon, Component: SystemConfigSection },
+        { key: 'lunch_break', title: 'Öğle Arası', icon: SunIcon, Component: LunchBreakSection },
+        { key: 'break_allowance', title: 'Mola Hakları', icon: PauseCircleIcon, Component: BreakAllowanceSection },
+        { key: 'tolerance', title: 'Tolerans Ayarları', icon: AdjustmentsHorizontalIcon, Component: ToleranceSection },
+        { key: 'monthly_targets', title: 'Aylık Hedefler', icon: ChartBarSquareIcon, Component: MonthlyTargetsSection },
+        { key: 'fiscal_periods', title: 'Mali Dönemler', icon: BanknotesIcon, Component: FiscalPeriodsSection },
+        { key: 'celery_tasks', title: 'Celery Görevleri', icon: CpuChipIcon, Component: CeleryTasksSection },
+        { key: 'system_config', title: 'Sistem Ayarları', icon: Cog6ToothIcon, Component: SystemConfigSection },
     ];
 
     return (
@@ -885,7 +885,7 @@ export default function AttendanceAuditTab() {
                             Mesai Uyumluluk Denetimi
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                            Takvim, mola, tolerans, hedef, mali donem ve Celery gorev sagligi kontrolu
+                            Takvim, mola, tolerans, hedef, mali dönem ve Celery görev sağlığı kontrolü
                         </p>
                     </div>
                     <button
@@ -898,7 +898,7 @@ export default function AttendanceAuditTab() {
                         `}
                     >
                         {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayIcon className="w-5 h-5" />}
-                        {loading ? 'Denetim Calisiyor...' : 'Denetimi Calistir'}
+                        {loading ? 'Denetim Çalışıyor...' : 'Denetimi Çalıştır'}
                     </button>
                 </div>
 
@@ -925,11 +925,11 @@ export default function AttendanceAuditTab() {
                             </div>
                             <div className="bg-green-50 p-4 rounded-xl border border-green-100 text-center">
                                 <div className="text-3xl font-bold text-green-700">{totalPassed}</div>
-                                <div className="text-xs text-green-600 font-medium mt-1">Basarili</div>
+                                <div className="text-xs text-green-600 font-medium mt-1">Başarılı</div>
                             </div>
                             <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-center">
                                 <div className="text-3xl font-bold text-red-700">{totalFailed}</div>
-                                <div className="text-xs text-red-600 font-medium mt-1">Basarisiz</div>
+                                <div className="text-xs text-red-600 font-medium mt-1">Başarısız</div>
                             </div>
                             <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-center">
                                 <div className="text-3xl font-bold text-amber-700">{totalWarnings}</div>
@@ -944,13 +944,13 @@ export default function AttendanceAuditTab() {
                             onClick={expandAll}
                             className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
                         >
-                            Tumunu Ac
+                            Tümünü Aç
                         </button>
                         <button
                             onClick={collapseAll}
                             className="text-xs text-gray-500 hover:text-gray-700 font-medium px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
                         >
-                            Tumunu Kapat
+                            Tümünü Kapat
                         </button>
                     </div>
                 </div>
@@ -983,7 +983,7 @@ export default function AttendanceAuditTab() {
             {/* ── Audit Timestamp ────────────────────────────────────────────── */}
             {results?.timestamp && (
                 <div className="text-xs text-gray-400 text-right px-2">
-                    Denetim zamani: {new Date(results.timestamp).toLocaleString('tr-TR')}
+                    Denetim zamanı: {new Date(results.timestamp).toLocaleString('tr-TR')}
                 </div>
             )}
 
@@ -991,9 +991,9 @@ export default function AttendanceAuditTab() {
             {!results && !loading && (
                 <div className="bg-white/80 backdrop-blur-sm p-12 rounded-xl shadow-lg border border-gray-200/50 text-center">
                     <ClockIcon className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <h4 className="text-gray-400 font-medium text-lg">Henuz denetim calistirilmadi</h4>
+                    <h4 className="text-gray-400 font-medium text-lg">Henüz denetim çalıştırılmadı</h4>
                     <p className="text-gray-300 text-sm mt-2">
-                        Yukaridaki "Denetimi Calistir" butonuna tiklayarak mesai uyumluluk denetimini baslatabilirsiniz.
+                        Yukarıdaki "Denetimi Çalıştır" butonuna tıklayarak mesai uyumluluk denetimini başlatabilirsiniz.
                     </p>
                 </div>
             )}

@@ -8,9 +8,9 @@ import api from '../services/api';
 const PRESENCE_CONFIG = {
     INSIDE:         { label: 'Ofiste',     color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
     REMOTE_WORKING: { label: 'Ofiste',     color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
-    ON_LEAVE:       { label: 'Izinde',     color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', ring: 'ring-orange-500/20' },
-    LEFT:           { label: 'Disarida',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
-    OUTSIDE:        { label: 'Disarida',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
+    ON_LEAVE:       { label: 'İzinde',     color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', ring: 'ring-orange-500/20' },
+    LEFT:           { label: 'Dışarıda',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
+    OUTSIDE:        { label: 'Dışarıda',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
 };
 
 const getInitials = (firstName, lastName) => {
@@ -152,7 +152,7 @@ const CompanyDirectory = () => {
                             <div className="flex items-center justify-end mt-2">
                                 <span className="text-[10px] font-bold text-green-600 flex items-center gap-0.5">
                                     <Circle size={6} fill="currentColor" />
-                                    Ulasılabilir
+                                    Ulaşılabilir
                                 </span>
                             </div>
                         )}
@@ -205,12 +205,12 @@ const CompanyDirectory = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Sirket Rehberi</h1>
+                    <h1 className="text-2xl font-bold text-slate-800">Şirket Rehberi</h1>
                     <p className="text-sm text-slate-500 mt-0.5">
-                        Tum calisanların guncel durum bilgisi
+                        Tüm çalışanların güncel durum bilgisi
                         {lastRefresh && (
                             <span className="text-slate-400 ml-2">
-                                Son guncelleme: {lastRefresh.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                Son güncelleme: {lastRefresh.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         )}
                     </p>
@@ -258,7 +258,7 @@ const CompanyDirectory = () => {
                             type="text"
                             value={searchText}
                             onChange={e => setSearchText(e.target.value)}
-                            placeholder="Calisan ara (ad soyad)..."
+                            placeholder="Çalışan ara (ad soyad)..."
                             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium text-slate-700"
                         />
                     </div>
@@ -321,8 +321,8 @@ const CompanyDirectory = () => {
             ) : employees.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                     <Users size={48} className="mb-3 text-slate-300" />
-                    <p className="text-lg font-bold text-slate-500">Sonuc bulunamadi</p>
-                    <p className="text-sm mt-1">Arama kriterlerini degistirmeyi deneyin.</p>
+                    <p className="text-lg font-bold text-slate-500">Sonuç bulunamadı</p>
+                    <p className="text-sm mt-1">Arama kriterlerini değiştirmeyi deneyin.</p>
                 </div>
             ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -333,10 +333,10 @@ const CompanyDirectory = () => {
                     <table className="w-full min-w-[600px]">
                         <thead className="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Calisan</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Çalışan</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden lg:table-cell">Durum</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden lg:table-cell">Telefon</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase hidden md:table-cell">Ulasılabilir</th>
+                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase hidden md:table-cell">Ulaşılabilir</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -349,7 +349,7 @@ const CompanyDirectory = () => {
             {/* Footer count */}
             {!loading && employees.length > 0 && (
                 <div className="text-center text-xs text-slate-400 pb-4">
-                    Toplam {employees.length} calisan gosteriliyor
+                    Toplam {employees.length} çalışan gösteriliyor
                 </div>
             )}
         </div>

@@ -67,7 +67,7 @@ export default function TeamOvertimeAnalytics() {
             setData(res.data);
         } catch (err) {
             console.error('TeamOvertimeAnalytics error:', err);
-            setError('Ekip mesai analizi yuklenemedi.');
+            setError('Ekip mesai analizi yüklenemedi.');
             setData(null);
         } finally {
             setLoading(false);
@@ -173,8 +173,8 @@ export default function TeamOvertimeAnalytics() {
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
                     <BarChart3 size={32} className="text-slate-300" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadi</h3>
-                <p className="text-sm text-slate-500 mt-1">Secilen donem icin ekip mesai verisi bulunmamaktadir.</p>
+                <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadı</h3>
+                <p className="text-sm text-slate-500 mt-1">Seçilen dönem için ekip mesai verisi bulunmamaktadır.</p>
             </div>
         );
     }
@@ -218,9 +218,9 @@ export default function TeamOvertimeAnalytics() {
             {/* KPI Cards Row 2 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <KPICard label="Toplam Saat" value={s.total_hours != null ? s.total_hours.toFixed(1) : 0} suffix="s" icon={<Clock size={56} />} gradient="bg-gradient-to-br from-indigo-500 to-indigo-600" />
-                <KPICard label="Suresi Dolmus" value={s.expired || 0} icon={<Timer size={56} />} gradient="bg-gradient-to-br from-rose-500 to-rose-600" />
+                <KPICard label="Süresi Dolmuş" value={s.expired || 0} icon={<Timer size={56} />} gradient="bg-gradient-to-br from-rose-500 to-rose-600" />
                 <KPICard label="Bekleyen" value={s.pending || 0} icon={<AlertCircle size={56} />} gradient="bg-gradient-to-br from-amber-400 to-amber-500" />
-                <KPICard label="Ort. Talep Suresi" value={data.avg_claim_days != null ? data.avg_claim_days.toFixed(1) : '-'} suffix="gun" icon={<Calendar size={56} />} gradient="bg-gradient-to-br from-teal-500 to-teal-600" />
+                <KPICard label="Ort. Talep Süresi" value={data.avg_claim_days != null ? data.avg_claim_days.toFixed(1) : '-'} suffix="gün" icon={<Calendar size={56} />} gradient="bg-gradient-to-br from-teal-500 to-teal-600" />
             </div>
 
             {/* Charts Row */}
@@ -231,7 +231,7 @@ export default function TeamOvertimeAnalytics() {
                         <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center">
                             <Info size={16} />
                         </div>
-                        Kaynak Dagilimi
+                        Kaynak Dağılımı
                     </h4>
                     {pieData.length > 0 ? (
                         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -274,7 +274,7 @@ export default function TeamOvertimeAnalytics() {
                         <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                             <TrendingUp size={16} />
                         </div>
-                        Aylik Trend
+                        Aylık Trend
                     </h4>
                     {barData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={220}>
@@ -301,7 +301,7 @@ export default function TeamOvertimeAnalytics() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <Calendar size={16} />
                     </div>
-                    Haftalik Yogunluk
+                    Haftalık Yoğunluk
                 </h4>
                 <div className="flex items-end gap-3 justify-center h-32">
                     {heatmapData.map((item) => {
@@ -337,7 +337,7 @@ export default function TeamOvertimeAnalytics() {
                         <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                             <Users size={16} />
                         </div>
-                        Calisan Bazli Tablo
+                        Çalışan Bazlı Tablo
                     </h4>
                 </div>
                 {sortedEmployees.length > 0 ? (
@@ -345,7 +345,7 @@ export default function TeamOvertimeAnalytics() {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-slate-50">
-                                    <th className="text-left py-3 px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Calisan</th>
+                                    <th className="text-left py-3 px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Çalışan</th>
                                     <th className="text-left py-3 px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Departman</th>
                                     {[
                                         { key: 'assignments', label: 'Atama' },
@@ -397,7 +397,7 @@ export default function TeamOvertimeAnalytics() {
                         </table>
                     </div>
                 ) : (
-                    <div className="py-12 text-center text-slate-400 text-sm">Calisan verisi bulunamadi.</div>
+                    <div className="py-12 text-center text-slate-400 text-sm">Çalışan verisi bulunamadı.</div>
                 )}
             </div>
 
@@ -409,9 +409,9 @@ export default function TeamOvertimeAnalytics() {
                     </div>
                     <div>
                         <p className="text-sm font-bold text-slate-800">
-                            Ortalama Talep Suresi: <span className="text-violet-700">{data.avg_claim_days.toFixed(1)} gun</span>
+                            Ortalama Talep Süresi: <span className="text-violet-700">{data.avg_claim_days.toFixed(1)} gün</span>
                         </p>
-                        <p className="text-xs text-slate-500">Atama tarihinden talep tarihine kadar gecen ortalama sure</p>
+                        <p className="text-xs text-slate-500">Atama tarihinden talep tarihine kadar geçen ortalama süre</p>
                     </div>
                 </div>
             )}

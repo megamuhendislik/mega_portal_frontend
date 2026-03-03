@@ -24,21 +24,21 @@ function StatusBadge({ status }) {
     if (status === 'PASS' || status === 'pass') {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                <CheckCircleIcon className="w-3.5 h-3.5" /> Basarili
+                <CheckCircleIcon className="w-3.5 h-3.5" /> Başarılı
             </span>
         );
     }
     if (status === 'FAIL' || status === 'fail') {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                <XCircleIcon className="w-3.5 h-3.5" /> Basarisiz
+                <XCircleIcon className="w-3.5 h-3.5" /> Başarısız
             </span>
         );
     }
     if (status === 'WARNING' || status === 'warning') {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                <ExclamationTriangleIcon className="w-3.5 h-3.5" /> Uyari
+                <ExclamationTriangleIcon className="w-3.5 h-3.5" /> Uyarı
             </span>
         );
     }
@@ -116,9 +116,9 @@ function CollapsibleSection({ id, title, icon: Icon, passed, failed, warnings, t
                     <h3 className="text-base font-bold text-gray-800">{title}</h3>
                 </div>
                 <div className="flex items-center gap-3">
-                    {passed > 0 && <CountBadge count={`${passed} basarili`} color="green" />}
-                    {failed > 0 && <CountBadge count={`${failed} basarisiz`} color="red" />}
-                    {warnings > 0 && <CountBadge count={`${warnings} uyari`} color="amber" />}
+                    {passed > 0 && <CountBadge count={`${passed} başarılı`} color="green" />}
+                    {failed > 0 && <CountBadge count={`${failed} başarısız`} color="red" />}
+                    {warnings > 0 && <CountBadge count={`${warnings} uyarı`} color="amber" />}
                     {total > 0 && <span className="text-xs text-gray-400 ml-1">{total} kontrol</span>}
                     {isOpen ? <ChevronUpIcon className="w-5 h-5 text-gray-400" /> : <ChevronDownIcon className="w-5 h-5 text-gray-400" />}
                 </div>
@@ -136,7 +136,7 @@ function CollapsibleSection({ id, title, icon: Icon, passed, failed, warnings, t
 
 function PermissionsSection({ data }) {
     if (!data?.items || data.items.length === 0) {
-        return <p className="text-gray-400 text-sm">Yetki verisi bulunamadi.</p>;
+        return <p className="text-gray-400 text-sm">Yetki verisi bulunamadı.</p>;
     }
 
     return (
@@ -171,7 +171,7 @@ function RolesSection({ data }) {
     const [expandedRole, setExpandedRole] = useState(null);
 
     if (!data?.items || data.items.length === 0) {
-        return <p className="text-gray-400 text-sm">Rol verisi bulunamadi.</p>;
+        return <p className="text-gray-400 text-sm">Rol verisi bulunamadı.</p>;
     }
 
     return (
@@ -180,7 +180,7 @@ function RolesSection({ data }) {
                 <table className="w-full text-left text-sm">
                     <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
                         <tr>
-                            <th className="px-4 py-3">Rol Adi</th>
+                            <th className="px-4 py-3">Rol Adı</th>
                             <th className="px-4 py-3 text-center">Beklenen Yetki</th>
                             <th className="px-4 py-3 text-center">Mevcut Yetki</th>
                             <th className="px-4 py-3 text-center">Eksik</th>
@@ -261,7 +261,7 @@ function RolesSection({ data }) {
 // ─── Section 3: Employee RBAC Status ───────────────────────────────────────────
 
 function EmployeeRBACSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Calisan RBAC verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Çalışan RBAC verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-6">
@@ -269,19 +269,19 @@ function EmployeeRBACSection({ data }) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                     <div className="text-2xl font-bold text-blue-700">{data.total_employees ?? '-'}</div>
-                    <div className="text-xs text-blue-600 font-medium mt-1">Toplam Calisan</div>
+                    <div className="text-xs text-blue-600 font-medium mt-1">Toplam Çalışan</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
                     <div className="text-2xl font-bold text-green-700">{data.with_roles ?? '-'}</div>
-                    <div className="text-xs text-green-600 font-medium mt-1">Rolu Olan</div>
+                    <div className="text-xs text-green-600 font-medium mt-1">Rolü Olan</div>
                 </div>
                 <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 text-center">
                     <div className="text-2xl font-bold text-amber-700">{data.without_manager ?? '-'}</div>
-                    <div className="text-xs text-amber-600 font-medium mt-1">Yoneticisiz</div>
+                    <div className="text-xs text-amber-600 font-medium mt-1">Yöneticisiz</div>
                 </div>
                 <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center">
                     <div className="text-2xl font-bold text-indigo-700">{data.board_exempt ?? '-'}</div>
-                    <div className="text-xs text-indigo-600 font-medium mt-1">Yonetim Kurulu</div>
+                    <div className="text-xs text-indigo-600 font-medium mt-1">Yönetim Kurulu</div>
                 </div>
             </div>
 
@@ -289,7 +289,7 @@ function EmployeeRBACSection({ data }) {
             {data.employees_without_roles && data.employees_without_roles.length > 0 && (
                 <div>
                     <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1">
-                        <XCircleIcon className="w-4 h-4" /> Rolu Olmayan Calisanlar ({data.employees_without_roles.length})
+                        <XCircleIcon className="w-4 h-4" /> Rolü Olmayan Çalışanlar ({data.employees_without_roles.length})
                     </h4>
                     <div className="overflow-x-auto border border-red-100 rounded-lg">
                         <table className="w-full text-left text-sm">
@@ -318,7 +318,7 @@ function EmployeeRBACSection({ data }) {
             {data.employees_without_manager && data.employees_without_manager.length > 0 && (
                 <div>
                     <h4 className="text-sm font-bold text-amber-700 mb-2 flex items-center gap-1">
-                        <ExclamationTriangleIcon className="w-4 h-4" /> Yoneticisi Olmayan Calisanlar ({data.employees_without_manager.length})
+                        <ExclamationTriangleIcon className="w-4 h-4" /> Yöneticisi Olmayan Çalışanlar ({data.employees_without_manager.length})
                     </h4>
                     <div className="overflow-x-auto border border-amber-100 rounded-lg">
                         <table className="w-full text-left text-sm">
@@ -348,7 +348,7 @@ function EmployeeRBACSection({ data }) {
              (!data.employees_without_manager || data.employees_without_manager.length === 0) && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum calisanlarin rolleri ve yoneticileri tanimli.
+                    Tüm çalışanların rolleri ve yöneticileri tanımlı.
                 </div>
             )}
         </div>
@@ -358,7 +358,7 @@ function EmployeeRBACSection({ data }) {
 // ─── Section 4: Manager Relations ──────────────────────────────────────────────
 
 function ManagerRelationsSection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Yonetici iliskileri verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Yönetici ilişkileri verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
@@ -366,15 +366,15 @@ function ManagerRelationsSection({ data }) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                     <div className="text-2xl font-bold text-blue-700">{data.primary_count ?? '-'}</div>
-                    <div className="text-xs text-blue-600 font-medium mt-1">PRIMARY Iliski</div>
+                    <div className="text-xs text-blue-600 font-medium mt-1">PRIMARY İlişki</div>
                 </div>
                 <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center">
                     <div className="text-2xl font-bold text-indigo-700">{data.secondary_count ?? data.cross_count ?? '-'}</div>
-                    <div className="text-xs text-indigo-600 font-medium mt-1">SECONDARY/CROSS Iliski</div>
+                    <div className="text-xs text-indigo-600 font-medium mt-1">SECONDARY/CROSS İlişki</div>
                 </div>
                 <div className={`p-4 rounded-lg border text-center ${(data.orphan_count ?? 0) > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                     <div className={`text-2xl font-bold ${(data.orphan_count ?? 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>{data.orphan_count ?? 0}</div>
-                    <div className={`text-xs font-medium mt-1 ${(data.orphan_count ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>Yetim Calisan</div>
+                    <div className={`text-xs font-medium mt-1 ${(data.orphan_count ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>Yetim Çalışan</div>
                 </div>
             </div>
 
@@ -383,7 +383,7 @@ function ManagerRelationsSection({ data }) {
                 <div>
                     <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1">
                         <ExclamationTriangleIcon className="w-4 h-4" />
-                        Yetim Calisanlar (yoneticisiz, YK degil, superuser degil)
+                        Yetim Çalışanlar (yöneticisiz, YK değil, superuser değil)
                     </h4>
                     <div className="overflow-x-auto border border-red-100 rounded-lg">
                         <table className="w-full text-left text-sm">
@@ -413,7 +413,7 @@ function ManagerRelationsSection({ data }) {
             {(!data.orphan_employees || data.orphan_employees.length === 0) && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tum calisanlarin yonetici atamasi mevcut veya muaf.
+                    Tüm çalışanların yönetici ataması mevcut veya muaf.
                 </div>
             )}
         </div>
@@ -424,7 +424,7 @@ function ManagerRelationsSection({ data }) {
 
 function RequestTypesSection({ data }) {
     if (!data?.items || data.items.length === 0) {
-        return <p className="text-gray-400 text-sm">Talep tipi verisi bulunamadi.</p>;
+        return <p className="text-gray-400 text-sm">Talep tipi verisi bulunamadı.</p>;
     }
 
     return (
@@ -468,14 +468,14 @@ function RequestTypesSection({ data }) {
 // ─── Section 6: Request Integrity ──────────────────────────────────────────────
 
 function RequestIntegritySection({ data }) {
-    if (!data) return <p className="text-gray-400 text-sm">Talep butunlugu verisi bulunamadi.</p>;
+    if (!data) return <p className="text-gray-400 text-sm">Talep bütünlüğü verisi bulunamadı.</p>;
 
     return (
         <div className="space-y-4">
             {/* Pending request counts */}
             {data.pending_by_type && Object.keys(data.pending_by_type).length > 0 && (
                 <div>
-                    <h4 className="text-sm font-bold text-gray-700 mb-2">Bekleyen Talepler (Tipe Gore)</h4>
+                    <h4 className="text-sm font-bold text-gray-700 mb-2">Bekleyen Talepler (Tipe Göre)</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                         {Object.entries(data.pending_by_type).map(([type, count]) => (
                             <div key={type} className={`p-3 rounded-lg border text-center ${count > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'}`}>
@@ -492,13 +492,13 @@ function RequestIntegritySection({ data }) {
                 {data.auto_approve_user_count !== undefined && (
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                         <div className="text-xl font-bold text-blue-700">{data.auto_approve_user_count}</div>
-                        <div className="text-xs text-blue-600 font-medium mt-1">AUTO_APPROVE Kullanicisi</div>
+                        <div className="text-xs text-blue-600 font-medium mt-1">AUTO_APPROVE Kullanıcısı</div>
                     </div>
                 )}
                 {data.stale_request_count !== undefined && (
                     <div className={`p-4 rounded-lg border ${data.stale_request_count > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
                         <div className={`text-xl font-bold ${data.stale_request_count > 0 ? 'text-amber-700' : 'text-green-700'}`}>{data.stale_request_count}</div>
-                        <div className={`text-xs font-medium mt-1 ${data.stale_request_count > 0 ? 'text-amber-600' : 'text-green-600'}`}>Bayat Talep (&gt;7 gun)</div>
+                        <div className={`text-xs font-medium mt-1 ${data.stale_request_count > 0 ? 'text-amber-600' : 'text-green-600'}`}>Bayat Talep (&gt;7 gün)</div>
                     </div>
                 )}
                 {data.ot_planning_model_exists !== undefined && (
@@ -514,7 +514,7 @@ function RequestIntegritySection({ data }) {
                                     OT Planning Model
                                 </div>
                                 <div className={`text-xs ${data.ot_planning_model_exists ? 'text-green-600' : 'text-red-600'}`}>
-                                    {data.ot_planning_model_exists ? 'Mevcut' : 'Bulunamadi'}
+                                    {data.ot_planning_model_exists ? 'Mevcut' : 'Bulunamadı'}
                                 </div>
                             </div>
                         </div>
@@ -552,7 +552,7 @@ function RequestIntegritySection({ data }) {
              data.stale_request_count === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Talep butunlugu kontrolleri basarili.
+                    Talep bütünlüğü kontrolleri başarılı.
                 </div>
             )}
         </div>
@@ -563,7 +563,7 @@ function RequestIntegritySection({ data }) {
 
 function SystemConfigSection({ data }) {
     if (!data?.items || data.items.length === 0) {
-        return <p className="text-gray-400 text-sm">Sistem yapilandirma verisi bulunamadi.</p>;
+        return <p className="text-gray-400 text-sm">Sistem yapılandırma verisi bulunamadı.</p>;
     }
 
     return (
@@ -572,8 +572,8 @@ function SystemConfigSection({ data }) {
                 <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
                     <tr>
                         <th className="px-4 py-3">Ayar</th>
-                        <th className="px-4 py-3">Beklenen Deger</th>
-                        <th className="px-4 py-3">Mevcut Deger</th>
+                        <th className="px-4 py-3">Beklenen Değer</th>
+                        <th className="px-4 py-3">Mevcut Değer</th>
                         <th className="px-4 py-3 w-[120px]">Durum</th>
                     </tr>
                 </thead>
@@ -643,7 +643,7 @@ export default function RBACAuditTab() {
             });
             setExpandedSections(autoExpand);
         } catch (err) {
-            setError('Denetim baslatilamadi: ' + (err.response?.data?.error || err.message));
+            setError('Denetim başlatılamadı: ' + (err.response?.data?.error || err.message));
         } finally {
             setLoading(false);
         }
@@ -676,11 +676,11 @@ export default function RBACAuditTab() {
     const sectionDefs = [
         { key: 'permissions', title: 'Yetkiler (Permissions)', icon: KeyIcon, Component: PermissionsSection },
         { key: 'roles', title: 'Roller (Roles)', icon: UserGroupIcon, Component: RolesSection },
-        { key: 'employee_rbac', title: 'Calisan RBAC Durumu', icon: UserIcon, Component: EmployeeRBACSection },
-        { key: 'manager_relations', title: 'Yonetici Iliskileri', icon: LinkIcon, Component: ManagerRelationsSection },
+        { key: 'employee_rbac', title: 'Çalışan RBAC Durumu', icon: UserIcon, Component: EmployeeRBACSection },
+        { key: 'manager_relations', title: 'Yönetici İlişkileri', icon: LinkIcon, Component: ManagerRelationsSection },
         { key: 'request_types', title: 'Talep Tipleri (Request Types)', icon: ClipboardDocumentListIcon, Component: RequestTypesSection },
-        { key: 'request_integrity', title: 'Talep Butunlugu (Request Integrity)', icon: DocumentCheckIcon, Component: RequestIntegritySection },
-        { key: 'system_config', title: 'Sistem Yapilandirmasi', icon: Cog6ToothIcon, Component: SystemConfigSection },
+        { key: 'request_integrity', title: 'Talep Bütünlüğü (Request Integrity)', icon: DocumentCheckIcon, Component: RequestIntegritySection },
+        { key: 'system_config', title: 'Sistem Yapılandırması', icon: Cog6ToothIcon, Component: SystemConfigSection },
     ];
 
     return (
@@ -694,7 +694,7 @@ export default function RBACAuditTab() {
                             RBAC & Talep Sistemi Denetimi
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                            Target Spec uyumluluk kontrolu -- Asama 1 (Yetki) + Asama 2 (Talepler)
+                            Target Spec uyumluluk kontrolü -- Aşama 1 (Yetki) + Aşama 2 (Talepler)
                         </p>
                     </div>
                     <button
@@ -707,7 +707,7 @@ export default function RBACAuditTab() {
                         `}
                     >
                         {loading ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayIcon className="w-5 h-5" />}
-                        {loading ? 'Denetim Calisiyor...' : 'Denetimi Baslat'}
+                        {loading ? 'Denetim Çalışıyor...' : 'Denetimi Başlat'}
                     </button>
                 </div>
 
@@ -734,15 +734,15 @@ export default function RBACAuditTab() {
                             </div>
                             <div className="bg-green-50 p-4 rounded-xl border border-green-100 text-center">
                                 <div className="text-3xl font-bold text-green-700">{totalPassed}</div>
-                                <div className="text-xs text-green-600 font-medium mt-1">Basarili</div>
+                                <div className="text-xs text-green-600 font-medium mt-1">Başarılı</div>
                             </div>
                             <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-center">
                                 <div className="text-3xl font-bold text-red-700">{totalFailed}</div>
-                                <div className="text-xs text-red-600 font-medium mt-1">Basarisiz</div>
+                                <div className="text-xs text-red-600 font-medium mt-1">Başarısız</div>
                             </div>
                             <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-center">
                                 <div className="text-3xl font-bold text-amber-700">{totalWarnings}</div>
-                                <div className="text-xs text-amber-600 font-medium mt-1">Uyari</div>
+                                <div className="text-xs text-amber-600 font-medium mt-1">Uyarı</div>
                             </div>
                         </div>
                     </div>
@@ -753,13 +753,13 @@ export default function RBACAuditTab() {
                             onClick={expandAll}
                             className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
                         >
-                            Tumunu Ac
+                            Tümünü Aç
                         </button>
                         <button
                             onClick={collapseAll}
                             className="text-xs text-gray-500 hover:text-gray-700 font-medium px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
                         >
-                            Tumunu Kapat
+                            Tümünü Kapat
                         </button>
                     </div>
                 </div>
@@ -792,7 +792,7 @@ export default function RBACAuditTab() {
             {/* ── Audit Timestamp ────────────────────────────────────────────── */}
             {results?.timestamp && (
                 <div className="text-xs text-gray-400 text-right px-2">
-                    Denetim zamani: {new Date(results.timestamp).toLocaleString('tr-TR')}
+                    Denetim zamanı: {new Date(results.timestamp).toLocaleString('tr-TR')}
                 </div>
             )}
 
@@ -800,9 +800,9 @@ export default function RBACAuditTab() {
             {!results && !loading && (
                 <div className="bg-white/80 backdrop-blur-sm p-12 rounded-xl shadow-lg border border-gray-200/50 text-center">
                     <ShieldCheckIcon className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <h4 className="text-gray-400 font-medium text-lg">Henuz denetim calistirilmadi</h4>
+                    <h4 className="text-gray-400 font-medium text-lg">Henüz denetim çalıştırılmadı</h4>
                     <p className="text-gray-300 text-sm mt-2">
-                        Yukaridaki "Denetimi Baslat" butonuna tiklayarak RBAC ve talep sistemi denetimini baslatabilirsiniz.
+                        Yukarıdaki "Denetimi Başlat" butonuna tıklayarak RBAC ve talep sistemi denetimini başlatabilirsiniz.
                     </p>
                 </div>
             )}
@@ -811,9 +811,9 @@ export default function RBACAuditTab() {
             {loading && (
                 <div className="bg-white/80 backdrop-blur-sm p-12 rounded-xl shadow-lg border border-gray-200/50 text-center">
                     <ArrowPathIcon className="w-12 h-12 text-indigo-400 mx-auto mb-4 animate-spin" />
-                    <h4 className="text-gray-600 font-medium text-lg">Denetim calisiyor...</h4>
+                    <h4 className="text-gray-600 font-medium text-lg">Denetim çalışıyor...</h4>
                     <p className="text-gray-400 text-sm mt-2">
-                        Yetkiler, roller, calisan durumu, talep tipleri ve sistem yapilandirmasi kontrol ediliyor.
+                        Yetkiler, roller, çalışan durumu, talep tipleri ve sistem yapılandırması kontrol ediliyor.
                     </p>
                 </div>
             )}

@@ -130,13 +130,13 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             {(request.employee_annual_leave_balance.years_of_service !== undefined || request.employee_annual_leave_balance.entitlement_tier !== undefined) && (
                                 <div className="mt-2 flex items-center justify-center gap-3 text-[10px] text-slate-500 bg-white/40 p-1 rounded">
                                     {request.employee_annual_leave_balance.years_of_service !== undefined && (
-                                        <span>Kidem: <span className="font-bold text-slate-700">{request.employee_annual_leave_balance.years_of_service} Yil</span></span>
+                                        <span>Kıdem: <span className="font-bold text-slate-700">{request.employee_annual_leave_balance.years_of_service} Yıl</span></span>
                                     )}
                                     {request.employee_annual_leave_balance.years_of_service !== undefined && request.employee_annual_leave_balance.entitlement_tier !== undefined && (
                                         <span className="text-slate-300">|</span>
                                     )}
                                     {request.employee_annual_leave_balance.entitlement_tier !== undefined && (
-                                        <span>Yillik Hak: <span className="font-bold text-emerald-600">{request.employee_annual_leave_balance.entitlement_tier} Gun</span></span>
+                                        <span>Yıllık Hak: <span className="font-bold text-emerald-600">{request.employee_annual_leave_balance.entitlement_tier} Gün</span></span>
                                     )}
                                 </div>
                             )}

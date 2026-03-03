@@ -73,7 +73,7 @@ export default function BulkOperationsTab() {
                 const data = res.data.results || res.data;
                 setEmployees(data);
             })
-            .catch(() => message.error('Personel listesi yuklenemedi.'))
+            .catch(() => message.error('Personel listesi yüklenemedi.'))
             .finally(() => setLoadingEmployees(false));
     }, []);
 
@@ -91,7 +91,7 @@ export default function BulkOperationsTab() {
     // ================================================================
     const handleBulkCreate = () => {
         if (!bulkSelectedEmps.length || !bulkDateRange || !bulkCheckIn || !bulkCheckOut) {
-            message.warning('Lutfen tum alanlari doldurun.');
+            message.warning('Lütfen tüm alanları doldurun.');
             return;
         }
 
@@ -105,32 +105,32 @@ export default function BulkOperationsTab() {
             : days;
 
         if (workDays.length === 0) {
-            message.warning('Secilen tarih araliginda is gunu bulunamadi.');
+            message.warning('Seçilen tarih aralığında iş günü bulunamadı.');
             return;
         }
 
         const total = bulkSelectedEmps.length * workDays.length;
 
         Modal.confirm({
-            title: 'Toplu Kayit Olusturma Onayi',
+            title: 'Toplu Kayıt Oluşturma Onayı',
             icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
             content: (
                 <div>
                     <p>
                         <strong>{bulkSelectedEmps.length}</strong> personel,{' '}
-                        <strong>{workDays.length}</strong> is gunu icin toplam{' '}
-                        <strong>{total}</strong> kayit olusturulacak.
+                        <strong>{workDays.length}</strong> iş günü için toplam{' '}
+                        <strong>{total}</strong> kayıt oluşturulacak.
                     </p>
                     <p className="text-slate-500 text-sm mt-2">
-                        Giris: {bulkCheckIn.format('HH:mm')} — Cikis: {bulkCheckOut.format('HH:mm')}
+                        Giriş: {bulkCheckIn.format('HH:mm')} — Çıkış: {bulkCheckOut.format('HH:mm')}
                     </p>
                     <p className="text-slate-500 text-sm">
                         {format(workDays[0], 'dd.MM.yyyy')} — {format(workDays[workDays.length - 1], 'dd.MM.yyyy')}
                     </p>
                 </div>
             ),
-            okText: 'Evet, Olustur',
-            cancelText: 'Vazgec',
+            okText: 'Evet, Oluştur',
+            cancelText: 'Vazgeç',
             onOk: () => executeBulkCreate(workDays, total),
         });
     };
@@ -159,7 +159,7 @@ export default function BulkOperationsTab() {
                             },
                         ],
                         delete_ids: [],
-                        override_note: 'Toplu giris ile olusturuldu',
+                        override_note: 'Toplu giriş ile oluşturuldu',
                     });
                     successCount++;
                 } catch {
@@ -177,10 +177,10 @@ export default function BulkOperationsTab() {
         }));
 
         if (errorCount === 0) {
-            message.success(`${successCount}/${total} kayit basariyla olusturuldu.`);
+            message.success(`${successCount}/${total} kayıt başarıyla oluşturuldu.`);
         } else {
             message.warning(
-                `${successCount} basarili, ${errorCount} hata. Toplam: ${total} kayit.`
+                `${successCount} başarılı, ${errorCount} hata. Toplam: ${total} kayıt.`
             );
         }
     };
@@ -190,28 +190,28 @@ export default function BulkOperationsTab() {
     // ================================================================
     const handleAutoFill = () => {
         if (!autoFillEmps.length || !autoFillMonth) {
-            message.warning('Lutfen personel ve ay secin.');
+            message.warning('Lütfen personel ve ay seçin.');
             return;
         }
 
         const monthLabel = autoFillMonth.format('MMMM YYYY');
 
         Modal.confirm({
-            title: 'Toplu Otomatik Tamamlama Onayi',
+            title: 'Toplu Otomatik Tamamlama Onayı',
             icon: <SyncOutlined style={{ color: '#3b82f6' }} />,
             content: (
                 <div>
                     <p>
-                        <strong>{autoFillEmps.length}</strong> personel icin{' '}
-                        <strong>{monthLabel}</strong> ayi otomatik doldurulacak.
+                        <strong>{autoFillEmps.length}</strong> personel için{' '}
+                        <strong>{monthLabel}</strong> ayı otomatik doldurulacak.
                     </p>
                     <p className="text-slate-500 text-sm mt-2">
-                        Zaten kaydi olan gunler etkilenmez. Bos is gunleri vardiya saatlerine gore doldurulur.
+                        Zaten kaydı olan günler etkilenmez. Boş iş günleri vardiya saatlerine göre doldurulur.
                     </p>
                 </div>
             ),
             okText: 'Evet, Tamamla',
-            cancelText: 'Vazgec',
+            cancelText: 'Vazgeç',
             onOk: () => executeAutoFill(),
         });
     };
@@ -254,11 +254,11 @@ export default function BulkOperationsTab() {
 
         if (errorCount === 0) {
             message.success(
-                `${successCount} personel tamamlandi. Toplam ${totalFilledDays} gun dolduruldu.`
+                `${successCount} personel tamamlandı. Toplam ${totalFilledDays} gün dolduruldu.`
             );
         } else {
             message.warning(
-                `${successCount} basarili, ${errorCount} hata. Toplam ${totalFilledDays} gun dolduruldu.`
+                `${successCount} başarılı, ${errorCount} hata. Toplam ${totalFilledDays} gün dolduruldu.`
             );
         }
     };
@@ -268,32 +268,32 @@ export default function BulkOperationsTab() {
     // ================================================================
     const handleSettle = () => {
         if (!settleEmps.length || !settleMonth) {
-            message.warning('Lutfen personel ve ay secin.');
+            message.warning('Lütfen personel ve ay seçin.');
             return;
         }
 
         const monthLabel = settleMonth.format('MMMM YYYY');
 
         Modal.confirm({
-            title: 'Toplu Mutabakat Onayi',
+            title: 'Toplu Mutabakat Onayı',
             icon: <CalculatorOutlined style={{ color: '#ef4444' }} />,
             content: (
                 <div>
                     <p>
-                        <strong>{settleEmps.length}</strong> personel icin{' '}
-                        <strong>{monthLabel}</strong> ayi bakiyesi sifirlanacak.
+                        <strong>{settleEmps.length}</strong> personel için{' '}
+                        <strong>{monthLabel}</strong> ayı bakiyesi sıfırlanacak.
                     </p>
                     <Alert
                         type="warning"
                         showIcon
                         className="mt-3"
-                        message="Bu islem geri alinamaz"
-                        description="Tum secili personellerin bakiyeleri sifirlanacak ve bir sonraki aya devretmeyecek."
+                        message="Bu işlem geri alınamaz"
+                        description="Tüm seçili personellerin bakiyeleri sıfırlanacak ve bir sonraki aya devretmeyecek."
                     />
                 </div>
             ),
             okText: 'Evet, Mutabakat Yap',
-            cancelText: 'Vazgec',
+            cancelText: 'Vazgeç',
             okType: 'danger',
             onOk: () => executeSettle(),
         });
@@ -333,10 +333,10 @@ export default function BulkOperationsTab() {
         }));
 
         if (errorCount === 0) {
-            message.success(`${successCount} personel bakiyesi basariyla sifirlandi.`);
+            message.success(`${successCount} personel bakiyesi başarıyla sıfırlandı.`);
         } else {
             message.warning(
-                `${successCount} basarili, ${errorCount} hata. Toplam: ${total} personel.`
+                `${successCount} başarılı, ${errorCount} hata. Toplam: ${total} personel.`
             );
         }
     };
@@ -350,7 +350,7 @@ export default function BulkOperationsTab() {
             <div className="mt-4 pt-4 border-t border-slate-100">
                 <div className="flex flex-wrap gap-4">
                     <Statistic
-                        title="Basarili"
+                        title="Başarılı"
                         value={r.success}
                         valueStyle={{ color: '#52c41a', fontSize: 20 }}
                         prefix={<CheckCircleOutlined />}
@@ -382,7 +382,7 @@ export default function BulkOperationsTab() {
             <div className="mt-4">
                 <div className="flex justify-between items-center mb-1">
                     <span className="text-xs text-slate-500">
-                        {progress.current}/{progress.total} islem
+                        {progress.current}/{progress.total} işlem
                     </span>
                     <span className="text-xs font-semibold text-slate-600">{percent}%</span>
                 </div>
@@ -430,8 +430,8 @@ export default function BulkOperationsTab() {
                     <ThunderboltOutlined className="text-amber-600 text-xl" />,
                     'bg-amber-500/10',
                     'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-                    'Toplu Giris/Cikis Olusturma',
-                    'Birden fazla personel icin toplu devam kaydi olustur'
+                    'Toplu Giriş/Çıkış Oluşturma',
+                    'Birden fazla personel için toplu devam kaydı oluştur'
                 )}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,7 +444,7 @@ export default function BulkOperationsTab() {
                         <Select
                             mode="multiple"
                             showSearch
-                            placeholder="Personel secin..."
+                            placeholder="Personel seçin..."
                             value={bulkSelectedEmps}
                             onChange={setBulkSelectedEmps}
                             options={employeeOptions}
@@ -461,7 +461,7 @@ export default function BulkOperationsTab() {
                     <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                             <CalendarOutlined className="mr-1" />
-                            Tarih Araligi
+                            Tarih Aralığı
                         </label>
                         <DatePicker.RangePicker
                             value={bulkDateRange}
@@ -469,7 +469,7 @@ export default function BulkOperationsTab() {
                             format="DD.MM.YYYY"
                             className="w-full"
                             disabled={bulkProcessing}
-                            placeholder={['Baslangic', 'Bitis']}
+                            placeholder={['Başlangıç', 'Bitiş']}
                         />
                     </div>
 
@@ -480,7 +480,7 @@ export default function BulkOperationsTab() {
                             onChange={(e) => setBulkSkipWeekends(e.target.checked)}
                             disabled={bulkProcessing}
                         >
-                            <span className="text-sm text-slate-700">Hafta sonlarini atla</span>
+                            <span className="text-sm text-slate-700">Hafta sonlarını atla</span>
                         </Checkbox>
                     </div>
 
@@ -488,7 +488,7 @@ export default function BulkOperationsTab() {
                     <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                             <ClockCircleOutlined className="mr-1" />
-                            Giris Saati
+                            Giriş Saati
                         </label>
                         <TimePicker
                             value={bulkCheckIn}
@@ -497,7 +497,7 @@ export default function BulkOperationsTab() {
                             className="w-full"
                             minuteStep={5}
                             disabled={bulkProcessing}
-                            placeholder="Giris"
+                            placeholder="Giriş"
                         />
                     </div>
 
@@ -505,7 +505,7 @@ export default function BulkOperationsTab() {
                     <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                             <ClockCircleOutlined className="mr-1" />
-                            Cikis Saati
+                            Çıkış Saati
                         </label>
                         <TimePicker
                             value={bulkCheckOut}
@@ -514,7 +514,7 @@ export default function BulkOperationsTab() {
                             className="w-full"
                             minuteStep={5}
                             disabled={bulkProcessing}
-                            placeholder="Cikis"
+                            placeholder="Çıkış"
                         />
                     </div>
                 </div>
@@ -535,11 +535,11 @@ export default function BulkOperationsTab() {
                         onClick={handleBulkCreate}
                         className="bg-amber-500 hover:!bg-amber-600 border-amber-500 hover:!border-amber-600"
                     >
-                        Olustur
+                        Oluştur
                     </Button>
                     {bulkSelectedEmps.length > 0 && bulkDateRange && (
                         <Tag color="blue" className="text-xs">
-                            {bulkSelectedEmps.length} personel secili
+                            {bulkSelectedEmps.length} personel seçili
                         </Tag>
                     )}
                 </div>
@@ -559,7 +559,7 @@ export default function BulkOperationsTab() {
                     'bg-blue-500/10',
                     'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                     'Toplu Otomatik Tamamlama',
-                    'Secilen ayin bos is gunlerini vardiya saatlerine gore doldur'
+                    'Seçilen ayın boş iş günlerini vardiya saatlerine göre doldur'
                 )}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -572,7 +572,7 @@ export default function BulkOperationsTab() {
                         <Select
                             mode="multiple"
                             showSearch
-                            placeholder="Personel secin..."
+                            placeholder="Personel seçin..."
                             value={autoFillEmps}
                             onChange={setAutoFillEmps}
                             options={employeeOptions}
@@ -598,7 +598,7 @@ export default function BulkOperationsTab() {
                             format="MMMM YYYY"
                             className="w-full"
                             disabled={autoFillProcessing}
-                            placeholder="Ay secin"
+                            placeholder="Ay seçin"
                         />
                     </div>
                 </div>
@@ -617,7 +617,7 @@ export default function BulkOperationsTab() {
                     </Button>
                     {autoFillEmps.length > 0 && (
                         <Tag color="blue" className="text-xs">
-                            {autoFillEmps.length} personel secili
+                            {autoFillEmps.length} personel seçili
                         </Tag>
                     )}
                 </div>
@@ -630,7 +630,7 @@ export default function BulkOperationsTab() {
                     autoFillProgress,
                     autoFillProgress.results[0]?.filledDays != null && (
                         <Statistic
-                            title="Doldurulan Gun"
+                            title="Doldurulan Gün"
                             value={autoFillProgress.results[0].filledDays}
                             valueStyle={{ color: '#1677ff', fontSize: 20 }}
                             prefix={<CalendarOutlined />}
@@ -646,8 +646,8 @@ export default function BulkOperationsTab() {
                     <CalculatorOutlined className="text-rose-600 text-xl" />,
                     'bg-rose-500/10',
                     'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-                    'Toplu Bakiye Sifirlama (Mutabakat)',
-                    'Secilen personellerin ay bakiyesini sifirla'
+                    'Toplu Bakiye Sıfırlama (Mutabakat)',
+                    'Seçilen personellerin ay bakiyesini sıfırla'
                 )}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -670,13 +670,13 @@ export default function BulkOperationsTab() {
                                 onChange={(e) => handleSelectAllSettle(e.target.checked)}
                                 disabled={settleProcessing || employees.length === 0}
                             >
-                                <span className="text-xs text-slate-500">Tumunu Sec</span>
+                                <span className="text-xs text-slate-500">Tümünü Seç</span>
                             </Checkbox>
                         </div>
                         <Select
                             mode="multiple"
                             showSearch
-                            placeholder="Personel secin..."
+                            placeholder="Personel seçin..."
                             value={settleEmps}
                             onChange={setSettleEmps}
                             options={employeeOptions}
@@ -702,7 +702,7 @@ export default function BulkOperationsTab() {
                             format="MMMM YYYY"
                             className="w-full"
                             disabled={settleProcessing}
-                            placeholder="Ay secin"
+                            placeholder="Ay seçin"
                         />
                     </div>
                 </div>
@@ -722,7 +722,7 @@ export default function BulkOperationsTab() {
                     </Button>
                     {settleEmps.length > 0 && (
                         <Tag color="red" className="text-xs">
-                            {settleEmps.length} personel secili
+                            {settleEmps.length} personel seçili
                         </Tag>
                     )}
                 </div>

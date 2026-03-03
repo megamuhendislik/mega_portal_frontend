@@ -33,11 +33,11 @@ const ServiceControl = () => {
         try {
             const response = await api.post('/attendance/recalculate-all/', { date: selectedDate });
             setStatus('success');
-            setMessage(response.data.message || `${format(new Date(selectedDate), 'd MMMM yyyy', { locale: tr })} icin hesaplama tamamlandi.`);
+            setMessage(response.data.message || `${format(new Date(selectedDate), 'd MMMM yyyy', { locale: tr })} için hesaplama tamamlandı.`);
         } catch (error) {
             console.error(error);
             setStatus('error');
-            setMessage(error.response?.data?.error || 'Islem baslatilamadi veya sunucu hatasi olustu.');
+            setMessage(error.response?.data?.error || 'İşlem başlatılamadı veya sunucu hatası oluştu.');
         } finally {
             setLoading(false);
         }
@@ -50,8 +50,8 @@ const ServiceControl = () => {
                     <Monitor className="text-white w-8 h-8" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Servis Yonetimi</h1>
-                    <p className="text-slate-500 font-medium">Toplu puantaj ve servis hesaplama islemleri</p>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Servis Yönetimi</h1>
+                    <p className="text-slate-500 font-medium">Toplu puantaj ve servis hesaplama işlemleri</p>
                 </div>
             </div>
 
@@ -62,12 +62,12 @@ const ServiceControl = () => {
                         <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                             <Play size={20} />
                         </div>
-                        <h2 className="text-lg font-bold text-slate-800">Gunluk Hesaplama Tetikle</h2>
+                        <h2 className="text-lg font-bold text-slate-800">Günlük Hesaplama Tetikle</h2>
                     </div>
 
                     <p className="text-sm text-slate-500 mb-6">
-                        Secilen gun icin <b>tum calisanlarin</b> giris-cikis, mola ve fazla mesai hesaplarini yeniden calistirir.
-                        Manuel duzeltmeler yapildiktan sonra senkronizasyon icin kullanin.
+                        Seçilen gün için <b>tüm çalışanların</b> giriş-çıkış, mola ve fazla mesai hesaplarını yeniden çalıştırır.
+                        Manuel düzeltmeler yapıldıktan sonra senkronizasyon için kullanın.
                     </p>
 
                     <div className="space-y-4">
@@ -84,8 +84,8 @@ const ServiceControl = () => {
                         <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg flex gap-3">
                             <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={18} />
                             <p className="text-xs text-amber-700 leading-relaxed">
-                                Bu islem calisan sayisina bagli olarak birkac saniye surebilir.
-                                Islem sirasinda sistem yavasliayabilir.
+                                Bu işlem çalışan sayısına bağlı olarak birkaç saniye sürebilir.
+                                İşlem sırasında sistem yavaşlayabilir.
                             </p>
                         </div>
 
@@ -99,12 +99,12 @@ const ServiceControl = () => {
                             {loading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Hesaplaniyor...
+                                    Hesaplanıyor...
                                 </>
                             ) : (
                                 <>
                                     <Play size={18} fill="currentColor" />
-                                    Servisi Calistir
+                                    Servisi Çalıştır
                                 </>
                             )}
                         </button>
@@ -140,19 +140,19 @@ const ServiceControl = () => {
                         </div>
                         <h3 className="text-slate-900 font-bold mb-1">Servis Aktif</h3>
                         <p className="text-sm text-slate-500 max-w-xs">
-                            Canli guncelleme her 30 saniyede, gece gorevleri 00:01'de otomatik calisir.
+                            Canlı güncelleme her 30 saniyede, gece görevleri 00:01'de otomatik çalışır.
                         </p>
                     </div>
 
                     <div className="mt-6 pt-6 border-t border-slate-100">
-                        <h4 className="font-bold text-slate-900 mb-3 text-sm">Hizli Baglantilar</h4>
+                        <h4 className="font-bold text-slate-900 mb-3 text-sm">Hızlı Bağlantılar</h4>
                         <div className="grid grid-cols-1 gap-2">
                             <Link to="/admin/system-health" className="w-full text-left p-3 hover:bg-slate-50 rounded-lg text-sm text-slate-600 font-medium transition-colors border border-transparent hover:border-slate-100 flex justify-between group">
                                 Sistem Kontrol Merkezi
                                 <span className="text-slate-300 group-hover:text-indigo-500 transition-colors">&rarr;</span>
                             </Link>
                             <Link to="/admin/live-status" className="w-full text-left p-3 hover:bg-slate-50 rounded-lg text-sm text-slate-600 font-medium transition-colors border border-transparent hover:border-slate-100 flex justify-between group">
-                                Canli Durum Paneli
+                                Canlı Durum Paneli
                                 <span className="text-slate-300 group-hover:text-indigo-500 transition-colors">&rarr;</span>
                             </Link>
                         </div>
@@ -165,14 +165,14 @@ const ServiceControl = () => {
                 <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
                     <h3 className="text-slate-100 font-mono text-sm font-semibold flex items-center gap-2">
                         <Activity size={16} className="text-green-400" />
-                        CANLI SERVIS LOGLARI (Son 100 Islem)
+                        CANLI SERVIS LOGLARI (Son 100 İşlem)
                     </h3>
                     <span className="text-xs text-slate-500 font-mono">Otomatik Yenileniyor...</span>
                 </div>
                 <div className="h-64 overflow-y-auto p-4 font-mono text-xs space-y-1 custom-scrollbar">
                     {logs.length === 0 ? (
                         <div className="text-slate-500 text-center py-10">
-                            Henuz log kaydi yok. Sistem Sagligi &gt; Sistem Ayarlari'ndan Servis Loglarini aktif edin.
+                            Henüz log kaydı yok. Sistem Sağlığı &gt; Sistem Ayarları'ndan Servis Loglarını aktif edin.
                         </div>
                     ) : (
                         logs.map((log) => (

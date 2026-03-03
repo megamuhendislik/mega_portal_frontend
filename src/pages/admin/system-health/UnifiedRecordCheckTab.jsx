@@ -538,17 +538,16 @@ export default function UnifiedRecordCheckTab() {
         setExpandedTimeline({});
         setDrawerTab('overview');
 
-        const daysDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
         const empId = row.employee?.id;
 
         try {
             const [forensicRes, inspectionRes] = await Promise.allSettled([
                 api.get('/system/health-check/attendance-forensic/', {
-                    params: { employee_id: empId, days_back: daysDiff, date: endDate },
+                    params: { employee_id: empId, start_date: startDate, end_date: endDate },
                     timeout: 60000,
                 }),
                 api.get('/system/health-check/data-inspection/', {
-                    params: { employee_id: empId, days: daysDiff },
+                    params: { employee_id: empId, start_date: startDate, end_date: endDate },
                     timeout: 60000,
                 }),
             ]);

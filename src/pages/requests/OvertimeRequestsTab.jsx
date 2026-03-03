@@ -570,7 +570,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                         {claimableData.potential.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Pill color="purple">Algilanan</Pill>
+                                    <Pill color="purple">Algılanan</Pill>
                                     <span className="text-xs text-slate-400 font-medium">{claimableData.potential.length} mesai</span>
                                 </div>
                                 <div className="space-y-2">
@@ -580,7 +580,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                                 fetchWeeklyOtStatus(item.date);
                                                 setClaimModal({
                                                     open: true, type: 'POTENTIAL', target: item,
-                                                    title: 'Algilanan Mesai Talep Et',
+                                                    title: 'Algılanan Mesai Talep Et',
                                                     subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}-${item.end_time})` : ''} - ${item.actual_overtime_hours} saat`,
                                                 });
                                             }} />
@@ -605,7 +605,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 <tr className="border-b border-slate-100">
                                     <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Tarih</th>
                                     <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Kaynak</th>
-                                    <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Sure</th>
+                                    <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Süre</th>
                                     <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Durum</th>
                                     <th className="text-right py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">\u0130\u015flemler</th>
                                 </tr>
@@ -654,9 +654,9 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-100">
-                                        <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Calisan</th>
+                                        <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Çalışan</th>
                                         <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Tarih</th>
-                                        <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Maks Sure</th>
+                                        <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Maks Süre</th>
                                         <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Durum</th>
                                         <th className="text-right py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">\u0130\u015flemler</th>
                                     </tr>

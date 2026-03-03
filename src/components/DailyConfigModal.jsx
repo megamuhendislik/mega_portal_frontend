@@ -64,7 +64,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                 <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2">
                         <Calendar size={18} className="text-indigo-600" />
-                        {isNewMode ? 'Yeni Ozel Gun Ekle' : `${displayDate} Yapilandirmasi`}
+                        {isNewMode ? 'Yeni Özel Gün Ekle' : `${displayDate} Yapılandırması`}
                     </h3>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
                         <X size={20} />
@@ -99,13 +99,13 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                             onClick={() => setActiveTab('HOLIDAY')}
                             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'HOLIDAY' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            Tatil / Izin
+                            Tatil / İzin
                         </button>
                         <button
                             onClick={() => setActiveTab('CUSTOM')}
                             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'CUSTOM' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            Ozel Saatler
+                            Özel Saatler
                         </button>
                     </div>
 
@@ -116,25 +116,25 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                 <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
                                     <Calendar size={24} />
                                 </div>
-                                <p className="text-sm text-slate-600 font-medium">Bu gun icin varsayilan haftalik calisma programi uygulanacak.</p>
-                                <p className="text-xs text-slate-400 mt-2">Varsa tum ozel ayarlar silinecektir.</p>
+                                <p className="text-sm text-slate-600 font-medium">Bu gün için varsayılan haftalık çalışma programı uygulanacak.</p>
+                                <p className="text-xs text-slate-400 mt-2">Varsa tüm özel ayarlar silinecektir.</p>
                             </div>
                         )}
 
                         {activeTab === 'HOLIDAY' && (
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Tatil Aciklamasi</label>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Tatil Açıklaması</label>
                                     <input
                                         type="text"
                                         value={holidayName}
                                         onChange={(e) => setHolidayName(e.target.value)}
                                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300"
-                                        placeholder="Orn: Cumhuriyet Bayrami"
+                                        placeholder="Örn: Cumhuriyet Bayramı"
                                     />
                                     <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
                                         <Trash2 size={12} />
-                                        Bu gun "OFF" (Calisma Yok) olarak isaretlenecektir.
+                                        Bu gün "OFF" (Çalışma Yok) olarak işaretlenecektir.
                                     </p>
                                 </div>
                             </div>
@@ -144,12 +144,12 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="flex items-center gap-2 mb-2 p-2 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
                                     <Clock size={14} />
-                                    <span>Bu gune ozel mesai saatleri tanimlayin.</span>
+                                    <span>Bu güne özel mesai saatleri tanımlayın.</span>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Baslangic</label>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Başlangıç</label>
                                         <input
                                             type="time"
                                             value={formData.start_time}
@@ -158,7 +158,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Bitis</label>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Mesai Bitiş</label>
                                         <input
                                             type="time"
                                             value={formData.end_time}
@@ -171,11 +171,11 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                 <div className="border-t border-slate-100 pt-4">
                                     <div className="flex items-center gap-2 mb-3 text-slate-800 font-bold text-xs">
                                         <Coffee size={14} className="text-amber-500" />
-                                        <span>Ogle Molasi</span>
+                                        <span>Öğle Molası</span>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Baslangic</label>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Başlangıç</label>
                                             <input
                                                 type="time"
                                                 value={formData.lunch_start}
@@ -184,7 +184,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Bitis</label>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mola Bitiş</label>
                                             <input
                                                 type="time"
                                                 value={formData.lunch_end}
@@ -196,13 +196,13 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                                 </div>
 
                                 <div className="border-t border-slate-100 pt-4">
-                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Aciklama (istege bagli)</label>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Açıklama (isteğe bağlı)</label>
                                     <input
                                         type="text"
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 focus:border-slate-300"
-                                        placeholder="Orn: Yarim gun Cumartesi"
+                                        placeholder="Örn: Yarım gün Cumartesi"
                                     />
                                 </div>
                             </div>
@@ -216,7 +216,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                         className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-lg transition-colors"
                         disabled={loading}
                     >
-                        Iptal
+                        İptal
                     </button>
                     <button
                         onClick={handleSave}
