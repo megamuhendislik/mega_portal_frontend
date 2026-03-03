@@ -493,23 +493,38 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
             return a._category.localeCompare(b._category);
         });
 
+        // First pass: employees with subordinates always render individually (never grouped)
+        sortedNodes.forEach(nodeItem => {
+            if (processedIds.has(nodeItem.id)) return;
+            if (nodeItem._category === 'SUB_DEPT') return; // handle later
+            if (nodeItem.children && nodeItem.children.length > 0) {
+                processedIds.add(nodeItem.id);
+                resultList.push({ ...nodeItem });
+            }
+        });
+
+        // Second pass: leaf employees (no children) — group by category if 2+
+        // Recount only leaf employees per category
+        const leafCounts = {};
+        sortedNodes.forEach(n => {
+            if (processedIds.has(n.id) || n._category === 'SUB_DEPT') return;
+            leafCounts[n._category] = (leafCounts[n._category] || 0) + 1;
+        });
+
         sortedNodes.forEach(nodeItem => {
             if (processedIds.has(nodeItem.id)) return;
 
             const category = nodeItem._category;
 
-            // Only group employees, never departments.
-            // Never group employees that have subordinates (children) — their tree must be rendered individually.
-            const hasSubordinates = (members) => members.some(m => m.children && m.children.length > 0);
-            if (category !== 'SUB_DEPT' && counts[category] >= 2 && !hasSubordinates(sortedNodes.filter(n => n._category === category))) {
-                const groupMembers = sortedNodes.filter(n => n._category === category);
+            if (category !== 'SUB_DEPT' && leafCounts[category] >= 2) {
+                const groupMembers = sortedNodes.filter(n => n._category === category && !processedIds.has(n.id));
                 groupMembers.forEach(m => processedIds.add(m.id));
 
                 resultList.push({
                     type: 'group',
                     title: category,
                     employees: groupMembers,
-                    id: `group-${category}-${nodeItem.id}`, // Unique ID base
+                    id: `group-${category}-${nodeItem.id}`,
                     color: getColorForCategory(category)
                 });
             } else {
