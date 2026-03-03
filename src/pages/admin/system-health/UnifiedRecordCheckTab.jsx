@@ -12,20 +12,20 @@ import {
 // Constants & Helpers — CardDiagnostics
 // ---------------------------------------------------------------------------
 const FLAG_LABELS = {
-    NO_ATTENDANCE: { label: 'Kart var \u2192 Attendance yok', color: 'bg-red-100 text-red-700 border-red-200' },
-    NO_GATE_EVENT: { label: 'Attendance var \u2192 Kart yok', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-    MANUAL_ENTRY: { label: 'Manuel giri\u015f', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    NO_ATTENDANCE: { label: 'Kart var → Attendance yok', color: 'bg-red-100 text-red-700 border-red-200' },
+    NO_GATE_EVENT: { label: 'Attendance var → Kart yok', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+    MANUAL_ENTRY: { label: 'Manuel giriş', color: 'bg-blue-100 text-blue-700 border-blue-200' },
 };
 
 function getFlagInfo(flag) {
     if (FLAG_LABELS[flag]) return FLAG_LABELS[flag];
     if (flag.startsWith('TIME_DIFF_')) {
         const sec = flag.replace('TIME_DIFF_', '').replace('s', '');
-        return { label: `Saat fark\u0131: ${sec}sn`, color: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+        return { label: `Saat farkı: ${sec}sn`, color: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
     }
     if (flag.startsWith('GATE_ISSUES_')) {
         const cnt = flag.replace('GATE_ISSUES_', '');
-        return { label: `${cnt} sorunlu kart olay\u0131`, color: 'bg-amber-100 text-amber-700 border-amber-200' };
+        return { label: `${cnt} sorunlu kart olayı`, color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
     return { label: flag, color: 'bg-gray-100 text-gray-600 border-gray-200' };
 }
@@ -57,12 +57,12 @@ const SEVERITY_DOT = {
 };
 
 const TYPE_LABELS = {
-    ATTENDANCE_CREATED: 'Kay\u0131t Olu\u015fturma',
-    ATTENDANCE_UPDATED: 'Kay\u0131t G\u00fcncelleme',
+    ATTENDANCE_CREATED: 'Kayıt Oluşturma',
+    ATTENDANCE_UPDATED: 'Kayıt Güncelleme',
     GATE_EVENT: 'Kart Okuyucu',
     SERVICE_LOG: 'Servis Log',
-    REQUEST_LEAVE: '\u0130zin Talebi',
-    REQUEST_CARDLESS: 'Karts\u0131z Giri\u015f',
+    REQUEST_LEAVE: 'İzin Talebi',
+    REQUEST_CARDLESS: 'Kartsız Giriş',
 };
 
 function formatSeconds(s) {
@@ -138,15 +138,15 @@ function CollapsibleSection({ title, count, icon: Icon, children, defaultOpen = 
 // Sub-components — Data Tables (from DataInspectionTab)
 // ---------------------------------------------------------------------------
 function AttendanceTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
                 <thead>
                     <tr className="bg-gray-50 text-gray-500">
                         <th className="px-2 py-1 text-left">Tarih</th>
-                        <th className="px-2 py-1 text-left">Giri\u015f</th>
-                        <th className="px-2 py-1 text-left">\u00c7\u0131k\u0131\u015f</th>
+                        <th className="px-2 py-1 text-left">Giriş</th>
+                        <th className="px-2 py-1 text-left">Çıkış</th>
                         <th className="px-2 py-1 text-left">Kaynak</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                         <th className="px-2 py-1 text-right">Toplam</th>
@@ -182,14 +182,14 @@ function AttendanceTable({ records }) {
 }
 
 function GateEventsTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
                 <thead>
                     <tr className="bg-gray-50 text-gray-500">
                         <th className="px-2 py-1 text-left">Zaman</th>
-                        <th className="px-2 py-1 text-left">Y\u00f6n</th>
+                        <th className="px-2 py-1 text-left">Yön</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                         <th className="px-2 py-1 text-left">Event ID</th>
                     </tr>
@@ -214,15 +214,15 @@ function GateEventsTable({ records }) {
 }
 
 function OvertimeTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
                 <thead>
                     <tr className="bg-gray-50 text-gray-500">
                         <th className="px-2 py-1 text-left">Tarih</th>
-                        <th className="px-2 py-1 text-left">Ba\u015flang\u0131\u00e7</th>
-                        <th className="px-2 py-1 text-left">Biti\u015f</th>
+                        <th className="px-2 py-1 text-left">Başlangıç</th>
+                        <th className="px-2 py-1 text-left">Bitiş</th>
                         <th className="px-2 py-1 text-right">Saat</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                         <th className="px-2 py-1 text-left">Kaynak</th>
@@ -254,7 +254,7 @@ function OvertimeTable({ records }) {
 }
 
 function AssignmentsTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
@@ -264,7 +264,7 @@ function AssignmentsTable({ records }) {
                         <th className="px-2 py-1 text-right">Maks Saat</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                         <th className="px-2 py-1 text-left">Atayan</th>
-                        <th className="px-2 py-1 text-left">A\u00e7\u0131klama</th>
+                        <th className="px-2 py-1 text-left">Açıklama</th>
                         <th className="px-2 py-1 text-center">Talep</th>
                     </tr>
                 </thead>
@@ -276,7 +276,7 @@ function AssignmentsTable({ records }) {
                             <td className="px-2 py-1"><StatusBadge status={r.status} /></td>
                             <td className="px-2 py-1">{r.assigned_by}</td>
                             <td className="px-2 py-1 text-gray-500 truncate max-w-[200px]">{r.task_description || '-'}</td>
-                            <td className="px-2 py-1 text-center">{r.has_claim ? '\u2713' : '-'}</td>
+                            <td className="px-2 py-1 text-center">{r.has_claim ? '✓' : '-'}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -286,17 +286,17 @@ function AssignmentsTable({ records }) {
 }
 
 function LeaveTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
                 <thead>
                     <tr className="bg-gray-50 text-gray-500">
-                        <th className="px-2 py-1 text-left">T\u00fcr</th>
+                        <th className="px-2 py-1 text-left">Tür</th>
                         <th className="px-2 py-1 text-left">Kategori</th>
-                        <th className="px-2 py-1 text-left">Ba\u015flang\u0131\u00e7</th>
-                        <th className="px-2 py-1 text-left">Biti\u015f</th>
-                        <th className="px-2 py-1 text-right">G\u00fcn</th>
+                        <th className="px-2 py-1 text-left">Başlangıç</th>
+                        <th className="px-2 py-1 text-left">Bitiş</th>
+                        <th className="px-2 py-1 text-right">Gün</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                     </tr>
                 </thead>
@@ -318,14 +318,14 @@ function LeaveTable({ records }) {
 }
 
 function MealTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
                 <thead>
                     <tr className="bg-gray-50 text-gray-500">
                         <th className="px-2 py-1 text-left">Tarih</th>
-                        <th className="px-2 py-1 text-left">T\u00fcr</th>
+                        <th className="px-2 py-1 text-left">Tür</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                     </tr>
                 </thead>
@@ -344,15 +344,15 @@ function MealTable({ records }) {
 }
 
 function CardlessTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
                 <thead>
                     <tr className="bg-gray-50 text-gray-500">
                         <th className="px-2 py-1 text-left">Tarih</th>
-                        <th className="px-2 py-1 text-left">Giri\u015f</th>
-                        <th className="px-2 py-1 text-left">\u00c7\u0131k\u0131\u015f</th>
+                        <th className="px-2 py-1 text-left">Giriş</th>
+                        <th className="px-2 py-1 text-left">Çıkış</th>
                         <th className="px-2 py-1 text-left">Durum</th>
                         <th className="px-2 py-1 text-left">Sebep</th>
                     </tr>
@@ -374,8 +374,8 @@ function CardlessTable({ records }) {
 }
 
 function MonthlySummaryTable({ records }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
-    const months = ['', 'Oca', '\u015eub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'A\u011fu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
+    const months = ['', 'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
@@ -388,8 +388,8 @@ function MonthlySummaryTable({ records }) {
                         <th className="px-2 py-1 text-right">Eksik</th>
                         <th className="px-2 py-1 text-right">Toplam</th>
                         <th className="px-2 py-1 text-right">Bakiye</th>
-                        <th className="px-2 py-1 text-right">K\u00fcm\u00fclatif</th>
-                        <th className="px-2 py-1 text-right">\u0130zin</th>
+                        <th className="px-2 py-1 text-right">Kümülatif</th>
+                        <th className="px-2 py-1 text-right">İzin</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -420,7 +420,7 @@ function MonthlySummaryTable({ records }) {
 // Forensic Attendance Table (with delete buttons)
 // ---------------------------------------------------------------------------
 function ForensicAttendanceTable({ records, deleteLoading, onDelete }) {
-    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kay\u0131t yok</p>;
+    if (!records?.length) return <p className="text-xs text-gray-400 italic">Kayıt yok</p>;
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -430,8 +430,8 @@ function ForensicAttendanceTable({ records, deleteLoading, onDelete }) {
                         <th className="p-2 text-left">Tarih</th>
                         <th className="p-2 text-left">Durum</th>
                         <th className="p-2 text-left">Kaynak</th>
-                        <th className="p-2 text-left">Giri\u015f</th>
-                        <th className="p-2 text-left">\u00c7\u0131k\u0131\u015f</th>
+                        <th className="p-2 text-left">Giriş</th>
+                        <th className="p-2 text-left">Çıkış</th>
                         <th className="p-2 text-right">Normal</th>
                         <th className="p-2 text-right">Mesai</th>
                         <th className="p-2 text-right">Eksik</th>
@@ -519,7 +519,7 @@ export default function UnifiedRecordCheckTab() {
             );
             setData(res.data);
         } catch (err) {
-            setError(err.response?.data?.error || 'Veri y\u00fcklenirken hata olu\u015ftu');
+            setError(err.response?.data?.error || 'Veri yüklenirken hata oluştu');
             setData(null);
         } finally {
             setLoading(false);
@@ -573,7 +573,7 @@ export default function UnifiedRecordCheckTab() {
     // Delete attendance record
     // -----------------------------------------------------------------------
     const handleDelete = async (attId) => {
-        if (!window.confirm(`Attendance #${attId} kayd\u0131 kal\u0131c\u0131 olarak silinecek. Emin misiniz?`)) return;
+        if (!window.confirm(`Attendance #${attId} kaydı kalıcı olarak silinecek. Emin misiniz?`)) return;
         setDeleteLoading(attId);
         try {
             await api.post('/system/health-check/delete-attendance-record/', { attendance_id: attId });
@@ -582,7 +582,7 @@ export default function UnifiedRecordCheckTab() {
                 openDetail(selectedEmp);
             }
         } catch (err) {
-            alert('Silme hatas\u0131: ' + (err.response?.data?.error || err.message));
+            alert('Silme hatası: ' + (err.response?.data?.error || err.message));
         } finally {
             setDeleteLoading(null);
         }
@@ -642,15 +642,15 @@ export default function UnifiedRecordCheckTab() {
     const drawerTabs = [
         { id: 'overview', label: 'Genel' },
         { id: 'anomalies', label: `Anomaliler (${anomalyCount})` },
-        { id: 'timeline', label: `Zaman \u00c7izelgesi` },
+        { id: 'timeline', label: `Zaman Çizelgesi` },
         { id: 'attendance', label: `Devam (${attCount})` },
-        { id: 'gates', label: `Ge\u00e7i\u015f (${gateCount})` },
+        { id: 'gates', label: `Geçiş (${gateCount})` },
         { id: 'overtime', label: `Ek Mesai (${otCount})` },
         { id: 'assignments', label: `Atamalar (${assignCount})` },
-        { id: 'leave', label: `\u0130zin (${leaveCount})` },
+        { id: 'leave', label: `İzin (${leaveCount})` },
         { id: 'meal', label: `Yemek (${mealCount})` },
-        { id: 'cardless', label: `Karts\u0131z (${cardlessCount})` },
-        { id: 'monthly', label: 'Ayl\u0131k \u00d6zet' },
+        { id: 'cardless', label: `Kartsız (${cardlessCount})` },
+        { id: 'monthly', label: 'Aylık Özet' },
     ];
 
     // -----------------------------------------------------------------------
@@ -660,13 +660,13 @@ export default function UnifiedRecordCheckTab() {
         <div className="space-y-6">
             {/* 1. HEADER */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h2 className="text-lg font-bold text-gray-800 mb-1">Birle\u015fik Kay\u0131t Kontrol\u00fc</h2>
+                <h2 className="text-lg font-bold text-gray-800 mb-1">Birleşik Kayıt Kontrolü</h2>
                 <p className="text-sm text-gray-500 mb-4">
-                    Kart hareketleri, devam kay\u0131tlar\u0131 ve t\u00fcm talepleri kar\u015f\u0131la\u015ft\u0131r\u0131n. \u00c7al\u0131\u015fan\u0131 se\u00e7erek detayl\u0131 inceleme yap\u0131n.
+                    Kart hareketleri, devam kayıtları ve tüm talepleri karşılaştırın. Çalışanı seçerek detaylı inceleme yapın.
                 </p>
                 <div className="flex flex-wrap items-end gap-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Ba\u015flang\u0131\u00e7</label>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Başlangıç</label>
                         <input
                             type="date"
                             value={startDate}
@@ -675,7 +675,7 @@ export default function UnifiedRecordCheckTab() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Biti\u015f</label>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Bitiş</label>
                         <input
                             type="date"
                             value={endDate}
@@ -688,7 +688,7 @@ export default function UnifiedRecordCheckTab() {
                         disabled={loading}
                         className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
                     >
-                        {loading ? 'Taran\u0131yor...' : 'Tara'}
+                        {loading ? 'Taranıyor...' : 'Tara'}
                     </button>
                 </div>
             </div>
@@ -703,13 +703,13 @@ export default function UnifiedRecordCheckTab() {
                     {/* 3. KPI CARDS */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                         {[
-                            { label: '\u00c7al\u0131\u015fan', value: data.summary.total_employees, color: 'text-gray-800' },
-                            { label: 'Kart Olay\u0131', value: data.summary.total_gate_events, color: 'text-blue-600' },
-                            { label: 'Giri\u015f (IN)', value: data.summary.gate_in_count, color: 'text-emerald-600' },
-                            { label: '\u00c7\u0131k\u0131\u015f (OUT)', value: data.summary.gate_out_count, color: 'text-rose-600' },
+                            { label: 'Çalışan', value: data.summary.total_employees, color: 'text-gray-800' },
+                            { label: 'Kart Olayı', value: data.summary.total_gate_events, color: 'text-blue-600' },
+                            { label: 'Giriş (IN)', value: data.summary.gate_in_count, color: 'text-emerald-600' },
+                            { label: 'Çıkış (OUT)', value: data.summary.gate_out_count, color: 'text-rose-600' },
                             { label: 'Attendance', value: data.summary.total_attendance_records, color: 'text-indigo-600' },
-                            { label: 'Uyu\u015fmazl\u0131k', value: data.summary.mismatch_count, color: data.summary.mismatch_count > 0 ? 'text-red-600' : 'text-green-600' },
-                            { label: 'Tarih Aral\u0131\u011f\u0131', value: `${data.summary.day_count || 1} g\u00fcn`, color: 'text-gray-500', isText: true },
+                            { label: 'Uyuşmazlık', value: data.summary.mismatch_count, color: data.summary.mismatch_count > 0 ? 'text-red-600' : 'text-green-600' },
+                            { label: 'Tarih Aralığı', value: `${data.summary.day_count || 1} gün`, color: 'text-gray-500', isText: true },
                         ].map((c, i) => (
                             <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
                                 <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{c.label}</div>
@@ -724,8 +724,8 @@ export default function UnifiedRecordCheckTab() {
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="flex bg-gray-100 rounded-lg p-0.5">
                             {[
-                                { id: 'all', label: `T\u00fcm\u00fc (${data.results.length})` },
-                                { id: 'mismatch', label: `Uyu\u015fmazl\u0131k (${data.summary.mismatch_count})` },
+                                { id: 'all', label: `Tümü (${data.results.length})` },
+                                { id: 'mismatch', label: `Uyuşmazlık (${data.summary.mismatch_count})` },
                                 { id: 'clean', label: `Temiz (${data.results.length - data.summary.mismatch_count})` },
                             ].map(f => (
                                 <button
@@ -741,12 +741,12 @@ export default function UnifiedRecordCheckTab() {
                         </div>
                         <input
                             type="text"
-                            placeholder="\u0130sim, sicil no veya departman ara..."
+                            placeholder="İsim, sicil no veya departman ara..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                         />
-                        <span className="text-xs text-gray-400">{filtered.length} sonu\u00e7</span>
+                        <span className="text-xs text-gray-400">{filtered.length} sonuç</span>
                     </div>
 
                     {/* 5. EMPLOYEE LIST */}
@@ -787,7 +787,7 @@ export default function UnifiedRecordCheckTab() {
                                         )}
                                         {row.flag_details && Object.keys(row.flag_details).length > 1 && (
                                             <span className="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500 border border-gray-200">
-                                                {Object.keys(row.flag_details).length} g\u00fcn detay\u0131
+                                                {Object.keys(row.flag_details).length} gün detayı
                                             </span>
                                         )}
                                         <button
@@ -802,10 +802,10 @@ export default function UnifiedRecordCheckTab() {
                         ))}
 
                         {filtered.length === 0 && data.results.length > 0 && (
-                            <div className="text-center py-8 text-gray-400 text-sm">Filtreye uyan sonu\u00e7 bulunamad\u0131</div>
+                            <div className="text-center py-8 text-gray-400 text-sm">Filtreye uyan sonuç bulunamadı</div>
                         )}
                         {data.results.length === 0 && (
-                            <div className="text-center py-8 text-gray-400 text-sm">Bu tarih aral\u0131\u011f\u0131 i\u00e7in kay\u0131t bulunamad\u0131</div>
+                            <div className="text-center py-8 text-gray-400 text-sm">Bu tarih aralığı için kayıt bulunamadı</div>
                         )}
                     </div>
                 </>
@@ -813,7 +813,7 @@ export default function UnifiedRecordCheckTab() {
 
             {/* 6. DETAIL DRAWER */}
             <Drawer
-                title={selectedEmp?.employee?.name ? `${selectedEmp.employee.name} \u2014 Detay` : 'Detay'}
+                title={selectedEmp?.employee?.name ? `${selectedEmp.employee.name} — Detay` : 'Detay'}
                 open={drawerOpen}
                 onClose={closeDrawer}
                 width={780}
@@ -822,7 +822,7 @@ export default function UnifiedRecordCheckTab() {
                 {detailLoading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                        <span className="text-sm text-gray-500">Veriler y\u00fckleniyor...</span>
+                        <span className="text-sm text-gray-500">Veriler yükleniyor...</span>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -856,7 +856,7 @@ export default function UnifiedRecordCheckTab() {
                                                 <div className="flex justify-between"><span className="text-gray-500">Sicil</span><span className="font-mono">{forensicData.employee.employee_code || '-'}</span></div>
                                                 <div className="flex justify-between"><span className="text-gray-500">Superuser</span>
                                                     <span className={`font-bold ${forensicData.employee.is_superuser ? 'text-red-600' : 'text-gray-600'}`}>
-                                                        {forensicData.employee.is_superuser ? 'EVET' : 'Hay\u0131r'}
+                                                        {forensicData.employee.is_superuser ? 'EVET' : 'Hayır'}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between"><span className="text-gray-500">Departman</span><span>{forensicData.employee.department || '-'}</span></div>
@@ -868,17 +868,17 @@ export default function UnifiedRecordCheckTab() {
 
                                     {forensicData?.day_rules && (
                                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                                            <h3 className="text-sm font-bold text-gray-700 mb-3">Vardiya Kurallar\u0131 ({forensicData.day_rules?.date || '-'})</h3>
+                                            <h3 className="text-sm font-bold text-gray-700 mb-3">Vardiya Kuralları ({forensicData.day_rules?.date || '-'})</h3>
                                             {forensicData.day_rules?.error ? (
                                                 <div className="text-red-500 text-xs">{forensicData.day_rules.error}</div>
                                             ) : (
                                                 <div className="space-y-1.5 text-xs">
-                                                    <div className="flex justify-between"><span className="text-gray-500">Vardiya</span><span className="font-mono font-bold">{forensicData.day_rules.shift_start} \u2014 {forensicData.day_rules.shift_end}</span></div>
-                                                    <div className="flex justify-between"><span className="text-gray-500">Yemek</span><span className="font-mono">{forensicData.day_rules.lunch_start} \u2014 {forensicData.day_rules.lunch_end}</span></div>
-                                                    <div className="flex justify-between"><span className="text-gray-500">Tatil G\u00fcn\u00fc</span>
-                                                        <span className={forensicData.day_rules.is_off_day ? 'font-bold text-emerald-600' : ''}>{forensicData.day_rules.is_off_day ? 'EVET' : 'Hay\u0131r'}</span>
+                                                    <div className="flex justify-between"><span className="text-gray-500">Vardiya</span><span className="font-mono font-bold">{forensicData.day_rules.shift_start} — {forensicData.day_rules.shift_end}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-500">Yemek</span><span className="font-mono">{forensicData.day_rules.lunch_start} — {forensicData.day_rules.lunch_end}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-500">Tatil Günü</span>
+                                                        <span className={forensicData.day_rules.is_off_day ? 'font-bold text-emerald-600' : ''}>{forensicData.day_rules.is_off_day ? 'EVET' : 'Hayır'}</span>
                                                     </div>
-                                                    <div className="flex justify-between"><span className="text-gray-500">Mola Hakk\u0131</span><span>{forensicData.day_rules.daily_break_allowance} dk</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-500">Mola Hakkı</span><span>{forensicData.day_rules.daily_break_allowance} dk</span></div>
                                                     <div className="flex justify-between"><span className="text-gray-500">Kaynak</span><span className="font-mono text-indigo-600">{forensicData.day_rules.source}</span></div>
                                                 </div>
                                             )}
@@ -892,7 +892,7 @@ export default function UnifiedRecordCheckTab() {
                                         {[
                                             { label: 'Attendance', count: forensicData.counts.attendance, color: 'indigo' },
                                             { label: 'Gate Events', count: forensicData.counts.gate_events, color: 'emerald' },
-                                            { label: 'Servis Loglar\u0131', count: forensicData.counts.service_logs, color: 'blue' },
+                                            { label: 'Servis Logları', count: forensicData.counts.service_logs, color: 'blue' },
                                             { label: 'Talepler', count: forensicData.counts.related_requests, color: 'violet' },
                                             { label: 'Anomaliler', count: forensicData.counts.anomalies, color: forensicData.counts.anomalies > 0 ? 'red' : 'gray' },
                                         ].map(c => {
@@ -909,7 +909,7 @@ export default function UnifiedRecordCheckTab() {
                                 )}
 
                                 {!forensicData && !inspectionData && (
-                                    <div className="text-center py-8 text-gray-400 text-sm">Detay verisi y\u00fcklenemedi.</div>
+                                    <div className="text-center py-8 text-gray-400 text-sm">Detay verisi yüklenemedi.</div>
                                 )}
                             </div>
                         )}
@@ -953,9 +953,9 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ TIMELINE TAB ============ */}
                         {drawerTab === 'timeline' && (
                             <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-gray-700 mb-3">Kronolojik Zaman \u00c7izelgesi</h3>
+                                <h3 className="text-sm font-bold text-gray-700 mb-3">Kronolojik Zaman Çizelgesi</h3>
                                 {!forensicData?.timeline?.length ? (
-                                    <div className="text-center text-gray-400 py-8 text-sm">Bu d\u00f6nemde zaman \u00e7izelgesi kayd\u0131 bulunamad\u0131.</div>
+                                    <div className="text-center text-gray-400 py-8 text-sm">Bu dönemde zaman çizelgesi kaydı bulunamadı.</div>
                                 ) : (
                                     <div className="relative">
                                         <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-200"></div>
@@ -996,7 +996,7 @@ export default function UnifiedRecordCheckTab() {
                                 {/* Forensic detailed attendance with delete */}
                                 {forensicData?.attendance_records?.length > 0 && (
                                     <CollapsibleSection
-                                        title="Detayl\u0131 Attendance Kay\u0131tlar\u0131 (Forensic)"
+                                        title="Detaylı Attendance Kayıtları (Forensic)"
                                         count={forensicData.attendance_records.length}
                                         icon={ClockIcon}
                                         defaultOpen={true}
@@ -1011,7 +1011,7 @@ export default function UnifiedRecordCheckTab() {
                                 {/* Inspection summary attendance */}
                                 {inspectionData?.attendance?.length > 0 && (
                                     <CollapsibleSection
-                                        title="\u00d6zet Devam Kay\u0131tlar\u0131"
+                                        title="Özet Devam Kayıtları"
                                         count={inspectionData.attendance.length}
                                         icon={ClockIcon}
                                         defaultOpen={!forensicData?.attendance_records?.length}
@@ -1020,7 +1020,7 @@ export default function UnifiedRecordCheckTab() {
                                     </CollapsibleSection>
                                 )}
                                 {!forensicData?.attendance_records?.length && !inspectionData?.attendance?.length && (
-                                    <p className="text-xs text-gray-400 italic text-center py-8">Devam kayd\u0131 bulunamad\u0131.</p>
+                                    <p className="text-xs text-gray-400 italic text-center py-8">Devam kaydı bulunamadı.</p>
                                 )}
                             </div>
                         )}
@@ -1028,7 +1028,7 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ GATES TAB ============ */}
                         {drawerTab === 'gates' && (
                             <CollapsibleSection
-                                title="Kap\u0131 Ge\u00e7i\u015f Kay\u0131tlar\u0131 (Gate Events)"
+                                title="Kapı Geçiş Kayıtları (Gate Events)"
                                 count={gateCount}
                                 icon={ClockIcon}
                                 defaultOpen={true}
@@ -1052,7 +1052,7 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ ASSIGNMENTS TAB ============ */}
                         {drawerTab === 'assignments' && (
                             <CollapsibleSection
-                                title="Mesai Atamalar\u0131"
+                                title="Mesai Atamaları"
                                 count={assignCount}
                                 icon={DocumentTextIcon}
                                 defaultOpen={true}
@@ -1064,7 +1064,7 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ LEAVE TAB ============ */}
                         {drawerTab === 'leave' && (
                             <CollapsibleSection
-                                title="\u0130zin Talepleri"
+                                title="İzin Talepleri"
                                 count={leaveCount}
                                 icon={DocumentTextIcon}
                                 defaultOpen={true}
@@ -1088,7 +1088,7 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ CARDLESS TAB ============ */}
                         {drawerTab === 'cardless' && (
                             <CollapsibleSection
-                                title="Karts\u0131z Giri\u015f Talepleri"
+                                title="Kartsız Giriş Talepleri"
                                 count={cardlessCount}
                                 icon={DocumentTextIcon}
                                 defaultOpen={true}
@@ -1100,7 +1100,7 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ MONTHLY SUMMARY TAB ============ */}
                         {drawerTab === 'monthly' && (
                             <CollapsibleSection
-                                title="Ayl\u0131k \u00d6zet (Bu Y\u0131l)"
+                                title="Aylık Özet (Bu Yıl)"
                                 count={inspectionData?.monthly_summaries?.length || 0}
                                 icon={ClockIcon}
                                 defaultOpen={true}
