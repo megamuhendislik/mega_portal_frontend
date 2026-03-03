@@ -96,6 +96,62 @@ function getCategoryTag(cat) {
     return <Tag color={cfg.color}>{cfg.icon} {cfg.label}</Tag>;
 }
 
+/** Generate Turkish problem description for a record */
+function getProblemDescription(record) {
+    const cat = record.problem_category;
+    if (cat === 'MATCH') return null;
+
+    const lines = [];
+    const sessions = record.sessions || [];
+    const has2359 = sessions.some(s => s.sys_check_out === '23:59:59');
+    const csvCount = record.csv_session_count || 0;
+    const sysCount = record.sys_session_count || 0;
+
+    if (cat === 'ABSENT_IN_SYSTEM') {
+        lines.push('Kart okuyucu verileri sisteme ulaşmamış — çalışan ABSENT (devamsız) olarak işaretlenmiş.');
+        lines.push(`CSV'de ${csvCount} oturum mevcut ama sistemde hiçbir giriş/çıkış kaydı yok.`);
+    } else if (cat === 'NO_SYSTEM_RECORD') {
+        lines.push('Bu tarih için sistemde hiçbir mesai kaydı bulunamadı.');
+        if (csvCount > 0) lines.push(`CSV'de ${csvCount} oturum mevcut.`);
+    } else if (cat === 'TIME_DIFF') {
+        if (has2359) {
+            const lastCsv = sessions.filter(s => s.csv_check_out && s.sys_check_out === '23:59:59');
+            const realOut = lastCsv.length > 0 ? lastCsv[0].csv_check_out : null;
+            lines.push(`Son oturum gece yarısı kapama ile 23:59:59'a uzatılmış.`);
+            if (realOut) lines.push(`Gerçek çıkış saati: ${realOut} (CSV'den).`);
+        } else {
+            lines.push('Giriş/çıkış saatleri CSV ile sistem arasında farklı.');
+        }
+        const diffH = Math.abs((record.csv_total_hours || 0) - (record.sys_total_hours || 0));
+        if (diffH > 0.5) lines.push(`Toplam saat farkı: ${diffH.toFixed(1)} saat.`);
+    } else if (cat === 'SESSION_MISMATCH') {
+        lines.push(`Oturum sayısı uyuşmuyor: CSV'de ${csvCount}, sistemde ${sysCount} oturum.`);
+        if (has2359) lines.push('Ek olarak, sistemde son çıkış 23:59:59 — gece yarısı kapama sorunu.');
+        const onlyCsv = sessions.filter(s => s.only_in_csv).length;
+        const onlySys = sessions.filter(s => s.only_in_system).length;
+        if (onlyCsv > 0) lines.push(`${onlyCsv} oturum sadece CSV'de var (sistemde eksik).`);
+        if (onlySys > 0) lines.push(`${onlySys} oturum sadece sistemde var (CSV'de eksik).`);
+    }
+    return lines;
+}
+
+/** Generate change preview for a record */
+function getChangePreview(record) {
+    const sessions = record.sessions || [];
+    const csvSessions = sessions.filter(s => !s.only_in_system && (s.csv_check_in || s.csv_check_out));
+    const sysCount = record.sys_session_count || 0;
+    const otCount = record.overtime_request_count || 0;
+
+    return {
+        willDeleteSessions: sysCount,
+        willCreateSessions: csvSessions.length,
+        csvTotalHours: record.csv_total_hours || 0,
+        sysTotalHours: record.sys_total_hours || 0,
+        otCount,
+        csvSessions,
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -114,9 +170,11 @@ const SummaryCard = ({ title, value, color, icon, suffix }) => (
 );
 
 /** Expanded row: session-based comparison + raw CSV events */
-const ExpandedRowContent = ({ record }) => {
+const ExpandedRowContent = ({ record, onFix, fixing }) => {
     const sessions = record.sessions || [];
     const csvEvents = record.csv_events || [];
+    const problemLines = getProblemDescription(record);
+    const preview = record.problem_category !== 'MATCH' ? getChangePreview(record) : null;
 
     const sessionColumns = [
         {
@@ -184,6 +242,85 @@ const ExpandedRowContent = ({ record }) => {
 
     return (
         <div className="space-y-4 p-2">
+            {/* Problem description */}
+            {problemLines && problemLines.length > 0 && (
+                <Alert
+                    type={record.problem_category === 'ABSENT_IN_SYSTEM' ? 'error' : record.problem_category === 'NO_SYSTEM_RECORD' ? 'error' : 'warning'}
+                    showIcon
+                    icon={<ExclamationCircleOutlined />}
+                    message={
+                        <span className="font-semibold">
+                            Sorun: {CATEGORY_CONFIG[record.problem_category]?.label || record.problem_category}
+                        </span>
+                    }
+                    description={
+                        <ul className="list-disc pl-4 mt-1 text-sm space-y-0.5">
+                            {problemLines.map((line, i) => <li key={i}>{line}</li>)}
+                        </ul>
+                    }
+                />
+            )}
+
+            {/* Change preview + Fix button */}
+            {preview && record.has_difference && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-2">
+                        <ToolOutlined className="mr-1" />
+                        CSV Verileri ile Düzeltme Önizlemesi
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Silinecek:</span>
+                            <span className="font-medium text-red-600">
+                                {preview.willDeleteSessions} sistem oturumu
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Oluşturulacak:</span>
+                            <span className="font-medium text-green-600">
+                                {preview.willCreateSessions} CSV oturumu
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Mevcut toplam:</span>
+                            <span className="font-mono">{formatHours(preview.sysTotalHours)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Yeni toplam (tahmini):</span>
+                            <span className="font-mono font-semibold text-blue-700">~{formatHours(preview.csvTotalHours)}</span>
+                        </div>
+                        {preview.otCount > 0 && (
+                            <div className="col-span-2 flex items-center gap-2 text-red-500">
+                                <WarningOutlined />
+                                <span className="font-medium">{preview.otCount} ek mesai talebi silinecek</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                        Düzeltme sonrası: snapping, mola, ek mesai otomatik hesaplanır. Tahmini saat kesin değildir.
+                    </div>
+                    {onFix && (
+                        <Button
+                            type="primary"
+                            danger
+                            size="small"
+                            icon={<ToolOutlined />}
+                            className="mt-3"
+                            loading={fixing}
+                            disabled={fixing || preview.willCreateSessions === 0}
+                            onClick={() => onFix(record)}
+                        >
+                            Bu Kaydı Düzelt
+                        </Button>
+                    )}
+                    {preview.willCreateSessions === 0 && (
+                        <div className="mt-2 text-xs text-orange-500">
+                            CSV'de geçerli oturum bulunamadığı için düzeltme yapılamaz.
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Session comparison */}
             <div>
                 <h4 className="text-sm font-semibold mb-2 text-gray-700">
@@ -464,6 +601,77 @@ export default function PdksCompareTab() {
         setSelectedRows([]);
         setShowOnlyDiff(true);
         setCategoryFilter(null);
+    };
+
+    const handleFixSingle = (record) => {
+        const sessions = (record.sessions || [])
+            .filter(s => !s.only_in_system)
+            .map(s => ({ check_in: s.csv_check_in, check_out: s.csv_check_out }))
+            .filter(s => s.check_in || s.check_out);
+
+        if (sessions.length === 0) {
+            message.error('CSV\'de geçerli oturum bulunamadı.');
+            return;
+        }
+
+        const preview = getChangePreview(record);
+        const problemLines = getProblemDescription(record);
+
+        Modal.confirm({
+            title: `${record.employee_name} — ${formatDate(record.work_date)} Düzeltme Onayı`,
+            icon: <ExclamationCircleOutlined />,
+            width: 520,
+            content: (
+                <div className="mt-2 text-sm space-y-2">
+                    {problemLines && (
+                        <div className="bg-orange-50 border border-orange-200 rounded p-2 text-xs">
+                            <strong>Sorun:</strong>
+                            <ul className="list-disc pl-4 mt-1">
+                                {problemLines.map((l, i) => <li key={i}>{l}</li>)}
+                            </ul>
+                        </div>
+                    )}
+                    <p>
+                        Sistemdeki <strong>{preview.willDeleteSessions}</strong> oturum silinecek,
+                        CSV'den <strong>{preview.willCreateSessions}</strong> oturum oluşturulacak.
+                    </p>
+                    <p>
+                        Tahmini: {formatHours(preview.sysTotalHours)} → ~{formatHours(preview.csvTotalHours)}
+                    </p>
+                    {preview.otCount > 0 && (
+                        <p className="text-red-500 font-medium">
+                            {preview.otCount} ek mesai talebi silinecek!
+                        </p>
+                    )}
+                </div>
+            ),
+            okText: 'Düzelt',
+            okButtonProps: { danger: true },
+            cancelText: 'İptal',
+            onOk: async () => {
+                setFixing(true);
+                try {
+                    const res = await api.post('/system/health-check/pdks-fix/', {
+                        corrections: [{
+                            employee_id: record.employee_id,
+                            work_date: record.work_date,
+                            sessions,
+                        }],
+                    });
+                    setFixResults(res.data);
+                    const fixed = res.data.summary?.fixed || 0;
+                    if (fixed > 0) {
+                        message.success(`${record.employee_name} (${formatDate(record.work_date)}) düzeltildi.`);
+                    } else {
+                        message.warning('Düzeltme yapılamadı.');
+                    }
+                } catch (e) {
+                    message.error('Düzeltme hatası: ' + (e.response?.data?.error || e.message));
+                } finally {
+                    setFixing(false);
+                }
+            },
+        });
     };
 
     const handleCleanupEmployees = (employeeIds, employeeNames) => {
@@ -1129,7 +1337,7 @@ export default function PdksCompareTab() {
                         rowKey={rowKey}
                         rowSelection={rowSelection}
                         expandable={{
-                            expandedRowRender: (record) => <ExpandedRowContent record={record} />,
+                            expandedRowRender: (record) => <ExpandedRowContent record={record} onFix={handleFixSingle} fixing={fixing} />,
                             rowExpandable: () => true,
                             defaultExpandedRowKeys: filteredData
                                 .filter((m) => m.has_difference || !m.has_attendance)
