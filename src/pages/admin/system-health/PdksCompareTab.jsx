@@ -951,9 +951,9 @@ export default function PdksCompareTab() {
                             return 'pdks-row-match';
                         }}
                         pagination={{
-                            pageSize: 50,
+                            defaultPageSize: 50,
                             showSizeChanger: true,
-                            pageSizeOptions: ['25', '50', '100', '200'],
+                            pageSizeOptions: ['25', '50', '100', '150', '200'],
                             showTotal: (total, range) =>
                                 `${range[0]}-${range[1]} / ${total} kayıt`,
                         }}
