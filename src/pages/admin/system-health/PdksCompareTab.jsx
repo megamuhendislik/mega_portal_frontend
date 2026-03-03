@@ -78,6 +78,24 @@ function formatHours(h) {
 }
 
 // ---------------------------------------------------------------------------
+// Problem category config
+// ---------------------------------------------------------------------------
+
+const CATEGORY_CONFIG = {
+    MATCH:            { label: 'Eşleşiyor',         color: 'green',  icon: '✓' },
+    TIME_DIFF:        { label: 'Saat Farkı',         color: 'orange', icon: '⏱' },
+    SESSION_MISMATCH: { label: 'Oturum Uyumsuz',     color: 'red',    icon: '⚡' },
+    NO_SYSTEM_RECORD: { label: 'Sistemde Kayıt Yok', color: 'volcano', icon: '⚠' },
+    ABSENT_IN_SYSTEM: { label: 'Devamsız (ABSENT)',   color: 'purple', icon: '👤' },
+};
+
+function getCategoryTag(cat) {
+    const cfg = CATEGORY_CONFIG[cat];
+    if (!cfg) return <Tag>{cat || '-'}</Tag>;
+    return <Tag color={cfg.color}>{cfg.icon} {cfg.label}</Tag>;
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
@@ -287,6 +305,7 @@ export default function PdksCompareTab() {
     const [fixResults, setFixResults] = useState(null);
     const [selectedRows, setSelectedRows] = useState([]);
     const [showOnlyDiff, setShowOnlyDiff] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState(null); // null = all
 
     // -----------------------------------------------------------------------
     // Derived data
@@ -302,11 +321,18 @@ export default function PdksCompareTab() {
         return { total, withDiff, matching, noAttendance };
     }, [results]);
 
+    const categorySummary = useMemo(() => {
+        return results?.summary?.category_summary || {};
+    }, [results]);
+
     const filteredData = useMemo(() => {
         if (!results?.matches) return [];
         let data = [...results.matches];
         if (showOnlyDiff) {
             data = data.filter((m) => m.has_difference || !m.has_attendance);
+        }
+        if (categoryFilter) {
+            data = data.filter((m) => m.problem_category === categoryFilter);
         }
         // Default sort: work_date asc, then employee_name asc
         data.sort((a, b) => {
@@ -315,7 +341,7 @@ export default function PdksCompareTab() {
             return (a.employee_name || '').localeCompare(b.employee_name || '', 'tr');
         });
         return data;
-    }, [results, showOnlyDiff]);
+    }, [results, showOnlyDiff, categoryFilter]);
 
     const rowKey = useCallback((record) => `${record.employee_id}_${record.work_date}`, []);
 
@@ -368,8 +394,9 @@ export default function PdksCompareTab() {
                         <strong>{selectedRows.length}</strong> gün için kart giriş/çıkış
                         verileri güncellenecek ve mesai yeniden hesaplanacak.
                     </p>
-                    <p className="mt-2 text-gray-500">
-                        Mevcut ek mesai talepleri silinmeyecek, sadece süreleri ayarlanacaktır.
+                    <p className="mt-2 text-red-500 font-medium">
+                        İlgili tarihlerdeki TÜM ek mesai talepleri silinecek ve mesai yeniden hesaplanacaktır.
+                        Potansiyel mesai olarak yeniden oluşturulabilir.
                     </p>
                 </div>
             ),
@@ -434,6 +461,7 @@ export default function PdksCompareTab() {
         setFixResults(null);
         setSelectedRows([]);
         setShowOnlyDiff(true);
+        setCategoryFilter(null);
     };
 
     // -----------------------------------------------------------------------
@@ -489,10 +517,19 @@ export default function PdksCompareTab() {
                 title: 'Ad Soyad',
                 dataIndex: 'employee_name',
                 key: 'employee_name',
-                width: 160,
+                width: 180,
                 sorter: (a, b) =>
                     (a.employee_name || '').localeCompare(b.employee_name || '', 'tr'),
-                ellipsis: true,
+                render: (v, record) => (
+                    <Tooltip title={[record.department_name, record.job_position_name].filter(Boolean).join(' — ') || 'Bilinmiyor'}>
+                        <div>
+                            <div className="font-medium text-sm truncate">{v || '-'}</div>
+                            {record.department_name && (
+                                <div className="text-[10px] text-gray-400 truncate">{record.department_name}</div>
+                            )}
+                        </div>
+                    </Tooltip>
+                ),
             },
             {
                 title: 'Tarih',
@@ -612,41 +649,15 @@ export default function PdksCompareTab() {
                 },
             },
             {
-                title: 'Durum',
-                key: 'status',
-                width: 120,
-                filters: [
-                    { text: 'Eşleşiyor', value: 'match' },
-                    { text: 'Fark Var', value: 'diff' },
-                    { text: 'Kayıt Yok', value: 'missing' },
-                ],
-                onFilter: (value, record) => {
-                    if (value === 'match') return record.has_attendance && !record.has_difference;
-                    if (value === 'diff') return record.has_attendance && record.has_difference;
-                    if (value === 'missing') return !record.has_attendance;
-                    return true;
-                },
-                render: (_, record) => {
-                    if (!record.has_attendance) {
-                        return (
-                            <Tag icon={<WarningOutlined />} color="orange">
-                                Kayıt Yok
-                            </Tag>
-                        );
-                    }
-                    if (record.has_difference) {
-                        return (
-                            <Tag icon={<CloseCircleOutlined />} color="red">
-                                Fark Var
-                            </Tag>
-                        );
-                    }
-                    return (
-                        <Tag icon={<CheckCircleOutlined />} color="green">
-                            Eşleşiyor
-                        </Tag>
-                    );
-                },
+                title: 'Kategori',
+                key: 'problem_category',
+                width: 150,
+                filters: Object.entries(CATEGORY_CONFIG).map(([k, v]) => ({
+                    text: `${v.icon} ${v.label}`,
+                    value: k,
+                })),
+                onFilter: (value, record) => record.problem_category === value,
+                render: (_, record) => getCategoryTag(record.problem_category),
             },
             {
                 title: 'OT',
@@ -878,25 +889,98 @@ export default function PdksCompareTab() {
                         />
                     </div>
 
-                    {/* Unmatched SicilIDs warning */}
-                    {results.unmatched_sicil_ids && results.unmatched_sicil_ids.length > 0 && (
+                    {/* Category summary badges */}
+                    {results.summary?.category_summary && (
+                        <div className="flex flex-wrap gap-2">
+                            {Object.entries(CATEGORY_CONFIG).map(([cat, cfg]) => {
+                                const count = categorySummary[cat] || 0;
+                                if (count === 0) return null;
+                                const isActive = categoryFilter === cat;
+                                return (
+                                    <Button
+                                        key={cat}
+                                        size="small"
+                                        type={isActive ? 'primary' : 'default'}
+                                        className={isActive ? '' : 'border-gray-300'}
+                                        onClick={() => setCategoryFilter(isActive ? null : cat)}
+                                    >
+                                        {cfg.icon} {cfg.label}: <strong className="ml-1">{count}</strong>
+                                    </Button>
+                                );
+                            })}
+                            {categoryFilter && (
+                                <Button size="small" onClick={() => setCategoryFilter(null)} type="link">
+                                    Filtreyi Kaldır
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* "Select all in category" quick action */}
+                    {categoryFilter && categoryFilter !== 'MATCH' && (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="small"
+                                type="dashed"
+                                onClick={() => {
+                                    const keys = filteredData
+                                        .filter((m) => !(m.has_attendance && !m.has_difference))
+                                        .map((m) => `${m.employee_id}_${m.work_date}`);
+                                    setSelectedRows(keys);
+                                    message.info(`${keys.length} kayıt seçildi (${CATEGORY_CONFIG[categoryFilter]?.label || categoryFilter})`);
+                                }}
+                            >
+                                Bu Gruptaki Tümünü Seç ({filteredData.filter((m) => !(m.has_attendance && !m.has_difference)).length})
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Unmatched employees — enhanced display */}
+                    {results.unmatched_employees && results.unmatched_employees.length > 0 && (
+                        <Alert
+                            type="warning"
+                            showIcon
+                            icon={<ExclamationCircleOutlined />}
+                            message={`Eşleştirilemeyen Sicil Numaraları (${results.unmatched_employees.length})`}
+                            description={
+                                <div className="mt-1">
+                                    <div className="space-y-1">
+                                        {results.unmatched_employees.map((emp) => (
+                                            <div key={emp.sicil_id} className="flex items-center gap-2 text-sm">
+                                                <Tag color="orange" className="font-mono">{emp.sicil_id}</Tag>
+                                                {emp.match_status === 'INACTIVE' ? (
+                                                    <>
+                                                        <Tag color="red">Pasif Çalışan</Tag>
+                                                        <span className="font-medium">{emp.employee_name}</span>
+                                                        <span className="text-gray-400">
+                                                            (ID: {emp.employee_id}{emp.department_name ? `, ${emp.department_name}` : ''}{emp.employment_status ? `, ${emp.employment_status}` : ''})
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Tag color="default">Bulunamadı</Tag>
+                                                        {emp.csv_name && <span className="text-gray-500">CSV adı: {emp.csv_name}</span>}
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            }
+                        />
+                    )}
+                    {/* Fallback: old-style unmatched if enhanced not available */}
+                    {!results.unmatched_employees && results.unmatched_sicil_ids && results.unmatched_sicil_ids.length > 0 && (
                         <Alert
                             type="warning"
                             showIcon
                             icon={<ExclamationCircleOutlined />}
                             message="Eşleştirilemeyen Sicil Numaraları"
                             description={
-                                <div className="mt-1">
-                                    <p className="text-sm mb-2">
-                                        Aşağıdaki sicil numaraları sistemde bulunamadı:
-                                    </p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {results.unmatched_sicil_ids.map((id) => (
-                                            <Tag key={id} color="orange" className="font-mono">
-                                                {id}
-                                            </Tag>
-                                        ))}
-                                    </div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                    {results.unmatched_sicil_ids.map((id) => (
+                                        <Tag key={id} color="orange" className="font-mono">{id}</Tag>
+                                    ))}
                                 </div>
                             }
                         />
@@ -973,6 +1057,7 @@ export default function PdksCompareTab() {
                         }}
                         rowClassName={(record) => {
                             if (!record.has_attendance) return 'pdks-row-missing';
+                            if (record.problem_category === 'ABSENT_IN_SYSTEM') return 'pdks-row-absent';
                             if (record.has_difference) return 'pdks-row-diff';
                             return 'pdks-row-match';
                         }}
@@ -995,18 +1080,22 @@ export default function PdksCompareTab() {
                     />
 
                     {/* Row color legend */}
-                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                    <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-300" />
                             Eşleşiyor
                         </span>
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300" />
-                            Fark Var
+                            Fark Var / Oturum Uyumsuz
                         </span>
                         <span className="flex items-center gap-1">
                             <span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-300" />
                             Kayıt Yok
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-3 h-3 rounded bg-purple-100 border border-purple-300" />
+                            Devamsız (ABSENT)
                         </span>
                     </div>
                 </div>
@@ -1115,6 +1204,12 @@ export default function PdksCompareTab() {
                 }
                 .pdks-row-missing:hover td {
                     background-color: #ffedd5 !important;
+                }
+                .pdks-row-absent td {
+                    background-color: #faf5ff !important;
+                }
+                .pdks-row-absent:hover td {
+                    background-color: #f3e8ff !important;
                 }
                 .pdks-row-system-only td {
                     background-color: #eff6ff !important;
