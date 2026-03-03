@@ -94,110 +94,181 @@ const SummaryCard = ({ title, value, color, icon, suffix }) => (
     </Card>
 );
 
-/** Expanded row: CSV events mini-table + system attendance details */
+/** Expanded row: session-based comparison + raw CSV events */
 const ExpandedRowContent = ({ record }) => {
+    const sessions = record.sessions || [];
     const csvEvents = record.csv_events || [];
-    // Backend returns these fields directly on the record, not nested
-    const sysDetails = {
-        total_hours: record.sys_total_hours,
-        overtime_hours: record.sys_overtime_hours,
-        status: record.attendance_status,
-        attendance_id: record.attendance_id,
-    };
+
+    const sessionColumns = [
+        {
+            title: '#',
+            dataIndex: 'session_index',
+            key: 'idx',
+            width: 40,
+            align: 'center',
+            render: (v) => <span className="text-xs text-gray-400">{v}</span>,
+        },
+        {
+            title: 'CSV Giriş',
+            dataIndex: 'csv_check_in',
+            key: 'csv_ci',
+            width: 100,
+            render: (v, s) => (
+                <span className={`font-mono text-xs font-semibold ${s.only_in_csv ? 'text-orange-600' : 'text-green-700'}`}>
+                    {v || '-'}
+                </span>
+            ),
+        },
+        {
+            title: 'CSV Çıkış',
+            dataIndex: 'csv_check_out',
+            key: 'csv_co',
+            width: 100,
+            render: (v, s) => (
+                <span className={`font-mono text-xs font-semibold ${s.only_in_csv ? 'text-orange-600' : 'text-green-700'}`}>
+                    {v || '-'}
+                </span>
+            ),
+        },
+        {
+            title: 'Sistem Giriş',
+            dataIndex: 'sys_check_in',
+            key: 'sys_ci',
+            width: 100,
+            render: (v, s) => {
+                const cls = s.only_in_system ? 'text-blue-600' : s.check_in_differs ? 'text-red-600 font-bold' : 'text-gray-700';
+                return <span className={`font-mono text-xs ${cls}`}>{v || '-'}</span>;
+            },
+        },
+        {
+            title: 'Sistem Çıkış',
+            dataIndex: 'sys_check_out',
+            key: 'sys_co',
+            width: 100,
+            render: (v, s) => {
+                const cls = s.only_in_system ? 'text-blue-600' : s.check_out_differs ? 'text-red-600 font-bold' : 'text-gray-700';
+                return <span className={`font-mono text-xs ${cls}`}>{v || '-'}</span>;
+            },
+        },
+        {
+            title: 'Durum',
+            key: 'sess_status',
+            width: 130,
+            render: (_, s) => {
+                if (s.only_in_csv) return <Tag color="orange">Sadece CSV</Tag>;
+                if (s.only_in_system) return <Tag color="blue">Sadece Sistem</Tag>;
+                if (s.check_in_differs || s.check_out_differs) return <Tag color="red">Fark Var</Tag>;
+                return <Tag color="green">Eşleşiyor</Tag>;
+            },
+        },
+    ];
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 p-2">
-            {/* CSV Events */}
-            <div className="flex-1">
+        <div className="space-y-4 p-2">
+            {/* Session comparison */}
+            <div>
                 <h4 className="text-sm font-semibold mb-2 text-gray-700">
-                    <FileTextOutlined className="mr-1" />
-                    CSV Kart Okuyucu Olayları
+                    <SyncOutlined className="mr-1" />
+                    Oturum Karşılaştırma
+                    <span className="ml-2 text-xs font-normal text-gray-400">
+                        (CSV: {record.csv_session_count || 0} oturum, Sistem: {record.sys_session_count || 0} oturum)
+                    </span>
                 </h4>
-                {csvEvents.length === 0 ? (
-                    <p className="text-xs text-gray-400">Olay bulunamadı.</p>
+                {sessions.length === 0 ? (
+                    <p className="text-xs text-gray-400">Oturum verisi yok.</p>
                 ) : (
                     <Table
-                        dataSource={csvEvents}
-                        rowKey={(e, i) => `${e.event_id || i}`}
+                        dataSource={sessions}
+                        rowKey={(s) => s.session_index}
                         size="small"
                         pagination={false}
                         bordered
-                        columns={[
-                            {
-                                title: 'Saat',
-                                dataIndex: 'time',
-                                key: 'time',
-                                width: 120,
-                                render: (v) => (
-                                    <span className="font-mono text-xs">{formatTime(v)}</span>
-                                ),
-                            },
-                            {
-                                title: 'Yön',
-                                dataIndex: 'direction',
-                                key: 'direction',
-                                width: 100,
-                                render: (v) => (
-                                    <Tag color={v === 'GIRIS' || v === 'GİRİŞ' || v === 'IN' ? 'green' : 'red'}>
-                                        {v === 'GIRIS' || v === 'IN' ? 'GİRİŞ' : v === 'CIKIS' || v === 'OUT' ? 'ÇIKIŞ' : v}
-                                    </Tag>
-                                ),
-                            },
-                            {
-                                title: 'Event ID',
-                                dataIndex: 'event_id',
-                                key: 'event_id',
-                                width: 120,
-                                render: (v) => (
-                                    <span className="font-mono text-xs text-gray-500">{v || '-'}</span>
-                                ),
-                            },
-                        ]}
+                        columns={sessionColumns}
+                        rowClassName={(s) => {
+                            if (s.only_in_csv) return 'pdks-row-missing';
+                            if (s.only_in_system) return 'pdks-row-system-only';
+                            if (s.check_in_differs || s.check_out_differs) return 'pdks-row-diff';
+                            return 'pdks-row-match';
+                        }}
                     />
                 )}
             </div>
 
-            {/* System attendance details */}
-            <div className="flex-1">
-                <h4 className="text-sm font-semibold mb-2 text-gray-700">
-                    <ToolOutlined className="mr-1" />
-                    Sistem Mesai Detayı
-                </h4>
-                {!record.has_attendance ? (
-                    <Alert
-                        type="warning"
-                        showIcon
-                        message="Bu tarih için sistemde mesai kaydı bulunamadı."
-                        className="text-xs"
-                    />
-                ) : (
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-gray-50 rounded p-2">
-                            <span className="text-gray-500">Toplam Süre:</span>
-                            <span className="ml-2 font-semibold">
-                                {sysDetails.total_hours != null
-                                    ? formatHours(sysDetails.total_hours)
-                                    : formatSeconds(sysDetails.total_seconds)}
-                            </span>
-                        </div>
-                        <div className="bg-gray-50 rounded p-2">
-                            <span className="text-gray-500">Ek Mesai:</span>
-                            <span className="ml-2 font-semibold">
-                                {sysDetails.overtime_hours != null
-                                    ? formatHours(sysDetails.overtime_hours)
-                                    : formatSeconds(sysDetails.overtime_seconds)}
-                            </span>
-                        </div>
-                        <div className="bg-gray-50 rounded p-2">
-                            <span className="text-gray-500">Durum:</span>
-                            <span className="ml-2 font-semibold">{sysDetails.status || '-'}</span>
-                        </div>
-                        <div className="bg-gray-50 rounded p-2">
-                            <span className="text-gray-500">Kayıt ID:</span>
-                            <span className="ml-2 font-mono">{sysDetails.attendance_id || '-'}</span>
+            {/* System summary + Raw events side by side */}
+            <div className="flex flex-col lg:flex-row gap-4">
+                {/* System totals */}
+                {record.has_attendance && (
+                    <div className="flex-1">
+                        <h4 className="text-sm font-semibold mb-2 text-gray-700">
+                            <ToolOutlined className="mr-1" />
+                            Sistem Özeti
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="bg-gray-50 rounded p-2">
+                                <span className="text-gray-500">Toplam Süre:</span>
+                                <span className="ml-2 font-semibold">{formatHours(record.sys_total_hours)}</span>
+                            </div>
+                            <div className="bg-gray-50 rounded p-2">
+                                <span className="text-gray-500">Ek Mesai:</span>
+                                <span className="ml-2 font-semibold">{formatHours(record.sys_overtime_hours)}</span>
+                            </div>
+                            <div className="bg-gray-50 rounded p-2">
+                                <span className="text-gray-500">Durum:</span>
+                                <span className="ml-2 font-semibold">{record.attendance_status || '-'}</span>
+                            </div>
+                            <div className="bg-gray-50 rounded p-2">
+                                <span className="text-gray-500">OT Talep:</span>
+                                <span className="ml-2 font-semibold">{record.overtime_request_count || 0}</span>
+                            </div>
                         </div>
                     </div>
                 )}
+
+                {/* Raw CSV events */}
+                <div className="flex-1">
+                    <h4 className="text-sm font-semibold mb-2 text-gray-700">
+                        <FileTextOutlined className="mr-1" />
+                        Ham CSV Olayları ({csvEvents.length})
+                    </h4>
+                    {csvEvents.length === 0 ? (
+                        <p className="text-xs text-gray-400">Olay bulunamadı.</p>
+                    ) : (
+                        <Table
+                            dataSource={csvEvents}
+                            rowKey={(e, i) => `${e.event_id || i}`}
+                            size="small"
+                            pagination={false}
+                            bordered
+                            columns={[
+                                {
+                                    title: 'Saat',
+                                    dataIndex: 'time',
+                                    key: 'time',
+                                    width: 100,
+                                    render: (v) => <span className="font-mono text-xs">{formatTime(v)}</span>,
+                                },
+                                {
+                                    title: 'Yön',
+                                    dataIndex: 'direction',
+                                    key: 'direction',
+                                    width: 80,
+                                    render: (v) => (
+                                        <Tag color={v === 'GIRIS' || v === 'IN' ? 'green' : 'red'}>
+                                            {v === 'GIRIS' || v === 'IN' ? 'GİRİŞ' : v === 'CIKIS' || v === 'OUT' ? 'ÇIKIŞ' : v}
+                                        </Tag>
+                                    ),
+                                },
+                                {
+                                    title: 'Event ID',
+                                    dataIndex: 'event_id',
+                                    key: 'event_id',
+                                    width: 110,
+                                    render: (v) => <span className="font-mono text-xs text-gray-500">{v || '-'}</span>,
+                                },
+                            ]}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -314,11 +385,18 @@ export default function PdksCompareTab() {
         const corrections = selectedRows.map((key) => {
             const match = results.matches.find((m) => `${m.employee_id}_${m.work_date}` === key);
             if (!match) return null;
+            // Send sessions (all check_in/check_out pairs from CSV)
+            const sessions = (match.sessions || [])
+                .filter(s => !s.only_in_system) // exclude system-only sessions
+                .map(s => ({
+                    check_in: s.csv_check_in,
+                    check_out: s.csv_check_out,
+                }))
+                .filter(s => s.check_in || s.check_out); // at least one must exist
             return {
                 employee_id: match.employee_id,
                 work_date: match.work_date,
-                csv_check_in: match.csv_check_in,
-                csv_check_out: match.csv_check_out,
+                sessions,
             };
         }).filter(Boolean);
 
@@ -490,6 +568,24 @@ export default function PdksCompareTab() {
                 },
             },
             {
+                title: 'Oturum',
+                key: 'session_count',
+                width: 80,
+                align: 'center',
+                render: (_, record) => {
+                    const csvC = record.csv_session_count || 0;
+                    const sysC = record.sys_session_count || 0;
+                    const differs = csvC !== sysC;
+                    return (
+                        <Tooltip title={`CSV: ${csvC} oturum, Sistem: ${sysC} oturum`}>
+                            <span className={`text-xs font-mono ${differs ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
+                                {csvC}/{sysC}
+                            </span>
+                        </Tooltip>
+                    );
+                },
+            },
+            {
                 title: 'Durum',
                 key: 'status',
                 width: 120,
@@ -571,58 +667,55 @@ export default function PdksCompareTab() {
                 render: (v) => formatDate(v),
             },
             {
-                title: 'Eski Giriş → Yeni Giriş',
-                key: 'check_in_change',
-                width: 180,
-                render: (_, record) => (
-                    <span className="font-mono text-xs">
-                        <span className="text-red-500 line-through">
-                            {formatTime(record.old_check_in)}
-                        </span>
-                        <span className="mx-1 text-gray-400">→</span>
-                        <span className="text-green-600 font-semibold">
-                            {formatTime(record.new_check_in)}
-                        </span>
-                    </span>
-                ),
-            },
-            {
-                title: 'Eski Çıkış → Yeni Çıkış',
-                key: 'check_out_change',
-                width: 180,
-                render: (_, record) => (
-                    <span className="font-mono text-xs">
-                        <span className="text-red-500 line-through">
-                            {formatTime(record.old_check_out)}
-                        </span>
-                        <span className="mx-1 text-gray-400">→</span>
-                        <span className="text-green-600 font-semibold">
-                            {formatTime(record.new_check_out)}
-                        </span>
-                    </span>
-                ),
-            },
-            {
-                title: 'Eski Süre → Yeni Süre',
-                key: 'duration_change',
-                width: 180,
+                title: 'Oturum',
+                key: 'session_change',
+                width: 100,
+                align: 'center',
                 render: (_, record) => {
-                    const oldDur = record.old_total_hours ?? record.old_total_seconds;
-                    const newDur = record.new_total_hours ?? record.new_total_seconds;
-                    const isSeconds = record.old_total_seconds != null;
-                    const fmt = isSeconds ? formatSeconds : formatHours;
+                    const oldC = record.old_session_count ?? '-';
+                    const newC = record.new_session_count ?? '-';
+                    const changed = oldC !== newC;
                     return (
                         <span className="font-mono text-xs">
-                            <span className="text-gray-500">{fmt(oldDur)}</span>
+                            <span className={changed ? 'text-red-500' : 'text-gray-500'}>{oldC}</span>
                             <span className="mx-1 text-gray-400">→</span>
-                            <span className="font-semibold">{fmt(newDur)}</span>
+                            <span className={changed ? 'text-green-600 font-semibold' : 'font-semibold'}>{newC}</span>
                         </span>
                     );
                 },
             },
             {
-                title: 'OT Değişim',
-                key: 'ot_change',
+                title: 'Eski Süre → Yeni Süre',
+                key: 'duration_change',
+                width: 180,
+                render: (_, record) => (
+                    <span className="font-mono text-xs">
+                        <span className="text-gray-500">{formatHours(record.old_total_hours)}</span>
+                        <span className="mx-1 text-gray-400">→</span>
+                        <span className="font-semibold">{formatHours(record.new_total_hours)}</span>
+                    </span>
+                ),
+            },
+            {
+                title: 'Eski OT → Yeni OT',
+                key: 'ot_seconds_change',
+                width: 160,
+                render: (_, record) => {
+                    const oldOt = record.old_overtime_seconds;
+                    const newOt = record.new_overtime_seconds;
+                    if (oldOt == null && newOt == null) return <span className="text-gray-300">-</span>;
+                    return (
+                        <span className="font-mono text-xs">
+                            <span className="text-gray-500">{formatSeconds(oldOt || 0)}</span>
+                            <span className="mx-1 text-gray-400">→</span>
+                            <span className="font-semibold">{formatSeconds(newOt || 0)}</span>
+                        </span>
+                    );
+                },
+            },
+            {
+                title: 'OT Talep Değişim',
+                key: 'ot_adj',
                 width: 160,
                 render: (_, record) => {
                     const adjustments = record.overtime_adjustments;
@@ -664,9 +757,7 @@ export default function PdksCompareTab() {
                         return <Tag color="default">Atlandı</Tag>;
                     }
                     if (v === 'error' || v === 'failed') {
-                        return (
-                            <Tag color="red">Hata</Tag>
-                        );
+                        return <Tag color="red">Hata</Tag>;
                     }
                     return <Tag>{v || '-'}</Tag>;
                 },
@@ -995,6 +1086,12 @@ export default function PdksCompareTab() {
                 }
                 .pdks-row-missing:hover td {
                     background-color: #ffedd5 !important;
+                }
+                .pdks-row-system-only td {
+                    background-color: #eff6ff !important;
+                }
+                .pdks-row-system-only:hover td {
+                    background-color: #dbeafe !important;
                 }
             `}</style>
         </div>
