@@ -498,8 +498,10 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
 
             const category = nodeItem._category;
 
-            // Only group employees, never departments
-            if (category !== 'SUB_DEPT' && counts[category] >= 2) {
+            // Only group employees, never departments.
+            // Never group employees that have subordinates (children) — their tree must be rendered individually.
+            const hasSubordinates = (members) => members.some(m => m.children && m.children.length > 0);
+            if (category !== 'SUB_DEPT' && counts[category] >= 2 && !hasSubordinates(sortedNodes.filter(n => n._category === category))) {
                 const groupMembers = sortedNodes.filter(n => n._category === category);
                 groupMembers.forEach(m => processedIds.add(m.id));
 
