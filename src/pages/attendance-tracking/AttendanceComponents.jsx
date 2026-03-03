@@ -15,6 +15,8 @@ export const formatMinutes = (minutes) => {
     return `${hours}s ${mins}dk`;
 };
 
+const round2 = (v) => Math.round((v || 0) * 100) / 100;
+
 /* ─────────────────────────────────────────────
    EmployeeAttendanceRow
    ───────────────────────────────────────────── */
@@ -88,6 +90,22 @@ export const EmployeeAttendanceRow = ({
                             )}
                         </div>
                         <span className="text-[11px] text-slate-400 truncate block">{title}</span>
+                        {s.weekly_ot_limit_hours > 0 && (() => {
+                            const used = round2(s.weekly_ot_used_seconds / 3600);
+                            const limit = s.weekly_ot_limit_hours;
+                            const ratio = used / (limit || 1);
+                            const cls = ratio >= 1
+                                ? 'bg-red-50 text-red-600 border-red-200'
+                                : ratio > 0.7
+                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+                            return used > 0 ? (
+                                <span className={`inline-flex items-center gap-1 mt-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`}>
+                                    Haftalık: {used}/{limit} sa
+                                    {ratio >= 1 && ' — LİMİT'}
+                                </span>
+                            ) : null;
+                        })()}
                     </div>
                 </div>
             </td>
