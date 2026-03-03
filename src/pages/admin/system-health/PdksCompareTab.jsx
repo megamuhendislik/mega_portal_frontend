@@ -941,6 +941,9 @@ export default function PdksCompareTab() {
                         expandable={{
                             expandedRowRender: (record) => <ExpandedRowContent record={record} />,
                             rowExpandable: () => true,
+                            defaultExpandedRowKeys: filteredData
+                                .filter((m) => m.has_difference || !m.has_attendance)
+                                .map((m) => `${m.employee_id}_${m.work_date}`),
                         }}
                         rowClassName={(record) => {
                             if (!record.has_attendance) return 'pdks-row-missing';
