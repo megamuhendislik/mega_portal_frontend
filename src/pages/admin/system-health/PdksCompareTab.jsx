@@ -24,6 +24,7 @@ import {
     ExclamationCircleOutlined,
     FileTextOutlined,
     ToolOutlined,
+    DeleteOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -306,6 +307,7 @@ export default function PdksCompareTab() {
     const [selectedRows, setSelectedRows] = useState([]);
     const [showOnlyDiff, setShowOnlyDiff] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState(null); // null = all
+    const [cleaning, setCleaning] = useState(false);
 
     // -----------------------------------------------------------------------
     // Derived data
@@ -462,6 +464,59 @@ export default function PdksCompareTab() {
         setSelectedRows([]);
         setShowOnlyDiff(true);
         setCategoryFilter(null);
+    };
+
+    const handleCleanupEmployees = (employeeIds, employeeNames) => {
+        Modal.confirm({
+            title: 'Çalışan Pasifleştirme Onayı',
+            icon: <ExclamationCircleOutlined />,
+            content: (
+                <div className="mt-2 text-sm">
+                    <p>
+                        <strong>{employeeIds.length}</strong> çalışan pasifleştirilecek ve tüm mesai kayıtları silinecek:
+                    </p>
+                    <ul className="list-disc pl-4 mt-2 text-gray-600">
+                        {employeeNames.map((name, i) => (
+                            <li key={i}>{name} (ID: {employeeIds[i]})</li>
+                        ))}
+                    </ul>
+                    <p className="mt-2 text-red-500 font-medium">
+                        Bu işlem geri alınamaz! Çalışanın tüm mesai ve ek mesai kayıtları silinecektir.
+                    </p>
+                </div>
+            ),
+            okText: 'Pasifleştir ve Temizle',
+            okButtonProps: { danger: true },
+            cancelText: 'İptal',
+            width: 480,
+            onOk: async () => {
+                setCleaning(true);
+                try {
+                    const res = await api.post('/system/health-check/pdks-cleanup-employees/', {
+                        employee_ids: employeeIds,
+                    });
+                    const cleaned = res.data.summary?.cleaned || 0;
+                    message.success(`${cleaned} çalışan pasifleştirildi ve kayıtları temizlendi.`);
+                    // Remove ABSENT rows for cleaned employees from current results
+                    if (results?.matches) {
+                        const cleanedIds = new Set(
+                            res.data.results
+                                ?.filter(r => r.status === 'cleaned')
+                                .map(r => r.employee_id) || []
+                        );
+                        setResults(prev => ({
+                            ...prev,
+                            matches: prev.matches.filter(m => !cleanedIds.has(m.employee_id)),
+                        }));
+                    }
+                } catch (e) {
+                    const errMsg = e.response?.data?.error || e.message;
+                    message.error('Temizleme hatası: ' + errMsg);
+                } finally {
+                    setCleaning(false);
+                }
+            },
+        });
     };
 
     // -----------------------------------------------------------------------
@@ -932,6 +987,31 @@ export default function PdksCompareTab() {
                             >
                                 Bu Gruptaki Tümünü Seç ({filteredData.filter((m) => !(m.has_attendance && !m.has_difference)).length})
                             </Button>
+                            {categoryFilter === 'ABSENT_IN_SYSTEM' && (
+                                <Button
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    loading={cleaning}
+                                    onClick={() => {
+                                        // Collect unique employee IDs from ABSENT rows
+                                        const empMap = new Map();
+                                        filteredData.forEach((m) => {
+                                            if (!empMap.has(m.employee_id)) {
+                                                empMap.set(m.employee_id, m.employee_name);
+                                            }
+                                        });
+                                        const ids = [...empMap.keys()];
+                                        const names = [...empMap.values()];
+                                        handleCleanupEmployees(ids, names);
+                                    }}
+                                >
+                                    Devamsız Çalışanları Pasifleştir ({(() => {
+                                        const uniqueIds = new Set(filteredData.map(m => m.employee_id));
+                                        return uniqueIds.size;
+                                    })()})
+                                </Button>
+                            )}
                         </div>
                     )}
 
