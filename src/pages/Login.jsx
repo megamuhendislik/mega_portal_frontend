@@ -50,7 +50,7 @@ const Login = () => {
                     </div>
 
                     <div className="flex items-center space-x-2 text-sm text-slate-200 font-medium">
-                        <span>© 2026 Mega Mühendislik Müşavirlik Tic. Ltd. Şti.</span>
+                        <span>© 2026 Mega Mühendislik Müşavirlik A.Ş.</span>
                         <span>•</span>
                         <span>Portal v1.0</span>
                     </div>
