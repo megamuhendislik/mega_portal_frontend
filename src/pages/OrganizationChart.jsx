@@ -339,8 +339,9 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
             </div>
 
             {emp.is_secondary && (
-                <div className="absolute top-1 right-1" title="İkincil Görevlendirme">
-                    <Star size={10} className="text-amber-500 fill-amber-500" />
+                <div className="absolute -top-1 -right-1 flex items-center gap-0.5 bg-amber-100 border border-amber-300 rounded-full px-1.5 py-0.5" title="İkincil Görevlendirme — Bu kişi başka bir departmandan atanmıştır">
+                    <Star size={8} className="text-amber-600 fill-amber-500" />
+                    <span className="text-[7px] font-bold text-amber-700">İkincil</span>
                 </div>
             )}
         </div>

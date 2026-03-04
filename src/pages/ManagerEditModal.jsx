@@ -242,14 +242,19 @@ const ManagerEditModal = ({ employeeId, employeeName, onClose, onSaved }) => {
             {/* Department & Position selects */}
             <div className="flex gap-2">
                 <select value={selectedDeptId} onChange={(e) => setSelectedDeptId(e.target.value)} className="flex-1 text-sm border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="">Departman</option>
+                    <option value="">Departman {addingTo === 'secondary' ? '(opsiyonel)' : ''}</option>
                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
                 <select value={selectedPosId} onChange={(e) => setSelectedPosId(e.target.value)} className="flex-1 text-sm border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="">Pozisyon</option>
+                    <option value="">Pozisyon {addingTo === 'secondary' ? '(opsiyonel)' : ''}</option>
                     {positions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
             </div>
+            {addingTo === 'secondary' && (
+                <p className="text-xs text-amber-600 mt-1">
+                    Farklı departman seçerseniz kişi org şemasında o departmanda da görünür. Boş bırakırsanız sadece kendi departmanında görünür.
+                </p>
+            )}
             {validationError && <p className="text-xs text-red-500">{validationError}</p>}
             <div className="flex justify-end gap-2">
                 <button onClick={resetAddForm} className="px-3 py-1 text-xs font-medium text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">Vazgeç</button>
