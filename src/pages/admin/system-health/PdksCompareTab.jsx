@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
     Table,
     Upload,
@@ -442,6 +442,7 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
 export default function PdksCompareTab() {
     // State
     const [mode, setMode] = useState('compare');
+    const previewResultsRef = useRef(null);
     const [file, setFile] = useState(null);
     const [comparing, setComparing] = useState(false);
     const [fixing, setFixing] = useState(false);
@@ -770,12 +771,24 @@ export default function PdksCompareTab() {
         try {
             const res = await api.post('/system/health-check/pdks-full-reset-preview/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 300000, // 5 dakika timeout (büyük CSV'ler için)
+            });
+            console.log('[PDKS Preview] Response received:', {
+                status: res.status,
+                previewCount: res.data?.preview?.length,
+                summaryKeys: Object.keys(res.data?.summary || {}),
+                hasParseErrors: res.data?.parse_errors?.length > 0,
             });
             setResetPreview(res.data);
             message.success(
                 `Analiz tamamlandı: ${res.data.summary?.total_employee_days || 0} çalışan-gün işlendi.`
             );
+            // Sonuçlara scroll et
+            setTimeout(() => {
+                previewResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         } catch (e) {
+            console.error('[PDKS Preview] Error:', e);
             const errMsg =
                 e.response?.data?.error ||
                 e.response?.data?.detail ||
@@ -1879,7 +1892,11 @@ export default function PdksCompareTab() {
                     {/* --- Loading overlay --- */}
                     {(previewing || executing) && (
                         <div className="flex items-center justify-center py-12">
-                            <Spin size="large" tip={previewing ? 'CSV analiz ediliyor (dry-run)...' : 'Tam reset çalıştırılıyor...'} />
+                            <Spin size="large" tip={previewing ? 'CSV analiz ediliyor (dry-run)... Bu işlem büyük dosyalarda 1-2 dakika sürebilir.' : 'Tam reset çalıştırılıyor...'}>
+                                <div className="py-8 text-center text-gray-400 text-sm">
+                                    {previewing ? 'Her çalışan-gün için simülasyon yapılıyor...' : 'Kayıtlar güncelleniyor...'}
+                                </div>
+                            </Spin>
                         </div>
                     )}
 
@@ -1906,7 +1923,7 @@ export default function PdksCompareTab() {
 
                     {/* --- Preview Results --- */}
                     {resetPreview && !resetResults && (
-                        <div className="space-y-4">
+                        <div ref={previewResultsRef} className="space-y-4">
                             {/* Summary stat cards */}
                             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
                                 <SummaryCard
