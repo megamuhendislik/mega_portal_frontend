@@ -27,7 +27,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   }, [isOpen, request]);
 
   useEffect(() => {
-    if (isOpen && request && requestType === 'LEAVE') {
+    if (isOpen && request && requestType === 'LEAVE' && request.request_type_detail?.category !== 'EXTERNAL_DUTY') {
       api.get(`/leave/requests/?employee_id=${request.employee}&status=APPROVED&ordering=-start_date&page_size=5`)
         .then(res => {
           const data = res.data?.results || res.data || [];
@@ -328,8 +328,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </>
             )}
 
-            {/* Calisan Izin Bakiye Bilgisi - Yonetici Gorunumu */}
-            {requestType === 'LEAVE' && request.employee_annual_leave_balance && (
+            {/* Calisan Izin Bakiye Bilgisi - Yonetici Gorunumu (EXTERNAL_DUTY hariç) */}
+            {requestType === 'LEAVE' && request.employee_annual_leave_balance &&
+             request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
               <div className="bg-blue-50/80 rounded-xl p-4 border border-blue-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Briefcase size={16} className="text-blue-600" />
@@ -372,8 +373,80 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </div>
             )}
 
-            {/* Calisanin Son Onayli Izinleri */}
-            {requestType === 'LEAVE' && employeeHistory.length > 0 && (
+            {/* Görev Mesai Bilgisi — External Duty */}
+            {requestType === 'LEAVE' && request.request_type_detail?.category === 'EXTERNAL_DUTY' && (
+              <div className="bg-purple-50/80 rounded-xl p-4 border border-purple-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Briefcase size={16} className="text-purple-600" />
+                  <h4 className="text-sm font-bold text-purple-700">Görev Mesai Bilgisi</h4>
+                </div>
+
+                {request.duty_work_info && (request.duty_work_info.attendance_records?.length > 0 || request.duty_work_info.overtime_records?.length > 0) ? (
+                  <>
+                    {/* Toplam Süre Özeti */}
+                    <div className="grid grid-cols-2 gap-2 text-center mb-3">
+                      <div className="bg-white p-2.5 rounded-lg border border-purple-100">
+                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Normal Mesai</span>
+                        <span className="block font-black text-purple-700 text-lg">
+                          {request.duty_work_info.total_work_minutes ? `${Math.floor(request.duty_work_info.total_work_minutes / 60)}s ${request.duty_work_info.total_work_minutes % 60}dk` : '0'}
+                        </span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-purple-100">
+                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Ek Mesai</span>
+                        <span className="block font-black text-amber-600 text-lg">
+                          {request.duty_work_info.total_ot_minutes ? `${Math.floor(request.duty_work_info.total_ot_minutes / 60)}s ${request.duty_work_info.total_ot_minutes % 60}dk` : '0'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Attendance Kayıtları */}
+                    {request.duty_work_info.attendance_records?.length > 0 && (
+                      <div className="space-y-1.5 mb-2">
+                        <span className="text-[10px] font-bold text-purple-600 uppercase">Mesai Kayıtları</span>
+                        {request.duty_work_info.attendance_records.map((att, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-purple-100">
+                            <span className="text-slate-600">{new Date(att.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span>
+                            <span className="font-bold text-purple-700">{att.check_in} - {att.check_out}</span>
+                            <span className="text-slate-500">{Math.floor(att.duration_minutes / 60)}s {att.duration_minutes % 60}dk</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* OT Kayıtları */}
+                    {request.duty_work_info.overtime_records?.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-amber-600 uppercase">Ek Mesai Kayıtları</span>
+                        {request.duty_work_info.overtime_records.map((ot, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-amber-100">
+                            <span className="text-slate-600">{new Date(ot.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span>
+                            <span className="font-bold text-amber-700">{ot.start_time} - {ot.end_time}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500">{Math.floor(ot.duration_minutes / 60)}s {ot.duration_minutes % 60}dk</span>
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                ot.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                                ot.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                'bg-amber-100 text-amber-700'
+                              }`}>
+                                {ot.status === 'APPROVED' ? 'Onaylı' : ot.status === 'REJECTED' ? 'Reddedildi' : 'Bekliyor'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-3 text-sm text-purple-400">
+                    {request.status === 'PENDING' ? 'Talep onaylandığında mesai kayıtları oluşacaktır.' : 'Mesai kaydı bulunamadı.'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Calisanin Son Onayli Izinleri (EXTERNAL_DUTY hariç) */}
+            {requestType === 'LEAVE' && employeeHistory.length > 0 &&
+             request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <h4 className="text-sm font-bold text-slate-600 mb-2.5 flex items-center gap-1.5">
                   <Calendar size={14} />
@@ -575,7 +648,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
             >
               <XCircle size={20} />
-              İzni İptal Et
+              {request.request_type_detail?.category === 'EXTERNAL_DUTY' ? 'Görevi İptal Et' : 'İzni İptal Et'}
             </button>
           )}
 

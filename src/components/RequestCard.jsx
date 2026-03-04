@@ -97,8 +97,9 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                         </div>
                     )}
 
-                    {/* Annual Leave Balance Info (Only for Incoming Leave Requests) */}
-                    {isIncoming && type === 'LEAVE' && request.employee_annual_leave_balance && (
+                    {/* Annual Leave Balance Info (Only for Incoming Leave Requests, EXTERNAL_DUTY hariç) */}
+                    {isIncoming && type === 'LEAVE' && request.employee_annual_leave_balance &&
+                     request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
                         <div className="bg-blue-50/50 rounded-xl p-2.5 border border-blue-100 text-xs text-slate-600">
                             <h5 className="font-bold text-blue-700 mb-1.5 flex items-center gap-1.5">
                                 <FileText size={12} />
