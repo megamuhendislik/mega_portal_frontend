@@ -100,7 +100,8 @@ export const EmployeeAttendanceRow = ({
                                     ? 'bg-amber-50 text-amber-600 border-amber-200'
                                     : 'bg-emerald-50 text-emerald-600 border-emerald-200';
                             return used > 0 ? (
-                                <span className={`inline-flex items-center gap-1 mt-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`}>
+                                <span className={`inline-flex items-center gap-1 mt-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`}
+                                    title={`Haftalık OT (Pzt-Paz): ${used}/${limit} sa`}>
                                     Haftalık: {used}/{limit} sa
                                     {ratio >= 1 && ' — LİMİT'}
                                 </span>
@@ -355,7 +356,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                     {weeklyOtData && !weeklyOtData.is_unlimited && (
                         <div className="p-3 rounded-xl border border-slate-100 bg-slate-50">
                             <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Mesai Limiti (Son 7 Gün)</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Ek Mesai (Pzt-Paz)</span>
                                 <span className={`text-[10px] font-bold ${
                                     weeklyOtData.is_over_limit ? 'text-red-600' :
                                     (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) > 0.7 ? 'text-amber-600' :

@@ -43,16 +43,33 @@ const DayDetailModal = ({ date, events, onClose, onAddEvent, onEditEvent, isMana
         setOtSubmitting(true);
         setOtError('');
         try {
-            await api.post('/attendance/overtime-assignments/bulk-create/', {
-                employee_ids: otSelectedEmps.map(Number),
-                date: dateStr,
-                max_duration_hours: otMaxHours,
-                task_description: otDescription,
-            });
-            setOtSuccess(true);
-            setOtSelectedEmps([]);
-            setOtDescription('');
-            setTimeout(() => { setOtSuccess(false); setShowOTForm(false); }, 1500);
+            const results = await Promise.allSettled(
+                otSelectedEmps.map(empId =>
+                    api.post('/attendance/overtime-assignments/bulk-create/', {
+                        employee_id: Number(empId),
+                        assignments: [{ date: dateStr, max_duration_hours: otMaxHours }],
+                        task_description: otDescription,
+                    })
+                )
+            );
+            const failedResults = results.filter(r =>
+                r.status === 'rejected' ||
+                (r.status === 'fulfilled' && r.value.data?.total_errors > 0)
+            );
+            if (failedResults.length > 0 && failedResults.length === otSelectedEmps.length) {
+                // All failed
+                const firstErr = failedResults[0];
+                if (firstErr.status === 'rejected') {
+                    setOtError(firstErr.reason?.response?.data?.error || 'Atama başarısız oldu.');
+                } else {
+                    setOtError(firstErr.value.data.errors[0]?.error || 'Atama başarısız oldu.');
+                }
+            } else {
+                setOtSuccess(true);
+                setOtSelectedEmps([]);
+                setOtDescription('');
+                setTimeout(() => { setOtSuccess(false); setShowOTForm(false); }, 1500);
+            }
         } catch (err) {
             setOtError(err.response?.data?.detail || err.response?.data?.error || 'Atama başarısız oldu.');
         } finally {

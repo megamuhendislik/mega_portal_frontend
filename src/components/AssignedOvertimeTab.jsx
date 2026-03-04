@@ -4,11 +4,12 @@ import {
     Clock, Calendar, XCircle, Users, Plus, Loader2, CheckCircle2,
     ChevronDown, ChevronRight, Zap, PenLine, FileText, Send, TrendingUp,
     ClipboardList, CalendarCheck, X, LayoutList, UserCheck,
-    LogIn, LogOut, Coffee, Briefcase, Sun, Moon
+    LogIn, LogOut, Coffee, Briefcase, Sun, Moon, Pencil
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import CreateAssignmentModal from './overtime/CreateAssignmentModal';
+import EditAssignmentModal from './overtime/EditAssignmentModal';
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS & HELPERS
@@ -394,7 +395,7 @@ const RequestCard = ({ req, onCancel }) => {
 // ASSIGNMENT CARD (for "Oluşturduklarım" team tab)
 // ═══════════════════════════════════════════════════════════
 
-const AssignmentCard = ({ assignment, onCancel }) => {
+const AssignmentCard = ({ assignment, onCancel, onEdit }) => {
     const d = new Date(assignment.date + 'T00:00:00');
     const dayName = DAY_NAMES[d.getDay()];
     const dayNum = String(d.getDate()).padStart(2, '0');
@@ -426,12 +427,20 @@ const AssignmentCard = ({ assignment, onCancel }) => {
                         <div className="text-[11px] text-slate-400 mt-1 truncate max-w-sm">{assignment.task_description}</div>
                     )}
                 </div>
-                <div className="flex flex-col items-end justify-center px-3 flex-shrink-0">
+                <div className="flex flex-col items-end justify-center px-3 flex-shrink-0 gap-1">
                     {assignment.status === 'ASSIGNED' && (
-                        <button onClick={() => onCancel(assignment)}
-                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
-                            <XCircle size={10} /> İptal
-                        </button>
+                        <>
+                            {onEdit && (
+                                <button onClick={() => onEdit(assignment)}
+                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                                    <Pencil size={10} /> Düzenle
+                                </button>
+                            )}
+                            <button onClick={() => onCancel(assignment)}
+                                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                                <XCircle size={10} /> İptal
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -443,7 +452,7 @@ const AssignmentCard = ({ assignment, onCancel }) => {
 // TEAM ITEM CARD (for "Ekip Talepleri" accordion items)
 // ═══════════════════════════════════════════════════════════
 
-const TeamItemCard = ({ item, onCancel }) => {
+const TeamItemCard = ({ item, onCancel, onEdit }) => {
     const d = new Date(item.date + 'T00:00:00');
     const dayName = DAY_NAMES[d.getDay()];
     const dayNum = String(d.getDate()).padStart(2, '0');
@@ -482,12 +491,20 @@ const TeamItemCard = ({ item, onCancel }) => {
                         <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description || item.reason}</div>
                     )}
                 </div>
-                {item._type === 'assignment' && item.status === 'ASSIGNED' && onCancel && (
-                    <div className="flex items-center px-2.5">
-                        <button onClick={() => onCancel(item)}
-                            className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
-                            <XCircle size={10} /> İptal
-                        </button>
+                {item._type === 'assignment' && item.status === 'ASSIGNED' && (
+                    <div className="flex flex-col items-center px-2.5 gap-1">
+                        {onEdit && (
+                            <button onClick={() => onEdit(item)}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                                <Pencil size={10} /> Düzenle
+                            </button>
+                        )}
+                        {onCancel && (
+                            <button onClick={() => onCancel(item)}
+                                className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
+                                <XCircle size={10} /> İptal
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
@@ -572,6 +589,7 @@ const AssignedOvertimeTab = () => {
     const [claimModal, setClaimModal] = useState({ open: false, type: null, target: null, title: '', subtitle: '' });
     const [cancelModal, setCancelModal] = useState({ open: false, target: null });
     const [showAssignModal, setShowAssignModal] = useState(false);
+    const [editModal, setEditModal] = useState({ open: false, assignment: null });
     const [actionLoading, setActionLoading] = useState(false);
     const [showManualForm, setShowManualForm] = useState(false);
 
@@ -667,6 +685,10 @@ const AssignedOvertimeTab = () => {
         if (!window.confirm(`${a.employee_name} - ${formatDateTurkish(a.date)} atamasını iptal etmek istiyor musunuz?`)) return;
         try { await api.post(`/overtime-assignments/${a.id}/cancel/`); fetchData(); }
         catch (err) { alert(err.response?.data?.error || 'Hata oluştu.'); }
+    };
+
+    const handleEditAssignment = (assignment) => {
+        setEditModal({ open: true, assignment });
     };
 
     // ── Computed ──
@@ -1009,7 +1031,7 @@ const AssignedOvertimeTab = () => {
                                 : (
                                     <div className="space-y-2">
                                         {filteredMyCreated.map(a => (
-                                            <AssignmentCard key={a.id} assignment={a} onCancel={handleCancelAssignment} />
+                                            <AssignmentCard key={a.id} assignment={a} onCancel={handleCancelAssignment} onEdit={handleEditAssignment} />
                                         ))}
                                     </div>
                                 )
@@ -1048,7 +1070,7 @@ const AssignedOvertimeTab = () => {
                                         {teamGroups.map(group => (
                                             <GroupAccordion key={group.name} name={group.name} count={group.items.length}>
                                                 {group.items.map(item => (
-                                                    <TeamItemCard key={item._key} item={item} onCancel={item._type === 'assignment' ? handleCancelAssignment : null} />
+                                                    <TeamItemCard key={item._key} item={item} onCancel={item._type === 'assignment' ? handleCancelAssignment : null} onEdit={handleEditAssignment} />
                                                 ))}
                                             </GroupAccordion>
                                         ))}
@@ -1071,6 +1093,12 @@ const AssignedOvertimeTab = () => {
                 <CreateAssignmentModal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)}
                     onSuccess={fetchData} teamMembers={teamMembers} />
             )}
+            <EditAssignmentModal
+                isOpen={editModal.open}
+                onClose={() => setEditModal({ open: false, assignment: null })}
+                onSuccess={fetchData}
+                assignment={editModal.assignment}
+            />
         </div>
     );
 };

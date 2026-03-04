@@ -15,14 +15,25 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
     const [error, setError] = useState('');
     const [busyDays, setBusyDays] = useState([]);
     const [loadingBusy, setLoadingBusy] = useState(false);
+    const [fiscalPeriods, setFiscalPeriods] = useState(null);
+    const [weeklyUsage, setWeeklyUsage] = useState(null);
 
     // Çalışan seçildiğinde dolu günleri getir
     const fetchBusyDays = useCallback(async (employeeId) => {
         if (!employeeId) { setBusyDays([]); return; }
         setLoadingBusy(true);
         try {
-            const res = await api.get(`/overtime-assignments/busy-days/${employeeId}/`);
-            setBusyDays(res.data || []);
+            const [busyRes, maxRes] = await Promise.allSettled([
+                api.get(`/overtime-assignments/busy-days/${employeeId}/`),
+                api.get(`/overtime-assignments/last-max-hours/?employee_ids=${employeeId}`),
+            ]);
+            if (busyRes.status === 'fulfilled') setBusyDays(busyRes.value.data || []);
+            if (maxRes.status === 'fulfilled') {
+                const lastMax = maxRes.value.data[String(employeeId)];
+                if (lastMax !== null && lastMax !== undefined) {
+                    setForm(prev => ({ ...prev, max_duration_hours: lastMax }));
+                }
+            }
         } catch { setBusyDays([]); }
         setLoadingBusy(false);
     }, []);
@@ -31,6 +42,25 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
         if (form.employee) fetchBusyDays(form.employee);
         else setBusyDays([]);
     }, [form.employee, fetchBusyDays]);
+
+    // Fetch fiscal periods on mount
+    useEffect(() => {
+        if (!isOpen) return;
+        api.get('/overtime-assignments/fiscal-periods/').then(res => {
+            setFiscalPeriods(res.data);
+        }).catch(() => {});
+    }, [isOpen]);
+
+    // Fetch weekly OT usage when employee + date selected
+    useEffect(() => {
+        if (form.employee && form.date) {
+            api.get('/overtime-requests/weekly-ot-status/', {
+                params: { employee_id: form.employee, reference_date: form.date },
+            }).then(res => setWeeklyUsage(res.data)).catch(() => setWeeklyUsage(null));
+        } else {
+            setWeeklyUsage(null);
+        }
+    }, [form.employee, form.date]);
 
     if (!isOpen) return null;
 
@@ -47,25 +77,36 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
 
         setSubmitting(true);
         try {
-            await api.post('/overtime-assignments/', {
-                employee: parseInt(form.employee),
-                date: form.date,
-                max_duration_hours: parseFloat(form.max_duration_hours),
+            const res = await api.post('/overtime-assignments/bulk-create/', {
+                employee_id: parseInt(form.employee),
+                assignments: [{ date: form.date, max_duration_hours: parseFloat(form.max_duration_hours) }],
                 task_description: form.task_description.trim(),
-                notes: form.notes.trim() || undefined,
+                notes: form.notes.trim() || '',
             });
-            setForm({ employee: '', date: '', max_duration_hours: 6, task_description: '', notes: '' });
-            setBusyDays([]);
-            onSuccess();
-            onClose();
+            if (res.data?.errors?.length) {
+                setError(res.data.errors[0].error);
+            } else {
+                setForm({ employee: '', date: '', max_duration_hours: 6, task_description: '', notes: '' });
+                setBusyDays([]);
+                onSuccess();
+                onClose();
+            }
         } catch (err) {
-            setError(err.response?.data?.error || err.response?.data?.detail || JSON.stringify(err.response?.data) || 'Hata oluştu.');
+            const data = err.response?.data;
+            if (data?.errors?.length) {
+                setError(data.errors[0].error);
+            } else {
+                setError(data?.error || data?.detail || 'Hata oluştu.');
+            }
         }
         setSubmitting(false);
     };
 
     // Tarih seçici min = bugün
     const today = new Date().toISOString().split('T')[0];
+    const dateMin = fiscalPeriods ? fiscalPeriods.current.start : today;
+    const dateMax = fiscalPeriods ? fiscalPeriods.next.end : '';
+    const effectiveMin = dateMin > today ? dateMin : today;
 
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
@@ -120,12 +161,32 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                         <div className="text-xs text-slate-400 text-center py-1">Dolu günler yükleniyor...</div>
                     )}
 
+                    {/* Weekly OT Usage */}
+                    {weeklyUsage && !weeklyUsage.is_unlimited && (
+                        <div className="bg-slate-50 rounded-xl p-2.5 space-y-1">
+                            <div className="flex justify-between text-[11px] font-bold">
+                                <span className="text-slate-500">Haftalık OT (Pzt-Paz)</span>
+                                <span className={weeklyUsage.used_hours / weeklyUsage.limit_hours >= 1 ? 'text-red-600' : 'text-slate-600'}>
+                                    {weeklyUsage.used_hours}/{weeklyUsage.limit_hours} sa
+                                    {weeklyUsage.used_hours / weeklyUsage.limit_hours >= 1 && ' — LİMİT'}
+                                </span>
+                            </div>
+                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${
+                                    weeklyUsage.used_hours / weeklyUsage.limit_hours >= 1 ? 'bg-red-500' :
+                                    weeklyUsage.used_hours / weeklyUsage.limit_hours > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                                }`} style={{ width: `${Math.min(100, (weeklyUsage.used_hours / weeklyUsage.limit_hours) * 100)}%` }} />
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
                             <input
                                 type="date"
-                                min={today}
+                                min={effectiveMin}
+                                max={dateMax}
                                 value={form.date}
                                 onChange={e => setForm({...form, date: e.target.value})}
                                 className={`w-full p-3 bg-slate-50 rounded-xl border text-sm font-medium focus:ring-2 focus:ring-blue-200 outline-none ${
@@ -136,6 +197,11 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                             {selectedDateBusy && (
                                 <p className="text-[10px] text-red-600 font-bold mt-1">
                                     Bu tarih {selectedDateBusy.manager_name} tarafından dolu!
+                                </p>
+                            )}
+                            {fiscalPeriods && (
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    {new Date(fiscalPeriods.current.start + 'T00:00:00').toLocaleDateString('tr-TR', {day:'numeric',month:'short'})} — {new Date(fiscalPeriods.next.end + 'T00:00:00').toLocaleDateString('tr-TR', {day:'numeric',month:'short'})}
                                 </p>
                             )}
                         </div>
