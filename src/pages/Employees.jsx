@@ -1658,12 +1658,20 @@ const Employees = () => {
                         <span className="text-[10px] text-slate-400 font-mono bg-slate-50 px-1.5 py-0.5 rounded hidden md:inline-block shrink-0">#{empData.employee_code}</span>
                     )}
 
+                    {/* Admin badge */}
+                    {empData?.is_admin && (
+                        <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded shrink-0">Admin</span>
+                    )}
+
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         {showSettings ? (
                             <>
-                                <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
-                                {hasPermission('PAGE_EMPLOYEES') && empData && (
+                                {/* Admin çalışanları sadece adminler düzenleyebilir */}
+                                {(!empData?.is_admin || hasPermission('SYSTEM_FULL_ACCESS')) && (
+                                    <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
+                                )}
+                                {hasPermission('PAGE_EMPLOYEES') && empData && !empData.is_admin && (
                                     <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                                 )}
                             </>

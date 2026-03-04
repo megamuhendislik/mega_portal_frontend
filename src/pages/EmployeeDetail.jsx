@@ -15,10 +15,13 @@ const EmployeeDetail = () => {
     const { hasPermission } = useAuth(); // Destructure
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
+    const [targetIsAdmin, setTargetIsAdmin] = useState(false);
 
-    const canEdit = hasPermission('PAGE_EMPLOYEES');
-    const canEditSensitive = hasPermission('PAGE_EMPLOYEES');
-    const canChangePassword = hasPermission('PAGE_EMPLOYEES');
+    const isCurrentUserAdmin = hasPermission('SYSTEM_FULL_ACCESS');
+    // Admin çalışanları sadece adminler düzenleyebilir
+    const canEdit = hasPermission('PAGE_EMPLOYEES') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canEditSensitive = canEdit;
+    const canChangePassword = canEdit;
     const canManageRoles = hasPermission('SYSTEM_FULL_ACCESS');
 
     // Data Sources
@@ -81,6 +84,9 @@ const EmployeeDetail = () => {
 
             const emp = empRes.data;
             const managers = managersRes.data;
+
+            // Admin koruma: hedef çalışan admin mi?
+            setTargetIsAdmin(!!emp.is_admin);
 
             setDepartments(deptRes.data.results || deptRes.data);
             setJobPositions(posRes.data.results || posRes.data);
@@ -255,6 +261,12 @@ const EmployeeDetail = () => {
                         </p>
                     </div>
                 </div>
+                {targetIsAdmin && !isCurrentUserAdmin && hasPermission('PAGE_EMPLOYEES') && (
+                    <div className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-medium border border-red-200">
+                        <Shield size={16} />
+                        Admin kullanıcı — sadece adminler düzenleyebilir
+                    </div>
+                )}
                 {canEdit && (
                     <button
                         onClick={handleSave}
