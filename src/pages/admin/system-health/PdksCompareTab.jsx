@@ -14,6 +14,7 @@ import {
     Statistic,
     Space,
     Spin,
+    Segmented,
 } from 'antd';
 import {
     InboxOutlined,
@@ -25,6 +26,9 @@ import {
     FileTextOutlined,
     ToolOutlined,
     DeleteOutlined,
+    ThunderboltOutlined,
+    SafetyOutlined,
+    ReloadOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -436,6 +440,7 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
 
 export default function PdksCompareTab() {
     // State
+    const [mode, setMode] = useState('compare');
     const [file, setFile] = useState(null);
     const [comparing, setComparing] = useState(false);
     const [fixing, setFixing] = useState(false);
@@ -445,6 +450,24 @@ export default function PdksCompareTab() {
     const [showOnlyDiff, setShowOnlyDiff] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState(null); // null = all
     const [cleaning, setCleaning] = useState(false);
+
+    // Full Reset mode state
+    const [resetPreview, setResetPreview] = useState(null);
+    const [resetResults, setResetResults] = useState(null);
+    const [previewing, setPreviewing] = useState(false);
+    const [executing, setExecuting] = useState(false);
+
+    // Mode switch handler — clears all state
+    const handleModeChange = useCallback((newMode) => {
+        setMode(newMode);
+        setResults(null);
+        setFixResults(null);
+        setSelectedRows([]);
+        setResetPreview(null);
+        setResetResults(null);
+        setShowOnlyDiff(false);
+        setCategoryFilter(null);
+    }, []);
 
     // -----------------------------------------------------------------------
     // Derived data
@@ -601,6 +624,8 @@ export default function PdksCompareTab() {
         setSelectedRows([]);
         setShowOnlyDiff(true);
         setCategoryFilter(null);
+        setResetPreview(null);
+        setResetResults(null);
     };
 
     const handleFixSingle = (record) => {
@@ -728,6 +753,103 @@ export default function PdksCompareTab() {
     };
 
     // -----------------------------------------------------------------------
+    // Full Reset handlers
+    // -----------------------------------------------------------------------
+
+    const handleResetPreview = useCallback(async () => {
+        if (!file) {
+            message.warning('Lütfen önce bir CSV dosyası seçin.');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        setPreviewing(true);
+        setResetPreview(null);
+        setResetResults(null);
+        try {
+            const res = await api.post('/system/health-check/pdks-full-reset-preview/', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setResetPreview(res.data);
+            message.success(
+                `Analiz tamamlandı: ${res.data.summary?.total_employee_days || 0} çalışan-gün işlendi.`
+            );
+        } catch (e) {
+            const errMsg =
+                e.response?.data?.error ||
+                e.response?.data?.detail ||
+                e.message;
+            message.error('Analiz hatası: ' + errMsg);
+        } finally {
+            setPreviewing(false);
+        }
+    }, [file]);
+
+    const handleResetExecute = useCallback(() => {
+        if (!file) {
+            message.warning('Lütfen önce bir CSV dosyası seçin.');
+            return;
+        }
+        Modal.confirm({
+            title: 'TAM RESET & YENİDEN HESAPLAMA ONAYI',
+            icon: <ExclamationCircleOutlined />,
+            width: 560,
+            content: (
+                <div className="mt-2 text-sm space-y-3">
+                    <Alert
+                        type="error"
+                        showIcon
+                        message="DİKKAT: Bu işlem geri alınamaz!"
+                        description={
+                            <div className="mt-1 space-y-1">
+                                <p>Seçili tarih aralığındaki TÜM attendance kayıtları silinecek.</p>
+                                <p>CSV verileri ile sıfırdan yeni kayıtlar oluşturulacak.</p>
+                                <p>Potansiyel (POTENTIAL) OT talepleri silinecek.</p>
+                                <p>Onaylı OT, izin, kartsız giriş ve dış görev kayıtları korunacak.</p>
+                            </div>
+                        }
+                    />
+                    {resetPreview?.summary && (
+                        <div className="bg-gray-50 rounded p-2 text-xs">
+                            <strong>Özet:</strong> {resetPreview.summary.total_employee_days} çalışan-gün,{' '}
+                            {resetPreview.summary.total_attendance_to_delete} attendance silinecek,{' '}
+                            {resetPreview.summary.total_csv_sessions_to_create} session oluşturulacak
+                        </div>
+                    )}
+                </div>
+            ),
+            okText: 'Onayla ve Tam Reset Çalıştır',
+            okButtonProps: { danger: true },
+            cancelText: 'İptal',
+            onOk: async () => {
+                const formData = new FormData();
+                formData.append('file', file);
+                setExecuting(true);
+                try {
+                    const res = await api.post('/system/health-check/pdks-full-reset-execute/', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                    });
+                    setResetResults(res.data);
+                    const s = res.data.summary || {};
+                    if ((s.failed || 0) === 0) {
+                        message.success(`Tam reset tamamlandı: ${s.success || 0} başarılı, ${s.skipped || 0} atlandı.`);
+                    } else {
+                        message.warning(`Tam reset: ${s.success || 0} başarılı, ${s.failed || 0} hata, ${s.skipped || 0} atlandı.`);
+                    }
+                } catch (e) {
+                    const errMsg =
+                        e.response?.data?.error ||
+                        e.response?.data?.detail ||
+                        e.message;
+                    message.error('Tam reset hatası: ' + errMsg);
+                } finally {
+                    setExecuting(false);
+                }
+            },
+        });
+    }, [file, resetPreview]);
+
+    // -----------------------------------------------------------------------
     // Upload props
     // -----------------------------------------------------------------------
 
@@ -739,6 +861,8 @@ export default function PdksCompareTab() {
             setResults(null);
             setFixResults(null);
             setSelectedRows([]);
+            setResetPreview(null);
+            setResetResults(null);
             return false; // prevent auto-upload
         },
         onRemove: () => {
@@ -746,6 +870,8 @@ export default function PdksCompareTab() {
             setResults(null);
             setFixResults(null);
             setSelectedRows([]);
+            setResetPreview(null);
+            setResetResults(null);
         },
         fileList: file ? [file] : [],
     };
@@ -1070,19 +1196,253 @@ export default function PdksCompareTab() {
     // Render
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Full Reset preview table columns
+    // -----------------------------------------------------------------------
+
+    const resetPreviewColumns = useMemo(() => [
+        {
+            title: 'Sicil No',
+            dataIndex: 'employee_code',
+            key: 'employee_code',
+            width: 90,
+            sorter: (a, b) => (a.employee_code || '').localeCompare(b.employee_code || ''),
+            render: (v) => <span className="font-mono text-xs">{v || '-'}</span>,
+        },
+        {
+            title: 'Ad Soyad',
+            dataIndex: 'employee_name',
+            key: 'employee_name',
+            width: 160,
+            sorter: (a, b) => (a.employee_name || '').localeCompare(b.employee_name || '', 'tr'),
+            ellipsis: true,
+        },
+        {
+            title: 'Departman',
+            dataIndex: 'department_name',
+            key: 'department_name',
+            width: 130,
+            ellipsis: true,
+            render: (v) => <span className="text-xs text-gray-500">{v || '-'}</span>,
+        },
+        {
+            title: 'Tarih',
+            dataIndex: 'work_date',
+            key: 'work_date',
+            width: 100,
+            defaultSortOrder: 'ascend',
+            sorter: (a, b) => (a.work_date || '').localeCompare(b.work_date || ''),
+            render: (v) => formatDate(v),
+        },
+        {
+            title: 'CSV Session',
+            dataIndex: 'csv_session_count',
+            key: 'csv_session_count',
+            width: 90,
+            align: 'center',
+            render: (v) => <span className="font-mono text-xs font-semibold text-green-700">{v || 0}</span>,
+        },
+        {
+            title: 'Mevcut Att.',
+            dataIndex: 'existing_attendance_count',
+            key: 'existing_attendance_count',
+            width: 90,
+            align: 'center',
+            render: (v) => <span className="font-mono text-xs">{v || 0}</span>,
+        },
+        {
+            title: 'Mevcut Saat',
+            dataIndex: 'existing_total_hours',
+            key: 'existing_total_hours',
+            width: 100,
+            align: 'center',
+            render: (v) => <span className="font-mono text-xs">{v != null ? formatHours(v) : '-'}</span>,
+        },
+        {
+            title: 'Sil. POT OT',
+            dataIndex: 'potential_ot_to_delete',
+            key: 'potential_ot_to_delete',
+            width: 90,
+            align: 'center',
+            render: (v) => v > 0
+                ? <span className="font-mono text-xs font-semibold text-orange-600">{v}</span>
+                : <span className="text-gray-300">-</span>,
+        },
+        {
+            title: 'Durum',
+            key: 'status_tags',
+            width: 200,
+            render: (_, record) => {
+                const tags = [];
+                if (record.has_approved_leave) tags.push(<Tag key="leave" color="blue">İzinli</Tag>);
+                if (record.approved_cardless_entries?.length > 0) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
+                if (record.external_duties?.length > 0) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
+                if (record.preserved_ot_requests?.length > 0) tags.push(<Tag key="ot" color="purple">OT Korunan</Tag>);
+                return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
+            },
+        },
+    ], []);
+
+    // -----------------------------------------------------------------------
+    // Full Reset execution results columns
+    // -----------------------------------------------------------------------
+
+    const resetResultColumns = useMemo(() => [
+        {
+            title: 'Sicil',
+            dataIndex: 'employee_code',
+            key: 'employee_code',
+            width: 80,
+            render: (v) => <span className="font-mono text-xs">{v || '-'}</span>,
+        },
+        {
+            title: 'Ad Soyad',
+            dataIndex: 'employee_name',
+            key: 'employee_name',
+            width: 150,
+            ellipsis: true,
+        },
+        {
+            title: 'Tarih',
+            dataIndex: 'work_date',
+            key: 'work_date',
+            width: 100,
+            render: (v) => formatDate(v),
+        },
+        {
+            title: 'Durum',
+            dataIndex: 'status',
+            key: 'status',
+            width: 100,
+            render: (v) => {
+                if (v === 'success') return <Tag color="green">Başarılı</Tag>;
+                if (v === 'failed') return <Tag color="red">Hata</Tag>;
+                if (v === 'skipped') return <Tag color="orange">Atlandı</Tag>;
+                return <Tag>{v || '-'}</Tag>;
+            },
+        },
+        {
+            title: 'Eski Att',
+            key: 'old_att',
+            width: 75,
+            align: 'center',
+            render: (_, r) => <span className="font-mono text-xs">{r.details?.old_attendance_count ?? '-'}</span>,
+        },
+        {
+            title: 'Yeni Att',
+            key: 'new_att',
+            width: 75,
+            align: 'center',
+            render: (_, r) => <span className="font-mono text-xs font-semibold">{r.details?.new_attendance_count ?? '-'}</span>,
+        },
+        {
+            title: 'Eski Saat',
+            key: 'old_hours',
+            width: 90,
+            align: 'center',
+            render: (_, r) => <span className="font-mono text-xs">{r.details?.old_total_hours != null ? formatHours(r.details.old_total_hours) : '-'}</span>,
+        },
+        {
+            title: 'Yeni Saat',
+            key: 'new_hours',
+            width: 90,
+            align: 'center',
+            render: (_, r) => <span className="font-mono text-xs font-semibold">{r.details?.new_total_hours != null ? formatHours(r.details.new_total_hours) : '-'}</span>,
+        },
+        {
+            title: 'OT Saat',
+            key: 'ot_hours',
+            width: 80,
+            align: 'center',
+            render: (_, r) => {
+                const v = r.details?.new_overtime_hours;
+                if (v == null || v === 0) return <span className="text-gray-300">-</span>;
+                return <span className="font-mono text-xs text-purple-600 font-semibold">{formatHours(v)}</span>;
+            },
+        },
+        {
+            title: 'İzin',
+            key: 'leave',
+            width: 60,
+            align: 'center',
+            render: (_, r) => r.details?.had_approved_leave
+                ? <Tag color="blue">Evet</Tag>
+                : <span className="text-gray-300">-</span>,
+        },
+        {
+            title: 'Hata',
+            dataIndex: 'error',
+            key: 'error',
+            width: 200,
+            ellipsis: true,
+            render: (v) => v ? <span className="text-xs text-red-500">{v}</span> : <span className="text-gray-300">-</span>,
+        },
+    ], []);
+
     return (
         <div className="space-y-6">
+            {/* --- Mode Selector --- */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <Segmented
+                    value={mode}
+                    onChange={handleModeChange}
+                    options={[
+                        {
+                            label: (
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                    <SyncOutlined />
+                                    <span>Karşılaştır</span>
+                                </div>
+                            ),
+                            value: 'compare',
+                        },
+                        {
+                            label: (
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                    <ThunderboltOutlined />
+                                    <span>Tam Reset & Yeniden Hesapla</span>
+                                </div>
+                            ),
+                            value: 'fullReset',
+                        },
+                    ]}
+                    block
+                    size="large"
+                />
+            </div>
+
             {/* --- Step 1: Upload Section --- */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h3 className="text-base font-semibold text-gray-800 mb-4">
-                    <SyncOutlined className="mr-2 text-blue-500" />
-                    PDKS Kart Okuyucu Karşılaştırma
+                    {mode === 'compare' ? (
+                        <>
+                            <SyncOutlined className="mr-2 text-blue-500" />
+                            PDKS Kart Okuyucu Karşılaştırma
+                        </>
+                    ) : (
+                        <>
+                            <ThunderboltOutlined className="mr-2 text-red-500" />
+                            PDKS Tam Reset & Yeniden Hesaplama
+                        </>
+                    )}
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
-                    Kart okuyucu (PDKS) cihazından alınan CSV dosyasını yükleyerek
-                    sistemdeki mesai kayıtları ile karşılaştırabilirsiniz. Farklılıklar
-                    tespit edildiğinde seçip düzeltebilirsiniz.
+                    {mode === 'compare'
+                        ? 'Kart okuyucu (PDKS) cihazından alınan CSV dosyasını yükleyerek sistemdeki mesai kayıtları ile karşılaştırabilirsiniz. Farklılıklar tespit edildiğinde seçip düzeltebilirsiniz.'
+                        : 'CSV dosyasındaki kart okuyucu verileri ile sistemdeki TÜM attendance kayıtları silinip sıfırdan oluşturulur. Onaylı OT, izin, kartsız giriş ve dış görev kayıtları korunur. Potansiyel OT talepleri silinir.'
+                    }
                 </p>
+
+                {mode === 'fullReset' && (
+                    <Alert
+                        type="warning"
+                        showIcon
+                        icon={<ExclamationCircleOutlined />}
+                        className="mb-4"
+                        message="Bu mod, seçili tarih aralığındaki tüm attendance kayıtlarını siler ve CSV'den yeniden oluşturur."
+                        description="Önce 'Analiz Et (Dry-Run)' ile önizleme yapmanız önerilir."
+                    />
+                )}
 
                 <Upload.Dragger {...uploadProps} className="mb-4">
                     <p className="ant-upload-drag-icon">
@@ -1096,381 +1456,753 @@ export default function PdksCompareTab() {
                     </p>
                 </Upload.Dragger>
 
-                <Space>
-                    <Button
-                        type="primary"
-                        icon={<SyncOutlined spin={comparing} />}
-                        onClick={handleCompare}
-                        loading={comparing}
-                        disabled={!file || comparing}
-                        size="large"
-                    >
-                        {comparing ? 'Karşılaştırılıyor...' : 'Karşılaştır'}
-                    </Button>
-                    {results && (
-                        <Button onClick={handleReset} size="large">
-                            Sıfırla
+                {mode === 'compare' && (
+                    <Space>
+                        <Button
+                            type="primary"
+                            icon={<SyncOutlined spin={comparing} />}
+                            onClick={handleCompare}
+                            loading={comparing}
+                            disabled={!file || comparing}
+                            size="large"
+                        >
+                            {comparing ? 'Karşılaştırılıyor...' : 'Karşılaştır'}
                         </Button>
-                    )}
-                </Space>
+                        {results && (
+                            <Button onClick={handleReset} size="large">
+                                Sıfırla
+                            </Button>
+                        )}
+                    </Space>
+                )}
+
+                {mode === 'fullReset' && (
+                    <Space>
+                        <Button
+                            type="primary"
+                            icon={<SafetyOutlined />}
+                            onClick={handleResetPreview}
+                            loading={previewing}
+                            disabled={!file || previewing || executing}
+                            size="large"
+                        >
+                            {previewing ? 'Analiz Ediliyor...' : 'Analiz Et (Dry-Run)'}
+                        </Button>
+                        {(resetPreview || resetResults) && (
+                            <Button onClick={handleReset} size="large">
+                                Sıfırla
+                            </Button>
+                        )}
+                    </Space>
+                )}
             </div>
 
-            {/* --- Loading overlay --- */}
-            {comparing && (
-                <div className="flex items-center justify-center py-12">
-                    <Spin size="large" tip="CSV dosyası işleniyor ve karşılaştırılıyor..." />
-                </div>
+            {/* ================================================================= */}
+            {/* COMPARE MODE                                                      */}
+            {/* ================================================================= */}
+            {mode === 'compare' && (
+                <>
+                    {/* --- Loading overlay --- */}
+                    {comparing && (
+                        <div className="flex items-center justify-center py-12">
+                            <Spin size="large" tip="CSV dosyası işleniyor ve karşılaştırılıyor..." />
+                        </div>
+                    )}
+
+                    {/* --- Step 2: Summary Cards --- */}
+                    {results && summary && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <SummaryCard
+                                    title="Toplam Gün"
+                                    value={summary.total}
+                                    color="bg-blue-50 border-blue-200"
+                                    icon={<FileTextOutlined className="text-blue-500" />}
+                                />
+                                <SummaryCard
+                                    title="Fark Var"
+                                    value={summary.withDiff}
+                                    color="bg-red-50 border-red-200"
+                                    icon={<CloseCircleOutlined className="text-red-500" />}
+                                />
+                                <SummaryCard
+                                    title="Eşleşme"
+                                    value={summary.matching}
+                                    color="bg-green-50 border-green-200"
+                                    icon={<CheckCircleOutlined className="text-green-500" />}
+                                />
+                                <SummaryCard
+                                    title="Sistemde Kayıt Yok"
+                                    value={summary.noAttendance}
+                                    color="bg-orange-50 border-orange-200"
+                                    icon={<WarningOutlined className="text-orange-500" />}
+                                />
+                            </div>
+
+                            {/* Category summary badges */}
+                            {results.summary?.category_summary && (
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.entries(CATEGORY_CONFIG).map(([cat, cfg]) => {
+                                        const count = categorySummary[cat] || 0;
+                                        if (count === 0) return null;
+                                        const isActive = categoryFilter === cat;
+                                        return (
+                                            <Button
+                                                key={cat}
+                                                size="small"
+                                                type={isActive ? 'primary' : 'default'}
+                                                className={isActive ? '' : 'border-gray-300'}
+                                                onClick={() => setCategoryFilter(isActive ? null : cat)}
+                                            >
+                                                {cfg.icon} {cfg.label}: <strong className="ml-1">{count}</strong>
+                                            </Button>
+                                        );
+                                    })}
+                                    {categoryFilter && (
+                                        <Button size="small" onClick={() => setCategoryFilter(null)} type="link">
+                                            Filtreyi Kaldır
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* "Select all in category" quick action */}
+                            {categoryFilter && categoryFilter !== 'MATCH' && (
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="small"
+                                        type="dashed"
+                                        onClick={() => {
+                                            const keys = filteredData
+                                                .filter((m) => !(m.has_attendance && !m.has_difference))
+                                                .map((m) => `${m.employee_id}_${m.work_date}`);
+                                            setSelectedRows(keys);
+                                            message.info(`${keys.length} kayıt seçildi (${CATEGORY_CONFIG[categoryFilter]?.label || categoryFilter})`);
+                                        }}
+                                    >
+                                        Bu Gruptaki Tümünü Seç ({filteredData.filter((m) => !(m.has_attendance && !m.has_difference)).length})
+                                    </Button>
+                                    {categoryFilter === 'ABSENT_IN_SYSTEM' && (
+                                        <Button
+                                            size="small"
+                                            danger
+                                            icon={<DeleteOutlined />}
+                                            loading={cleaning}
+                                            onClick={() => {
+                                                // Collect unique employee IDs from ABSENT rows
+                                                const empMap = new Map();
+                                                filteredData.forEach((m) => {
+                                                    if (!empMap.has(m.employee_id)) {
+                                                        empMap.set(m.employee_id, m.employee_name);
+                                                    }
+                                                });
+                                                const ids = [...empMap.keys()];
+                                                const names = [...empMap.values()];
+                                                handleCleanupEmployees(ids, names);
+                                            }}
+                                        >
+                                            Kalıntı Çalışanları Tamamen Sil ({(() => {
+                                                const uniqueIds = new Set(filteredData.map(m => m.employee_id));
+                                                return uniqueIds.size;
+                                            })()})
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Unmatched employees — enhanced display */}
+                            {results.unmatched_employees && results.unmatched_employees.length > 0 && (
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    icon={<ExclamationCircleOutlined />}
+                                    message={`Eşleştirilemeyen Sicil Numaraları (${results.unmatched_employees.length})`}
+                                    description={
+                                        <div className="mt-1">
+                                            <div className="space-y-1">
+                                                {results.unmatched_employees.map((emp) => (
+                                                    <div key={emp.sicil_id} className="flex items-center gap-2 text-sm">
+                                                        <Tag color="orange" className="font-mono">{emp.sicil_id}</Tag>
+                                                        {emp.match_status === 'INACTIVE' ? (
+                                                            <>
+                                                                <Tag color="red">Pasif Çalışan</Tag>
+                                                                <span className="font-medium">{emp.employee_name}</span>
+                                                                <span className="text-gray-400">
+                                                                    (ID: {emp.employee_id}{emp.department_name ? `, ${emp.department_name}` : ''}{emp.employment_status ? `, ${emp.employment_status}` : ''})
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Tag color="default">Bulunamadı</Tag>
+                                                                {emp.csv_name && <span className="text-gray-500">CSV adı: {emp.csv_name}</span>}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    }
+                                />
+                            )}
+                            {/* Fallback: old-style unmatched if enhanced not available */}
+                            {!results.unmatched_employees && results.unmatched_sicil_ids && results.unmatched_sicil_ids.length > 0 && (
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    icon={<ExclamationCircleOutlined />}
+                                    message="Eşleştirilemeyen Sicil Numaraları"
+                                    description={
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                            {results.unmatched_sicil_ids.map((id) => (
+                                                <Tag key={id} color="orange" className="font-mono">{id}</Tag>
+                                            ))}
+                                        </div>
+                                    }
+                                />
+                            )}
+
+                            {/* Parse errors warning */}
+                            {results.parse_errors && results.parse_errors.length > 0 && (
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    className="mt-3"
+                                    message={`${results.parse_errors.length} satır CSV'den ayrıştırılamadı`}
+                                    description={
+                                        <div className="mt-1 max-h-32 overflow-y-auto">
+                                            <ul className="list-disc pl-4 text-xs">
+                                                {results.parse_errors.slice(0, 20).map((err, i) => (
+                                                    <li key={i}>{err}</li>
+                                                ))}
+                                                {results.parse_errors.length > 20 && (
+                                                    <li>...ve {results.parse_errors.length - 20} daha</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    }
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {/* --- Step 3: Results Table --- */}
+                    {results && results.matches && results.matches.length > 0 && (
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            {/* Table toolbar */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <Checkbox
+                                        checked={showOnlyDiff}
+                                        onChange={(e) => setShowOnlyDiff(e.target.checked)}
+                                    >
+                                        <span className="text-sm">Sadece Farkları Göster</span>
+                                    </Checkbox>
+                                    <span className="text-xs text-gray-400">
+                                        {filteredData.length} / {results.matches.length} kayıt
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {selectedRows.length > 0 && (
+                                        <Button
+                                            type="primary"
+                                            danger
+                                            icon={<ToolOutlined />}
+                                            onClick={handleFix}
+                                            loading={fixing}
+                                            disabled={fixing}
+                                        >
+                                            Seçilenleri Düzelt ({selectedRows.length})
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Main comparison table */}
+                            <Table
+                                dataSource={filteredData}
+                                columns={columns}
+                                rowKey={rowKey}
+                                rowSelection={rowSelection}
+                                expandable={{
+                                    expandedRowRender: (record) => <ExpandedRowContent record={record} onFix={handleFixSingle} fixing={fixing} />,
+                                    rowExpandable: () => true,
+                                    defaultExpandedRowKeys: filteredData
+                                        .filter((m) => m.has_difference || !m.has_attendance)
+                                        .map((m) => `${m.employee_id}_${m.work_date}`),
+                                }}
+                                rowClassName={(record) => {
+                                    if (!record.has_attendance) return 'pdks-row-missing';
+                                    if (record.problem_category === 'ABSENT_IN_SYSTEM') return 'pdks-row-absent';
+                                    if (record.has_difference) return 'pdks-row-diff';
+                                    return 'pdks-row-match';
+                                }}
+                                pagination={{
+                                    defaultPageSize: 50,
+                                    showSizeChanger: true,
+                                    pageSizeOptions: ['25', '50', '100', '150', '200'],
+                                    showTotal: (total, range) =>
+                                        `${range[0]}-${range[1]} / ${total} kayıt`,
+                                }}
+                                size="small"
+                                bordered
+                                scroll={{ x: 1100 }}
+                                loading={comparing}
+                                locale={{
+                                    emptyText: 'Karşılaştırma sonucu bulunamadı.',
+                                    filterConfirm: 'Filtrele',
+                                    filterReset: 'Sıfırla',
+                                }}
+                            />
+
+                            {/* Row color legend */}
+                            <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
+                                <span className="flex items-center gap-1">
+                                    <span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-300" />
+                                    Eşleşiyor
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300" />
+                                    Fark Var / Oturum Uyumsuz
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-300" />
+                                    Kayıt Yok
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <span className="inline-block w-3 h-3 rounded bg-purple-100 border border-purple-300" />
+                                    Devamsız (ABSENT)
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- No differences message --- */}
+                    {results && results.matches && results.matches.length > 0 && summary && summary.withDiff === 0 && summary.noAttendance === 0 && (
+                        <Alert
+                            type="success"
+                            showIcon
+                            icon={<CheckCircleOutlined />}
+                            message="Tüm Kayıtlar Eşleşiyor"
+                            description="CSV dosyasındaki tüm kart okuyucu verileri sistemdeki mesai kayıtları ile eşleşmektedir. Düzeltme yapılmasına gerek yoktur."
+                        />
+                    )}
+
+                    {/* --- Step 5: Fix Results --- */}
+                    {fixResults && (
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-base font-semibold text-gray-800 mb-4">
+                                <ToolOutlined className="mr-2 text-green-500" />
+                                Düzeltme Sonuçları
+                            </h3>
+
+                            {/* Fix summary */}
+                            <div className="grid grid-cols-3 gap-4 mb-4">
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-green-700">
+                                        {fixResults.summary?.fixed || 0}
+                                    </div>
+                                    <div className="text-xs text-green-600 font-medium">Düzeltildi</div>
+                                </div>
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-red-700">
+                                        {fixResults.summary?.failed || 0}
+                                    </div>
+                                    <div className="text-xs text-red-600 font-medium">Hata</div>
+                                </div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-gray-700">
+                                        {fixResults.summary?.skipped || 0}
+                                    </div>
+                                    <div className="text-xs text-gray-600 font-medium">Atlandı</div>
+                                </div>
+                            </div>
+
+                            {/* Fix details table */}
+                            {fixResults.results && fixResults.results.length > 0 && (
+                                <Table
+                                    dataSource={fixResults.results}
+                                    columns={fixColumns}
+                                    rowKey={(r) => `fix_${r.employee_id}_${r.work_date}`}
+                                    pagination={false}
+                                    size="small"
+                                    bordered
+                                    scroll={{ x: 1000 }}
+                                    rowClassName={(record) => {
+                                        if (record.status === 'fixed' || record.status === 'created')
+                                            return 'pdks-row-match';
+                                        if (record.status === 'failed')
+                                            return 'pdks-row-diff';
+                                        if (record.status === 'skipped')
+                                            return 'pdks-row-missing';
+                                        return '';
+                                    }}
+                                />
+                            )}
+
+                            {/* Errors list — filter failed results */}
+                            {fixResults.results?.filter(r => r.status === 'failed').length > 0 && (
+                                <Alert
+                                    type="error"
+                                    showIcon
+                                    className="mt-4"
+                                    message="Düzeltme Hataları"
+                                    description={
+                                        <ul className="list-disc pl-4 text-xs mt-1">
+                                            {fixResults.results.filter(r => r.status === 'failed').map((err, i) => (
+                                                <li key={i}>
+                                                    <strong>{err.employee_name || `#${err.employee_id}`}</strong> ({err.work_date}): {err.error}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    }
+                                />
+                            )}
+                        </div>
+                    )}
+                </>
             )}
 
-            {/* --- Step 2: Summary Cards --- */}
-            {results && summary && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <SummaryCard
-                            title="Toplam Gün"
-                            value={summary.total}
-                            color="bg-blue-50 border-blue-200"
-                            icon={<FileTextOutlined className="text-blue-500" />}
-                        />
-                        <SummaryCard
-                            title="Fark Var"
-                            value={summary.withDiff}
-                            color="bg-red-50 border-red-200"
-                            icon={<CloseCircleOutlined className="text-red-500" />}
-                        />
-                        <SummaryCard
-                            title="Eşleşme"
-                            value={summary.matching}
-                            color="bg-green-50 border-green-200"
-                            icon={<CheckCircleOutlined className="text-green-500" />}
-                        />
-                        <SummaryCard
-                            title="Sistemde Kayıt Yok"
-                            value={summary.noAttendance}
-                            color="bg-orange-50 border-orange-200"
-                            icon={<WarningOutlined className="text-orange-500" />}
-                        />
-                    </div>
-
-                    {/* Category summary badges */}
-                    {results.summary?.category_summary && (
-                        <div className="flex flex-wrap gap-2">
-                            {Object.entries(CATEGORY_CONFIG).map(([cat, cfg]) => {
-                                const count = categorySummary[cat] || 0;
-                                if (count === 0) return null;
-                                const isActive = categoryFilter === cat;
-                                return (
-                                    <Button
-                                        key={cat}
-                                        size="small"
-                                        type={isActive ? 'primary' : 'default'}
-                                        className={isActive ? '' : 'border-gray-300'}
-                                        onClick={() => setCategoryFilter(isActive ? null : cat)}
-                                    >
-                                        {cfg.icon} {cfg.label}: <strong className="ml-1">{count}</strong>
-                                    </Button>
-                                );
-                            })}
-                            {categoryFilter && (
-                                <Button size="small" onClick={() => setCategoryFilter(null)} type="link">
-                                    Filtreyi Kaldır
-                                </Button>
-                            )}
+            {/* ================================================================= */}
+            {/* FULL RESET MODE                                                    */}
+            {/* ================================================================= */}
+            {mode === 'fullReset' && (
+                <>
+                    {/* --- Loading overlay --- */}
+                    {(previewing || executing) && (
+                        <div className="flex items-center justify-center py-12">
+                            <Spin size="large" tip={previewing ? 'CSV analiz ediliyor (dry-run)...' : 'Tam reset çalıştırılıyor...'} />
                         </div>
                     )}
 
-                    {/* "Select all in category" quick action */}
-                    {categoryFilter && categoryFilter !== 'MATCH' && (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                size="small"
-                                type="dashed"
-                                onClick={() => {
-                                    const keys = filteredData
-                                        .filter((m) => !(m.has_attendance && !m.has_difference))
-                                        .map((m) => `${m.employee_id}_${m.work_date}`);
-                                    setSelectedRows(keys);
-                                    message.info(`${keys.length} kayıt seçildi (${CATEGORY_CONFIG[categoryFilter]?.label || categoryFilter})`);
-                                }}
-                            >
-                                Bu Gruptaki Tümünü Seç ({filteredData.filter((m) => !(m.has_attendance && !m.has_difference)).length})
-                            </Button>
-                            {categoryFilter === 'ABSENT_IN_SYSTEM' && (
-                                <Button
-                                    size="small"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    loading={cleaning}
-                                    onClick={() => {
-                                        // Collect unique employee IDs from ABSENT rows
-                                        const empMap = new Map();
-                                        filteredData.forEach((m) => {
-                                            if (!empMap.has(m.employee_id)) {
-                                                empMap.set(m.employee_id, m.employee_name);
-                                            }
-                                        });
-                                        const ids = [...empMap.keys()];
-                                        const names = [...empMap.values()];
-                                        handleCleanupEmployees(ids, names);
-                                    }}
-                                >
-                                    Kalıntı Çalışanları Tamamen Sil ({(() => {
-                                        const uniqueIds = new Set(filteredData.map(m => m.employee_id));
-                                        return uniqueIds.size;
-                                    })()})
-                                </Button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Unmatched employees — enhanced display */}
-                    {results.unmatched_employees && results.unmatched_employees.length > 0 && (
+                    {/* --- Parse errors from preview --- */}
+                    {resetPreview?.parse_errors?.length > 0 && (
                         <Alert
                             type="warning"
                             showIcon
-                            icon={<ExclamationCircleOutlined />}
-                            message={`Eşleştirilemeyen Sicil Numaraları (${results.unmatched_employees.length})`}
-                            description={
-                                <div className="mt-1">
-                                    <div className="space-y-1">
-                                        {results.unmatched_employees.map((emp) => (
-                                            <div key={emp.sicil_id} className="flex items-center gap-2 text-sm">
-                                                <Tag color="orange" className="font-mono">{emp.sicil_id}</Tag>
-                                                {emp.match_status === 'INACTIVE' ? (
-                                                    <>
-                                                        <Tag color="red">Pasif Çalışan</Tag>
-                                                        <span className="font-medium">{emp.employee_name}</span>
-                                                        <span className="text-gray-400">
-                                                            (ID: {emp.employee_id}{emp.department_name ? `, ${emp.department_name}` : ''}{emp.employment_status ? `, ${emp.employment_status}` : ''})
-                                                        </span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Tag color="default">Bulunamadı</Tag>
-                                                        {emp.csv_name && <span className="text-gray-500">CSV adı: {emp.csv_name}</span>}
-                                                    </>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            }
-                        />
-                    )}
-                    {/* Fallback: old-style unmatched if enhanced not available */}
-                    {!results.unmatched_employees && results.unmatched_sicil_ids && results.unmatched_sicil_ids.length > 0 && (
-                        <Alert
-                            type="warning"
-                            showIcon
-                            icon={<ExclamationCircleOutlined />}
-                            message="Eşleştirilemeyen Sicil Numaraları"
-                            description={
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                    {results.unmatched_sicil_ids.map((id) => (
-                                        <Tag key={id} color="orange" className="font-mono">{id}</Tag>
-                                    ))}
-                                </div>
-                            }
-                        />
-                    )}
-
-                    {/* Parse errors warning */}
-                    {results.parse_errors && results.parse_errors.length > 0 && (
-                        <Alert
-                            type="warning"
-                            showIcon
-                            className="mt-3"
-                            message={`${results.parse_errors.length} satır CSV'den ayrıştırılamadı`}
+                            message={`${resetPreview.parse_errors.length} satır CSV'den ayrıştırılamadı`}
                             description={
                                 <div className="mt-1 max-h-32 overflow-y-auto">
                                     <ul className="list-disc pl-4 text-xs">
-                                        {results.parse_errors.slice(0, 20).map((err, i) => (
+                                        {resetPreview.parse_errors.slice(0, 20).map((err, i) => (
                                             <li key={i}>{err}</li>
                                         ))}
-                                        {results.parse_errors.length > 20 && (
-                                            <li>...ve {results.parse_errors.length - 20} daha</li>
+                                        {resetPreview.parse_errors.length > 20 && (
+                                            <li>...ve {resetPreview.parse_errors.length - 20} daha</li>
                                         )}
                                     </ul>
                                 </div>
                             }
                         />
                     )}
-                </div>
-            )}
 
-            {/* --- Step 3: Results Table --- */}
-            {results && results.matches && results.matches.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    {/* Table toolbar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                        <div className="flex items-center gap-3">
-                            <Checkbox
-                                checked={showOnlyDiff}
-                                onChange={(e) => setShowOnlyDiff(e.target.checked)}
-                            >
-                                <span className="text-sm">Sadece Farkları Göster</span>
-                            </Checkbox>
-                            <span className="text-xs text-gray-400">
-                                {filteredData.length} / {results.matches.length} kayıt
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {selectedRows.length > 0 && (
+                    {/* --- Preview Results --- */}
+                    {resetPreview && !resetResults && (
+                        <div className="space-y-4">
+                            {/* Summary stat cards */}
+                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                                <SummaryCard
+                                    title="Eşleşen Çalışan"
+                                    value={resetPreview.summary?.matched_employees || 0}
+                                    color="bg-blue-50 border-blue-200"
+                                    icon={<CheckCircleOutlined className="text-blue-500" />}
+                                />
+                                <SummaryCard
+                                    title="Toplam Çalışan-Gün"
+                                    value={resetPreview.summary?.total_employee_days || 0}
+                                    color="bg-gray-50 border-gray-200"
+                                    icon={<FileTextOutlined className="text-gray-500" />}
+                                />
+                                <SummaryCard
+                                    title="Silinecek Attendance"
+                                    value={resetPreview.summary?.total_attendance_to_delete || 0}
+                                    color="bg-red-50 border-red-200"
+                                    icon={<DeleteOutlined className="text-red-500" />}
+                                />
+                                <SummaryCard
+                                    title="Oluşturulacak Session"
+                                    value={resetPreview.summary?.total_csv_sessions_to_create || 0}
+                                    color="bg-green-50 border-green-200"
+                                    icon={<CheckCircleOutlined className="text-green-500" />}
+                                />
+                                <SummaryCard
+                                    title="Silinecek Potansiyel OT"
+                                    value={resetPreview.summary?.total_potential_ot_to_delete || 0}
+                                    color="bg-orange-50 border-orange-200"
+                                    icon={<WarningOutlined className="text-orange-500" />}
+                                />
+                                {(resetPreview.summary?.days_with_leave || 0) > 0 && (
+                                    <SummaryCard
+                                        title="İzinli Günler"
+                                        value={resetPreview.summary.days_with_leave}
+                                        color="bg-blue-50 border-blue-200"
+                                        icon={<FileTextOutlined className="text-blue-500" />}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Date range info */}
+                            {resetPreview.summary?.date_range && (
+                                <div className="text-sm text-gray-500">
+                                    Tarih aralığı: <strong>{formatDate(resetPreview.summary.date_range[0])}</strong> — <strong>{formatDate(resetPreview.summary.date_range[1])}</strong>
+                                </div>
+                            )}
+
+                            {/* Unmatched employees warning */}
+                            {resetPreview.unmatched_employees?.length > 0 && (
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    icon={<ExclamationCircleOutlined />}
+                                    message={`Eşleştirilemeyen Sicil Numaraları (${resetPreview.unmatched_employees.length})`}
+                                    description={
+                                        <div className="mt-1 space-y-1">
+                                            {resetPreview.unmatched_employees.map((emp) => (
+                                                <div key={emp.sicil_id} className="flex items-center gap-2 text-sm">
+                                                    <Tag color="orange" className="font-mono">{emp.sicil_id}</Tag>
+                                                    {emp.csv_name && <span className="text-gray-500">CSV adı: {emp.csv_name}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    }
+                                />
+                            )}
+
+                            {/* Preview detail table */}
+                            {resetPreview.preview?.length > 0 && (
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                    <h3 className="text-base font-semibold text-gray-800 mb-4">
+                                        <FileTextOutlined className="mr-2 text-blue-500" />
+                                        Önizleme Detayı ({resetPreview.preview.length} çalışan-gün)
+                                    </h3>
+                                    <Table
+                                        dataSource={resetPreview.preview}
+                                        columns={resetPreviewColumns}
+                                        rowKey={(r) => `${r.employee_id}_${r.work_date}`}
+                                        size="small"
+                                        bordered
+                                        scroll={{ x: 1200 }}
+                                        pagination={{
+                                            defaultPageSize: 50,
+                                            showSizeChanger: true,
+                                            pageSizeOptions: ['25', '50', '100', '200'],
+                                            showTotal: (total, range) =>
+                                                `${range[0]}-${range[1]} / ${total} kayıt`,
+                                        }}
+                                        expandable={{
+                                            expandedRowRender: (record) => (
+                                                <div className="space-y-3 p-2">
+                                                    {/* CSV sessions */}
+                                                    {record.csv_sessions?.length > 0 && (
+                                                        <div>
+                                                            <h4 className="text-xs font-semibold text-gray-600 mb-1">CSV Oturumları:</h4>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {record.csv_sessions.map((s, i) => (
+                                                                    <Tag key={i} color="green" className="font-mono text-xs">
+                                                                        {s.check_in || '?'} — {s.check_out || '?'}
+                                                                    </Tag>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* Preserved OT */}
+                                                    {record.preserved_ot_requests?.length > 0 && (
+                                                        <div>
+                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan OT Talepleri:</h4>
+                                                            <div className="space-y-1">
+                                                                {record.preserved_ot_requests.map((ot) => (
+                                                                    <div key={ot.id} className="flex items-center gap-2 text-xs">
+                                                                        <Tag color="purple">{ot.status}</Tag>
+                                                                        <span className="font-mono">{ot.start_time} — {ot.end_time}</span>
+                                                                        <span className="text-gray-400">({formatSeconds(ot.duration_seconds)})</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* Approved leaves */}
+                                                    {record.approved_leaves?.length > 0 && (
+                                                        <div>
+                                                            <h4 className="text-xs font-semibold text-blue-700 mb-1">Onaylı İzinler:</h4>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {record.approved_leaves.map((lv, i) => (
+                                                                    <Tag key={i} color="blue" className="text-xs">
+                                                                        {lv.leave_type || lv.request_type_name || 'İzin'} ({lv.status})
+                                                                    </Tag>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* Cardless entries */}
+                                                    {record.approved_cardless_entries?.length > 0 && (
+                                                        <div>
+                                                            <h4 className="text-xs font-semibold text-cyan-700 mb-1">Kartsız Giriş:</h4>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {record.approved_cardless_entries.map((ce, i) => (
+                                                                    <Tag key={i} color="cyan" className="font-mono text-xs">
+                                                                        {ce.check_in || '?'} — {ce.check_out || '?'}
+                                                                    </Tag>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* External duties */}
+                                                    {record.external_duties?.length > 0 && (
+                                                        <div>
+                                                            <h4 className="text-xs font-semibold text-geekblue-700 mb-1">Dış Görevler:</h4>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {record.external_duties.map((ed, i) => (
+                                                                    <Tag key={i} color="geekblue" className="text-xs">
+                                                                        {ed.description || ed.location || 'Dış Görev'}
+                                                                    </Tag>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ),
+                                            rowExpandable: (r) =>
+                                                (r.csv_sessions?.length > 0) ||
+                                                (r.preserved_ot_requests?.length > 0) ||
+                                                (r.approved_leaves?.length > 0) ||
+                                                (r.approved_cardless_entries?.length > 0) ||
+                                                (r.external_duties?.length > 0),
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Execute button */}
+                            <div className="flex justify-center pt-2">
                                 <Button
                                     type="primary"
                                     danger
-                                    icon={<ToolOutlined />}
-                                    onClick={handleFix}
-                                    loading={fixing}
-                                    disabled={fixing}
+                                    size="large"
+                                    icon={<ThunderboltOutlined />}
+                                    onClick={handleResetExecute}
+                                    loading={executing}
+                                    disabled={executing || !resetPreview?.preview?.length}
                                 >
-                                    Seçilenleri Düzelt ({selectedRows.length})
+                                    Onayla ve Tam Reset Çalıştır
                                 </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- Execution Results --- */}
+                    {resetResults && (
+                        <div className="space-y-4">
+                            {/* Summary alert */}
+                            <Alert
+                                type={(resetResults.summary?.failed || 0) === 0 ? 'success' : 'warning'}
+                                showIcon
+                                message={
+                                    (resetResults.summary?.failed || 0) === 0
+                                        ? `Tam reset başarıyla tamamlandı: ${resetResults.summary?.success || 0} başarılı, ${resetResults.summary?.skipped || 0} atlandı.`
+                                        : `Tam reset tamamlandı: ${resetResults.summary?.success || 0} başarılı, ${resetResults.summary?.failed || 0} hata, ${resetResults.summary?.skipped || 0} atlandı.`
+                                }
+                            />
+
+                            {/* Audit alert */}
+                            {resetResults.audit_summary?.total_issues > 0 && (
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    icon={<ExclamationCircleOutlined />}
+                                    message={`Denetim: ${resetResults.audit_summary.total_issues} sorun tespit edildi`}
+                                    description={
+                                        <div className="mt-1 text-xs">
+                                            {Object.entries(resetResults.audit_summary.categories || {}).map(([cat, count]) => (
+                                                <div key={cat}>
+                                                    <strong>{cat}:</strong> {count}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    }
+                                />
+                            )}
+
+                            {/* Summary stat cards */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-green-700">
+                                        {resetResults.summary?.success || 0}
+                                    </div>
+                                    <div className="text-xs text-green-600 font-medium">Başarılı</div>
+                                </div>
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-red-700">
+                                        {resetResults.summary?.failed || 0}
+                                    </div>
+                                    <div className="text-xs text-red-600 font-medium">Hata</div>
+                                </div>
+                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-orange-700">
+                                        {resetResults.summary?.skipped || 0}
+                                    </div>
+                                    <div className="text-xs text-orange-600 font-medium">Atlandı</div>
+                                </div>
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-blue-700">
+                                        {resetResults.summary?.total || 0}
+                                    </div>
+                                    <div className="text-xs text-blue-600 font-medium">Toplam</div>
+                                </div>
+                            </div>
+
+                            {/* Results table */}
+                            {resetResults.results?.length > 0 && (
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                    <h3 className="text-base font-semibold text-gray-800 mb-4">
+                                        <ReloadOutlined className="mr-2 text-green-500" />
+                                        Reset Sonuçları
+                                    </h3>
+                                    <Table
+                                        dataSource={resetResults.results}
+                                        columns={resetResultColumns}
+                                        rowKey={(r) => `reset_${r.employee_id}_${r.work_date}`}
+                                        size="small"
+                                        bordered
+                                        scroll={{ x: 1200 }}
+                                        pagination={{
+                                            defaultPageSize: 50,
+                                            showSizeChanger: true,
+                                            pageSizeOptions: ['25', '50', '100', '200'],
+                                            showTotal: (total, range) =>
+                                                `${range[0]}-${range[1]} / ${total} kayıt`,
+                                        }}
+                                        rowClassName={(record) => {
+                                            if (record.status === 'success') return 'pdks-row-match';
+                                            if (record.status === 'failed') return 'pdks-row-diff';
+                                            if (record.status === 'skipped') return 'pdks-row-missing';
+                                            return '';
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Parse errors from execute */}
+                            {resetResults.parse_errors?.length > 0 && (
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    message={`${resetResults.parse_errors.length} satır CSV'den ayrıştırılamadı`}
+                                    description={
+                                        <div className="mt-1 max-h-32 overflow-y-auto">
+                                            <ul className="list-disc pl-4 text-xs">
+                                                {resetResults.parse_errors.slice(0, 20).map((err, i) => (
+                                                    <li key={i}>{err}</li>
+                                                ))}
+                                                {resetResults.parse_errors.length > 20 && (
+                                                    <li>...ve {resetResults.parse_errors.length - 20} daha</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    }
+                                />
                             )}
                         </div>
-                    </div>
-
-                    {/* Main comparison table */}
-                    <Table
-                        dataSource={filteredData}
-                        columns={columns}
-                        rowKey={rowKey}
-                        rowSelection={rowSelection}
-                        expandable={{
-                            expandedRowRender: (record) => <ExpandedRowContent record={record} onFix={handleFixSingle} fixing={fixing} />,
-                            rowExpandable: () => true,
-                            defaultExpandedRowKeys: filteredData
-                                .filter((m) => m.has_difference || !m.has_attendance)
-                                .map((m) => `${m.employee_id}_${m.work_date}`),
-                        }}
-                        rowClassName={(record) => {
-                            if (!record.has_attendance) return 'pdks-row-missing';
-                            if (record.problem_category === 'ABSENT_IN_SYSTEM') return 'pdks-row-absent';
-                            if (record.has_difference) return 'pdks-row-diff';
-                            return 'pdks-row-match';
-                        }}
-                        pagination={{
-                            defaultPageSize: 50,
-                            showSizeChanger: true,
-                            pageSizeOptions: ['25', '50', '100', '150', '200'],
-                            showTotal: (total, range) =>
-                                `${range[0]}-${range[1]} / ${total} kayıt`,
-                        }}
-                        size="small"
-                        bordered
-                        scroll={{ x: 1100 }}
-                        loading={comparing}
-                        locale={{
-                            emptyText: 'Karşılaştırma sonucu bulunamadı.',
-                            filterConfirm: 'Filtrele',
-                            filterReset: 'Sıfırla',
-                        }}
-                    />
-
-                    {/* Row color legend */}
-                    <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                            <span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-300" />
-                            Eşleşiyor
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300" />
-                            Fark Var / Oturum Uyumsuz
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-300" />
-                            Kayıt Yok
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="inline-block w-3 h-3 rounded bg-purple-100 border border-purple-300" />
-                            Devamsız (ABSENT)
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* --- No differences message --- */}
-            {results && results.matches && results.matches.length > 0 && summary && summary.withDiff === 0 && summary.noAttendance === 0 && (
-                <Alert
-                    type="success"
-                    showIcon
-                    icon={<CheckCircleOutlined />}
-                    message="Tüm Kayıtlar Eşleşiyor"
-                    description="CSV dosyasındaki tüm kart okuyucu verileri sistemdeki mesai kayıtları ile eşleşmektedir. Düzeltme yapılmasına gerek yoktur."
-                />
-            )}
-
-            {/* --- Step 5: Fix Results --- */}
-            {fixResults && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h3 className="text-base font-semibold text-gray-800 mb-4">
-                        <ToolOutlined className="mr-2 text-green-500" />
-                        Düzeltme Sonuçları
-                    </h3>
-
-                    {/* Fix summary */}
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                            <div className="text-2xl font-bold text-green-700">
-                                {fixResults.summary?.fixed || 0}
-                            </div>
-                            <div className="text-xs text-green-600 font-medium">Düzeltildi</div>
-                        </div>
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                            <div className="text-2xl font-bold text-red-700">
-                                {fixResults.summary?.failed || 0}
-                            </div>
-                            <div className="text-xs text-red-600 font-medium">Hata</div>
-                        </div>
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                            <div className="text-2xl font-bold text-gray-700">
-                                {fixResults.summary?.skipped || 0}
-                            </div>
-                            <div className="text-xs text-gray-600 font-medium">Atlandı</div>
-                        </div>
-                    </div>
-
-                    {/* Fix details table */}
-                    {fixResults.results && fixResults.results.length > 0 && (
-                        <Table
-                            dataSource={fixResults.results}
-                            columns={fixColumns}
-                            rowKey={(r) => `fix_${r.employee_id}_${r.work_date}`}
-                            pagination={false}
-                            size="small"
-                            bordered
-                            scroll={{ x: 1000 }}
-                            rowClassName={(record) => {
-                                if (record.status === 'fixed' || record.status === 'created')
-                                    return 'pdks-row-match';
-                                if (record.status === 'failed')
-                                    return 'pdks-row-diff';
-                                if (record.status === 'skipped')
-                                    return 'pdks-row-missing';
-                                return '';
-                            }}
-                        />
                     )}
-
-                    {/* Errors list — filter failed results */}
-                    {fixResults.results?.filter(r => r.status === 'failed').length > 0 && (
-                        <Alert
-                            type="error"
-                            showIcon
-                            className="mt-4"
-                            message="Düzeltme Hataları"
-                            description={
-                                <ul className="list-disc pl-4 text-xs mt-1">
-                                    {fixResults.results.filter(r => r.status === 'failed').map((err, i) => (
-                                        <li key={i}>
-                                            <strong>{err.employee_name || `#${err.employee_id}`}</strong> ({err.work_date}): {err.error}
-                                        </li>
-                                    ))}
-                                </ul>
-                            }
-                        />
-                    )}
-                </div>
+                </>
             )}
 
             {/* --- Inline styles for row coloring --- */}
