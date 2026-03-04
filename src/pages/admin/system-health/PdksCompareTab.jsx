@@ -676,12 +676,12 @@ export default function PdksCompareTab() {
 
     const handleCleanupEmployees = (employeeIds, employeeNames) => {
         Modal.confirm({
-            title: 'Çalışan Pasifleştirme Onayı',
+            title: 'Kalıntı Çalışanları Tamamen Sil',
             icon: <ExclamationCircleOutlined />,
             content: (
                 <div className="mt-2 text-sm">
                     <p>
-                        <strong>{employeeIds.length}</strong> çalışan pasifleştirilecek ve tüm mesai kayıtları silinecek:
+                        <strong>{employeeIds.length}</strong> çalışan ve TÜM ilişkili verileri (mesai, ek mesai, izin, yemek, kullanıcı hesabı) tamamen silinecek:
                     </p>
                     <ul className="list-disc pl-4 mt-2 text-gray-600">
                         {employeeNames.map((name, i) => (
@@ -689,11 +689,11 @@ export default function PdksCompareTab() {
                         ))}
                     </ul>
                     <p className="mt-2 text-red-500 font-medium">
-                        Bu işlem geri alınamaz! Çalışanın tüm mesai ve ek mesai kayıtları silinecektir.
+                        Bu işlem GERİ ALINAMAZ! Çalışan ve tüm verileri kalıcı olarak silinecektir.
                     </p>
                 </div>
             ),
-            okText: 'Pasifleştir ve Temizle',
+            okText: 'Tamamen Sil',
             okButtonProps: { danger: true },
             cancelText: 'İptal',
             width: 480,
@@ -703,13 +703,13 @@ export default function PdksCompareTab() {
                     const res = await api.post('/system/health-check/pdks-cleanup-employees/', {
                         employee_ids: employeeIds,
                     });
-                    const cleaned = res.data.summary?.cleaned || 0;
-                    message.success(`${cleaned} çalışan pasifleştirildi ve kayıtları temizlendi.`);
+                    const deleted = res.data.summary?.deleted || 0;
+                    message.success(`${deleted} çalışan ve tüm verileri tamamen silindi.`);
                     // Remove ABSENT rows for cleaned employees from current results
                     if (results?.matches) {
                         const cleanedIds = new Set(
                             res.data.results
-                                ?.filter(r => r.status === 'cleaned')
+                                ?.filter(r => r.status === 'deleted')
                                 .map(r => r.employee_id) || []
                         );
                         setResults(prev => ({
@@ -1214,7 +1214,7 @@ export default function PdksCompareTab() {
                                         handleCleanupEmployees(ids, names);
                                     }}
                                 >
-                                    Devamsız Çalışanları Pasifleştir ({(() => {
+                                    Kalıntı Çalışanları Tamamen Sil ({(() => {
                                         const uniqueIds = new Set(filteredData.map(m => m.employee_id));
                                         return uniqueIds.size;
                                     })()})
