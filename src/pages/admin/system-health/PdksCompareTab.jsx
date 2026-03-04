@@ -15,6 +15,7 @@ import {
     Space,
     Spin,
     Segmented,
+    Collapse,
 } from 'antd';
 import {
     InboxOutlined,
@@ -1281,6 +1282,14 @@ export default function PdksCompareTab() {
                 return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
             },
         },
+        {
+            title: 'Değişim Özeti',
+            dataIndex: 'changes_summary',
+            key: 'changes_summary',
+            width: 260,
+            ellipsis: true,
+            render: (v) => v ? <span className="font-mono text-xs">{v}</span> : <span className="text-gray-300">-</span>,
+        },
     ], []);
 
     // -----------------------------------------------------------------------
@@ -1980,7 +1989,7 @@ export default function PdksCompareTab() {
                                         rowKey={(r) => `${r.employee_id}_${r.work_date}`}
                                         size="small"
                                         bordered
-                                        scroll={{ x: 1200 }}
+                                        scroll={{ x: 1460 }}
                                         pagination={{
                                             defaultPageSize: 50,
                                             showSizeChanger: true,
@@ -1991,6 +2000,95 @@ export default function PdksCompareTab() {
                                         expandable={{
                                             expandedRowRender: (record) => (
                                                 <div className="space-y-3 p-2">
+                                                    {/* ── Before/After Karşılaştırma ── */}
+                                                    {record.before && record.after && (
+                                                        <div className="grid grid-cols-2 gap-4 mb-3">
+                                                            {/* BEFORE Card */}
+                                                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                                                <h4 className="text-xs font-semibold text-red-700 mb-2">Mevcut Durum (Silinecek)</h4>
+                                                                <div className="space-y-1 text-xs">
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.before.attendance_count}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.before.total_hours)}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.before.normal_hours)}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.before.overtime_hours)}</span></div>
+                                                                    {record.before.sessions?.length > 0 && (
+                                                                        <div className="mt-2 border-t border-red-200 pt-1">
+                                                                            <span className="text-gray-500 block mb-1">Oturumlar:</span>
+                                                                            {record.before.sessions.map((s, i) => (
+                                                                                <div key={i} className="font-mono text-gray-700 flex items-center gap-1">
+                                                                                    {s.check_in || '?'} — {s.check_out || '?'}
+                                                                                    <Tag size="small" className="ml-1 text-xs">{s.status}</Tag>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {/* AFTER Card */}
+                                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                                <h4 className="text-xs font-semibold text-green-700 mb-2">Yeni Durum (Hesaplanan)</h4>
+                                                                <div className="space-y-1 text-xs">
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.after.attendance_count}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.after.total_hours)}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.after.normal_hours)}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.after.overtime_hours)}</span></div>
+                                                                    {record.after.potential_ot_count > 0 && (
+                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel OT:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
+                                                                    )}
+                                                                    {record.after.sessions?.length > 0 && (
+                                                                        <div className="mt-2 border-t border-green-200 pt-1">
+                                                                            <span className="text-gray-500 block mb-1">Oturumlar:</span>
+                                                                            {record.after.sessions.map((s, i) => (
+                                                                                <div key={i} className="font-mono text-gray-700 flex items-center gap-1">
+                                                                                    {s.check_in || '?'} — {s.check_out || '?'}
+                                                                                    <Tag size="small" className="ml-1 text-xs">{s.source}</Tag>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {record.after.potential_ot_details?.length > 0 && (
+                                                                        <div className="mt-2 border-t border-green-200 pt-1">
+                                                                            <span className="text-orange-600 block mb-1">OT Detayları:</span>
+                                                                            {record.after.potential_ot_details.map((ot, i) => (
+                                                                                <div key={i} className="font-mono text-orange-700">
+                                                                                    {ot.start_time} — {ot.end_time} ({formatSeconds(ot.duration_seconds)})
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* ── Hesaplama Logları ── */}
+                                                    {record.calculation_logs?.length > 0 && (
+                                                        <Collapse
+                                                            size="small"
+                                                            className="mb-3"
+                                                            items={[{
+                                                                key: 'calc-logs',
+                                                                label: <span className="text-xs font-semibold">Hesaplama Detayları ({record.calculation_logs.length} satır)</span>,
+                                                                children: (
+                                                                    <div className="bg-gray-50 rounded p-2 max-h-64 overflow-y-auto">
+                                                                        {record.calculation_logs.map((log, i) => {
+                                                                            let color = 'text-gray-600';
+                                                                            if (log.includes('[CONTEXT]')) color = 'text-blue-600';
+                                                                            else if (log.includes('[SNAP]')) color = 'text-orange-600';
+                                                                            else if (log.includes('[BREAK]')) color = 'text-green-600';
+                                                                            else if (log.includes('[CALC]')) color = 'text-purple-600';
+                                                                            else if (log.includes('[OT-REQ]')) color = 'text-red-600';
+                                                                            else if (log.includes('[ABSENT]')) color = 'text-yellow-700';
+                                                                            else if (log.includes('[SYNC]')) color = 'text-cyan-600';
+                                                                            else if (log.includes('[SIM-ERROR]')) color = 'text-red-700 font-bold';
+                                                                            return <div key={i} className={`font-mono text-xs leading-5 ${color}`}>{log}</div>;
+                                                                        })}
+                                                                    </div>
+                                                                ),
+                                                            }]}
+                                                        />
+                                                    )}
+
                                                     {/* CSV sessions */}
                                                     {record.csv_sessions?.length > 0 && (
                                                         <div>
@@ -2061,6 +2159,8 @@ export default function PdksCompareTab() {
                                                 </div>
                                             ),
                                             rowExpandable: (r) =>
+                                                (r.before && r.after) ||
+                                                (r.calculation_logs?.length > 0) ||
                                                 (r.csv_sessions?.length > 0) ||
                                                 (r.preserved_ot_requests?.length > 0) ||
                                                 (r.approved_leaves?.length > 0) ||
