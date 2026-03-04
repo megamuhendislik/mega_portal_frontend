@@ -20,7 +20,8 @@ import {
     ChartBarIcon,
     UsersIcon,
     BuildingOfficeIcon,
-    CreditCardIcon
+    CreditCardIcon,
+    UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -41,6 +42,7 @@ import OvertimeAuditTab from './system-health/OvertimeAuditTab';
 import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
 import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksCompareTab from './system-health/PdksCompareTab';
+import GhostEmployeesTab from './system-health/GhostEmployeesTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -114,6 +116,7 @@ export default function SystemHealth() {
                         { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
                         { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
                         { id: 'pdks_compare', name: 'PDKS Düzeltme', icon: CreditCardIcon },
+                        { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -159,6 +162,7 @@ export default function SystemHealth() {
                 {activeTab === 'password_reset' && <PasswordResetTab />}
                 {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
                 {activeTab === 'pdks_compare' && <PdksCompareTab />}
+                {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
             </div>
 
         </div>
