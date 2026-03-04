@@ -255,6 +255,119 @@ const CancelConfirmModal = ({ isOpen, date, onClose, onSubmit, loading }) => {
     );
 };
 
+// --- Potential OT: Day Group ---
+const OT_TYPE_LABELS = {
+    'PRE_SHIFT': { label: 'Vardiya Öncesi', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    'POST_SHIFT': { label: 'Vardiya Sonrası', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    'OFF_DAY': { label: 'Tatil Mesaisi', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    'MIXED': { label: 'Karışık', color: 'bg-slate-50 text-slate-700 border-slate-200' },
+};
+
+const PotentialSegmentRow = ({ item, onClaim }) => {
+    const typeInfo = OT_TYPE_LABELS[item.ot_type] || OT_TYPE_LABELS['MIXED'];
+    const showClaimButton = item.actual_overtime_seconds > 0 && !item.already_claimed && !item.claim_status;
+
+    return (
+        <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 transition-all">
+            <div className="flex items-center gap-3 min-w-0 flex-wrap">
+                <Clock size={12} className="text-purple-500 flex-shrink-0" />
+                <span className="text-xs font-bold text-slate-800">{item.start_time} - {item.end_time}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold border ${typeInfo.color}`}>
+                    {typeInfo.label}
+                </span>
+                <span className="text-[11px] text-purple-700 font-bold">{item.actual_overtime_hours} sa</span>
+                {item.segments && item.segments.length > 1 && (
+                    <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 text-[9px] font-extrabold">
+                        {item.segments.length} parça
+                    </span>
+                )}
+            </div>
+            <div className="flex-shrink-0 ml-2">
+                {item.claim_status === 'APPROVED' ? (
+                    <Pill color="emerald">Onaylandı</Pill>
+                ) : item.claim_status === 'PENDING' ? (
+                    <Pill color="amber">Bekliyor</Pill>
+                ) : item.is_rejected ? (
+                    <div className="flex items-center gap-1">
+                        <Pill color="red">Reddedildi</Pill>
+                        <button onClick={onClaim} className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-0.5">
+                            <Send size={9} /> Tekrar
+                        </button>
+                    </div>
+                ) : showClaimButton ? (
+                    <button onClick={onClaim}
+                        className="px-3 py-1 font-bold text-[11px] rounded-lg shadow-sm bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 transition-all">
+                        <Send size={10} /> Talep Et
+                    </button>
+                ) : (
+                    <Pill color="slate">Bekleniyor</Pill>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const PotentialDayGroup = ({ date: dateStr, items, onClaimItem }) => {
+    const first = items[0];
+    const entries = first.entries || [];
+    const isOffDay = first.is_off_day;
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const monthName = MONTH_NAMES[d.getMonth()];
+    const year = d.getFullYear();
+    const totalOtHours = items.reduce((sum, it) => sum + (it.actual_overtime_hours || 0), 0);
+
+    return (
+        <div className="rounded-xl border border-slate-100 bg-white overflow-hidden">
+            <div className="flex">
+                {/* Date column */}
+                <div className={`w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 ${isOffDay ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                    <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName} {year}</span>
+                    <span className={`text-[10px] font-bold mt-0.5 ${isOffDay ? 'text-amber-600' : 'text-slate-400'}`}>{dayName}</span>
+                    {isOffDay && <span className="mt-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-100 text-amber-700">TATİL</span>}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 p-3 min-w-0">
+                    {/* Shift info */}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                        {first.shift_start_time && first.shift_end_time && !isOffDay && (
+                            <span className="flex items-center gap-1"><Briefcase size={11} className="text-slate-400" /> Vardiya: {first.shift_start_time} - {first.shift_end_time}</span>
+                        )}
+                        {isOffDay && <span className="flex items-center gap-1 text-amber-600 font-bold"><Sun size={11} /> Tatil / İzin Günü</span>}
+                        <span className="text-slate-500 text-[11px]">Toplam Potansiyel: <strong className="text-purple-700">{totalOtHours.toFixed(1)} sa</strong></span>
+                    </div>
+
+                    {/* Entries */}
+                    {entries.length > 0 && (
+                        <div className="space-y-1 mb-2">
+                            {entries.map((e, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs">
+                                    {entries.length > 1 && <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-500 text-[9px] font-extrabold flex items-center justify-center flex-shrink-0">{idx + 1}</span>}
+                                    <span className="flex items-center gap-1 text-emerald-700 font-medium"><LogIn size={10} /> {e.check_in || '-'}</span>
+                                    <span className="text-slate-300">&rarr;</span>
+                                    <span className="flex items-center gap-1 text-red-600 font-medium"><LogOut size={10} /> {e.check_out || '-'}</span>
+                                    {e.total_seconds > 0 && <span className="text-slate-400 ml-1">({formatDuration(e.total_seconds)})</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Segment rows */}
+                    <div className="border-t border-slate-100 mt-1 pt-1 space-y-0.5">
+                        {items.map((item, i) => (
+                            <PotentialSegmentRow key={i} item={item}
+                                onClaim={() => onClaimItem(item)} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // CLAIMABLE CARD
 const ClaimableCard = ({ item, type, onClaim }) => {
     const entries = item.entries || [];
@@ -566,7 +679,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                             </div>
                         )}
 
-                        {/* Potential (Detected) */}
+                        {/* Potential (Detected) — Day Grouped */}
                         {claimableData.potential.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
@@ -574,17 +687,26 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                     <span className="text-xs text-slate-400 font-medium">{claimableData.potential.length} mesai</span>
                                 </div>
                                 <div className="space-y-2">
-                                    {claimableData.potential.map((item, i) => (
-                                        <ClaimableCard key={`p-${i}`} item={item} type="potential"
-                                            onClaim={() => {
-                                                fetchWeeklyOtStatus(item.date);
-                                                setClaimModal({
-                                                    open: true, type: 'POTENTIAL', target: item,
-                                                    title: 'Algılanan Mesai Talep Et',
-                                                    subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}-${item.end_time})` : ''} - ${item.actual_overtime_hours} saat`,
-                                                });
-                                            }} />
-                                    ))}
+                                    {(() => {
+                                        const grouped = {};
+                                        claimableData.potential.forEach(item => {
+                                            if (!grouped[item.date]) grouped[item.date] = [];
+                                            grouped[item.date].push(item);
+                                        });
+                                        return Object.entries(grouped)
+                                            .sort(([a], [b]) => b.localeCompare(a))
+                                            .map(([dateStr, items]) => (
+                                                <PotentialDayGroup key={dateStr} date={dateStr} items={items}
+                                                    onClaimItem={(item) => {
+                                                        fetchWeeklyOtStatus(item.date);
+                                                        setClaimModal({
+                                                            open: true, type: 'POTENTIAL', target: item,
+                                                            title: 'Algılanan Mesai Talep Et',
+                                                            subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}-${item.end_time})` : ''} - ${item.actual_overtime_hours} saat`,
+                                                        });
+                                                    }} />
+                                            ));
+                                    })()}
                                 </div>
                             </div>
                         )}
