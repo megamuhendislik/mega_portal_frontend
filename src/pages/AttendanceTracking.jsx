@@ -21,6 +21,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const { hasPermission } = useAuth();
     const navigate = useNavigate();
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
+    const [secondaryTeam, setSecondaryTeam] = useState([]);
+    const [showSecondaryTeam, setShowSecondaryTeam] = useState(false);
 
     // State — propMonth is 0-based (from Attendance.jsx), convert to 1-based for API
     // Default to fiscal month: if day >= 26, we're in next month's fiscal period
@@ -95,13 +97,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             if (selectedDept) params.department_id = selectedDept;
             params.include_inactive = 'true';
 
-            const [statsRes, hierarchyRes] = await Promise.all([
+            const [statsRes, hierarchyRes, secondaryRes] = await Promise.allSettled([
                 api.get('/dashboard/stats/', { params, timeout: 60000 }),
-                api.get('/dashboard/team_hierarchy/', { timeout: 60000 })
+                api.get('/dashboard/team_hierarchy/', { timeout: 60000 }),
+                api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' }, timeout: 30000 })
             ]);
 
             // Process stats
-            const data = Array.isArray(statsRes.data) ? statsRes.data : [];
+            const statsData = statsRes.status === 'fulfilled' ? statsRes.value.data : [];
+            const data = Array.isArray(statsData) ? statsData : [];
             setStats(data);
 
             const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
@@ -120,8 +124,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             });
 
             // Process hierarchy
-            const hData = Array.isArray(hierarchyRes.data) ? hierarchyRes.data : [];
+            const hierarchyData_raw = hierarchyRes.status === 'fulfilled' ? hierarchyRes.value.data : [];
+            const hData = Array.isArray(hierarchyData_raw) ? hierarchyData_raw : [];
             setHierarchyData(hData);
+
+            // Process secondary team
+            if (secondaryRes.status === 'fulfilled') {
+                const secData = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : [];
+                setSecondaryTeam(secData);
+            }
             if (initialLoad && hData.length) {
                 const initialExpanded = {};
                 const expandAll = (nodes) => {
@@ -721,6 +732,31 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     </table>
                 </div>
             </div>}
+
+            {/* SECONDARY TEAM */}
+            {secondaryTeam.length > 0 && (
+                <div className="mt-4 border-t border-amber-200/50 pt-4">
+                    <button
+                        onClick={() => setShowSecondaryTeam(!showSecondaryTeam)}
+                        className="flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800 mb-3 transition-colors"
+                    >
+                        {showSecondaryTeam ? '▼' : '▶'}
+                        İkincil Ekip ({secondaryTeam.length} kişi)
+                    </button>
+                    {showSecondaryTeam && (
+                        <div className="space-y-1 opacity-80">
+                            {secondaryTeam.map(emp => (
+                                <div key={emp.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
+                                        <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">İkincil</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* DETAIL MODAL */}
             <EmployeeDetailModal

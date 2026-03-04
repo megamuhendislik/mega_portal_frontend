@@ -473,7 +473,9 @@ const TeamItemCard = ({ item, onCancel }) => {
                             <span>Süre: <strong className="text-slate-700">{formatDuration(item.duration_seconds)}</strong></span>
                         )}
                         {item.assigned_by_name && (
-                            <span>Atayan: <strong className="text-slate-600">{item.assigned_by_name}</strong></span>
+                            <span className="flex items-center gap-1 text-xs text-slate-500">
+                                Oluşturan: <strong className="text-slate-600">{item.assigned_by_name}</strong>
+                            </span>
                         )}
                     </div>
                     {(item.task_description || item.reason) && (

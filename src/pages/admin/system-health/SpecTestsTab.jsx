@@ -68,6 +68,7 @@ const STAGES = [
     { id: 35, name: 'Sınır Durumları & Edge Cases v2', icon: ExclamationTriangleIcon, color: 'orange', description: 'Dead zone & break credit testleri — total_seconds mola hakkı dahil etmeme, pre-shift overtime hesaplama, break credit bucket dağılımı, off-day/tatil sınır durumları' },
     { id: 36, name: 'Potansiyel Mesai Düzeltmeleri', icon: ClockIcon, color: 'purple', description: '16 test — Pre-shift OT POTENTIAL yakalama (vardiya öncesi erken giriş), claim_potential cleanup düzeltmesi (diğer POTENTIAL korunması), has_active_request overlap-based cleanup (çakışmayan POTENTIAL korunması), claimable endpoint ot_type alanı (PRE_SHIFT/POST_SHIFT/OFF_DAY), off-day davranış koruması' },
     { id: 37, name: 'Çoklu Yönetici Senaryoları', icon: UserGroupIcon, color: 'indigo', description: '35 test — Çoklu PRIMARY property (manager/all_primary/all_secondary/all_managers/is_manager_of), Model validation (aynı kişi PRIMARY+SECONDARY engeli, self-management, duplicate engeli, çoklu atama izni), Talep devri (tüm eski PRIMARY\'lerden toplu devir, NULL target, tek PRIMARY deaktif/silinme), Fallback (tüm PRIMARY silinince dept_mgr fallback, property None/boş), Bildirimler (tüm eski PRIMARY\'lere bildirim, çalışan bildirimi), SECONDARY davranış (devir yok, silme devir yok), ApproverService (find_approver/find_all_approvers çoklu), Permission (is_manager_of tüm tipler)' },
+    { id: 38, name: 'İkincil Yönetici', icon: UserGroupIcon, color: 'amber', description: 'İkincil yönetici yetki kısıtlamaları' },
 ];
 
 export default function SpecTestsTab() {
