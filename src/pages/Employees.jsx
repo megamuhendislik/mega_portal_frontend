@@ -1584,23 +1584,30 @@ const Employees = () => {
                 (emp.title || '').toLocaleLowerCase('tr-TR').includes(searchLower);
         };
 
+        // Check if an employee or any of its subordinates match the search
+        const empTreeHasMatch = (emp) => {
+            if (matchesSearch(emp)) return true;
+            if (emp.children && emp.children.length > 0) {
+                return emp.children.some(child => empTreeHasMatch(child));
+            }
+            return false;
+        };
+
         // Check if a department (or any of its sub-departments) has matching employees
         const deptHasMatch = (dept) => {
             if (!searchTerm && !departmentFilter) return true;
             // Department filter check
             if (departmentFilter && dept.id !== parseInt(departmentFilter)) {
-                // Check if any child department matches
                 const childMatch = (dept.children || []).some(child => deptHasMatch(child));
-                if (!childMatch) return false;
-                return true;
+                return childMatch;
             }
             if (!searchTerm) return true;
-            // Check employees in this department
+            // Check employees in this department (including their subordinate trees)
             const empMatch = (dept.employees || []).some(emp => {
                 if (emp.type === 'group' && emp.employees) {
-                    return emp.employees.some(sub => matchesSearch(sub));
+                    return emp.employees.some(sub => empTreeHasMatch(sub));
                 }
-                return matchesSearch(emp);
+                return empTreeHasMatch(emp);
             });
             if (empMatch) return true;
             // Check child departments recursively
@@ -1624,9 +1631,9 @@ const Employees = () => {
             const hasChildren = (emp.children && emp.children.length > 0);
             const nodeKey = `emp-${parentKey}-${emp.id}`;
             const isCollapsed = collapsedNodes[nodeKey];
-            const show = matchesSearch(emp) || !searchTerm;
+            const show = !searchTerm || empTreeHasMatch(emp);
 
-            if (!show && !hasChildren) return null;
+            if (!show) return null;
 
             const rows = [];
             rows.push(
