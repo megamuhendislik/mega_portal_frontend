@@ -104,9 +104,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
     const handleApprove = async (req, notes) => {
         try {
             if (req.type === 'LEAVE') {
-                await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onayland\u0131' });
+                await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'OVERTIME') {
-                await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onayland\u0131' });
+                await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
             }
@@ -136,11 +136,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         try {
             if (req.type === 'LEAVE') {
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, {
-                    action: 'approve', notes: 'Vekil olarak onayland\u0131', acting_as_substitute_for: req.principal_id,
+                    action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id,
                 });
             } else if (req.type === 'OVERTIME') {
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
-                    action: 'approve', notes: 'Vekil olarak onayland\u0131', acting_as_substitute_for: req.principal_id,
+                    action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id,
                 });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {

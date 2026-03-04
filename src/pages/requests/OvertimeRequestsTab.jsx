@@ -11,8 +11,8 @@ import CreateAssignmentModal from '../../components/overtime/CreateAssignmentMod
 import RequestDetailModal from '../../components/RequestDetailModal';
 
 // CONSTANTS & HELPERS
-const DAY_NAMES = ['Pazar', 'Pazartesi', 'Sal\u0131', '\u00c7ar\u015famba', 'Per\u015fembe', 'Cuma', 'Cumartesi'];
-const MONTH_NAMES = ['Ocak', '\u015eubat', 'Mart', 'Nisan', 'May\u0131s', 'Haziran', 'Temmuz', 'A\u011fustos', 'Eyl\u00fcl', 'Ekim', 'Kas\u0131m', 'Aral\u0131k'];
+const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const MONTH_NAMES = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 function formatDateTurkish(dateStr) {
     if (!dateStr) return '';
@@ -54,7 +54,7 @@ const Pill = ({ children, color = 'slate' }) => {
 };
 
 const SourceBadge = ({ type }) => {
-    const map = { INTENDED: ['Planl\u0131', 'emerald'], POTENTIAL: ['Alg\u0131lanan', 'amber'], MANUAL: ['Manuel', 'blue'] };
+    const map = { INTENDED: ['Planlı', 'emerald'], POTENTIAL: ['Algılanan', 'amber'], MANUAL: ['Manuel', 'blue'] };
     const [label, color] = map[type] || [type || '?', 'slate'];
     return <Pill color={color}>{label}</Pill>;
 };
@@ -62,9 +62,9 @@ const SourceBadge = ({ type }) => {
 const StatusBadge = ({ status }) => {
     const map = {
         PENDING: ['Bekliyor', 'amber'],
-        APPROVED: ['Onayland\u0131', 'emerald'],
+        APPROVED: ['Onaylandı', 'emerald'],
         REJECTED: ['Reddedildi', 'red'],
-        CANCELLED: ['\u0130ptal', 'slate'],
+        CANCELLED: ['İptal', 'slate'],
     };
     const [label, color] = map[status] || [status, 'slate'];
     return <Pill color={color}>{label}</Pill>;
@@ -72,10 +72,10 @@ const StatusBadge = ({ status }) => {
 
 const AssignmentStatusBadge = ({ status }) => {
     const map = {
-        ASSIGNED: ['Atand\u0131', 'blue'],
+        ASSIGNED: ['Atandı', 'blue'],
         CLAIMED: ['Talep Edildi', 'emerald'],
-        EXPIRED: ['S\u00fcresi Doldu', 'slate'],
-        CANCELLED: ['\u0130ptal', 'red'],
+        EXPIRED: ['Süresi Doldu', 'slate'],
+        CANCELLED: ['İptal', 'red'],
     };
     const [label, color] = map[status] || [status, 'slate'];
     return <Pill color={color}>{label}</Pill>;
@@ -122,10 +122,10 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, weekl
                             : 'bg-amber-50 border-amber-200 text-amber-700'
                     }`}>
                         <p className="font-bold text-xs mb-0.5">
-                            Haftal\u0131k Mesai: {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} saat
+                            Haftalık Mesai: {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} saat
                         </p>
                         {isOverLimit ? (
-                            <p className="text-xs">Son 7 g\u00fcnde ek mesai limitinize ula\u015ft\u0131n\u0131z. Yeni talep olu\u015fturamazs\u0131n\u0131z.</p>
+                            <p className="text-xs">Son 7 günde ek mesai limitinize ulaştınız. Yeni talep oluşturamazsınız.</p>
                         ) : (
                             <p className="text-xs">Kalan: {weeklyOtStatus.remaining_hours} saat</p>
                         )}
@@ -133,12 +133,12 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, weekl
                 )}
 
                 <textarea rows="3" value={reason} onChange={e => setReason(e.target.value)}
-                    placeholder="A\u00e7\u0131klama (opsiyonel)..." className="input-field resize-none" />
+                    placeholder="Açıklama (opsiyonel)..." className="input-field resize-none" />
                 <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazge\u00e7</button>
+                    <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
                     <button onClick={() => { onSubmit(reason); setReason(''); }} disabled={loading || isOverLimit}
                         className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all">
-                        {loading ? 'G\u00f6nderiliyor...' : isOverLimit ? 'Limit Dolu' : 'Talep Et'}
+                        {loading ? 'Gönderiliyor...' : isOverLimit ? 'Limit Dolu' : 'Talep Et'}
                     </button>
                 </div>
             </div>
@@ -159,10 +159,10 @@ const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading, fetchWeeklyOtSta
     };
 
     const handleSubmit = () => {
-        if (!form.date || !form.start_time || !form.end_time) { setError('T\u00fcm alanlar\u0131 doldurunuz.'); return; }
-        if (form.end_time <= form.start_time) { setError('Biti\u015f saati ba\u015flang\u0131\u00e7tan b\u00fcy\u00fck olmal\u0131.'); return; }
-        if (!form.reason.trim()) { setError('A\u00e7\u0131klama giriniz.'); return; }
-        if (isOverLimit) { setError('Haftal\u0131k ek mesai limitinize ula\u015ft\u0131n\u0131z.'); return; }
+        if (!form.date || !form.start_time || !form.end_time) { setError('Tüm alanları doldurunuz.'); return; }
+        if (form.end_time <= form.start_time) { setError('Bitiş saati başlangıçtan büyük olmalı.'); return; }
+        if (!form.reason.trim()) { setError('Açıklama giriniz.'); return; }
+        if (isOverLimit) { setError('Haftalık ek mesai limitinize ulaştınız.'); return; }
         setError('');
         onSubmit(form);
     };
@@ -177,7 +177,7 @@ const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading, fetchWeeklyOtSta
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-fade-in">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Manuel Ek Mesai Giri\u015fi</h3>
+                    <h3 className="text-lg font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Manuel Ek Mesai Girişi</h3>
                     <button onClick={handleClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>
                 {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-sm font-medium">{error}</div>}
@@ -190,10 +190,10 @@ const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading, fetchWeeklyOtSta
                             : 'bg-amber-50 border-amber-200 text-amber-700'
                     }`}>
                         <p className="font-bold text-xs mb-0.5">
-                            Haftal\u0131k Mesai: {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} saat
+                            Haftalık Mesai: {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} saat
                         </p>
                         {isOverLimit ? (
-                            <p className="text-xs">Son 7 g\u00fcnde ek mesai limitinize ula\u015ft\u0131n\u0131z.</p>
+                            <p className="text-xs">Son 7 günde ek mesai limitinize ulaştınız.</p>
                         ) : (
                             <p className="text-xs">Kalan: {weeklyOtStatus.remaining_hours} saat</p>
                         )}
@@ -206,25 +206,25 @@ const ManualEntryModal = ({ isOpen, onClose, onSubmit, loading, fetchWeeklyOtSta
                         <input type="date" value={form.date} onChange={e => handleDateChange(e.target.value)} className="input-field" />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">Ba\u015flang\u0131\u00e7</label>
+                        <label className="text-xs font-bold text-slate-500 mb-1 block">Başlangıç</label>
                         <input type="time" value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} className="input-field" />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">Biti\u015f</label>
+                        <label className="text-xs font-bold text-slate-500 mb-1 block">Bitiş</label>
                         <input type="time" value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} className="input-field" />
                     </div>
                 </div>
                 <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">A\u00e7\u0131klama</label>
+                    <label className="text-xs font-bold text-slate-500 mb-1 block">Açıklama</label>
                     <textarea rows="2" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })}
-                        placeholder="Yap\u0131lan i\u015fin a\u00e7\u0131klamas\u0131..." className="input-field resize-none" />
+                        placeholder="Yapılan işin açıklaması..." className="input-field resize-none" />
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handleClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazge\u00e7</button>
+                    <button onClick={handleClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
                     <button onClick={handleSubmit} disabled={loading || isOverLimit}
                         className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                         {loading ? <Loader2 size={14} className="animate-spin" /> : <PenLine size={14} />}
-                        {loading ? 'G\u00f6nderiliyor...' : isOverLimit ? 'Limit Dolu' : 'Talep Olu\u015ftur'}
+                        {loading ? 'Gönderiliyor...' : isOverLimit ? 'Limit Dolu' : 'Talep Oluştur'}
                     </button>
                 </div>
             </div>
@@ -239,15 +239,15 @@ const CancelConfirmModal = ({ isOpen, date, onClose, onSubmit, loading }) => {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-fade-in">
                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    <XCircle size={20} className="text-red-500" /> Talebi \u0130ptal Et
+                    <XCircle size={20} className="text-red-500" /> Talebi İptal Et
                 </h3>
-                <p className="text-sm text-slate-500"><strong>{date}</strong> tarihli talebi iptal etmek istedi\u011finize emin misiniz?</p>
-                <textarea rows="2" value={reason} onChange={e => setReason(e.target.value)} placeholder="\u0130ptal sebebi (opsiyonel)" className="input-field resize-none" />
+                <p className="text-sm text-slate-500"><strong>{date}</strong> tarihli talebi iptal etmek istediğinize emin misiniz?</p>
+                <textarea rows="2" value={reason} onChange={e => setReason(e.target.value)} placeholder="İptal sebebi (opsiyonel)" className="input-field resize-none" />
                 <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazge\u00e7</button>
+                    <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
                     <button onClick={() => { onSubmit(reason); setReason(''); }} disabled={loading}
                         className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-red-500/20 disabled:opacity-50">
-                        \u0130ptal Et
+                        İptal Et
                     </button>
                 </div>
             </div>
@@ -276,7 +276,7 @@ const ClaimableCard = ({ item, type, onClaim }) => {
                     <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
                     <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName} {year}</span>
                     <span className={`text-[10px] font-bold mt-0.5 ${isOffDay ? 'text-amber-600' : 'text-slate-400'}`}>{dayName}</span>
-                    {isOffDay && <span className="mt-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-100 text-amber-700">TATIL</span>}
+                    {isOffDay && <span className="mt-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-100 text-amber-700">TATİL</span>}
                 </div>
 
                 <div className="flex-1 p-3 min-w-0">
@@ -284,7 +284,7 @@ const ClaimableCard = ({ item, type, onClaim }) => {
                         {item.shift_start_time && item.shift_end_time && !isOffDay && (
                             <span className="flex items-center gap-1"><Briefcase size={11} className="text-slate-400" /> Vardiya: {item.shift_start_time} - {item.shift_end_time}</span>
                         )}
-                        {isOffDay && <span className="flex items-center gap-1 text-amber-600 font-bold"><Sun size={11} /> Tatil / \u0130zin G\u00fcn\u00fc</span>}
+                        {isOffDay && <span className="flex items-center gap-1 text-amber-600 font-bold"><Sun size={11} /> Tatil / İzin Günü</span>}
                     </div>
                     {entries.length > 0 && (
                         <div className="space-y-1 mb-2">
@@ -315,7 +315,7 @@ const ClaimableCard = ({ item, type, onClaim }) => {
                 {/* Action column */}
                 <div className="flex flex-col items-end justify-center gap-1.5 px-3 flex-shrink-0">
                     {item.claim_status === 'APPROVED' ? (
-                        <Pill color="emerald">Onayland\u0131</Pill>
+                        <Pill color="emerald">Onaylandı</Pill>
                     ) : item.claim_status === 'PENDING' ? (
                         <Pill color="amber">Bekliyor</Pill>
                     ) : item.is_rejected ? (
@@ -457,7 +457,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
             setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' });
             refetchAll();
         } catch (err) {
-            alert(err.response?.data?.error || 'Talep s\u0131ras\u0131nda hata olu\u015ftu.');
+            alert(err.response?.data?.error || 'Talep sırasında hata oluştu.');
         }
         setActionLoading(false);
     };
@@ -469,7 +469,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
             setCancelModal({ open: false, target: null });
             refetchAll();
         } catch (err) {
-            alert(err.response?.data?.error || '\u0130ptal s\u0131ras\u0131nda hata olu\u015ftu.');
+            alert(err.response?.data?.error || 'İptal sırasında hata oluştu.');
         }
         setActionLoading(false);
     };
@@ -484,18 +484,18 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
             setShowManualModal(false);
             refetchAll();
         } catch (err) {
-            alert(err.response?.data?.error || err.response?.data?.detail || 'Hata olu\u015ftu.');
+            alert(err.response?.data?.error || err.response?.data?.detail || 'Hata oluştu.');
         }
         setActionLoading(false);
     };
 
     const handleCancelAssignment = async (a) => {
-        if (!window.confirm(`${a.employee_name} - ${formatDateTurkish(a.date)} atamas\u0131n\u0131 iptal etmek istiyor musunuz?`)) return;
+        if (!window.confirm(`${a.employee_name} - ${formatDateTurkish(a.date)} atamasını iptal etmek istiyor musunuz?`)) return;
         try {
             await api.post(`/overtime-assignments/${a.id}/cancel/`);
             refetchAll();
         } catch (err) {
-            alert(err.response?.data?.error || 'Hata olu\u015ftu.');
+            alert(err.response?.data?.error || 'Hata oluştu.');
         }
     };
 
@@ -524,7 +524,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
             <div className="flex flex-wrap gap-3">
                 <button onClick={() => setShowManualModal(true)}
                     className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2">
-                    <PenLine size={15} /> Kendim \u0130\u00e7in OT Talebi
+                    <PenLine size={15} /> Kendim İçin OT Talebi
                 </button>
                 {isManager && (
                     <button onClick={() => setShowAssignModal(true)}
@@ -547,7 +547,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                         {visibleIntended.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Pill color="blue">Planl\u0131</Pill>
+                                    <Pill color="blue">Planlı</Pill>
                                     <span className="text-xs text-slate-400 font-medium">{visibleIntended.length} atama</span>
                                 </div>
                                 <div className="space-y-2">
@@ -557,7 +557,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                                 fetchWeeklyOtStatus(item.date);
                                                 setClaimModal({
                                                     open: true, type: 'INTENDED', target: item,
-                                                    title: 'Planl\u0131 Mesai Talep Et',
+                                                    title: 'Planlı Mesai Talep Et',
                                                     subtitle: `${formatDateTurkish(item.date)} - ${item.claimable_hours || item.actual_overtime_hours} saat`,
                                                 });
                                             }} />
@@ -607,7 +607,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                     <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Kaynak</th>
                                     <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Süre</th>
                                     <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Durum</th>
-                                    <th className="text-right py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">\u0130\u015flemler</th>
+                                    <th className="text-right py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -629,7 +629,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                                 {req.status === 'PENDING' && (
                                                     <button onClick={() => setCancelModal({ open: true, target: req })}
                                                         className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
-                                                        <XCircle size={10} /> \u0130ptal
+                                                        <XCircle size={10} /> İptal
                                                     </button>
                                                 )}
                                             </div>
@@ -642,13 +642,13 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 )}
             </div>
 
-            {/* SECTION 3: Ekip Atamalar\u0131 (manager only) */}
+            {/* SECTION 3: Ekip Atamaları (manager only) */}
             {isManager && (
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                    <SectionHeader icon={<Users size={16} />} title="Ekip Atamalar\u0131" count={teamAssignments.length} />
+                    <SectionHeader icon={<Users size={16} />} title="Ekip Atamaları" count={teamAssignments.length} />
 
                     {teamAssignments.length === 0 ? (
-                        <EmptyState text="Ekip atamas\u0131 bulunmuyor." />
+                        <EmptyState text="Ekip ataması bulunmuyor." />
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -658,7 +658,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                         <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Tarih</th>
                                         <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Maks Süre</th>
                                         <th className="text-left py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Durum</th>
-                                        <th className="text-right py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">\u0130\u015flemler</th>
+                                        <th className="text-right py-2.5 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">İşlemler</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -674,8 +674,8 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                                                 ? 'bg-amber-50 text-amber-600 border border-amber-200'
                                                                 : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                                                     }`}>
-                                                        Haftal\u0131k Mesai: {a._weeklyOtStatus.used_hours}/{a._weeklyOtStatus.limit_hours} sa
-                                                        {a._weeklyOtStatus.is_over_limit && ' \u2014 L\u0130M\u0130T A\u015eILMI\u015e'}
+                                                        Haftalık Mesai: {a._weeklyOtStatus.used_hours}/{a._weeklyOtStatus.limit_hours} sa
+                                                        {a._weeklyOtStatus.is_over_limit && ' — LİMİT AŞILMIŞ'}
                                                     </div>
                                                 )}
                                             </td>
@@ -686,7 +686,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                                 {a.status === 'ASSIGNED' && (
                                                     <button onClick={() => handleCancelAssignment(a)}
                                                         className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
-                                                        <XCircle size={10} /> \u0130ptal
+                                                        <XCircle size={10} /> İptal
                                                     </button>
                                                 )}
                                             </td>
