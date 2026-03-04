@@ -14,6 +14,7 @@ const GHOST_REASON_MAP = {
     TERMINATED: { label: 'İş Akdi Sonlandırılmış', color: 'volcano', desc: 'employment_status=TERMINATED' },
     FROZEN: { label: 'Dondurulmuş', color: 'blue', desc: 'is_frozen=True' },
     ABSENT_ONLY: { label: 'Sadece Devamsız', color: 'orange', desc: 'Aktif ama tüm mesai kayıtları ABSENT' },
+    USER_DISABLED: { label: 'Hesap Kapatılmış', color: 'magenta', desc: 'Employee aktif ama User hesabı devre dışı (frontend\'ten silinmiş)' },
     ORPHAN_USER: { label: 'Yetim Kullanıcı', color: 'purple', desc: 'User var, Employee yok' },
 };
 
@@ -203,7 +204,7 @@ export default function GhostEmployeesTab() {
                 {data && (
                     <>
                         {/* Summary cards */}
-                        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
                             <Card size="small" className="text-center">
                                 <Statistic title="Toplam" value={summary.total || 0} valueStyle={{ color: summary.total > 0 ? '#ef4444' : '#22c55e' }} />
                             </Card>
@@ -218,6 +219,9 @@ export default function GhostEmployeesTab() {
                             </Card>
                             <Card size="small" className="text-center">
                                 <Statistic title="Sadece Devamsız" value={summary.absent_only || 0} valueStyle={{ fontSize: 20, color: '#f97316' }} />
+                            </Card>
+                            <Card size="small" className="text-center">
+                                <Statistic title="Hesap Kapalı" value={summary.user_disabled || 0} valueStyle={{ fontSize: 20, color: '#eb2f96' }} />
                             </Card>
                             <Card size="small" className="text-center">
                                 <Statistic title="Yetim User" value={summary.orphan_users || 0} valueStyle={{ fontSize: 20 }} />
