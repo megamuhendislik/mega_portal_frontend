@@ -2343,7 +2343,7 @@ export default function PdksCompareTab() {
                                                                             <div className="space-y-1">
                                                                                 {record.revised_ot_requests.filter(r => r.changed).map((ot) => (
                                                                                     <div key={ot.id} className="flex items-center gap-2 text-xs">
-                                                                                        <Tag color="orange">{ot.status} {ot.no_match ? '- İPTAL' : '- REVİZE'}</Tag>
+                                                                                        <Tag color={ot.no_match ? "red" : "orange"}>{ot.status} {ot.no_match ? '- SİL (0sa)' : '- REVİZE'}</Tag>
                                                                                         {ot.no_match ? (
                                                                                             <span className="font-mono line-through text-red-500">{ot.old_start} — {ot.old_end} ({formatSeconds(ot.old_duration)})</span>
                                                                                         ) : (
