@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
 import { createPortal } from 'react-dom';
 import {
     ShieldCheckIcon,
@@ -55,13 +56,11 @@ function useBodyScrollLock(active) {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getDefaultDateFrom() {
-    const d = new Date();
-    d.setDate(d.getDate() - 90);
-    return d.toISOString().split('T')[0];
+    return getIstanbulDateOffset(-90);
 }
 
 function getDefaultDateTo() {
-    return new Date().toISOString().split('T')[0];
+    return getIstanbulToday();
 }
 
 const SeverityBadge = ({ severity }) => {

@@ -49,7 +49,7 @@ const EmployeeDetail = () => {
 
         // Work Schedule
         work_schedule: '',
-        attendance_tolerance_minutes: 0, daily_break_allowance: 0,
+        daily_break_allowance: 0,
         shift_start: '', shift_end: '',
         lunch_start: '12:30', lunch_end: '13:30',
         uses_service: false, service_tolerance_minutes: 0,
@@ -134,7 +134,6 @@ const EmployeeDetail = () => {
                 })),
 
                 work_schedule: emp.work_schedule?.id || '',
-                attendance_tolerance_minutes: emp.attendance_tolerance_minutes || 0,
                 daily_break_allowance: emp.daily_break_allowance || 0,
                 shift_start: emp.shift_start || '',
                 shift_end: emp.shift_end || '',
@@ -610,10 +609,6 @@ const EmployeeDetail = () => {
                                             </select>
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tolerans (Dk)</label>
-                                            <input type="number" name="attendance_tolerance_minutes" value={formData.attendance_tolerance_minutes} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Mola Hakkı (Dk)</label>
                                             <input type="number" name="daily_break_allowance" value={formData.daily_break_allowance} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />

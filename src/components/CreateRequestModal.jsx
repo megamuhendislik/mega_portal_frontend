@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getIstanbulToday } from '../utils/dateUtils';
 import {
     LeaveRequestForm,
     OvertimeRequestForm,
@@ -60,7 +61,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
 
     const [overtimeForm, setOvertimeForm] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: getIstanbulToday(),
         start_time: '',
         end_time: '',
         reason: '',
@@ -68,13 +69,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
 
     const [mealForm, setMealForm] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: getIstanbulToday(),
         description: ''
     });
 
     const [externalDutyForm, setExternalDutyForm] = useState({
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date().toISOString().split('T')[0],
+        start_date: getIstanbulToday(),
+        end_date: getIstanbulToday(),
         start_time: '',
         end_time: '',
         reason: '',
@@ -105,7 +106,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [dutyHoursLoading, setDutyHoursLoading] = useState(false);
 
     const [cardlessEntryForm, setCardlessEntryForm] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: getIstanbulToday(),
         check_in_time: '',
         check_out_time: '',
         reason: '',
@@ -185,7 +186,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setApproverSubstitutes([]);
             // Reset forms
             setOvertimeForm({
-                date: new Date().toISOString().split('T')[0],
+                date: getIstanbulToday(),
                 start_time: '',
                 end_time: '',
                 reason: '',
@@ -228,7 +229,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         if (!selectedApproverId) { setApproverSubstitutes([]); return; }
         api.get(`/substitute-authority/?search=${selectedApproverId}`)
             .then(res => {
-                const today = new Date().toISOString().split('T')[0];
+                const today = getIstanbulToday();
                 const active = (res.data?.results || res.data || []).filter(s =>
                     s.principal === selectedApproverId || s.principal_id === selectedApproverId
                 ).filter(s => s.valid_from <= today && s.valid_to >= today);

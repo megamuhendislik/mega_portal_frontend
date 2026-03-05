@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText } from 'lucide-react';
+import { getIstanbulToday, getIstanbulDateOffset } from '../../utils/dateUtils';
 
 // ============================================================
 // LeaveRequestForm
@@ -862,13 +863,8 @@ export const OvertimeRequestForm = ({
 // ============================================================
 export const MealRequestForm = ({ mealForm, setMealForm }) => {
     // Tarih sınırları: 2 mali ay geri (~75 gün), 2 gün ileri (backend ile uyumlu)
-    const today = new Date();
-    const minDate = new Date(today);
-    minDate.setDate(minDate.getDate() - 75);
-    const maxDate = new Date(today);
-    maxDate.setDate(maxDate.getDate() + 2);
-    const minStr = minDate.toISOString().split('T')[0];
-    const maxStr = maxDate.toISOString().split('T')[0];
+    const minStr = getIstanbulDateOffset(-75);
+    const maxStr = getIstanbulDateOffset(2);
 
     return (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
@@ -1603,11 +1599,8 @@ export const CardlessEntryForm = ({
         <div>
             <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
             {(() => {
-                const today = new Date();
-                const maxDate = today.toISOString().split('T')[0];
-                const minD = new Date();
-                minD.setDate(minD.getDate() - 75);
-                const minDate = minD.toISOString().split('T')[0];
+                const maxDate = getIstanbulToday();
+                const minDate = getIstanbulDateOffset(-75);
                 return (
                     <input
                         required

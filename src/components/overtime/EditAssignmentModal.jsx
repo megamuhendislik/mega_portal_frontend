@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Pencil, X, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
+import { getIstanbulToday } from '../../utils/dateUtils';
 
 const EditAssignmentModal = ({ isOpen, onClose, onSuccess, assignment }) => {
     const [form, setForm] = useState({
@@ -38,8 +39,8 @@ const EditAssignmentModal = ({ isOpen, onClose, onSuccess, assignment }) => {
 
     if (!isOpen || !assignment) return null;
 
-    const isPast = new Date(assignment.date + 'T00:00:00') < new Date(new Date().toDateString());
-    const today = new Date().toISOString().split('T')[0];
+    const today = getIstanbulToday();
+    const isPast = assignment.date < today;
 
     const handleSubmit = async (e) => {
         e.preventDefault();

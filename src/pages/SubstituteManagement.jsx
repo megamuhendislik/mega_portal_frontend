@@ -5,6 +5,7 @@ import {
   Plus, CheckCircle2, XCircle, CalendarDays, UserCheck, Briefcase, Loader2
 } from 'lucide-react';
 import api from '../services/api';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 const SubstituteManagement = () => {
   const [delegations, setDelegations] = useState([]);
@@ -66,7 +67,7 @@ const SubstituteManagement = () => {
   };
 
   const getStatus = (d) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getIstanbulToday();
     if (!d.is_active) return 'passive';
     if (d.valid_from > today) return 'future';
     if (d.valid_to < today) return 'expired';
@@ -74,7 +75,7 @@ const SubstituteManagement = () => {
   };
 
   const stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getIstanbulToday();
     const all = delegations;
     const getStatusLocal = (d) => {
       if (!d.is_active) return 'passive';

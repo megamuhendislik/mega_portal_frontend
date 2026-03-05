@@ -154,7 +154,7 @@ const WorkSchedules = () => {
                 lunch_start: "12:30",
                 lunch_end: "13:30",
                 daily_break_allowance: 30,
-                late_tolerance_minutes: 15,
+                tolerance_minutes: 30,
                 service_tolerance_minutes: 0,
                 minimum_overtime_minutes: 15,
             });
@@ -392,8 +392,7 @@ const WorkSchedules = () => {
                 lunch_start: "12:30",
                 lunch_end: "13:30",
                 daily_break_allowance: 30,
-                late_tolerance_minutes: 30,
-                early_leave_tolerance_minutes: 0,
+                tolerance_minutes: 30,
                 service_tolerance_minutes: 15,
                 minimum_overtime_minutes: 15
             });

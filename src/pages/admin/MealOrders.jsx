@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { getIstanbulToday } from '../../utils/dateUtils';
 import { Utensils, Check, Undo2, Pencil, X, ChevronLeft, ChevronRight, Loader2, Ban, Plus, Search, Package } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -14,7 +15,7 @@ const MealOrders = () => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState([]);
     const [summary, setSummary] = useState({ total_requests: 0, ordered_count: 0, pending_count: 0, rejected_count: 0 });
-    const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(() => getIstanbulToday());
     const [editingNote, setEditingNote] = useState(null);
     const [noteText, setNoteText] = useState('');
     const [searchTerm, setSearchTerm] = useState('');

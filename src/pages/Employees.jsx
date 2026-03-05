@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, ChevronDown, ChevronRight, Check, X, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key, Calculator, Network } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getIstanbulToday } from '../utils/dateUtils';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
@@ -70,7 +71,7 @@ const INITIAL_FORM_STATE = {
     weekly_ot_limit_hours: 30,
     remote_work_days: [], // ['MON', 'WED']
 
-    hired_date: new Date().toISOString().split('T')[0],
+    hired_date: getIstanbulToday(),
 
     // ...
 
@@ -516,7 +517,7 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
     const defaultLunchStart = selectedSchedule?.lunch_start?.slice(0, 5) || '';
     const defaultLunchEnd = selectedSchedule?.lunch_end?.slice(0, 5) || '';
     const defaultBreak = selectedSchedule?.daily_break_allowance || '';
-    const defaultTolerance = selectedSchedule?.late_tolerance_minutes || '';
+    const defaultTolerance = selectedSchedule?.tolerance_minutes || '';
     const defaultServiceTolerance = selectedSchedule?.service_tolerance_minutes || '';
 
     return (
@@ -1420,7 +1421,6 @@ const Employees = () => {
 
                 // Schedule Overrides mapping
                 daily_break_allowance: data.daily_break_allowance || '',
-                attendance_tolerance_minutes: data.attendance_tolerance_minutes || '',
                 shift_start: data.shift_start || '',
                 shift_end: data.shift_end || '',
                 lunch_start: data.lunch_start || '',
@@ -1483,7 +1483,6 @@ const Employees = () => {
                 lunch_start: null,
                 lunch_end: null,
                 daily_break_allowance: null,
-                // attendance_tolerance_minutes: null, // Allow editing/saving
                 service_tolerance_minutes: cleanPayload.uses_service ? (cleanPayload.service_tolerance_minutes || null) : null,
                 weekly_ot_limit_hours: cleanPayload.weekly_ot_limit_hours ?? 30,
                 weekly_schedule: null, // Force remove any legacy weekly schedule data

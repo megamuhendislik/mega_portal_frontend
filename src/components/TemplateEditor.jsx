@@ -197,9 +197,9 @@ const TemplateEditor = ({ template, onChange, onSave, onDelete, saving }) => {
             {/* Tolerances */}
             <div className="grid grid-cols-3 gap-3">
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Geç Kalma Tol. (dk)</label>
-                    <input type="number" value={template.late_tolerance_minutes ?? 15}
-                        onChange={e => handleFieldChange('late_tolerance_minutes', parseInt(e.target.value) || 0)}
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Tolerans (dk)</label>
+                    <input type="number" value={template.tolerance_minutes ?? 30}
+                        onChange={e => handleFieldChange('tolerance_minutes', parseInt(e.target.value) || 0)}
                         className="w-full px-2 py-1.5 border rounded-lg text-xs text-center focus:ring-1 ring-indigo-500 outline-none" />
                 </div>
                 <div>

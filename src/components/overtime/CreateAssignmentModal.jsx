@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Calendar, X, AlertTriangle, Clock } from 'lucide-react';
 import api from '../../services/api';
+import { getIstanbulToday } from '../../utils/dateUtils';
 
 const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
     const [form, setForm] = useState({
@@ -103,7 +104,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
     };
 
     // Tarih seçici min = bugün
-    const today = new Date().toISOString().split('T')[0];
+    const today = getIstanbulToday();
     const dateMin = fiscalPeriods ? fiscalPeriods.current.start : today;
     const dateMax = fiscalPeriods ? fiscalPeriods.next.end : '';
     const effectiveMin = dateMin > today ? dateMin : today;

@@ -374,22 +374,22 @@ function ToleranceSection({ data }) {
     return (
         <div className="space-y-4">
             {/* Summary */}
-            {(data.employees_using_service !== undefined || data.late_tolerance_set !== undefined) && (
+            {(data.employees_using_service !== undefined || data.tolerance_set !== undefined) && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {data.late_tolerance_set !== undefined && (
-                        <div className={`p-4 rounded-lg border text-center ${data.late_tolerance_set ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
+                    {data.tolerance_set !== undefined && (
+                        <div className={`p-4 rounded-lg border text-center ${data.tolerance_set ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
                             <div className="flex items-center justify-center gap-2">
-                                {data.late_tolerance_set ? (
+                                {data.tolerance_set ? (
                                     <CheckCircleIcon className="w-6 h-6 text-green-600" />
                                 ) : (
                                     <ExclamationTriangleIcon className="w-6 h-6 text-amber-600" />
                                 )}
-                                <div className={`text-sm font-bold ${data.late_tolerance_set ? 'text-green-700' : 'text-amber-700'}`}>
-                                    Geç Kalma Toleransı
+                                <div className={`text-sm font-bold ${data.tolerance_set ? 'text-green-700' : 'text-amber-700'}`}>
+                                    Tolerans
                                 </div>
                             </div>
-                            <div className={`text-xs mt-1 ${data.late_tolerance_set ? 'text-green-600' : 'text-amber-600'}`}>
-                                {data.late_tolerance_set ? 'Tanımlı' : 'Tanımsız'}
+                            <div className={`text-xs mt-1 ${data.tolerance_set ? 'text-green-600' : 'text-amber-600'}`}>
+                                {data.tolerance_set ? 'Tanımlı' : 'Tanımsız'}
                             </div>
                         </div>
                     )}

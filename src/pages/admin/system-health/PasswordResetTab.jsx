@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../../services/api';
+import { getIstanbulToday } from '../../../utils/dateUtils';
 import {
     ExclamationTriangleIcon,
     ArrowDownTrayIcon,
@@ -34,7 +35,7 @@ export default function PasswordResetTab() {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `sifre_sifirla_${new Date().toISOString().split('T')[0]}.xlsx`);
+            link.setAttribute('download', `sifre_sifirla_${getIstanbulToday()}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
