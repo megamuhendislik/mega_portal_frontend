@@ -100,6 +100,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         contact_phone: '',
     });
 
+    // External duty hours preview
+    const [dutyHoursPreview, setDutyHoursPreview] = useState(null);
+    const [dutyHoursLoading, setDutyHoursLoading] = useState(false);
+
     const [cardlessEntryForm, setCardlessEntryForm] = useState({
         date: new Date().toISOString().split('T')[0],
         check_in_time: '',
@@ -811,6 +815,26 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     })();
 
+    // Fetch duty hours preview for external duty summary step
+    const fetchDutyHoursPreview = async () => {
+        if (!externalDutyForm.start_date || !externalDutyForm.end_date) return;
+        setDutyHoursLoading(true);
+        try {
+            const resp = await api.post('/leave/requests/preview-duty-hours/', {
+                start_date: externalDutyForm.start_date,
+                end_date: externalDutyForm.end_date,
+                start_time: externalDutyForm.start_time || null,
+                end_time: externalDutyForm.end_time || null,
+            });
+            setDutyHoursPreview(resp.data);
+        } catch (err) {
+            console.error('Duty hours preview error:', err);
+            setDutyHoursPreview(null);
+        } finally {
+            setDutyHoursLoading(false);
+        }
+    };
+
     // For overtime: only show footer submit when manual section is open
     const showOvertimeSubmit = selectedType === 'OVERTIME' && overtimeManualOpen;
 
@@ -909,6 +933,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     setExternalDutyForm={setExternalDutyForm}
                                     duration={externalDutyDuration}
                                     approverDropdown={approverDropdownElement}
+                                    dutyHoursPreview={dutyHoursPreview}
+                                    dutyHoursLoading={dutyHoursLoading}
+                                    fetchDutyHoursPreview={fetchDutyHoursPreview}
                                 />
                             )}
                             {selectedType === 'CARDLESS_ENTRY' && (

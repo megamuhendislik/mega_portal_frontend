@@ -19,12 +19,43 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [dutyPreview, setDutyPreview] = useState(null);
+  const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && request) {
       fetchTimeLockInfo();
     }
   }, [isOpen, request]);
+
+  useEffect(() => {
+    if (request?.status === 'PENDING' &&
+        request?.request_type_detail?.category === 'EXTERNAL_DUTY' &&
+        request?.start_date && request?.end_date) {
+      const fetchPreview = async () => {
+        setDutyPreviewLoading(true);
+        try {
+          const resp = await api.post('/leave/requests/preview-duty-hours/', {
+            start_date: request.start_date,
+            end_date: request.end_date,
+            start_time: request.start_time || null,
+            end_time: request.end_time || null,
+            employee_id: request.employee,
+          });
+          setDutyPreview(resp.data);
+        } catch (err) {
+          console.error('Duty preview error:', err);
+          setDutyPreview(null);
+        } finally {
+          setDutyPreviewLoading(false);
+        }
+      };
+      fetchPreview();
+    } else {
+      setDutyPreview(null);
+      setDutyPreviewLoading(false);
+    }
+  }, [request?.id]);
 
   useEffect(() => {
     if (isOpen && request && requestType === 'LEAVE' && request.request_type_detail?.category !== 'EXTERNAL_DUTY') {
@@ -437,8 +468,66 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                     )}
                   </>
                 ) : (
-                  <div className="text-center py-3 text-sm text-purple-400">
-                    {request.status === 'PENDING' ? 'Talep onaylandığında mesai kayıtları oluşacaktır.' : 'Mesai kaydı bulunamadı.'}
+                  <div>
+                    {request.status === 'PENDING' && dutyPreview ? (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className="text-[10px] font-bold text-indigo-600 uppercase">Tahmini Hesaplama</span>
+                          <span className="text-[9px] text-slate-400">(onay sonrası kesinleşir)</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <div className="bg-white p-2 rounded-lg border border-emerald-100 text-center">
+                            <span className="block text-[10px] text-slate-400 font-bold uppercase">Normal Mesai</span>
+                            <span className="block font-black text-emerald-600 text-lg">
+                              {Math.floor(dutyPreview.totals.total_normal_work_minutes / 60)}s {dutyPreview.totals.total_normal_work_minutes % 60}dk
+                            </span>
+                          </div>
+                          <div className="bg-white p-2 rounded-lg border border-amber-100 text-center">
+                            <span className="block text-[10px] text-slate-400 font-bold uppercase">Ek Mesai</span>
+                            <span className="block font-black text-amber-600 text-lg">
+                              {Math.floor(dutyPreview.totals.total_overtime_minutes / 60)}s {dutyPreview.totals.total_overtime_minutes % 60}dk
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {dutyPreview.days.map((day, i) => (
+                            <div key={i} className={`flex items-center justify-between text-xs p-2 rounded-lg border ${
+                              day.is_off_day ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'
+                            }`}>
+                              <div className="w-16">
+                                <span className="font-bold text-slate-700">
+                                  {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                </span>
+                                <span className="block text-[10px] text-slate-400">{day.day_name}</span>
+                              </div>
+                              <span className="text-slate-500 text-center">{day.duty_start} - {day.duty_end}</span>
+                              <div className="text-center">
+                                {day.normal_work_minutes > 0 ? (
+                                  <span className="text-emerald-600 font-bold">
+                                    {Math.floor(day.normal_work_minutes / 60)}s {day.normal_work_minutes % 60}dk
+                                  </span>
+                                ) : <span className="text-slate-300">—</span>}
+                              </div>
+                              <div className="text-right">
+                                {day.overtime_minutes > 0 ? (
+                                  <span className="text-amber-600 font-bold">
+                                    {Math.floor(day.overtime_minutes / 60)}s {day.overtime_minutes % 60}dk
+                                  </span>
+                                ) : <span className="text-slate-300">—</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : dutyPreviewLoading ? (
+                      <div className="text-center py-3">
+                        <div className="animate-pulse text-sm text-purple-400">Hesaplanıyor...</div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-3 text-sm text-purple-400">
+                        {request.status === 'PENDING' ? 'Talep onaylandığında mesai kayıtları oluşacaktır.' : 'Mesai kaydı bulunamadı.'}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

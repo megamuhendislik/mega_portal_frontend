@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText } from 'lucide-react';
 
 // ============================================================
@@ -921,8 +921,18 @@ export const ExternalDutyForm = ({
     setExternalDutyForm,
     duration,
     approverDropdown,
+    dutyHoursPreview,
+    dutyHoursLoading,
+    fetchDutyHoursPreview,
 }) => {
     const [currentStep, setCurrentStep] = useState(0);
+
+    // Fetch duty hours preview when reaching the summary step (step 7)
+    useEffect(() => {
+        if (currentStep === 7 && fetchDutyHoursPreview) {
+            fetchDutyHoursPreview();
+        }
+    }, [currentStep]);
 
     // Step definitions (all possible steps)
     const ALL_STEPS = {
@@ -1395,6 +1405,75 @@ export const ExternalDutyForm = ({
                     <SummaryRow label="Saat" value={externalDutyForm.start_time && externalDutyForm.end_time ? `${externalDutyForm.start_time} - ${externalDutyForm.end_time}` : ''} />
                     <SummaryRow label="Süre" value={duration ? `${duration} Gün` : ''} />
                 </SummaryCard>
+                {/* Tahmini Mesai Hesaplaması */}
+                {dutyHoursPreview ? (
+                    <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/30">
+                        <h4 className="text-sm font-bold text-indigo-700 mb-3 flex items-center gap-2">
+                            <Clock size={16} /> Tahmini Mesai Hesaplaması
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            <div className="bg-white p-2.5 rounded-lg border border-emerald-100 text-center">
+                                <span className="block text-[10px] text-slate-400 font-bold uppercase">Normal Mesai</span>
+                                <span className="block font-black text-emerald-600 text-lg">
+                                    {Math.floor(dutyHoursPreview.totals.total_normal_work_minutes / 60)}s {dutyHoursPreview.totals.total_normal_work_minutes % 60}dk
+                                </span>
+                            </div>
+                            <div className="bg-white p-2.5 rounded-lg border border-amber-100 text-center">
+                                <span className="block text-[10px] text-slate-400 font-bold uppercase">Ek Mesai</span>
+                                <span className="block font-black text-amber-600 text-lg">
+                                    {Math.floor(dutyHoursPreview.totals.total_overtime_minutes / 60)}s {dutyHoursPreview.totals.total_overtime_minutes % 60}dk
+                                </span>
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            {dutyHoursPreview.days.map((day, i) => (
+                                <div key={i} className={`flex items-center justify-between text-xs p-2.5 rounded-lg border ${
+                                    day.is_off_day ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'
+                                }`}>
+                                    <div className="w-20">
+                                        <span className="font-bold text-slate-700">
+                                            {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                        <span className="block text-[10px] text-slate-400">{day.day_name}</span>
+                                    </div>
+                                    <span className="text-slate-500 w-24 text-center">{day.duty_start} - {day.duty_end}</span>
+                                    <div className="w-20 text-center">
+                                        {day.normal_work_minutes > 0 ? (
+                                            <span className="text-emerald-600 font-bold">
+                                                {Math.floor(day.normal_work_minutes / 60)}s {day.normal_work_minutes % 60}dk
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-300">&mdash;</span>
+                                        )}
+                                    </div>
+                                    <div className="w-24 text-right">
+                                        {day.overtime_minutes > 0 ? (
+                                            <div>
+                                                <span className="text-amber-600 font-bold">
+                                                    {Math.floor(day.overtime_minutes / 60)}s {day.overtime_minutes % 60}dk
+                                                </span>
+                                                {day.overtime_segments.length > 0 && (
+                                                    <span className="block text-[9px] text-slate-400">
+                                                        {day.overtime_segments.map(s => `${s.start}-${s.end}`).join(' + ')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-300">&mdash;</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-400 text-center">
+                            Toplam {dutyHoursPreview.totals.total_days} {"\u0067\u00fc\u006e"} ({dutyHoursPreview.totals.working_days} {"\u0069\u015f"} {"\u0067\u00fc\u006e\u00fc"}, {dutyHoursPreview.totals.off_days} tatil)
+                        </div>
+                    </div>
+                ) : dutyHoursLoading ? (
+                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 text-center">
+                        <div className="animate-pulse text-sm text-slate-400">Mesai hesaplanıyor...</div>
+                    </div>
+                ) : null}
                 {!isRemote && (
                     <SummaryCard title="Lokasyon" icon={MapPin}>
                         <SummaryRow label="Şehir" value={`${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim()} />
