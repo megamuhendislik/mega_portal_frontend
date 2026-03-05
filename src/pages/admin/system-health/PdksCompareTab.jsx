@@ -1233,6 +1233,8 @@ export default function PdksCompareTab() {
                     hasLeave: false,
                     hasCardless: false,
                     hasExternalDuty: false,
+                    hasChanges: false,
+                    hasAnomaly: false,
                 });
             }
             const group = map.get(key);
@@ -1244,6 +1246,8 @@ export default function PdksCompareTab() {
             if (item.has_approved_leave) group.hasLeave = true;
             if (item.approved_cardless_entries?.length > 0) group.hasCardless = true;
             if (item.external_duties?.length > 0) group.hasExternalDuty = true;
+            if (item.has_changes) group.hasChanges = true;
+            if (item.has_anomaly) group.hasAnomaly = true;
         }
         return Array.from(map.values()).sort((a, b) =>
             (a.employee_code || '').localeCompare(b.employee_code || '')
@@ -1339,9 +1343,21 @@ export default function PdksCompareTab() {
             title: 'Değişim Özeti',
             dataIndex: 'changes_summary',
             key: 'changes_summary',
-            width: 260,
-            ellipsis: true,
-            render: (v) => v ? <span className="font-mono text-xs">{v}</span> : <span className="text-gray-300">-</span>,
+            width: 300,
+            ellipsis: false,
+            render: (v, record) => {
+                if (!v) return <span className="text-gray-300">-</span>;
+                return (
+                    <div>
+                        {record.has_anomaly && <Tag color="red" className="text-[10px] mb-1">Anomali: OT&gt;24sa</Tag>}
+                        {record.has_changes ? (
+                            <span className="font-mono text-xs font-semibold text-orange-700">{v}</span>
+                        ) : (
+                            <span className="font-mono text-xs text-gray-400">{v}</span>
+                        )}
+                    </div>
+                );
+            },
         },
     ], []);
 
@@ -1397,14 +1413,19 @@ export default function PdksCompareTab() {
         {
             title: 'Durum',
             key: 'tags',
-            width: 200,
+            width: 260,
             render: (_, record) => {
                 const tags = [];
+                if (record.hasAnomaly) tags.push(<Tag key="anomaly" color="red">Anomali</Tag>);
+                if (record.hasChanges) tags.push(<Tag key="changes" color="orange">Değişim Var</Tag>);
                 if (record.hasOtPreserved) tags.push(<Tag key="ot" color="purple">OT Korunan</Tag>);
                 if (record.hasLeave) tags.push(<Tag key="leave" color="blue">İzinli</Tag>);
                 if (record.hasCardless) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
                 if (record.hasExternalDuty) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
-                return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
+                if (!record.hasChanges && !record.hasAnomaly && tags.length === 0) {
+                    tags.push(<Tag key="ok" color="green">Değişim Yok</Tag>);
+                }
+                return <Space size={2} wrap>{tags}</Space>;
             },
         },
     ], []);
@@ -2150,7 +2171,7 @@ export default function PdksCompareTab() {
                                             showTotal: (total, range) =>
                                                 `${range[0]}-${range[1]} / ${total} çalışan`,
                                         }}
-                                        defaultExpandAllRows={true}
+                                        defaultExpandedRowKeys={groupedPreviewData.filter(g => g.hasChanges || g.hasAnomaly).map(g => g.key)}
                                         expandable={{
                                             expandedRowRender: (empRecord) => (
                                                 <div className="pl-4">
@@ -2161,6 +2182,7 @@ export default function PdksCompareTab() {
                                                         size="small"
                                                         bordered
                                                         pagination={false}
+                                                        defaultExpandedRowKeys={empRecord.days.filter(d => d.has_changes || d.has_anomaly).map(d => d.key)}
                                                         expandable={{
                                                             expandedRowRender: (record) => (
                                                                 <div className="space-y-3 p-2">
