@@ -13,6 +13,7 @@ import {
     SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
+import { getIstanbulToday } from '../../../utils/dateUtils';
 
 const { Dragger } = Upload;
 const { Title, Text } = Typography;
@@ -40,7 +41,7 @@ export default function BackupTab() {
             const link = document.createElement('a');
             link.href = url;
 
-            let filename = `backup_${fmt}_${new Date().toISOString().slice(0, 10)}.json`;
+            let filename = `backup_${fmt}_${getIstanbulToday()}.json`;
             if (fmt === 'csv') filename = filename.replace('.json', '.zip');
 
             const contentDisposition = response.headers['content-disposition'];

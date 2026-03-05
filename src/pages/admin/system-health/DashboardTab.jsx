@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import { getIstanbulToday } from '../../../utils/dateUtils';
 
 import {
     CpuChipIcon,
@@ -234,9 +235,9 @@ export default function DashboardTab({ stats, refresh, loading }) {
                         description="Belirtilen tarih aralığındaki tüm kayıtları tarar ve personelin bağlı olduğu takvimin mola kurallarına göre (örn: 30dk veya 60dk) otomatik düşüm yapar."
                         hazard={false}
                         onClick={async () => {
-                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
+                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", getIstanbulToday().slice(0, 8) + '01');
                             if (!start) return;
-                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", getIstanbulToday());
                             if (!end) return;
 
                             if (confirm(`${start} - ${end} arası tüm personelin molaları takvim kurallarına göre yeniden hesaplanacak. Onaylıyor musunuz?`)) {
@@ -265,9 +266,9 @@ export default function DashboardTab({ stats, refresh, loading }) {
                         description="Vardiya saatleri dışındaki (Erken Giriş / Geç Çıkış) tüm süreleri siler ve giriş-çıkış saatlerini vardiya saatlerine eşitler. Fazla mesaileri sıfırlar."
                         hazard={true}
                         onClick={async () => {
-                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 8) + '01');
+                            const start = prompt("Başlangıç Tarihi (YYYY-MM-DD):", getIstanbulToday().slice(0, 8) + '01');
                             if (!start) return;
-                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+                            const end = prompt("Bitiş Tarihi (YYYY-MM-DD):", getIstanbulToday());
                             if (!end) return;
 
                             if (confirm(`DİKKAT: ${start} - ${end} arasındaki tüm kayıtlarda ERKEN GİRİŞ ve GEÇ ÇIKIŞLAR SİLİNECEK. Sadece standart çalışma saatleri kalacak. Onaylıyor musunuz?`)) {

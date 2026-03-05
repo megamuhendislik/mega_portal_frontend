@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { getIstanbulToday } from '../../../utils/dateUtils';
 import {
     PlayCircleIcon,
     ArrowPathIcon,
@@ -934,7 +935,7 @@ export default function BreakFixTab() {
                                         <button
                                             onClick={() => {
                                                 const text = generateLogText(detailedData);
-                                                const dateStr = new Date().toISOString().slice(0, 10);
+                                                const dateStr = getIstanbulToday();
                                                 downloadTxt(text, `puantaj_log_${dateStr}.txt`);
                                             }}
                                             className="px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white shadow-sm transition-all"

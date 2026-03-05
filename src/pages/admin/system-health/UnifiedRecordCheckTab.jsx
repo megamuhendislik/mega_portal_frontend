@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Drawer } from 'antd';
 import api from '../../../services/api';
+import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
 import {
     ChevronDownIcon,
     ChevronRightIcon,
@@ -484,8 +485,8 @@ function ForensicAttendanceTable({ records, deleteLoading, onDelete }) {
 // Main Component
 // ---------------------------------------------------------------------------
 export default function UnifiedRecordCheckTab() {
-    const today = new Date().toISOString().slice(0, 10);
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const today = getIstanbulToday();
+    const weekAgo = getIstanbulDateOffset(-7);
 
     // List state
     const [startDate, setStartDate] = useState(weekAgo);
