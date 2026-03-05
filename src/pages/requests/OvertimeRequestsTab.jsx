@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import {
     Clock, XCircle, Users, Loader2, PenLine, Send,
     ClipboardList, CalendarCheck, X, LogIn, LogOut,
-    Coffee, Briefcase, Sun, Eye
+    Coffee, Briefcase, Sun, Eye, AlertTriangle
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -263,9 +263,13 @@ const OT_TYPE_LABELS = {
     'MIXED': { label: 'Karışık', color: 'bg-slate-50 text-slate-700 border-slate-200' },
 };
 
-const PotentialSegmentRow = ({ item, onClaim }) => {
+const PotentialSegmentRow = ({ item, onClaim, weeklyOtStatus }) => {
     const typeInfo = OT_TYPE_LABELS[item.ot_type] || OT_TYPE_LABELS['MIXED'];
     const showClaimButton = item.actual_overtime_seconds > 0 && !item.already_claimed && !item.claim_status;
+
+    const segmentHours = item.actual_overtime_hours || (item.actual_overtime_seconds / 3600);
+    const weeklyRemaining = weeklyOtStatus?.remaining_hours ?? 999;
+    const isWeeklyLimitExceeded = weeklyOtStatus && !weeklyOtStatus.is_unlimited && segmentHours > weeklyRemaining;
 
     return (
         <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 transition-all">
@@ -290,14 +294,19 @@ const PotentialSegmentRow = ({ item, onClaim }) => {
                 ) : item.is_rejected ? (
                     <div className="flex items-center gap-1">
                         <Pill color="red">Reddedildi</Pill>
-                        <button onClick={onClaim} className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-0.5">
-                            <Send size={9} /> Tekrar
+                        <button onClick={onClaim}
+                            disabled={isWeeklyLimitExceeded}
+                            title={isWeeklyLimitExceeded ? `Haftalık limit yetersiz (kalan: ${weeklyRemaining} sa)` : ''}
+                            className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <Send size={9} /> {isWeeklyLimitExceeded ? 'Limit Yetersiz' : 'Tekrar'}
                         </button>
                     </div>
                 ) : showClaimButton ? (
                     <button onClick={onClaim}
-                        className="px-3 py-1 font-bold text-[11px] rounded-lg shadow-sm bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 transition-all">
-                        <Send size={10} /> Talep Et
+                        disabled={isWeeklyLimitExceeded}
+                        title={isWeeklyLimitExceeded ? `Haftalık limit yetersiz (kalan: ${weeklyRemaining} sa)` : ''}
+                        className="px-3 py-1 font-bold text-[11px] rounded-lg shadow-sm bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Send size={10} /> {isWeeklyLimitExceeded ? 'Limit Yetersiz' : 'Talep Et'}
                     </button>
                 ) : (
                     <Pill color="slate">Bekleniyor</Pill>
@@ -307,7 +316,7 @@ const PotentialSegmentRow = ({ item, onClaim }) => {
     );
 };
 
-const PotentialDayGroup = ({ date: dateStr, items, onClaimItem }) => {
+const PotentialDayGroup = ({ date: dateStr, items, onClaimItem, weeklyOtStatus }) => {
     const first = items[0];
     const entries = first.entries || [];
     const isOffDay = first.is_off_day;
@@ -359,7 +368,8 @@ const PotentialDayGroup = ({ date: dateStr, items, onClaimItem }) => {
                     <div className="border-t border-slate-100 mt-1 pt-1 space-y-0.5">
                         {items.map((item, i) => (
                             <PotentialSegmentRow key={i} item={item}
-                                onClaim={() => onClaimItem(item)} />
+                                onClaim={() => onClaimItem(item)}
+                                weeklyOtStatus={weeklyOtStatus} />
                         ))}
                     </div>
                 </div>
@@ -686,6 +696,30 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                     <Pill color="purple">Algılanan</Pill>
                                     <span className="text-xs text-slate-400 font-medium">{claimableData.potential.length} mesai</span>
                                 </div>
+
+                                {/* Weekly OT Limit Warning Banner */}
+                                {claimableData?.weekly_ot_status?.exceeds_limit && (
+                                    <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                        <div className="flex items-start gap-2">
+                                            <AlertTriangle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                                            <div>
+                                                <p className="text-xs font-bold text-amber-700">
+                                                    Haftalık Limit Uyarısı
+                                                </p>
+                                                <p className="text-xs text-amber-600 mt-0.5">
+                                                    Bu haftaki potansiyel mesailerinizin tamamını talep edemezsiniz.
+                                                </p>
+                                                <div className="flex flex-wrap gap-3 mt-1.5 text-[10px] text-amber-700">
+                                                    <span>Limit: <b>{claimableData.weekly_ot_status.limit_hours} sa</b></span>
+                                                    <span>Kullanılan: <b>{claimableData.weekly_ot_status.used_hours} sa</b></span>
+                                                    <span>Kalan: <b>{claimableData.weekly_ot_status.remaining_hours} sa</b></span>
+                                                    <span>Potansiyel: <b>{claimableData.weekly_ot_status.total_potential_hours} sa</b></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="space-y-2">
                                     {(() => {
                                         const grouped = {};
@@ -697,6 +731,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                             .sort(([a], [b]) => b.localeCompare(a))
                                             .map(([dateStr, items]) => (
                                                 <PotentialDayGroup key={dateStr} date={dateStr} items={items}
+                                                    weeklyOtStatus={claimableData?.weekly_ot_status}
                                                     onClaimItem={(item) => {
                                                         fetchWeeklyOtStatus(item.date);
                                                         setClaimModal({

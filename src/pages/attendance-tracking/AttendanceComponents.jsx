@@ -3,7 +3,7 @@ import {
     Activity,
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon,
-    CalendarPlus, CalendarCheck
+    CalendarPlus, CalendarCheck, AlertTriangle
 } from 'lucide-react';
 import moment from 'moment';
 import api from '../../services/api';
@@ -93,17 +93,23 @@ export const EmployeeAttendanceRow = ({
                         {s.weekly_ot_limit_hours > 0 && (() => {
                             const used = round2(s.weekly_ot_used_seconds / 3600);
                             const limit = s.weekly_ot_limit_hours;
+                            const remaining = round2(limit - used);
                             const ratio = used / (limit || 1);
                             const cls = ratio >= 1
                                 ? 'bg-red-50 text-red-600 border-red-200'
-                                : ratio > 0.7
-                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
-                                    : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+                                : ratio > 0.9
+                                    ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
+                                    : ratio > 0.7
+                                        ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                        : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+                            const label = ratio >= 1 ? 'LİMİT DOLDU' : ratio > 0.9 ? 'KRİTİK' : ratio > 0.7 ? 'DİKKAT' : '';
                             return used > 0 ? (
-                                <span className={`inline-flex items-center gap-1 mt-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`}
-                                    title={`Haftalık Fazla Mesai (Pzt-Paz): ${used}/${limit} sa`}>
-                                    Haftalık: {used}/{limit} sa
-                                    {ratio >= 1 && ' — LİMİT'}
+                                <span
+                                    className={`inline-flex items-center gap-1 mt-0.5 text-[9px] px-1.5 py-0.5 rounded border ${cls}`}
+                                    title={`Haftalık limit: ${limit} sa, Kullanılan: ${used} sa, Kalan: ${remaining} sa`}
+                                >
+                                    {ratio > 0.7 && <AlertTriangle size={10} />}
+                                    Haftalık: {used}/{limit} sa {label && <b>&mdash; {label}</b>}
                                 </span>
                             ) : null;
                         })()}

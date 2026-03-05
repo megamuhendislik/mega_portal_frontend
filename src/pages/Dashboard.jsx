@@ -9,7 +9,7 @@ import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
-import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight } from 'lucide-react';
+import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -227,30 +227,73 @@ const Dashboard = () => {
                     </p>
 
                     {/* Weekly OT Progress */}
-                    {todaySummary?.weekly_ot_limit_hours > 0 && (
-                        <div className="pt-2 border-t border-slate-50">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[9px] font-bold text-amber-500 uppercase">HAFTALIK LİMİT</span>
-                                <span className={`text-[9px] font-bold ${
-                                    todaySummary?.weekly_ot_is_over_limit ? 'text-red-600' :
-                                    (todaySummary?.weekly_ot_used_hours / (todaySummary?.weekly_ot_limit_hours || 1)) > 0.7 ? 'text-amber-600' :
-                                    'text-emerald-600'
-                                }`}>
-                                    {todaySummary?.weekly_ot_used_hours || 0}/{todaySummary?.weekly_ot_limit_hours} sa
-                                </span>
+                    {todaySummary?.weekly_ot_limit_hours > 0 && (() => {
+                        const used = todaySummary?.weekly_ot_used_hours || 0;
+                        const limit = todaySummary?.weekly_ot_limit_hours;
+                        const remaining = todaySummary?.weekly_ot_remaining_hours || 0;
+                        const ratio = used / (limit || 1);
+                        const pct = Math.min(100, Math.round(ratio * 100));
+
+                        let colorClass, bgClass, borderClass, icon, label;
+                        if (ratio >= 1) {
+                            colorClass = 'text-red-700';
+                            bgClass = 'bg-red-50';
+                            borderClass = 'border-red-300 animate-pulse';
+                            icon = <XCircle size={14} className="text-red-600" />;
+                            label = 'Limit doldu!';
+                        } else if (ratio >= 0.9) {
+                            colorClass = 'text-red-600';
+                            bgClass = 'bg-red-50';
+                            borderClass = 'border-red-200 animate-pulse';
+                            icon = <AlertCircle size={14} className="text-red-500" />;
+                            label = 'Limit kritik!';
+                        } else if (ratio >= 0.7) {
+                            colorClass = 'text-amber-600';
+                            bgClass = 'bg-amber-50';
+                            borderClass = 'border-amber-200';
+                            icon = <AlertTriangle size={14} className="text-amber-500" />;
+                            label = 'Limite yaklaşıyorsunuz';
+                        } else {
+                            colorClass = 'text-emerald-600';
+                            bgClass = '';
+                            borderClass = 'border-slate-100';
+                            icon = null;
+                            label = null;
+                        }
+
+                        return (
+                            <div className={`pt-2 border-t ${ratio >= 0.7 ? `${bgClass} ${borderClass} px-2 py-1.5 -mx-2 rounded-lg border mt-2` : 'border-slate-50'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1">
+                                        {icon}
+                                        <span className="text-[9px] font-bold text-amber-500">HAFTALIK LİMİT</span>
+                                    </div>
+                                    <span className={`text-[9px] font-bold ${colorClass}`}>
+                                        {used}/{limit} sa
+                                    </span>
+                                </div>
+                                {label && (
+                                    <p className={`text-[9px] mt-0.5 font-medium ${colorClass}`}>{label}</p>
+                                )}
+                                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+                                    <div
+                                        className={`h-full rounded-full transition-all ${
+                                            ratio >= 1 ? 'bg-red-500' :
+                                            ratio >= 0.9 ? 'bg-red-400' :
+                                            ratio >= 0.7 ? 'bg-amber-400' :
+                                            'bg-emerald-500'
+                                        }`}
+                                        style={{ width: `${pct}%` }}
+                                    />
+                                </div>
+                                {ratio >= 0.7 && (
+                                    <p className={`text-[8px] mt-0.5 ${colorClass}`}>
+                                        Kalan: {remaining} saat
+                                    </p>
+                                )}
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full transition-all ${
-                                        todaySummary?.weekly_ot_is_over_limit ? 'bg-red-500' :
-                                        (todaySummary?.weekly_ot_used_hours / (todaySummary?.weekly_ot_limit_hours || 1)) > 0.7 ? 'bg-amber-400' :
-                                        'bg-emerald-500'
-                                    }`}
-                                    style={{ width: `${Math.min(100, ((todaySummary?.weekly_ot_used_hours || 0) / (todaySummary?.weekly_ot_limit_hours || 1)) * 100)}%` }}
-                                />
-                            </div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* 4. Unified Leave Card — Annual + Excuse side by side */}
