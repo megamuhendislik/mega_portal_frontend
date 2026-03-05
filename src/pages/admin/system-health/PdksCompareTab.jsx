@@ -1230,6 +1230,7 @@ export default function PdksCompareTab() {
                     totalExistingAtt: 0,
                     totalPotentialOtDelete: 0,
                     hasOtPreserved: false,
+                    hasBrokenOt: false,
                     hasLeave: false,
                     hasCardless: false,
                     hasExternalDuty: false,
@@ -1243,6 +1244,7 @@ export default function PdksCompareTab() {
             group.totalExistingAtt += (item.existing_attendance_count || 0);
             group.totalPotentialOtDelete += (item.potential_ot_to_delete || 0);
             if (item.preserved_ot_requests?.length > 0) group.hasOtPreserved = true;
+            if (item.broken_ot_requests?.length > 0) group.hasBrokenOt = true;
             if (item.has_approved_leave) group.hasLeave = true;
             if (item.approved_cardless_entries?.length > 0) group.hasCardless = true;
             if (item.external_duties?.length > 0) group.hasExternalDuty = true;
@@ -1336,6 +1338,7 @@ export default function PdksCompareTab() {
                 if (record.approved_cardless_entries?.length > 0) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
                 if (record.external_duties?.length > 0) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
                 if (record.preserved_ot_requests?.length > 0) tags.push(<Tag key="ot" color="purple">FM Korunan</Tag>);
+                if (record.broken_ot_requests?.length > 0) tags.push(<Tag key="broken" color="red">Bozuk OT ({record.broken_ot_requests.length})</Tag>);
                 return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
             },
         },
@@ -1425,6 +1428,7 @@ export default function PdksCompareTab() {
                 const tags = [];
                 if (record.hasAnomaly) tags.push(<Tag key="anomaly" color="red">Anomali</Tag>);
                 if (record.hasChanges) tags.push(<Tag key="changes" color="orange">Değişim Var</Tag>);
+                if (record.hasBrokenOt) tags.push(<Tag key="broken" color="red">Bozuk OT</Tag>);
                 if (record.hasOtPreserved) tags.push(<Tag key="ot" color="purple">OT Korunan</Tag>);
                 if (record.hasLeave) tags.push(<Tag key="leave" color="blue">İzinli</Tag>);
                 if (record.hasCardless) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
@@ -2088,6 +2092,14 @@ export default function PdksCompareTab() {
                                     color="bg-orange-50 border-orange-200"
                                     icon={<WarningOutlined className="text-orange-500" />}
                                 />
+                                {(resetPreview.summary?.total_broken_ot || 0) > 0 && (
+                                    <SummaryCard
+                                        title="Bozuk OT (İptal)"
+                                        value={resetPreview.summary.total_broken_ot}
+                                        color="bg-red-50 border-red-200"
+                                        icon={<CloseCircleOutlined className="text-red-500" />}
+                                    />
+                                )}
                                 {(resetPreview.summary?.days_with_leave || 0) > 0 && (
                                     <SummaryCard
                                         title="İzinli Günler"
@@ -2178,7 +2190,7 @@ export default function PdksCompareTab() {
                                             showTotal: (total, range) =>
                                                 `${range[0]}-${range[1]} / ${total} çalışan`,
                                         }}
-                                        defaultExpandedRowKeys={groupedPreviewData.filter(g => g.hasChanges || g.hasAnomaly).map(g => g.key)}
+                                        defaultExpandedRowKeys={groupedPreviewData.filter(g => g.hasChanges || g.hasAnomaly || g.hasBrokenOt).map(g => g.key)}
                                         expandable={{
                                             expandedRowRender: (empRecord) => (
                                                 <div className="pl-4">
@@ -2189,7 +2201,7 @@ export default function PdksCompareTab() {
                                                         size="small"
                                                         bordered
                                                         pagination={false}
-                                                        defaultExpandedRowKeys={empRecord.days.filter(d => d.has_changes || d.has_anomaly).map(d => d.key)}
+                                                        defaultExpandedRowKeys={empRecord.days.filter(d => d.has_changes || d.has_anomaly || d.broken_ot_requests?.length > 0).map(d => d.key)}
                                                         expandable={{
                                                             expandedRowRender: (record) => (
                                                                 <div className="space-y-3 p-2">
@@ -2288,6 +2300,20 @@ export default function PdksCompareTab() {
                                                                                     <Tag key={i} color="green" className="font-mono text-xs">
                                                                                         {s.check_in || '?'} — {s.check_out || '?'}
                                                                                     </Tag>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {record.broken_ot_requests?.length > 0 && (
+                                                                        <div>
+                                                                            <h4 className="text-xs font-semibold text-red-700 mb-1">Bozuk OT Talepleri (otomatik iptal edilecek):</h4>
+                                                                            <div className="space-y-1">
+                                                                                {record.broken_ot_requests.map((ot) => (
+                                                                                    <div key={ot.id} className="flex items-center gap-2 text-xs">
+                                                                                        <Tag color="red">{ot.status} - İPTAL</Tag>
+                                                                                        <span className="font-mono line-through">{ot.start_time} — {ot.end_time}</span>
+                                                                                        <span className="text-red-400">({formatSeconds(ot.duration_seconds)})</span>
+                                                                                    </div>
                                                                                 ))}
                                                                             </div>
                                                                         </div>
