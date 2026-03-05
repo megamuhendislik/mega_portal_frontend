@@ -2,11 +2,11 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
-    CheckCircle2, XCircle, AlertCircle, Zap
+    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import RequestListTable from '../../components/RequestListTable';
+import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
@@ -63,6 +63,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [overtimeRequests, setOvertimeRequests] = useState([]);
     const [mealRequests, setMealRequests] = useState([]);
     const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
+    const [healthReports, setHealthReports] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
     const [currentUserInfo, setCurrentUserInfo] = useState({ name: '', department: '' });
@@ -82,6 +83,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [selectedRequestType, setSelectedRequestType] = useState(null);
     const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
     const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
+    const [expandedRowId, setExpandedRowId] = useState(null);
 
     // Fetch all data
     const fetchData = useCallback(async () => {
@@ -93,9 +95,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 api.get('/overtime-requests/'),
                 api.get('/meal-requests/'),
                 api.get('/cardless-entry-requests/'),
+                api.get('/health-reports/'),
             ]);
 
-            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes] = results;
+            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes] = results;
 
             if (meRes.status === 'fulfilled') {
                 const me = meRes.value.data;
@@ -119,6 +122,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             }
             if (cardlessRes.status === 'fulfilled') {
                 setCardlessEntryRequests(cardlessRes.value.data.results || cardlessRes.value.data);
+            }
+            if (healthRes.status === 'fulfilled') {
+                setHealthReports(healthRes.value.data.results || healthRes.value.data);
             }
         } catch (e) {
             console.error('MyRequestsTab fetchData error:', e);
@@ -154,6 +160,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             else if (t === 'OVERTIME') await api.delete(`/overtime-requests/${r.id}/`);
             else if (t === 'MEAL') await api.delete(`/meal-requests/${r.id}/`);
             else if (t === 'CARDLESS_ENTRY') await api.delete(`/cardless-entry-requests/${r.id}/`);
+            else if (t === 'HEALTH_REPORT' || t === 'HOSPITAL_VISIT') await api.post(`/health-reports/${r.id}/cancel/`);
             await fetchData();
             notifyParent();
         } catch (e) {
@@ -252,9 +259,17 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
             approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
+        healthReports.filter(isMyRequest).forEach(r => items.push({
+            ...r, ...myInfo,
+            _type: r.report_type === 'HOSPITAL_VISIT' ? 'HOSPITAL_VISIT' : 'HEALTH_REPORT',
+            type: r.report_type === 'HOSPITAL_VISIT' ? 'HOSPITAL_VISIT' : 'HEALTH_REPORT',
+            _sortDate: r.start_date || r.created_at,
+            target_approver_name: r.target_approver_detail?.full_name || null,
+            approved_by_name: r.approved_by_detail?.full_name || null,
+        }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
-    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, requestTypes, currentUserInfo, currentUserEmployeeId, handleResubmitOvertime]);
+    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, healthReports, requestTypes, currentUserInfo, currentUserEmployeeId, handleResubmitOvertime]);
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
@@ -277,6 +292,8 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             overtime: actual.filter(r => r._type === 'OVERTIME').length,
             meal: actual.filter(r => r._type === 'MEAL').length,
             cardless: actual.filter(r => r._type === 'CARDLESS_ENTRY').length,
+            health_report: actual.filter(r => r._type === 'HEALTH_REPORT').length,
+            hospital_visit: actual.filter(r => r._type === 'HOSPITAL_VISIT').length,
             pending: actual.filter(r => r.status === 'PENDING').length,
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
             rejected: actual.filter(r => ['REJECTED', 'CANCELLED'].includes(r.status)).length,
@@ -338,6 +355,8 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     <FilterChip active={typeFilter === 'OVERTIME'} onClick={() => setTypeFilter('OVERTIME')} label="Mesai" icon={<Clock size={14} />} count={counts.overtime} color="amber" />
                     <FilterChip active={typeFilter === 'MEAL'} onClick={() => setTypeFilter('MEAL')} label="Yemek" icon={<Utensils size={14} />} count={counts.meal} color="emerald" />
                     <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsız" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
+                    <FilterChip active={typeFilter === 'HEALTH_REPORT'} onClick={() => setTypeFilter(typeFilter === 'HEALTH_REPORT' ? 'ALL' : 'HEALTH_REPORT')} label="Sağlık Raporu" icon={<HeartPulse size={14} />} count={counts.health_report} color="red" />
+                    <FilterChip active={typeFilter === 'HOSPITAL_VISIT'} onClick={() => setTypeFilter(typeFilter === 'HOSPITAL_VISIT' ? 'ALL' : 'HOSPITAL_VISIT')} label="Hastane Ziyareti" icon={<Stethoscope size={14} />} count={counts.hospital_visit} color="red" />
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tümü" color="slate" />
@@ -375,27 +394,55 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                             </p>
                         </div>
                     )}
-                    <RequestListTable
-                        requests={wrappedRequests}
-                        onViewDetails={handleViewDetails}
-                        onEdit={handleEdit}
-                        onDelete={handleDeleteRequest}
-                        showEmployeeColumn={false}
-                        claimPotentialRenderer={(req) => {
-                            if (!req._claimAction) return null;
-                            return (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); req._claimAction(); }}
-                                    disabled={req._claiming}
-                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                    title="Bu potansiyel mesaiyi talep et"
-                                >
-                                    <Zap size={12} />
-                                    {req._claiming ? 'İşleniyor...' : 'Talep Et'}
-                                </button>
-                            );
-                        }}
-                    />
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
+                                        <th className="pl-3 pr-1 py-2 w-8"></th>
+                                        <th className="px-3 py-2 font-bold">Tür</th>
+                                        <th className="px-3 py-2 font-bold">Tarih</th>
+                                        <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                        <th className="px-3 py-2 font-bold">Süre</th>
+                                        <th className="px-3 py-2 font-bold">Durum</th>
+                                        <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {wrappedRequests.map(req => (
+                                        <ExpandableRequestRow
+                                            key={`${req._type || req.type}-${req.id}`}
+                                            req={req}
+                                            isExpanded={expandedRowId === `${req._type || req.type}-${req.id}`}
+                                            onToggle={() => {
+                                                const key = `${req._type || req.type}-${req.id}`;
+                                                setExpandedRowId(prev => prev === key ? null : key);
+                                            }}
+                                            onViewDetails={handleViewDetails}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDeleteRequest}
+                                            showEmployeeColumn={false}
+                                            mode="personal"
+                                            claimPotentialRenderer={(r) => {
+                                                if (!r._claimAction) return null;
+                                                return (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); r._claimAction(); }}
+                                                        disabled={r._claiming}
+                                                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                                        title="Bu potansiyel mesaiyi talep et"
+                                                    >
+                                                        <Zap size={12} />
+                                                        {r._claiming ? 'İşleniyor...' : 'Talep Et'}
+                                                    </button>
+                                                );
+                                            }}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
 

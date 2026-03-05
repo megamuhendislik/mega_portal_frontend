@@ -4,7 +4,7 @@ import {
     HeartPulse, Search, Loader2, Check, X, Ban,
     ChevronLeft, ChevronRight, Eye, FileText, Trash2,
     Download, Upload, Calendar, Clock, User, Building,
-    Filter, RefreshCw, Pencil, AlertCircle, ExternalLink
+    Filter, RefreshCw, Pencil, AlertCircle, ExternalLink, Stethoscope
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -41,6 +41,9 @@ const formatDateTime = (dtStr) => {
 };
 
 const HealthReports = () => {
+    // Tab
+    const [activeTab, setActiveTab] = useState('HEALTH_REPORT');
+
     // Data
     const [reports, setReports] = useState([]);
     const [summary, setSummary] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
@@ -73,6 +76,7 @@ const HealthReports = () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
+            params.append('report_type', activeTab);
             if (statusFilter) params.append('status', statusFilter);
             if (searchTerm) params.append('search', searchTerm);
             if (dateFrom) params.append('date_from', dateFrom);
@@ -81,7 +85,7 @@ const HealthReports = () => {
 
             const [listRes, summaryRes] = await Promise.allSettled([
                 api.get(`/health-reports/?${params.toString()}`),
-                api.get('/health-reports/summary/')
+                api.get(`/health-reports/summary/?report_type=${activeTab}`)
             ]);
 
             if (listRes.status === 'fulfilled') {
@@ -96,7 +100,7 @@ const HealthReports = () => {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, searchTerm, dateFrom, dateTo, page]);
+    }, [statusFilter, searchTerm, dateFrom, dateTo, page, activeTab]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -221,7 +225,11 @@ const HealthReports = () => {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-800">Sağlık Raporları</h1>
-                        <p className="text-sm text-slate-500">Çalışan sağlık raporlarını görüntüleyin, düzenleyin ve onaylayın</p>
+                        <p className="text-sm text-slate-500">
+                            {activeTab === 'HOSPITAL_VISIT'
+                                ? 'Çalışan hastane ziyaretlerini görüntüleyin, düzenleyin ve onaylayın'
+                                : 'Çalışan sağlık raporlarını görüntüleyin, düzenleyin ve onaylayın'}
+                        </p>
                     </div>
                 </div>
                 <button
@@ -229,6 +237,26 @@ const HealthReports = () => {
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
                 >
                     <RefreshCw size={16} /> Yenile
+                </button>
+            </div>
+
+            {/* Tab Toggle */}
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => { setActiveTab('HEALTH_REPORT'); setPage(1); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === 'HEALTH_REPORT' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                    }`}>
+                    <HeartPulse size={16} />
+                    Sağlık Raporları
+                </button>
+                <button
+                    onClick={() => { setActiveTab('HOSPITAL_VISIT'); setPage(1); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === 'HOSPITAL_VISIT' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                    }`}>
+                    <Stethoscope size={16} />
+                    Hastane Ziyaretleri
                 </button>
             </div>
 
@@ -354,6 +382,11 @@ const HealthReports = () => {
                                                 <div className="text-slate-700">
                                                     {formatDate(report.start_date)} — {formatDate(report.end_date)}
                                                 </div>
+                                                {report.report_type === 'HOSPITAL_VISIT' && !report.is_full_day && report.start_time && (
+                                                    <div className="text-xs text-rose-500 mt-0.5">
+                                                        {report.start_time?.substring(0, 5)} — {report.end_time?.substring(0, 5)}
+                                                    </div>
+                                                )}
                                             </td>
 
                                             {/* Days */}
@@ -555,6 +588,18 @@ const HealthReports = () => {
                                         <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={12} /> Bitiş</div>
                                         <div className="font-medium text-slate-800">{formatDate(detailModal.end_date)}</div>
                                     </div>
+                                    {detailModal.report_type === 'HOSPITAL_VISIT' && !detailModal.is_full_day && detailModal.start_time && (
+                                        <>
+                                            <div className="bg-slate-50 p-3 rounded-lg">
+                                                <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Clock size={12} /> Başlangıç Saati</div>
+                                                <div className="font-medium text-slate-800">{detailModal.start_time?.substring(0, 5)}</div>
+                                            </div>
+                                            <div className="bg-slate-50 p-3 rounded-lg">
+                                                <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Clock size={12} /> Bitiş Saati</div>
+                                                <div className="font-medium text-slate-800">{detailModal.end_time?.substring(0, 5)}</div>
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="col-span-2 bg-slate-50 p-3 rounded-lg">
                                         <div className="text-xs text-slate-500 mb-1">Toplam Gün</div>
                                         <div className="font-bold text-red-600 text-xl">{detailModal.total_days} gün</div>
