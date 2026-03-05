@@ -1350,6 +1350,13 @@ export default function PdksCompareTab() {
                 return (
                     <div>
                         {record.has_anomaly && <Tag color="red" className="text-[10px] mb-1">Anomali: OT&gt;24sa</Tag>}
+                        {record.changes_detail?.length > 0 && (
+                            <div className="mb-1">
+                                {record.changes_detail.map((d, i) => (
+                                    <Tag key={i} color="orange" className="text-[10px] mr-1 mb-0.5">{d}</Tag>
+                                ))}
+                            </div>
+                        )}
                         {record.has_changes ? (
                             <span className="font-mono text-xs font-semibold text-orange-700">{v}</span>
                         ) : (
@@ -2195,6 +2202,8 @@ export default function PdksCompareTab() {
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.before.total_hours)}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.before.normal_hours)}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.before.overtime_hours)}</span></div>
+                                                                                    {record.before.break_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{record.before.break_minutes} dk</span></div>}
+                                                                                    {record.before.missing_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{record.before.missing_minutes} dk</span></div>}
                                                                                     {record.before.sessions?.length > 0 && (
                                                                                         <div className="mt-2 border-t border-red-200 pt-1">
                                                                                             <span className="text-gray-500 block mb-1">Oturumlar:</span>
@@ -2215,6 +2224,8 @@ export default function PdksCompareTab() {
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.after.total_hours)}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.after.normal_hours)}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.after.overtime_hours)}</span></div>
+                                                                                    {record.after.break_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{record.after.break_minutes} dk</span></div>}
+                                                                                    {record.after.missing_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{record.after.missing_minutes} dk</span></div>}
                                                                                     {record.after.potential_ot_count > 0 && (
                                                                                         <div className="flex justify-between text-orange-600"><span>Potansiyel OT:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
                                                                                     )}
