@@ -70,17 +70,22 @@ function formatSeconds(s) {
     const sign = s < 0 ? '-' : '';
     const h = Math.floor(abs / 3600);
     const m = Math.floor((abs % 3600) / 60);
-    if (h > 0) return `${sign}${h}sa ${m}dk`;
-    return `${sign}${m}dk`;
+    const sec = Math.floor(abs % 60);
+    if (h > 0) return `${sign}${h}sa ${m}dk ${sec}sn`;
+    if (m > 0) return `${sign}${m}dk ${sec}sn`;
+    return `${sign}${sec}sn`;
 }
 
-/** Format hours (decimal) to human-readable */
+/** Format hours (decimal) to human-readable with seconds */
 function formatHours(h) {
     if (h === null || h === undefined) return '-';
-    const hours = Math.floor(h);
-    const mins = Math.round((h - hours) * 60);
-    if (hours > 0) return `${hours}sa ${mins}dk`;
-    return `${mins}dk`;
+    const totalSec = Math.round(h * 3600);
+    const hours = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    if (hours > 0) return `${hours}sa ${mins}dk ${secs}sn`;
+    if (mins > 0) return `${mins}dk ${secs}sn`;
+    return `${secs}sn`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2211,11 +2216,11 @@ export default function PdksCompareTab() {
                                                                                 <h4 className="text-xs font-semibold text-red-700 mb-2">Mevcut Durum (Silinecek)</h4>
                                                                                 <div className="space-y-1 text-xs">
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.before.attendance_count}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.before.total_hours)}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.before.normal_hours)}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.before.overtime_hours)}</span></div>
-                                                                                    {record.before.break_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{record.before.break_minutes} dk</span></div>}
-                                                                                    {record.before.missing_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{record.before.missing_minutes} dk</span></div>}
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatSeconds(record.before.total_seconds ?? record.before.total_hours * 3600)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatSeconds(record.before.normal_seconds ?? record.before.normal_hours * 3600)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatSeconds(record.before.overtime_seconds ?? record.before.overtime_hours * 3600)}</span></div>
+                                                                                    {(record.before.break_seconds || record.before.break_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{formatSeconds(record.before.break_seconds ?? record.before.break_minutes * 60)}</span></div>}
+                                                                                    {(record.before.missing_seconds || record.before.missing_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{formatSeconds(record.before.missing_seconds ?? record.before.missing_minutes * 60)}</span></div>}
                                                                                     {record.before.sessions?.length > 0 && (
                                                                                         <div className="mt-2 border-t border-red-200 pt-1">
                                                                                             <span className="text-gray-500 block mb-1">Oturumlar:</span>
@@ -2233,11 +2238,11 @@ export default function PdksCompareTab() {
                                                                                 <h4 className="text-xs font-semibold text-green-700 mb-2">Yeni Durum (Hesaplanan)</h4>
                                                                                 <div className="space-y-1 text-xs">
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.after.attendance_count}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.after.total_hours)}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.after.normal_hours)}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.after.overtime_hours)}</span></div>
-                                                                                    {record.after.break_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{record.after.break_minutes} dk</span></div>}
-                                                                                    {record.after.missing_minutes > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{record.after.missing_minutes} dk</span></div>}
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatSeconds(record.after.total_seconds ?? record.after.total_hours * 3600)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatSeconds(record.after.normal_seconds ?? record.after.normal_hours * 3600)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatSeconds(record.after.overtime_seconds ?? record.after.overtime_hours * 3600)}</span></div>
+                                                                                    {(record.after.break_seconds || record.after.break_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{formatSeconds(record.after.break_seconds ?? record.after.break_minutes * 60)}</span></div>}
+                                                                                    {(record.after.missing_seconds || record.after.missing_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{formatSeconds(record.after.missing_seconds ?? record.after.missing_minutes * 60)}</span></div>}
                                                                                     {record.after.potential_ot_count > 0 && (
                                                                                         <div className="flex justify-between text-orange-600"><span>Potansiyel OT:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
                                                                                     )}
