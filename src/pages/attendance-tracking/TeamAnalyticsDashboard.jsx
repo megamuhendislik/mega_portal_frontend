@@ -134,7 +134,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             <div className="bg-indigo-50 rounded-xl p-3">
                                 <p className="text-[10px] text-indigo-400 font-semibold">Normal Çalışma</p>
                                 <p className="text-lg font-bold text-indigo-600">{formatMinutes(completed)}</p>
-                                {otTotal > 0 && <p className="text-[10px] text-indigo-300">+{formatMinutes(otTotal)} OT</p>}
+                                {otTotal > 0 && <p className="text-[10px] text-indigo-300">+{formatMinutes(otTotal)} Fazla Mesai</p>}
                             </div>
                             <div className="bg-slate-50 rounded-xl p-3">
                                 <p className="text-[10px] text-slate-400 font-semibold">Hedef (bugünedek)</p>
@@ -228,7 +228,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
 
                                 {/* OT/Normal ratio */}
                                 <div className="flex items-center justify-between text-[11px] mb-2">
-                                    <span className="text-slate-400 font-semibold">OT / Normal Oranı</span>
+                                    <span className="text-slate-400 font-semibold">Fazla Mesai / Normal Oranı</span>
                                     <span className="font-bold text-amber-600">%{otNormalRatio}</span>
                                 </div>
                                 <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mb-3">
@@ -241,7 +241,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                                 {/* OT frequency */}
                                 <div className="bg-amber-50 rounded-xl p-3 text-xs">
                                     <span className="text-amber-700 font-semibold">
-                                        OT Sıklığı: {elapsedWorkDays} iş gününün {otDays} günü OT (%{otFreqPct})
+                                        Fazla Mesai Sıklığı: {elapsedWorkDays} iş gününün {otDays} günü FM (%{otFreqPct})
                                     </span>
                                     {otPerDay > 0 && (
                                         <span className="text-amber-500 ml-2">· Gün başı ort. {formatMinutes(otPerDay)}</span>
@@ -256,15 +256,15 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                     {/* Hafta Sonu OT Analizi */}
                     {((person.ot_weekend_minutes || 0) > 0 || (person.ot_weekday_minutes || 0) > 0) && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Hafta Sonu OT Analizi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Hafta Sonu Fazla Mesai Analizi</h4>
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="text-center p-3 bg-amber-50 rounded-xl">
-                                    <p className="text-[10px] text-amber-400 font-semibold">H.Sonu OT</p>
+                                    <p className="text-[10px] text-amber-400 font-semibold">H.Sonu FM</p>
                                     <p className="text-sm font-bold text-amber-600">{formatMinutes(person.ot_weekend_minutes || 0)}</p>
                                     <p className="text-[10px] text-amber-300">{person.ot_weekend_count || 0} gün</p>
                                 </div>
                                 <div className="text-center p-3 bg-blue-50 rounded-xl">
-                                    <p className="text-[10px] text-blue-400 font-semibold">H.Ici OT</p>
+                                    <p className="text-[10px] text-blue-400 font-semibold">H.İçi FM</p>
                                     <p className="text-sm font-bold text-blue-600">{formatMinutes(person.ot_weekday_minutes || 0)}</p>
                                     <p className="text-[10px] text-blue-300">{person.ot_weekday_count || 0} gün</p>
                                 </div>
@@ -290,11 +290,11 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                                     <p className="text-sm font-bold text-cyan-600">{person.meal_ordered || 0} sipariş</p>
                                 </div>
                                 <div className="text-center p-3 bg-slate-50 rounded-xl">
-                                    <p className="text-[10px] text-slate-400 font-semibold">OT'de Yemek</p>
+                                    <p className="text-[10px] text-slate-400 font-semibold">FM'de Yemek</p>
                                     <p className="text-sm font-bold text-slate-700">{person.ot_meal_overlap || 0}/{person.ot_days_total || 0} gün</p>
                                 </div>
                                 <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                                    <p className="text-[10px] text-emerald-400 font-semibold">OT Yemek Oranı</p>
+                                    <p className="text-[10px] text-emerald-400 font-semibold">FM Yemek Oranı</p>
                                     <p className="text-sm font-bold text-emerald-600">
                                         %{(person.ot_days_total || 0) > 0 ? Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100) : 0}
                                     </p>
@@ -603,7 +603,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
         // Radar data for departments (only for "Tum Ekibim")
         const radarData = departments.length > 1 ? (() => {
-            const axes = ['Verimlilik', 'OT Yoğunluğu', 'Eksik Düşükl.', 'Katılım', 'Pozitif Bakiye'];
+            const axes = ['Verimlilik', 'FM Yoğunluğu', 'Eksik Düşükl.', 'Katılım', 'Pozitif Bakiye'];
             return axes.map(axis => {
                 const row = { axis };
                 departments.slice(0, 6).forEach(dept => {
@@ -615,7 +615,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
                     let val = 0;
                     if (axis === 'Verimlilik') val = Math.min(100, dEff);
-                    else if (axis === 'OT Yoğunluğu') val = Math.min(100, dOT * 5);
+                    else if (axis === 'FM Yoğunluğu') val = Math.min(100, dOT * 5);
                     else if (axis === 'Eksik Düşükl.') val = Math.max(0, dMiss);
                     else if (axis === 'Katılım') val = Math.min(100, dAttRate);
                     else if (axis === 'Pozitif Bakiye') val = dPosBal;
@@ -691,8 +691,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             .slice(0, 10)
             .map(s => ({
                 name: (s.employee_name || '').split(' ').slice(0, 2).join(' '),
-                'H.Ici OT': s.ot_weekday_minutes || 0,
-                'H.Sonu OT': s.ot_weekend_minutes || 0,
+                'H.İçi FM': s.ot_weekday_minutes || 0,
+                'H.Sonu FM': s.ot_weekend_minutes || 0,
             }));
 
         // Leave usage by department
@@ -926,7 +926,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 <KpiCard
                     label="Gnl. Ort. Normal"
                     value={formatMinutes(analytics.dailyAvgNormalMin)}
-                    subValue={`OT/Normal: %${analytics.otNormalPercent}`}
+                    subValue={`FM/Normal: %${analytics.otNormalPercent}`}
                     icon={Clock}
                     color="blue"
                 />
@@ -969,12 +969,12 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         { key: 'count', label: 'Kişi' },
                                         { key: 'efficiency', label: 'Verim %' },
                                         { key: 'avgWorked', label: 'Ort. Çalışma' },
-                                        { key: 'avgOT', label: 'Ort. OT' },
+                                        { key: 'avgOT', label: 'Ort. FM' },
                                         { key: 'avgMissing', label: 'Ort. Eksik' },
                                         { key: 'dailyMissing', label: 'Günlük Ort. Eksik' },
                                         { key: 'projected', label: 'Tahmini Bakiye' },
                                         { key: 'dailyNormalDept', label: 'Gnl.Normal' },
-                                        { key: 'otNormalPctDept', label: 'OT/Normal%' },
+                                        { key: 'otNormalPctDept', label: 'FM/Normal%' },
                                         { key: 'attendanceRateAvg', label: 'Katılım%' },
                                     ].map(col => (
                                         <th
@@ -1446,7 +1446,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     {/* OT Source Distribution Donut (1/3) */}
                     {analytics.otSourceDistribution.length > 0 && (
                         <AnalyticsCard
-                            title="OT Kaynak Dagilimi"
+                            title="Fazla Mesai Kaynak Dağılımı"
                             subtitle="Onaylanmis ek mesai kaynaklari"
                             icon={Activity}
                         >
@@ -1488,7 +1488,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                             </div>
                             <div className="mt-3 pt-3 border-t border-slate-100">
                                 <div className="flex items-center justify-between text-[11px]">
-                                    <span className="text-slate-400 font-semibold">OT / Normal Oranı</span>
+                                    <span className="text-slate-400 font-semibold">Fazla Mesai / Normal Oranı</span>
                                     <span className="font-bold text-amber-600">%{analytics.otNormalRatio}</span>
                                 </div>
                                 <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -1507,8 +1507,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             {analytics.weekendOTData.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <AnalyticsCard
-                        title="Hafta Sonu vs Hafta Ici OT"
-                        subtitle="En çok OT yapan 10 kişi (hafta içi / hafta sonu)"
+                        title="Hafta Sonu vs Hafta İçi Fazla Mesai"
+                        subtitle="En çok fazla mesai yapan 10 kişi (hafta içi / hafta sonu)"
                         icon={Calendar}
                         className="lg:col-span-2"
                     >
@@ -1542,8 +1542,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         iconType="circle"
                                         iconSize={8}
                                     />
-                                    <Bar dataKey="H.Ici OT" name="Hafta Ici OT" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="H.Sonu OT" name="Hafta Sonu OT" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="H.İçi FM" name="Hafta İçi FM" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="H.Sonu FM" name="Hafta Sonu FM" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -1551,11 +1551,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
                     <div className="space-y-3">
                         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                            <p className="text-[10px] text-blue-400 font-semibold uppercase">Hafta Ici OT</p>
+                            <p className="text-[10px] text-blue-400 font-semibold uppercase">Hafta İçi FM</p>
                             <p className="text-lg font-bold text-blue-600">{formatMinutes(analytics.totalWeekdayOTMin)}</p>
                         </div>
                         <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-                            <p className="text-[10px] text-amber-400 font-semibold uppercase">Hafta Sonu OT</p>
+                            <p className="text-[10px] text-amber-400 font-semibold uppercase">Hafta Sonu FM</p>
                             <p className="text-lg font-bold text-amber-600">{formatMinutes(analytics.totalWeekendOTMin)}</p>
                         </div>
                         <div className="bg-violet-50 border border-violet-100 rounded-xl p-4">
@@ -1565,7 +1565,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-4">
                             <p className="text-[10px] text-cyan-400 font-semibold uppercase flex items-center gap-1">
                                 <UtensilsCrossed size={10} />
-                                OT'de Yemek
+                                FM'de Yemek
                             </p>
                             <p className="text-lg font-bold text-cyan-600">%{analytics.otMealRate}</p>
                             <p className="text-[10px] text-cyan-400">{analytics.totalOTMealOverlap}/{analytics.totalOTDays} gün</p>
@@ -1600,8 +1600,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Tahmini</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">İzin</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katılım%</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">H.Sonu OT</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-cyan-400 uppercase tracking-wider">Yemek/OT</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">H.Sonu FM</th>
+                                <th className="px-3 py-2.5 text-right font-bold text-cyan-400 uppercase tracking-wider">Yemek/FM</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2119,7 +2119,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     {/* OT Meal Rate Badge */}
                                     {(person.ot_days_total || 0) > 0 && (
                                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-100 text-cyan-700">
-                                            Yemek/OT %{Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100)}
+                                            Yemek/FM %{Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100)}
                                         </span>
                                     )}
                                 </div>
@@ -2139,7 +2139,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <span className={`font-bold tabular-nums ${missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{missing > 0 ? formatMinutes(missing) : '0'}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-slate-400">OT/Normal</span>
+                                        <span className="text-slate-400">FM/Normal</span>
                                         <span className="font-bold text-amber-500 tabular-nums">%{personOTNormalRatio}</span>
                                     </div>
                                 </div>
@@ -2199,7 +2199,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         <p className="text-sm font-bold text-indigo-400 tabular-nums">{formatMinutes(analytics.totalWorked)}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Toplam OT</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">Toplam FM</p>
                         <p className="text-sm font-bold text-amber-400 tabular-nums">{formatMinutes(analytics.totalOT)}</p>
                     </div>
                     <div className="text-center">

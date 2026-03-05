@@ -101,7 +101,7 @@ export const EmployeeAttendanceRow = ({
                                     : 'bg-emerald-50 text-emerald-600 border-emerald-200';
                             return used > 0 ? (
                                 <span className={`inline-flex items-center gap-1 mt-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`}
-                                    title={`Haftalık OT (Pzt-Paz): ${used}/${limit} sa`}>
+                                    title={`Haftalık Fazla Mesai (Pzt-Paz): ${used}/${limit} sa`}>
                                     Haftalık: {used}/{limit} sa
                                     {ratio >= 1 && ' — LİMİT'}
                                 </span>

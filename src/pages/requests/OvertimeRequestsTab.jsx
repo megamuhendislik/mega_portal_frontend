@@ -637,12 +637,12 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
             <div className="flex flex-wrap gap-3">
                 <button onClick={() => setShowManualModal(true)}
                     className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2">
-                    <PenLine size={15} /> Kendim İçin OT Talebi
+                    <PenLine size={15} /> Kendim İçin Fazla Mesai Talebi
                 </button>
                 {isManager && (
                     <button onClick={() => setShowAssignModal(true)}
                         className="px-4 py-2.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2">
-                        <Users size={15} /> Ekibime OT Ata
+                        <Users size={15} /> Ekibime Fazla Mesai Ata
                     </button>
                 )}
             </div>
@@ -716,7 +716,7 @@ const OvertimeRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
             {/* SECTION 2: Mevcut OT Taleplerim */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                <SectionHeader icon={<ClipboardList size={16} />} title="Mevcut OT Taleplerim" count={filteredRequests.length} />
+                <SectionHeader icon={<ClipboardList size={16} />} title="Mevcut Fazla Mesai Taleplerim" count={filteredRequests.length} />
 
                 {filteredRequests.length === 0 ? (
                     <EmptyState text="Ek mesai talebiniz bulunmuyor." />

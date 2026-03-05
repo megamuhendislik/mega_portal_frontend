@@ -104,7 +104,7 @@ const EditAssignmentModal = ({ isOpen, onClose, onSuccess, assignment }) => {
                 {weeklyUsage && !weeklyUsage.is_unlimited && (
                     <div className="space-y-1">
                         <div className="flex justify-between text-[11px] font-bold">
-                            <span className="text-slate-500">Haftalık OT (Pzt-Paz)</span>
+                            <span className="text-slate-500">Haftalık Fazla Mesai (Pzt-Paz)</span>
                             <span className={limitRatio >= 1 ? 'text-red-600' : 'text-slate-600'}>
                                 {weeklyUsage.used_hours}/{weeklyUsage.limit_hours} sa
                             </span>

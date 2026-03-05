@@ -251,7 +251,7 @@ export default function OvertimeAuditTab() {
         { header: 'Çıkış', render: r => <span className="font-mono text-[10px]">{r.check_out?.slice(0,5) || '—'}</span> },
         { header: 'Uzatma', render: r => <span className="font-bold">{r.ext_hours}sa</span> },
         { header: 'Ek Mesai', render: r => <span className="font-bold">{r.ot_hours}sa</span> },
-        { header: 'Toplam OT', render: r => <span className="font-bold text-indigo-700">{r.total_ot_hours}sa</span> },
+        { header: 'Toplam FM', render: r => <span className="font-bold text-indigo-700">{r.total_ot_hours}sa</span> },
         { header: 'Durum', render: r => <StatusPill status={r.status} /> },
         { header: 'Flags', render: r => r.flags?.length > 0 ? <div className="flex flex-wrap gap-1">{r.flags.map((f,i) => <FlagBadge key={i} flag={f} />)}</div> : '—' },
     ];
@@ -338,7 +338,7 @@ export default function OvertimeAuditTab() {
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                         <StatCard label="Ek Mesai Talepleri" value={data.summary.total_ot_requests} color="bg-blue-50 border-blue-100 text-blue-700" />
                         <StatCard label="Atamalar" value={data.summary.total_assignments} color="bg-indigo-50 border-indigo-100 text-indigo-700" />
-                        <StatCard label="Mesai Kaydı (OT)" value={data.summary.total_attendance_ot} color="bg-purple-50 border-purple-100 text-purple-700" />
+                        <StatCard label="Mesai Kaydı (Fazla Mesai)" value={data.summary.total_attendance_ot} color="bg-purple-50 border-purple-100 text-purple-700" />
                         <StatCard
                             label="Gelecek Tarihli Talep"
                             value={data.summary.future_ot_requests}
@@ -467,7 +467,7 @@ export default function OvertimeAuditTab() {
 
                     {/* Attendance OT Section */}
                     <Section
-                        title="Mesai Kayıtları (OT/Ext)"
+                        title="Mesai Kayıtları (Fazla Mesai/Uzatma)"
                         icon={ClockIcon}
                         count={filteredAttendance.length}
                         expanded={showAttendance}

@@ -165,7 +165,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                     {weeklyUsage && !weeklyUsage.is_unlimited && (
                         <div className="bg-slate-50 rounded-xl p-2.5 space-y-1">
                             <div className="flex justify-between text-[11px] font-bold">
-                                <span className="text-slate-500">Haftalık OT (Pzt-Paz)</span>
+                                <span className="text-slate-500">Haftalık Fazla Mesai (Pzt-Paz)</span>
                                 <span className={weeklyUsage.used_hours / weeklyUsage.limit_hours >= 1 ? 'text-red-600' : 'text-slate-600'}>
                                     {weeklyUsage.used_hours}/{weeklyUsage.limit_hours} sa
                                     {weeklyUsage.used_hours / weeklyUsage.limit_hours >= 1 && ' — LİMİT'}

@@ -378,7 +378,7 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
                                 <span className="ml-2 font-semibold">{record.attendance_status || '-'}</span>
                             </div>
                             <div className="bg-gray-50 rounded p-2">
-                                <span className="text-gray-500">OT Talep:</span>
+                                <span className="text-gray-500">Fazla Mesai Talep:</span>
                                 <span className="ml-2 font-semibold">{record.overtime_request_count || 0}</span>
                             </div>
                         </div>
@@ -1137,7 +1137,7 @@ export default function PdksCompareTab() {
                 ),
             },
             {
-                title: 'Eski OT → Yeni OT',
+                title: 'Eski FM → Yeni FM',
                 key: 'ot_seconds_change',
                 width: 160,
                 render: (_, record) => {
@@ -1154,7 +1154,7 @@ export default function PdksCompareTab() {
                 },
             },
             {
-                title: 'OT Talep Değişim',
+                title: 'FM Talep Değişim',
                 key: 'ot_adj',
                 width: 160,
                 render: (_, record) => {
@@ -1273,7 +1273,7 @@ export default function PdksCompareTab() {
             render: (v) => <span className="font-mono text-xs">{v != null ? formatHours(v) : '-'}</span>,
         },
         {
-            title: 'Sil. POT OT',
+            title: 'Sil. POT FM',
             dataIndex: 'potential_ot_to_delete',
             key: 'potential_ot_to_delete',
             width: 90,
@@ -1291,7 +1291,7 @@ export default function PdksCompareTab() {
                 if (record.has_approved_leave) tags.push(<Tag key="leave" color="blue">İzinli</Tag>);
                 if (record.approved_cardless_entries?.length > 0) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
                 if (record.external_duties?.length > 0) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
-                if (record.preserved_ot_requests?.length > 0) tags.push(<Tag key="ot" color="purple">OT Korunan</Tag>);
+                if (record.preserved_ot_requests?.length > 0) tags.push(<Tag key="ot" color="purple">FM Korunan</Tag>);
                 return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
             },
         },
@@ -1372,7 +1372,7 @@ export default function PdksCompareTab() {
             render: (_, r) => <span className="font-mono text-xs font-semibold">{r.details?.new_total_hours != null ? formatHours(r.details.new_total_hours) : '-'}</span>,
         },
         {
-            title: 'OT Saat',
+            title: 'FM Saat',
             key: 'ot_hours',
             width: 80,
             align: 'center',
@@ -1451,7 +1451,7 @@ export default function PdksCompareTab() {
                 <p className="text-sm text-gray-500 mb-4">
                     {mode === 'compare'
                         ? 'Kart okuyucu (PDKS) cihazından alınan CSV dosyasını yükleyerek sistemdeki mesai kayıtları ile karşılaştırabilirsiniz. Farklılıklar tespit edildiğinde seçip düzeltebilirsiniz.'
-                        : 'CSV dosyasındaki kart okuyucu verileri ile sistemdeki TÜM attendance kayıtları silinip sıfırdan oluşturulur. Onaylı OT, izin, kartsız giriş ve dış görev kayıtları korunur. Potansiyel OT talepleri silinir.'
+                        : 'CSV dosyasındaki kart okuyucu verileri ile sistemdeki TÜM attendance kayıtları silinip sıfırdan oluşturulur. Onaylı fazla mesai, izin, kartsız giriş ve dış görev kayıtları korunur. Potansiyel fazla mesai talepleri silinir.'
                     }
                 </p>
 
@@ -1951,7 +1951,7 @@ export default function PdksCompareTab() {
                                     icon={<CheckCircleOutlined className="text-green-500" />}
                                 />
                                 <SummaryCard
-                                    title="Silinecek Potansiyel OT"
+                                    title="Silinecek Potansiyel FM"
                                     value={resetPreview.summary?.total_potential_ot_to_delete || 0}
                                     color="bg-orange-50 border-orange-200"
                                     icon={<WarningOutlined className="text-orange-500" />}
@@ -2050,7 +2050,7 @@ export default function PdksCompareTab() {
                                                                     <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.after.normal_hours)}</span></div>
                                                                     <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.after.overtime_hours)}</span></div>
                                                                     {record.after.potential_ot_count > 0 && (
-                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel OT:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
+                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel FM:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
                                                                     )}
                                                                     {record.after.sessions?.length > 0 && (
                                                                         <div className="mt-2 border-t border-green-200 pt-1">
@@ -2065,7 +2065,7 @@ export default function PdksCompareTab() {
                                                                     )}
                                                                     {record.after.potential_ot_details?.length > 0 && (
                                                                         <div className="mt-2 border-t border-green-200 pt-1">
-                                                                            <span className="text-orange-600 block mb-1">OT Detayları:</span>
+                                                                            <span className="text-orange-600 block mb-1">FM Detayları:</span>
                                                                             {record.after.potential_ot_details.map((ot, i) => (
                                                                                 <div key={i} className="font-mono text-orange-700">
                                                                                     {ot.start_time} — {ot.end_time} ({formatSeconds(ot.duration_seconds)})
@@ -2122,7 +2122,7 @@ export default function PdksCompareTab() {
                                                     {/* Preserved OT */}
                                                     {record.preserved_ot_requests?.length > 0 && (
                                                         <div>
-                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan OT Talepleri:</h4>
+                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan Fazla Mesai Talepleri:</h4>
                                                             <div className="space-y-1">
                                                                 {record.preserved_ot_requests.map((ot) => (
                                                                     <div key={ot.id} className="flex items-center gap-2 text-xs">

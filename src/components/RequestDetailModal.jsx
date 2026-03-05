@@ -539,13 +539,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 </div>
                 <div className="flex items-center justify-between text-xs bg-white/60 p-2 rounded-lg border border-amber-100">
                   <span className="text-slate-600">
-                    OT Onaylı: <span className="font-bold text-emerald-700">{request.employee_monthly_stats.ot_requests_approved}</span>
+                    Fazla Mesai Onaylı: <span className="font-bold text-emerald-700">{request.employee_monthly_stats.ot_requests_approved}</span>
                   </span>
                   <span className="text-slate-600">
-                    OT Bekleyen: <span className="font-bold text-amber-700">{request.employee_monthly_stats.ot_requests_pending}</span>
+                    Fazla Mesai Bekleyen: <span className="font-bold text-amber-700">{request.employee_monthly_stats.ot_requests_pending}</span>
                   </span>
                   <span className="text-slate-600">
-                    Toplam OT: <span className="font-bold text-slate-800">{request.employee_monthly_stats.ot_total_approved_minutes} dk</span>
+                    Toplam Fazla Mesai: <span className="font-bold text-slate-800">{request.employee_monthly_stats.ot_total_approved_minutes} dk</span>
                   </span>
                 </div>
               </div>

@@ -395,7 +395,7 @@ const helpContent = [
             },
             {
                 title: 'Talep Analizleri',
-                description: 'Talep Analizleri sayfasında 10 bölüm bulunur: KPI kartları, aylık trend grafiği, dağılım grafikleri, ekip analizi (departman/rol/kişi bazlı), ek mesai analizi (kaynak/atama/haftalık), izin analizi, OT-yemek korelasyonu, dolaylı talepler ve haftalık pattern ısı haritası.'
+                description: 'Talep Analizleri sayfasında 10 bölüm bulunur: KPI kartları, aylık trend grafiği, dağılım grafikleri, ekip analizi (departman/rol/kişi bazlı), ek mesai analizi (kaynak/atama/haftalık), izin analizi, fazla mesai-yemek korelasyonu, dolaylı talepler ve haftalık pattern ısı haritası.'
             }
         ],
         tips: [
