@@ -27,7 +27,8 @@ import {
     MessageSquare,
     Coffee,
     AlertTriangle,
-    BookOpen
+    BookOpen,
+    HeartPulse
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -162,6 +163,7 @@ const MainLayout = () => {
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_ORDERS' },
+        { path: '/health-reports', label: 'Sağlık Raporları', icon: HeartPulse, permission: 'PAGE_HEALTH_REPORTS' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },

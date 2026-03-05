@@ -26,6 +26,7 @@ import CompanyDirectory from './pages/CompanyDirectory';
 import DataManagement from './pages/admin/DataManagement';
 import ProgramManagement from './pages/admin/ProgramManagement';
 import Feedback from './pages/Feedback';
+import HealthReports from './pages/admin/HealthReports';
 
 const lazyRetry = (importFn) =>
   React.lazy(() => {
@@ -135,6 +136,9 @@ function App() {
 
             {/* Meal Orders - Requires PAGE_MEAL_ORDERS */}
             <Route path="meal-orders" element={<ProtectedRoute requiredPermission="PAGE_MEAL_ORDERS"><MealOrders /></ProtectedRoute>} />
+
+            {/* Health Reports - Requires PAGE_HEALTH_REPORTS */}
+            <Route path="health-reports" element={<ProtectedRoute requiredPermission="PAGE_HEALTH_REPORTS"><HealthReports /></ProtectedRoute>} />
 
 
 

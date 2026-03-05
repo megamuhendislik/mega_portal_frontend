@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users } from 'lucide-react';
+import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
@@ -112,6 +112,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         reason: '',
         send_to_substitute: false
     });
+
+    const [healthReportForm, setHealthReportForm] = useState({
+        start_date: getIstanbulToday(),
+        end_date: getIstanbulToday(),
+        description: '',
+    });
+    const [healthReportFiles, setHealthReportFiles] = useState([]);
 
     // Approver selection
     const [availableApprovers, setAvailableApprovers] = useState([]);
@@ -505,6 +512,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 });
             } else if (selectedType === 'CARDLESS_ENTRY') {
                 response = await api.post('/cardless-entry-requests/', { ...cardlessEntryForm, ...approverPayload });
+            } else if (selectedType === 'HEALTH_REPORT') {
+                const formData = new FormData();
+                formData.append('start_date', healthReportForm.start_date);
+                formData.append('end_date', healthReportForm.end_date);
+                formData.append('description', healthReportForm.description);
+                healthReportFiles.forEach(f => formData.append('files', f));
+                response = await api.post('/health-reports/', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             }
 
             // Hedef onaylayıcı bilgisini al
@@ -798,6 +814,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     <ChevronRight size={18} />
                 </div>
             </button>
+
+            <button
+                onClick={() => handleTypeSelect('HEALTH_REPORT')}
+                className="group relative p-5 bg-white border border-slate-200 rounded-2xl hover:border-red-500 hover:shadow-xl hover:shadow-red-500/10 transition-all text-left flex items-center gap-5"
+            >
+                <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform shrink-0">
+                    <HeartPulse size={28} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-0.5">Sağlık Raporu</h3>
+                    <p className="text-sm text-slate-500">Sağlık raporunuzu yükleyin ve bildirim oluşturun.</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                    <ChevronRight size={18} />
+                </div>
+            </button>
         </div>
     );
 
@@ -862,7 +894,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     selectedType === 'LEAVE' ? 'İzin Talebi' :
                                         selectedType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
                                             selectedType === 'MEAL' ? 'Yemek Talebi' :
-                                                selectedType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' : 'Şirket Dışı Görev'}
+                                                selectedType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' :
+                                                    selectedType === 'HEALTH_REPORT' ? 'Sağlık Raporu' : 'Şirket Dışı Görev'}
                             </h2>
                             <p className="text-slate-500 text-xs mt-0.5 font-medium">
                                 {step === 1 ? 'Talep türünü seçiniz' :
@@ -950,6 +983,56 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     scheduleEnd={scheduleEnd}
                                     approverDropdown={approverDropdownElement}
                                 />
+                            )}
+                            {selectedType === 'HEALTH_REPORT' && (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Tarihi *</label>
+                                            <input type="date" required value={healthReportForm.start_date}
+                                                onChange={e => setHealthReportForm(p => ({...p, start_date: e.target.value}))}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş Tarihi *</label>
+                                            <input type="date" required value={healthReportForm.end_date}
+                                                onChange={e => setHealthReportForm(p => ({...p, end_date: e.target.value}))}
+                                                min={healthReportForm.start_date}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                                        <textarea value={healthReportForm.description}
+                                            onChange={e => setHealthReportForm(p => ({...p, description: e.target.value}))}
+                                            rows={3} placeholder="Rapor ile ilgili açıklama (opsiyonel)"
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm resize-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Rapor Dosyası *</label>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.pdf" multiple
+                                            onChange={e => setHealthReportFiles(Array.from(e.target.files))}
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                                        />
+                                        <p className="text-xs text-slate-400 mt-1">JPG, PNG veya PDF. Maks. 10MB, en fazla 3 dosya.</p>
+                                        {healthReportFiles.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                {healthReportFiles.map((f, i) => (
+                                                    <div key={i} className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg">
+                                                        <span className="truncate flex-1">{f.name}</span>
+                                                        <span className="text-slate-400">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
+                                        <p>Sağlık raporunuz yöneticinize bildirim olarak gönderilecektir. Onay, İK/Sistem Yöneticisi tarafından Sağlık Raporları sayfasından verilecektir.</p>
+                                    </div>
+                                </div>
                             )}
                         </form>
                     )}
