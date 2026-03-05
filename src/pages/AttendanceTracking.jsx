@@ -16,6 +16,7 @@ import {
 } from './attendance-tracking/AttendanceComponents';
 import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
 import OvertimeCalendarModal from '../components/OvertimeCalendarModal';
+import OvertimeCalendarView from '../components/overtime/OvertimeCalendarView';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -60,7 +61,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [calendarTarget, setCalendarTarget] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
-    const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics'
+    const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics' | 'overtime'
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -604,7 +605,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
-            {/* View Toggle: Liste / Analiz */}
+            {/* View Toggle: Liste / Analiz / Ek Mesai */}
             {stats.length > 0 && (
                 <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 w-fit">
                     <button
@@ -629,12 +630,28 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <BarChart3 size={14} />
                         Analiz
                     </button>
+                    <button
+                        onClick={() => setViewMode('overtime')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                            viewMode === 'overtime'
+                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <Clock size={14} />
+                        Ek Mesai
+                    </button>
                 </div>
             )}
 
             {/* Analytics View */}
             {viewMode === 'analytics' && stats.length > 0 && (
                 <TeamAnalyticsDashboard stats={stats} year={year} month={month} departmentId={selectedDept} />
+            )}
+
+            {/* Overtime Calendar View */}
+            {viewMode === 'overtime' && (
+                <OvertimeCalendarView mode="manager" />
             )}
 
             {/* Main Table */}
