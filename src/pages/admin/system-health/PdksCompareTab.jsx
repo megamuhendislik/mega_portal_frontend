@@ -1211,6 +1211,46 @@ export default function PdksCompareTab() {
     // -----------------------------------------------------------------------
 
     // -----------------------------------------------------------------------
+    // Group preview items by employee for nested display
+    // -----------------------------------------------------------------------
+    const groupedPreviewData = useMemo(() => {
+        if (!resetPreview?.preview?.length) return [];
+        const map = new Map();
+        for (const item of resetPreview.preview) {
+            const key = item.employee_id;
+            if (!map.has(key)) {
+                map.set(key, {
+                    key: `emp_${key}`,
+                    employee_id: key,
+                    employee_code: item.employee_code,
+                    employee_name: item.employee_name,
+                    department_name: item.department_name,
+                    days: [],
+                    totalCsvSessions: 0,
+                    totalExistingAtt: 0,
+                    totalPotentialOtDelete: 0,
+                    hasOtPreserved: false,
+                    hasLeave: false,
+                    hasCardless: false,
+                    hasExternalDuty: false,
+                });
+            }
+            const group = map.get(key);
+            group.days.push({ ...item, key: `${key}_${item.work_date}` });
+            group.totalCsvSessions += (item.csv_session_count || 0);
+            group.totalExistingAtt += (item.existing_attendance_count || 0);
+            group.totalPotentialOtDelete += (item.potential_ot_to_delete || 0);
+            if (item.preserved_ot_requests?.length > 0) group.hasOtPreserved = true;
+            if (item.has_approved_leave) group.hasLeave = true;
+            if (item.approved_cardless_entries?.length > 0) group.hasCardless = true;
+            if (item.external_duties?.length > 0) group.hasExternalDuty = true;
+        }
+        return Array.from(map.values()).sort((a, b) =>
+            (a.employee_code || '').localeCompare(b.employee_code || '')
+        );
+    }, [resetPreview]);
+
+    // -----------------------------------------------------------------------
     // Full Reset preview table columns
     // -----------------------------------------------------------------------
 
@@ -1302,6 +1342,70 @@ export default function PdksCompareTab() {
             width: 260,
             ellipsis: true,
             render: (v) => v ? <span className="font-mono text-xs">{v}</span> : <span className="text-gray-300">-</span>,
+        },
+    ], []);
+
+    // Employee-level columns for grouped view
+    const employeeGroupColumns = useMemo(() => [
+        {
+            title: 'Sicil No',
+            dataIndex: 'employee_code',
+            key: 'employee_code',
+            width: 90,
+            sorter: (a, b) => (a.employee_code || '').localeCompare(b.employee_code || ''),
+            render: (v) => <span className="font-mono text-xs font-bold">{v || '-'}</span>,
+        },
+        {
+            title: 'Ad Soyad',
+            dataIndex: 'employee_name',
+            key: 'employee_name',
+            width: 200,
+            sorter: (a, b) => (a.employee_name || '').localeCompare(b.employee_name || '', 'tr'),
+        },
+        {
+            title: 'Departman',
+            dataIndex: 'department_name',
+            key: 'department_name',
+            width: 180,
+            ellipsis: true,
+            render: (v) => <span className="text-xs text-gray-500">{v || '-'}</span>,
+        },
+        {
+            title: 'Gün Sayısı',
+            dataIndex: 'days',
+            key: 'day_count',
+            width: 90,
+            align: 'center',
+            render: (days) => <span className="font-mono text-sm font-bold">{days?.length || 0}</span>,
+        },
+        {
+            title: 'CSV Session',
+            dataIndex: 'totalCsvSessions',
+            key: 'totalCsvSessions',
+            width: 100,
+            align: 'center',
+            render: (v) => <span className="font-mono text-xs text-green-700">{v}</span>,
+        },
+        {
+            title: 'Mevcut Att.',
+            dataIndex: 'totalExistingAtt',
+            key: 'totalExistingAtt',
+            width: 100,
+            align: 'center',
+            render: (v) => <span className="font-mono text-xs">{v}</span>,
+        },
+        {
+            title: 'Durum',
+            key: 'tags',
+            width: 200,
+            render: (_, record) => {
+                const tags = [];
+                if (record.hasOtPreserved) tags.push(<Tag key="ot" color="purple">OT Korunan</Tag>);
+                if (record.hasLeave) tags.push(<Tag key="leave" color="blue">İzinli</Tag>);
+                if (record.hasCardless) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
+                if (record.hasExternalDuty) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
+                return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
+            },
         },
     ], []);
 
@@ -1993,196 +2097,232 @@ export default function PdksCompareTab() {
                                 />
                             )}
 
-                            {/* Preview detail table */}
-                            {resetPreview.preview?.length > 0 && (
+                            {/* DB'de olup CSV'de olmayan çalışanlar */}
+                            {resetPreview.db_employees_not_in_csv?.length > 0 && (
+                                <Alert
+                                    type="info"
+                                    showIcon
+                                    message={`DB'de Olup CSV'de Olmayan Çalışanlar (${resetPreview.db_employees_not_in_csv.length})`}
+                                    description={
+                                        <div className="mt-1 max-h-48 overflow-y-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="text-left text-gray-500">
+                                                        <th className="pr-3">Sicil</th>
+                                                        <th className="pr-3">Ad Soyad</th>
+                                                        <th className="pr-3">Departman</th>
+                                                        <th>Att. Sayısı</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {resetPreview.db_employees_not_in_csv.map((emp) => (
+                                                        <tr key={emp.employee_id} className="border-t border-gray-100">
+                                                            <td className="pr-3 font-mono">{emp.employee_code}</td>
+                                                            <td className="pr-3">{emp.employee_name}</td>
+                                                            <td className="pr-3 text-gray-500">{emp.department_name || '-'}</td>
+                                                            <td className="font-mono">{emp.attendance_count}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                />
+                            )}
+
+                            {/* Preview detail table - grouped by employee */}
+                            {groupedPreviewData.length > 0 && (
                                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                                     <h3 className="text-base font-semibold text-gray-800 mb-4">
                                         <FileTextOutlined className="mr-2 text-blue-500" />
-                                        Önizleme Detayı ({resetPreview.preview.length} çalışan-gün)
+                                        Önizleme Detayı ({groupedPreviewData.length} çalışan, {resetPreview.preview.length} çalışan-gün)
                                     </h3>
                                     <Table
-                                        dataSource={resetPreview.preview}
-                                        columns={resetPreviewColumns}
-                                        rowKey={(r) => `${r.employee_id}_${r.work_date}`}
+                                        dataSource={groupedPreviewData}
+                                        columns={employeeGroupColumns}
+                                        rowKey="key"
                                         size="small"
                                         bordered
-                                        scroll={{ x: 1460 }}
                                         pagination={{
-                                            defaultPageSize: 50,
+                                            defaultPageSize: 100,
                                             showSizeChanger: true,
-                                            pageSizeOptions: ['25', '50', '100', '200'],
+                                            pageSizeOptions: ['50', '100', '200'],
                                             showTotal: (total, range) =>
-                                                `${range[0]}-${range[1]} / ${total} kayıt`,
+                                                `${range[0]}-${range[1]} / ${total} çalışan`,
                                         }}
+                                        defaultExpandAllRows={true}
                                         expandable={{
-                                            expandedRowRender: (record) => (
-                                                <div className="space-y-3 p-2">
-                                                    {/* ── Before/After Karşılaştırma ── */}
-                                                    {record.before && record.after && (
-                                                        <div className="grid grid-cols-2 gap-4 mb-3">
-                                                            {/* BEFORE Card */}
-                                                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                                                <h4 className="text-xs font-semibold text-red-700 mb-2">Mevcut Durum (Silinecek)</h4>
-                                                                <div className="space-y-1 text-xs">
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.before.attendance_count}</span></div>
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.before.total_hours)}</span></div>
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.before.normal_hours)}</span></div>
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.before.overtime_hours)}</span></div>
-                                                                    {record.before.sessions?.length > 0 && (
-                                                                        <div className="mt-2 border-t border-red-200 pt-1">
-                                                                            <span className="text-gray-500 block mb-1">Oturumlar:</span>
-                                                                            {record.before.sessions.map((s, i) => (
-                                                                                <div key={i} className="font-mono text-gray-700 flex items-center gap-1">
-                                                                                    {s.check_in || '?'} — {s.check_out || '?'}
-                                                                                    <Tag size="small" className="ml-1 text-xs">{s.status}</Tag>
+                                            expandedRowRender: (empRecord) => (
+                                                <div className="pl-4">
+                                                    <Table
+                                                        dataSource={empRecord.days}
+                                                        columns={resetPreviewColumns}
+                                                        rowKey="key"
+                                                        size="small"
+                                                        bordered
+                                                        pagination={false}
+                                                        expandable={{
+                                                            expandedRowRender: (record) => (
+                                                                <div className="space-y-3 p-2">
+                                                                    {record.before && record.after && (
+                                                                        <div className="grid grid-cols-2 gap-4 mb-3">
+                                                                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                                                                <h4 className="text-xs font-semibold text-red-700 mb-2">Mevcut Durum (Silinecek)</h4>
+                                                                                <div className="space-y-1 text-xs">
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.before.attendance_count}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.before.total_hours)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.before.normal_hours)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.before.overtime_hours)}</span></div>
+                                                                                    {record.before.sessions?.length > 0 && (
+                                                                                        <div className="mt-2 border-t border-red-200 pt-1">
+                                                                                            <span className="text-gray-500 block mb-1">Oturumlar:</span>
+                                                                                            {record.before.sessions.map((s, i) => (
+                                                                                                <div key={i} className="font-mono text-gray-700 flex items-center gap-1">
+                                                                                                    {s.check_in || '?'} — {s.check_out || '?'}
+                                                                                                    <Tag size="small" className="ml-1 text-xs">{s.status}</Tag>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
-                                                                            ))}
+                                                                            </div>
+                                                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                                                <h4 className="text-xs font-semibold text-green-700 mb-2">Yeni Durum (Hesaplanan)</h4>
+                                                                                <div className="space-y-1 text-xs">
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.after.attendance_count}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.after.total_hours)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.after.normal_hours)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.after.overtime_hours)}</span></div>
+                                                                                    {record.after.potential_ot_count > 0 && (
+                                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel OT:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
+                                                                                    )}
+                                                                                    {record.after.sessions?.length > 0 && (
+                                                                                        <div className="mt-2 border-t border-green-200 pt-1">
+                                                                                            <span className="text-gray-500 block mb-1">Oturumlar:</span>
+                                                                                            {record.after.sessions.map((s, i) => (
+                                                                                                <div key={i} className="font-mono text-gray-700 flex items-center gap-1">
+                                                                                                    {s.check_in || '?'} — {s.check_out || '?'}
+                                                                                                    <Tag size="small" className="ml-1 text-xs">{s.source}</Tag>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                    {record.after.potential_ot_details?.length > 0 && (
+                                                                                        <div className="mt-2 border-t border-green-200 pt-1">
+                                                                                            <span className="text-orange-600 block mb-1">OT Detayları:</span>
+                                                                                            {record.after.potential_ot_details.map((ot, i) => (
+                                                                                                <div key={i} className="font-mono text-orange-700">
+                                                                                                    {ot.start_time} — {ot.end_time} ({formatSeconds(ot.duration_seconds)})
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {record.calculation_logs?.length > 0 && (
+                                                                        <Collapse
+                                                                            size="small"
+                                                                            className="mb-3"
+                                                                            items={[{
+                                                                                key: 'calc-logs',
+                                                                                label: <span className="text-xs font-semibold">Hesaplama Detayları ({record.calculation_logs.length} satır)</span>,
+                                                                                children: (
+                                                                                    <div className="bg-gray-50 rounded p-2 max-h-64 overflow-y-auto">
+                                                                                        {record.calculation_logs.map((log, i) => {
+                                                                                            let color = 'text-gray-600';
+                                                                                            if (log.includes('[CONTEXT]')) color = 'text-blue-600';
+                                                                                            else if (log.includes('[SNAP]')) color = 'text-orange-600';
+                                                                                            else if (log.includes('[BREAK]')) color = 'text-green-600';
+                                                                                            else if (log.includes('[CALC]')) color = 'text-purple-600';
+                                                                                            else if (log.includes('[OT-REQ]')) color = 'text-red-600';
+                                                                                            else if (log.includes('[ABSENT]')) color = 'text-yellow-700';
+                                                                                            else if (log.includes('[SYNC]')) color = 'text-cyan-600';
+                                                                                            else if (log.includes('[SIM-ERROR]')) color = 'text-red-700 font-bold';
+                                                                                            return <div key={i} className={`font-mono text-xs leading-5 ${color}`}>{log}</div>;
+                                                                                        })}
+                                                                                    </div>
+                                                                                ),
+                                                                            }]}
+                                                                        />
+                                                                    )}
+                                                                    {record.csv_sessions?.length > 0 && (
+                                                                        <div>
+                                                                            <h4 className="text-xs font-semibold text-gray-600 mb-1">CSV Oturumları:</h4>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {record.csv_sessions.map((s, i) => (
+                                                                                    <Tag key={i} color="green" className="font-mono text-xs">
+                                                                                        {s.check_in || '?'} — {s.check_out || '?'}
+                                                                                    </Tag>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {record.preserved_ot_requests?.length > 0 && (
+                                                                        <div>
+                                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan OT Talepleri:</h4>
+                                                                            <div className="space-y-1">
+                                                                                {record.preserved_ot_requests.map((ot) => (
+                                                                                    <div key={ot.id} className="flex items-center gap-2 text-xs">
+                                                                                        <Tag color="purple">{ot.status}</Tag>
+                                                                                        <span className="font-mono">{ot.start_time} — {ot.end_time}</span>
+                                                                                        <span className="text-gray-400">({formatSeconds(ot.duration_seconds)})</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {record.approved_leaves?.length > 0 && (
+                                                                        <div>
+                                                                            <h4 className="text-xs font-semibold text-blue-700 mb-1">Onaylı İzinler:</h4>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {record.approved_leaves.map((lv, i) => (
+                                                                                    <Tag key={i} color="blue" className="text-xs">
+                                                                                        {lv.leave_type || lv.request_type_name || 'İzin'} ({lv.status})
+                                                                                    </Tag>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {record.approved_cardless_entries?.length > 0 && (
+                                                                        <div>
+                                                                            <h4 className="text-xs font-semibold text-cyan-700 mb-1">Kartsız Giriş:</h4>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {record.approved_cardless_entries.map((ce, i) => (
+                                                                                    <Tag key={i} color="cyan" className="font-mono text-xs">
+                                                                                        {ce.check_in || '?'} — {ce.check_out || '?'}
+                                                                                    </Tag>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {record.external_duties?.length > 0 && (
+                                                                        <div>
+                                                                            <h4 className="text-xs font-semibold text-indigo-700 mb-1">Dış Görevler:</h4>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {record.external_duties.map((ed, i) => (
+                                                                                    <Tag key={i} color="geekblue" className="text-xs">
+                                                                                        {ed.description || ed.location || 'Dış Görev'}
+                                                                                    </Tag>
+                                                                                ))}
+                                                                            </div>
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                            </div>
-                                                            {/* AFTER Card */}
-                                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                                                <h4 className="text-xs font-semibold text-green-700 mb-2">Yeni Durum (Hesaplanan)</h4>
-                                                                <div className="space-y-1 text-xs">
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.after.attendance_count}</span></div>
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatHours(record.after.total_hours)}</span></div>
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatHours(record.after.normal_hours)}</span></div>
-                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatHours(record.after.overtime_hours)}</span></div>
-                                                                    {record.after.potential_ot_count > 0 && (
-                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel FM:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
-                                                                    )}
-                                                                    {record.after.sessions?.length > 0 && (
-                                                                        <div className="mt-2 border-t border-green-200 pt-1">
-                                                                            <span className="text-gray-500 block mb-1">Oturumlar:</span>
-                                                                            {record.after.sessions.map((s, i) => (
-                                                                                <div key={i} className="font-mono text-gray-700 flex items-center gap-1">
-                                                                                    {s.check_in || '?'} — {s.check_out || '?'}
-                                                                                    <Tag size="small" className="ml-1 text-xs">{s.source}</Tag>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                    {record.after.potential_ot_details?.length > 0 && (
-                                                                        <div className="mt-2 border-t border-green-200 pt-1">
-                                                                            <span className="text-orange-600 block mb-1">FM Detayları:</span>
-                                                                            {record.after.potential_ot_details.map((ot, i) => (
-                                                                                <div key={i} className="font-mono text-orange-700">
-                                                                                    {ot.start_time} — {ot.end_time} ({formatSeconds(ot.duration_seconds)})
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* ── Hesaplama Logları ── */}
-                                                    {record.calculation_logs?.length > 0 && (
-                                                        <Collapse
-                                                            size="small"
-                                                            className="mb-3"
-                                                            items={[{
-                                                                key: 'calc-logs',
-                                                                label: <span className="text-xs font-semibold">Hesaplama Detayları ({record.calculation_logs.length} satır)</span>,
-                                                                children: (
-                                                                    <div className="bg-gray-50 rounded p-2 max-h-64 overflow-y-auto">
-                                                                        {record.calculation_logs.map((log, i) => {
-                                                                            let color = 'text-gray-600';
-                                                                            if (log.includes('[CONTEXT]')) color = 'text-blue-600';
-                                                                            else if (log.includes('[SNAP]')) color = 'text-orange-600';
-                                                                            else if (log.includes('[BREAK]')) color = 'text-green-600';
-                                                                            else if (log.includes('[CALC]')) color = 'text-purple-600';
-                                                                            else if (log.includes('[OT-REQ]')) color = 'text-red-600';
-                                                                            else if (log.includes('[ABSENT]')) color = 'text-yellow-700';
-                                                                            else if (log.includes('[SYNC]')) color = 'text-cyan-600';
-                                                                            else if (log.includes('[SIM-ERROR]')) color = 'text-red-700 font-bold';
-                                                                            return <div key={i} className={`font-mono text-xs leading-5 ${color}`}>{log}</div>;
-                                                                        })}
-                                                                    </div>
-                                                                ),
-                                                            }]}
-                                                        />
-                                                    )}
-
-                                                    {/* CSV sessions */}
-                                                    {record.csv_sessions?.length > 0 && (
-                                                        <div>
-                                                            <h4 className="text-xs font-semibold text-gray-600 mb-1">CSV Oturumları:</h4>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {record.csv_sessions.map((s, i) => (
-                                                                    <Tag key={i} color="green" className="font-mono text-xs">
-                                                                        {s.check_in || '?'} — {s.check_out || '?'}
-                                                                    </Tag>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {/* Preserved OT */}
-                                                    {record.preserved_ot_requests?.length > 0 && (
-                                                        <div>
-                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan Fazla Mesai Talepleri:</h4>
-                                                            <div className="space-y-1">
-                                                                {record.preserved_ot_requests.map((ot) => (
-                                                                    <div key={ot.id} className="flex items-center gap-2 text-xs">
-                                                                        <Tag color="purple">{ot.status}</Tag>
-                                                                        <span className="font-mono">{ot.start_time} — {ot.end_time}</span>
-                                                                        <span className="text-gray-400">({formatSeconds(ot.duration_seconds)})</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {/* Approved leaves */}
-                                                    {record.approved_leaves?.length > 0 && (
-                                                        <div>
-                                                            <h4 className="text-xs font-semibold text-blue-700 mb-1">Onaylı İzinler:</h4>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {record.approved_leaves.map((lv, i) => (
-                                                                    <Tag key={i} color="blue" className="text-xs">
-                                                                        {lv.leave_type || lv.request_type_name || 'İzin'} ({lv.status})
-                                                                    </Tag>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {/* Cardless entries */}
-                                                    {record.approved_cardless_entries?.length > 0 && (
-                                                        <div>
-                                                            <h4 className="text-xs font-semibold text-cyan-700 mb-1">Kartsız Giriş:</h4>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {record.approved_cardless_entries.map((ce, i) => (
-                                                                    <Tag key={i} color="cyan" className="font-mono text-xs">
-                                                                        {ce.check_in || '?'} — {ce.check_out || '?'}
-                                                                    </Tag>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {/* External duties */}
-                                                    {record.external_duties?.length > 0 && (
-                                                        <div>
-                                                            <h4 className="text-xs font-semibold text-geekblue-700 mb-1">Dış Görevler:</h4>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {record.external_duties.map((ed, i) => (
-                                                                    <Tag key={i} color="geekblue" className="text-xs">
-                                                                        {ed.description || ed.location || 'Dış Görev'}
-                                                                    </Tag>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                            ),
+                                                            rowExpandable: (r) =>
+                                                                (r.before && r.after) ||
+                                                                (r.calculation_logs?.length > 0) ||
+                                                                (r.csv_sessions?.length > 0) ||
+                                                                (r.preserved_ot_requests?.length > 0) ||
+                                                                (r.approved_leaves?.length > 0) ||
+                                                                (r.approved_cardless_entries?.length > 0) ||
+                                                                (r.external_duties?.length > 0),
+                                                        }}
+                                                    />
                                                 </div>
                                             ),
-                                            rowExpandable: (r) =>
-                                                (r.before && r.after) ||
-                                                (r.calculation_logs?.length > 0) ||
-                                                (r.csv_sessions?.length > 0) ||
-                                                (r.preserved_ot_requests?.length > 0) ||
-                                                (r.approved_leaves?.length > 0) ||
-                                                (r.approved_cardless_entries?.length > 0) ||
-                                                (r.external_duties?.length > 0),
                                         }}
                                     />
                                 </div>
