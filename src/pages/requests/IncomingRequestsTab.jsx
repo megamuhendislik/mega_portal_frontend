@@ -60,13 +60,37 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             ]);
 
             if (meRes.status === 'fulfilled') {
-                setCurrentUserEmployeeId(meRes.value.data.id);
+                const meId = meRes.value.data.id;
+                setCurrentUserEmployeeId(meId);
+                console.log('[IncomingRequestsTab] currentUserEmployeeId =', meId);
             }
             if (subsRes.status === 'fulfilled') {
                 setSubordinates(subsRes.value.data || []);
+                console.log('[IncomingRequestsTab] subordinates count =', (subsRes.value.data || []).length);
             }
             if (teamRes.status === 'fulfilled') {
-                setIncomingRequests(teamRes.value.data || []);
+                const teamData = teamRes.value.data || [];
+                setIncomingRequests(teamData);
+                console.log('[IncomingRequestsTab] incomingRequests count =', teamData.length);
+                // Debug: request_scope dağılımı
+                const scopes = {};
+                teamData.forEach(r => {
+                    const s = r.request_scope || 'UNDEFINED';
+                    scopes[s] = (scopes[s] || 0) + 1;
+                });
+                console.log('[IncomingRequestsTab] request_scope dağılımı:', scopes);
+                // Debug: ilk 3 request detayı
+                teamData.slice(0, 3).forEach((r, i) => {
+                    console.log(`[IncomingRequestsTab] request[${i}]:`, {
+                        id: r.id,
+                        type: r.type,
+                        request_scope: r.request_scope,
+                        approver_target: r.approver_target,
+                        level: r.level,
+                        employee_name: r.employee_name,
+                        status: r.status,
+                    });
+                });
             }
             if (histRes.status === 'fulfilled') {
                 const hData = histRes.value.data;
@@ -245,6 +269,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         }
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
+        console.log('[IncomingRequestsTab] directIncomingItems count =', items.length, items.map(r => ({ id: r.id, type: r.type, scope: r.request_scope, emp: r.employee_name })));
         return items;
     }, [incomingRequests, substituteData]);
 
@@ -285,6 +310,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         });
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
+        console.log('[IncomingRequestsTab] teamItems count =', items.length, 'fromIncoming:', items.filter(r => r.request_scope).length, 'fromHistory:', items.filter(r => !r.request_scope).length);
         return items;
     }, [incomingRequests, teamHistoryRequests, directSubordinateIds, currentUserEmployeeId]);
 
