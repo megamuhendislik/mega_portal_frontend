@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText } from 'lucide-react';
+import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset } from '../../utils/dateUtils';
 
 // ============================================================
@@ -922,9 +922,9 @@ export const ExternalDutyForm = ({
 }) => {
     const [currentStep, setCurrentStep] = useState(0);
 
-    // Fetch duty hours preview when reaching the summary step (step 7)
+    // Fetch duty hours preview when reaching the summary step (step 7) or hours step (step 8)
     useEffect(() => {
-        if (currentStep === 7 && fetchDutyHoursPreview) {
+        if ((currentStep === 7 || currentStep === 8) && fetchDutyHoursPreview) {
             fetchDutyHoursPreview();
         }
     }, [currentStep]);
@@ -933,6 +933,7 @@ export const ExternalDutyForm = ({
     const ALL_STEPS = {
         0: { id: 0, label: 'Görev Tipi', icon: Briefcase },
         1: { id: 1, label: 'Tarih & Saat', icon: CalendarDays },
+        8: { id: 8, label: 'Çalışma Saatleri', icon: Clock },
         2: { id: 2, label: 'Lokasyon', icon: MapPin },
         3: { id: 3, label: 'Görev Detayı', icon: FileText },
         4: { id: 4, label: 'Ulaşım', icon: Car },
@@ -943,12 +944,12 @@ export const ExternalDutyForm = ({
 
     // Which steps are active per duty category
     const STEP_MAP = {
-        REMOTE_WORK:     [0, 1, 3, 7],
-        SITE_VISIT:      [0, 1, 2, 3, 4, 5, 6, 7],
-        CUSTOMER_VISIT:  [0, 1, 2, 3, 4, 5, 6, 7],
-        TRAINING:        [0, 1, 2, 3, 7],
-        MEETING:         [0, 1, 2, 3, 7],
-        OTHER:           [0, 1, 2, 3, 4, 5, 6, 7],
+        REMOTE_WORK:     [0, 1, 8, 3, 7],
+        SITE_VISIT:      [0, 1, 8, 2, 3, 4, 5, 6, 7],
+        CUSTOMER_VISIT:  [0, 1, 8, 2, 3, 4, 5, 6, 7],
+        TRAINING:        [0, 1, 8, 2, 3, 7],
+        MEETING:         [0, 1, 8, 2, 3, 7],
+        OTHER:           [0, 1, 8, 2, 3, 4, 5, 6, 7],
         '':              [0],
     };
 
@@ -1100,19 +1101,9 @@ export const ExternalDutyForm = ({
                     <span className="font-bold text-purple-700">{duration} Gün</span>
                 </div>
             )}
-            <div className="grid grid-cols-2 gap-5">
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Saati <span className="text-red-500">*</span></label>
-                    <input required type="time" value={externalDutyForm.start_time}
-                        onChange={e => setExternalDutyForm({ ...externalDutyForm, start_time: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
-                </div>
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Saati <span className="text-red-500">*</span></label>
-                    <input required type="time" value={externalDutyForm.end_time}
-                        onChange={e => setExternalDutyForm({ ...externalDutyForm, end_time: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
-                </div>
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-sm text-slate-500 flex items-center gap-2">
+                <Clock size={16} className="text-slate-400 shrink-0" />
+                <span>Çalışma saatleri bir sonraki adımda gün bazlı girilecektir.</span>
             </div>
         </div>
     );
@@ -1397,7 +1388,11 @@ export const ExternalDutyForm = ({
                 </SummaryCard>
                 <SummaryCard title="Tarih & Saat" icon={CalendarDays}>
                     <SummaryRow label="Tarih" value={`${externalDutyForm.start_date} - ${externalDutyForm.end_date}`} />
-                    <SummaryRow label="Saat" value={externalDutyForm.start_time && externalDutyForm.end_time ? `${externalDutyForm.start_time} - ${externalDutyForm.end_time}` : ''} />
+                    <SummaryRow label="Saat" value={
+                        (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time).length > 0
+                            ? `${(externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time).length} gün tanımlı`
+                            : externalDutyForm.start_time && externalDutyForm.end_time ? `${externalDutyForm.start_time} - ${externalDutyForm.end_time}` : ''
+                    } />
                     <SummaryRow label="Süre" value={duration ? `${duration} Gün` : ''} />
                 </SummaryCard>
                 {/* Tahmini Mesai Hesaplaması */}
@@ -1506,6 +1501,142 @@ export const ExternalDutyForm = ({
         );
     };
 
+    // -- Step 8: Gün Bazlı Çalışma Saatleri --
+    const Step8 = () => {
+        const segments = externalDutyForm.date_segments || [];
+
+        const updateSegment = (index, field, value) => {
+            const updated = [...segments];
+            updated[index] = { ...updated[index], [field]: value };
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
+        const applyToAll = () => {
+            if (segments.length === 0) return;
+            const first = segments[0];
+            if (!first.start_time || !first.end_time) return;
+            const updated = segments.map(seg => ({
+                ...seg,
+                start_time: first.start_time,
+                end_time: first.end_time,
+            }));
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
+        const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+        // Debounced preview fetch when all segments are filled
+        useEffect(() => {
+            const allFilled = segments.every(s => s.start_time && s.end_time);
+            if (allFilled && segments.length > 0 && fetchDutyHoursPreview) {
+                const timer = setTimeout(() => fetchDutyHoursPreview(), 600);
+                return () => clearTimeout(timer);
+            }
+        }, [JSON.stringify(segments)]);
+
+        return (
+            <div className="space-y-4 animate-in slide-in-from-right-8 duration-300">
+                <div className="bg-indigo-50 p-3 rounded-xl flex items-start gap-3 text-indigo-800 text-sm border border-indigo-100">
+                    <Clock className="shrink-0 mt-0.5" size={18} />
+                    <div>
+                        <h4 className="font-bold">Gün Bazlı Çalışma Saatleri</h4>
+                        <p className="mt-1 text-xs">Her gün için başlangıç ve bitiş saatlerini girin. Mola hesaplanmaz, direkt çalışma süresi alınır.</p>
+                    </div>
+                </div>
+
+                {segments.length > 1 && (
+                    <button type="button" onClick={applyToAll}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 transition-colors">
+                        <Copy size={14} /> İlk günün saatlerini tüm günlere uygula
+                    </button>
+                )}
+
+                <div className="space-y-2">
+                    {segments.map((seg, i) => {
+                        const d = new Date(seg.date + 'T00:00:00');
+                        const dayName = DAY_NAMES[d.getDay()];
+                        const dateLabel = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                        const dayPreview = dutyHoursPreview?.days?.find(dp => dp.date === seg.date);
+
+                        return (
+                            <div key={seg.date} className={`p-3 rounded-xl border transition-all ${
+                                dayPreview?.is_off_day ? 'bg-red-50/50 border-red-200' : 'bg-white border-slate-200'
+                            }`}>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <div className="w-28">
+                                        <span className="font-bold text-sm text-slate-700">{dateLabel}</span>
+                                        <span className="block text-[10px] text-slate-400">{dayName}</span>
+                                    </div>
+
+                                    {dayPreview && (
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            dayPreview.is_off_day ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                                        }`}>
+                                            {dayPreview.is_off_day ? 'Tatil' : `Vardiya ${dayPreview.shift_start}-${dayPreview.shift_end}`}
+                                        </span>
+                                    )}
+
+                                    <div className="flex items-center gap-2 ml-auto">
+                                        <input type="time" value={seg.start_time}
+                                            onChange={e => updateSegment(i, 'start_time', e.target.value)}
+                                            className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+                                        <span className="text-slate-400 text-sm">&rarr;</span>
+                                        <input type="time" value={seg.end_time}
+                                            onChange={e => updateSegment(i, 'end_time', e.target.value)}
+                                            className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+                                    </div>
+                                </div>
+
+                                {dayPreview && seg.start_time && seg.end_time && (
+                                    <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-100 text-xs">
+                                        {dayPreview.normal_work_minutes > 0 && (
+                                            <span className="text-emerald-600 font-bold">
+                                                Normal: {Math.floor(dayPreview.normal_work_minutes / 60)}s {dayPreview.normal_work_minutes % 60}dk
+                                            </span>
+                                        )}
+                                        {dayPreview.overtime_minutes > 0 && (
+                                            <span className="text-amber-600 font-bold">
+                                                Ek Mesai: {Math.floor(dayPreview.overtime_minutes / 60)}s {dayPreview.overtime_minutes % 60}dk
+                                            </span>
+                                        )}
+                                        {dayPreview.overtime_segments?.length > 0 && (
+                                            <span className="text-slate-400 text-[10px]">
+                                                ({dayPreview.overtime_segments.map(s => `${s.start}-${s.end}`).join(' + ')})
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {dutyHoursPreview && (
+                    <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="text-center">
+                            <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Normal Mesai</span>
+                            <span className="block font-black text-emerald-600 text-lg">
+                                {Math.floor(dutyHoursPreview.totals.total_normal_work_minutes / 60)}s {dutyHoursPreview.totals.total_normal_work_minutes % 60}dk
+                            </span>
+                        </div>
+                        <div className="text-center">
+                            <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Ek Mesai</span>
+                            <span className="block font-black text-amber-600 text-lg">
+                                {Math.floor(dutyHoursPreview.totals.total_overtime_minutes / 60)}s {dutyHoursPreview.totals.total_overtime_minutes % 60}dk
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {dutyHoursLoading && (
+                    <div className="text-center py-2">
+                        <div className="animate-pulse text-sm text-indigo-400">Hesaplanıyor...</div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const renderStep = () => {
         switch (currentStep) {
             case 0: return Step0();
@@ -1516,6 +1647,7 @@ export const ExternalDutyForm = ({
             case 5: return Step5();
             case 6: return Step6();
             case 7: return Step7();
+            case 8: return Step8();
             default: return Step0();
         }
     };

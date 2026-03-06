@@ -99,6 +99,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         budget_amount: '',
         send_to_substitute: false,
         contact_phone: '',
+        date_segments: [],  // [{date, start_time, end_time}]
     });
 
     // External duty hours preview
@@ -179,6 +180,32 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         };
         fetchSchedule();
     }, [cardlessEntryForm.date, selectedType]);
+
+    // Auto-generate date_segments when external duty dates change
+    useEffect(() => {
+        if (selectedType === 'EXTERNAL_DUTY' && externalDutyForm.start_date && externalDutyForm.end_date) {
+            const start = new Date(externalDutyForm.start_date);
+            const end = new Date(externalDutyForm.end_date);
+            if (isNaN(start) || isNaN(end) || end < start) return;
+
+            const newSegments = [];
+            const current = new Date(start);
+            while (current <= end) {
+                const dateStr = current.toISOString().split('T')[0];
+                const existing = externalDutyForm.date_segments.find(s => s.date === dateStr);
+                newSegments.push(existing || {
+                    date: dateStr,
+                    start_time: '',
+                    end_time: '',
+                });
+                current.setDate(current.getDate() + 1);
+            }
+            // Only update if segments actually changed
+            if (JSON.stringify(newSegments.map(s => s.date)) !== JSON.stringify(externalDutyForm.date_segments.map(s => s.date))) {
+                setExternalDutyForm(prev => ({ ...prev, date_segments: newSegments }));
+            }
+        }
+    }, [externalDutyForm.start_date, externalDutyForm.end_date, selectedType]);
 
     useEffect(() => {
         if (isOpen) {
@@ -492,6 +519,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     end_date: externalDutyForm.end_date,
                     start_time: externalDutyForm.start_time || null,
                     end_time: externalDutyForm.end_time || null,
+                    date_segments: (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time),
                     reason: externalDutyForm.duty_description || externalDutyForm.reason || 'Şirket dışı görev',
                     destination: externalDutyForm.destination || `${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim(),
                     trip_type: externalDutyForm.trip_type,
@@ -889,11 +917,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         if (!externalDutyForm.start_date || !externalDutyForm.end_date) return;
         setDutyHoursLoading(true);
         try {
+            const filledSegments = (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time);
             const resp = await api.post('/leave/requests/preview-duty-hours/', {
                 start_date: externalDutyForm.start_date,
                 end_date: externalDutyForm.end_date,
                 start_time: externalDutyForm.start_time || null,
                 end_time: externalDutyForm.end_time || null,
+                date_segments: filledSegments.length > 0 ? filledSegments : null,
             });
             setDutyHoursPreview(resp.data);
         } catch (err) {
