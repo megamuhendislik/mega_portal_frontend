@@ -267,8 +267,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
 
         // History (leave requests — don't duplicate) — doğrudan bana gelenler hariç
         (teamHistoryRequests || []).forEach(r => {
-            // Leave history farklı alan adı kullanabilir: target_approver
-            if (r.target_approver?.id === currentUserEmployeeId) return;
+            // Leave history: target_approver integer FK veya object olabilir
+            const histTargetId = typeof r.target_approver === 'object'
+                ? r.target_approver?.id
+                : r.target_approver;
+            if (histTargetId === currentUserEmployeeId) return;
             if (r.approver_target?.id === currentUserEmployeeId) return;
             const histType = r.type || 'LEAVE';
             const key = `${histType}-${r.id}`;
