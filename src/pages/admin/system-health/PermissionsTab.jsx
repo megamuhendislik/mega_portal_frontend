@@ -241,15 +241,12 @@ function PermissionMatrixView() {
     const departments = [...new Set(data.users.map(u => u.department))].filter(Boolean).sort();
     const allRoleKeys = [...new Set(data.users.flatMap(u => u.role_keys || []))].sort();
 
-    // Frontend permission codes that are actually checked in routes/sidebar
-    const frontendPagePerms = [
-        'PAGE_EMPLOYEES', 'PAGE_ORG_CHART', 'PAGE_WORK_SCHEDULES', 'PAGE_REPORTS',
-        'PAGE_SYSTEM_HEALTH', 'PAGE_MEAL_ORDERS', 'PAGE_DATA_MANAGEMENT', 'PAGE_DEBUG', 'PAGE_PROGRAM_MANAGEMENT'
-    ];
-    const frontendFeaturePerms = [
-        'ACTION_ORG_CHART_EDIT', 'FEATURE_BREAK_ANALYSIS', 'SYSTEM_FULL_ACCESS',
-        'APPROVAL_LEAVE', 'APPROVAL_OVERTIME', 'APPROVAL_CARDLESS_ENTRY', 'APPROVAL_EXTERNAL_TASK'
-    ];
+    // Derive page and feature permissions dynamically from backend category data
+    const allPerms = data.permissions || [];
+    const frontendPagePerms = allPerms.filter(p => p.category === 'MENU').map(p => p.code).sort();
+    const frontendFeaturePerms = allPerms
+        .filter(p => ['REQUEST', 'HR_ORG', 'SYSTEM', 'ACCOUNTING'].includes(p.category))
+        .map(p => p.code).sort();
     const allCriticalPerms = [...frontendPagePerms, ...frontendFeaturePerms];
 
     // Detect issues per user
