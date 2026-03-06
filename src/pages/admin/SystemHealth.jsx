@@ -760,7 +760,7 @@ function ServiceLogsTab() {
                     <tbody className="divide-y divide-gray-100">
                         {logs.map((log) => (
                             <tr key={log.id} className="hover:bg-indigo-50/30 transition-colors">
-                                <td className="px-6 py-3 text-gray-500 font-mono text-xs">{new Date(log.timestamp).toLocaleTimeString()}</td>
+                                <td className="px-6 py-3 text-gray-500 font-mono text-xs">{new Date(log.timestamp).toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}</td>
                                 <td className="px-6 py-3">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getLevelBadge(log.level)}`}>{log.level}</span>
                                 </td>

@@ -10,6 +10,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import CreateAssignmentModal from './overtime/CreateAssignmentModal';
 import EditAssignmentModal from './overtime/EditAssignmentModal';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS & HELPERS
@@ -40,8 +41,7 @@ function formatDuration(seconds) {
 }
 
 function isDatePast(dateStr) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    return new Date(dateStr + 'T00:00:00') < today;
+    return dateStr < getIstanbulToday();
 }
 
 function matchesDateRange(dateStr, from, to) {
@@ -702,8 +702,9 @@ const AssignedOvertimeTab = () => {
     const pendingCount = myRequests.filter(r => r.status === 'PENDING').length;
     const approvedHours = Math.round(myRequests.filter(r => r.status === 'APPROVED').reduce((s, r) => s + (r.duration_seconds || 0), 0) / 3600 * 10) / 10;
     const thisMonthCount = myRequests.filter(r => {
-        const d = new Date(r.date + 'T00:00:00'), now = new Date();
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        const [ry, rm] = r.date.split('-').map(Number);
+        const [ny, nm] = getIstanbulToday().split('-').map(Number);
+        return rm === nm && ry === ny;
     }).length;
 
     const filteredMyCreated = useMemo(() => {

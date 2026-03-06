@@ -13,6 +13,7 @@ import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as C
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -33,11 +34,11 @@ const Dashboard = () => {
 
     // Helper: Period Calc (26-25 fiscal rule)
     const getPeriodDates = () => {
-        const t = new Date();
-        const y = t.getFullYear();
-        const m = t.getMonth();
+        const todayStr = getIstanbulToday();
+        const [y, m0, d] = todayStr.split('-').map(Number);
+        const m = m0 - 1; // 0-based month for Date constructor
         let start, end;
-        if (t.getDate() >= 26) {
+        if (d >= 26) {
             start = new Date(y, m, 26);
             end = m === 11 ? new Date(y + 1, 0, 25) : new Date(y, m + 1, 25);
         } else {
@@ -73,7 +74,7 @@ const Dashboard = () => {
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
-                api.get(`/calendar-events/?start=${format(new Date(), 'yyyy-MM-dd')}&end=${format(addDays(new Date(), 7), 'yyyy-MM-dd')}&employee_id=${employeeId}`)
+                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${format(addDays(new Date(getIstanbulToday() + 'T00:00:00'), 7), 'yyyy-MM-dd')}&employee_id=${employeeId}`)
             ]);
 
             if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
@@ -412,7 +413,7 @@ const Dashboard = () => {
                     <AttendanceAnalyticsChart
                         logs={logs}
                         employeeId={user?.id}
-                        currentYear={new Date().getFullYear()}
+                        currentYear={Number(getIstanbulToday().split('-')[0])}
                     />
                 </div>
 

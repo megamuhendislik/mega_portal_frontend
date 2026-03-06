@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Search, Database, Calculator, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { getIstanbulToday } from '../../utils/dateUtils';
 
 const AttendanceDebugger = () => {
     const [employees, setEmployees] = useState([]);
     const [selectedEmp, setSelectedEmp] = useState('');
     const [debugData, setDebugData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [month, setMonth] = useState(() => { const d = new Date(); return d.getDate() >= 26 ? (d.getMonth() + 2 > 12 ? 1 : d.getMonth() + 2) : d.getMonth() + 1; });
-    const [year, setYear] = useState(() => { const d = new Date(); return d.getDate() >= 26 && d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear(); });
+    const [month, setMonth] = useState(() => { const [, m, d] = getIstanbulToday().split('-').map(Number); return d >= 26 ? (m + 1 > 12 ? 1 : m + 1) : m; });
+    const [year, setYear] = useState(() => { const [y, m, d] = getIstanbulToday().split('-').map(Number); return d >= 26 && m === 12 ? y + 1 : y; });
 
     useEffect(() => {
         fetchEmployees();
@@ -151,7 +152,7 @@ const AttendanceDebugger = () => {
                                         </p>
                                     </div>
                                     <div className="text-xs text-slate-400 mt-2 text-right">
-                                        Last Updated: {debugData.db_summary?.updated_at ? new Date(debugData.db_summary.updated_at).toLocaleString() : 'N/A'}
+                                        Last Updated: {debugData.db_summary?.updated_at ? new Date(debugData.db_summary.updated_at).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' }) : 'N/A'}
                                     </div>
                                 </div>
                             )}

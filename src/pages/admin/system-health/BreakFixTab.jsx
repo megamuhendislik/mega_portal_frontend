@@ -64,7 +64,7 @@ function generateLogText(detailedData) {
     const empNames = Object.keys(detailedData).sort((a, b) => a.localeCompare(b, 'tr'));
 
     lines.push(`[LOG] PUANTAJ TANILAMA RAPORU`);
-    lines.push(`[LOG] tarih=${now.toLocaleDateString('tr-TR')} saat=${now.toLocaleTimeString('tr-TR')} toplam_personel=${empNames.length}`);
+    lines.push(`[LOG] tarih=${now.toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })} saat=${now.toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })} toplam_personel=${empNames.length}`);
     lines.push('');
 
     for (const empName of empNames) {
@@ -498,7 +498,7 @@ export default function BreakFixTab() {
 
     const addCompactLog = useCallback((message, type = 'info', success = true) => {
         setCompactLogs(prev => [...prev, {
-            time: new Date().toLocaleTimeString('tr-TR'),
+            time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' }),
             message,
             type,
             success,

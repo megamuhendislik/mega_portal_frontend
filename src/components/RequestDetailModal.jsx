@@ -310,9 +310,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-600">Oluşturulma</span>
                     <span className="text-sm text-slate-700">
-                      {new Date(request.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {new Date(request.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' })}
                       {' '}
-                      <span className="text-slate-400">{new Date(request.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-slate-400">{new Date(request.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</span>
                     </span>
                   </div>
                 )}
@@ -705,9 +705,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-slate-600">Karar Tarihi</span>
                         <span className="text-sm text-slate-700">
-                          {new Date(request.approved_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {new Date(request.approved_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' })}
                           {' '}
-                          <span className="text-slate-400">{new Date(request.approved_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="text-slate-400">{new Date(request.approved_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</span>
                         </span>
                       </div>
                     )}

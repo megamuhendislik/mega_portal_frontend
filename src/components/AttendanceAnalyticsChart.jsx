@@ -12,6 +12,7 @@ import {
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 // Sub-component for Weekly Bar Chart (Legacy Logic)
 // Sub-component for Weekly Bar Chart (Logs Based)
@@ -175,7 +176,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 : (dailyTargets[dateStr] || 0);
 
             // Calculate Missing
-            const isFuture = d > new Date();
+            const isFuture = dateStr > getIstanbulToday();
             // Don't calculate dynamically. Use DB value.
             const calculatedMissing = totalMissing;
 
@@ -467,7 +468,7 @@ const YearlyView = ({ data }) => {
     );
 };
 
-const AttendanceAnalyticsChart = ({ logs, currentYear = new Date().getFullYear(), currentMonth = (() => { const d = new Date(); return d.getDate() >= 26 ? (d.getMonth() + 2 > 12 ? 1 : d.getMonth() + 2) : d.getMonth() + 1; })(), employeeId, onDateClick }) => {
+const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday().split('-')[0]), currentMonth = (() => { const [, m, d] = getIstanbulToday().split('-').map(Number); return d >= 26 ? (m + 1 > 12 ? 1 : m + 1) : m; })(), employeeId, onDateClick }) => {
     const [scope, setScope] = useState('WEEKLY'); // WEEKLY, MONTHLY, YEARLY
     const [yearlyData, setYearlyData] = useState([]);
     const [monthlyTrendData, setMonthlyTrendData] = useState([]);

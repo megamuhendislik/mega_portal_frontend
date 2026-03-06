@@ -289,10 +289,9 @@ export const LeaveRequestForm = ({
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
                         {(() => {
                             // 2 mali dönem geriye: ayın 26'sından önceysek 3 ay geri, sonrasıysak 2 ay geri (26'sı dahil)
-                            const now = new Date();
-                            const curYear = now.getFullYear();
-                            const curMonth = now.getMonth(); // 0-based
-                            const curDay = now.getDate();
+                            const [_yr, _mo, curDay] = getIstanbulToday().split('-').map(Number);
+                            const curYear = _yr;
+                            const curMonth = _mo - 1; // 0-based
                             // Mali dönem: 26-25 cycle. Şu anki mali ay hesabı
                             let fiscalMonth, fiscalYear;
                             if (curDay >= 26) {

@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import moment from 'moment';
+import { getIstanbulToday } from '../utils/dateUtils';
 import {
     formatMinutes,
     EmployeeAttendanceRow,
@@ -28,19 +29,18 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     // State — propMonth is 0-based (from Attendance.jsx), convert to 1-based for API
     // Default to fiscal month: if day >= 26, we're in next month's fiscal period
     const getFiscalMonth = () => {
-        const today = moment();
-        if (today.date() >= 26) {
-            // Next month's fiscal period
-            return today.month() + 2 > 12 ? 1 : today.month() + 2;
+        const [, m, d] = getIstanbulToday().split('-').map(Number);
+        if (d >= 26) {
+            return m + 1 > 12 ? 1 : m + 1;
         }
-        return today.month() + 1;
+        return m;
     };
     const getFiscalYear = () => {
-        const today = moment();
-        if (today.date() >= 26 && today.month() === 11) {
-            return today.year() + 1; // December 26+ → January of next year
+        const [y, m, d] = getIstanbulToday().split('-').map(Number);
+        if (d >= 26 && m === 12) {
+            return y + 1; // December 26+ → January of next year
         }
-        return today.year();
+        return y;
     };
     const [year, setYear] = useState(propYear || getFiscalYear());
     const [month, setMonth] = useState(propMonth != null ? propMonth + 1 : getFiscalMonth());

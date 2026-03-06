@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileDown, Calendar, ChevronDown, FileText, Users } from 'lucide-react';
 import api from '../services/api';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 const Reports = () => {
     const [calendars, setCalendars] = useState([]);
@@ -54,9 +55,7 @@ const Reports = () => {
                 setPeriods(allPeriods);
 
                 // Auto-select current period
-                const now = new Date();
-                const currentMonth = now.getMonth() + 1;
-                const currentYear = now.getFullYear();
+                const [currentYear, currentMonth] = getIstanbulToday().split('-').map(Number);
                 const current = allPeriods.find(p => p.year === currentYear && p.month === currentMonth);
                 setSelectedPeriod(current || allPeriods[allPeriods.length - 1] || null);
             } catch (err) {

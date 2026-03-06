@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import api from '../../../services/api';
+import { getIstanbulToday } from '../../../utils/dateUtils';
 
 import {
     ClockIcon,
 } from '@heroicons/react/24/outline';
 
 export default function AttendanceDiagTab() {
-    const [year, setYear] = useState(() => { const d = new Date(); return d.getDate() >= 26 && d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear(); });
-    const [month, setMonth] = useState(() => { const d = new Date(); return d.getDate() >= 26 ? (d.getMonth() + 2 > 12 ? 1 : d.getMonth() + 2) : d.getMonth() + 1; });
+    const [year, setYear] = useState(() => { const [y, m, d] = getIstanbulToday().split('-').map(Number); return d >= 26 && m === 12 ? y + 1 : y; });
+    const [month, setMonth] = useState(() => { const [, m, d] = getIstanbulToday().split('-').map(Number); return d >= 26 ? (m + 1 > 12 ? 1 : m + 1) : m; });
     const [allMonths, setAllMonths] = useState(false);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);

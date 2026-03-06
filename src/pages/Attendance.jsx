@@ -16,6 +16,7 @@ import Skeleton from '../components/Skeleton';
 import AttendanceTracking from './AttendanceTracking';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 const Attendance = () => {
     const { user, hasPermission } = useAuth();
@@ -35,15 +36,14 @@ const Attendance = () => {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
     // Date State (Defaults to current period)
-    const today = new Date();
+    const todayStr = getIstanbulToday();
+    const [_iy, _im, _id] = todayStr.split('-').map(Number);
     // Logic: If today >= 26, we are in Next Month's cycle (Start 26th this month, End 25th next month)
     // If today < 26, we are in This Month's cycle (Start 26th prev month, End 25th this month)
-    const initialMonth = today.getDate() >= 26 ? today.getMonth() + 1 : today.getMonth();
-    // Year boundary: if today >= 26 AND we are in December (month 11), initialMonth becomes 12
-    // which means we crossed into next year's January period, so increment the year.
-    const initialYear = today.getDate() >= 26 && today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear();
+    const initialMonth = _id >= 26 ? _im : _im - 1; // 0-based month
+    // Year boundary: if today >= 26 AND we are in December, increment the year.
+    const initialYear = _id >= 26 && _im === 12 ? _iy + 1 : _iy;
     // Wrap month index: if initialMonth overflowed to 12, reset to 0 (January).
-    // This pairs with the year increment above to correctly handle Dec 26+ -> Jan period.
     const safeInitialMonth = initialMonth > 11 ? 0 : initialMonth;
 
     const [viewYear, setViewYear] = useState(initialYear);
@@ -51,7 +51,7 @@ const Attendance = () => {
     const [viewScope, setViewScope] = useState('DAILY'); // 'DAILY' | 'MONTHLY'
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [selectedDate, setSelectedDate] = useState(format(today, 'yyyy-MM-dd'));
+    const [selectedDate, setSelectedDate] = useState(todayStr);
 
     const months = [
         'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -204,7 +204,7 @@ const Attendance = () => {
                             <button
                                 onClick={() => {
                                     setViewScope('DAILY');
-                                    if (selectedDate === '') setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+                                    if (selectedDate === '') setSelectedDate(getIstanbulToday());
                                 }}
                                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${viewScope === 'DAILY'
                                     ? 'bg-white text-indigo-600 shadow-sm'
@@ -233,8 +233,8 @@ const Attendance = () => {
                             <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
                                 {/* Today Shortcut */}
                                 <button
-                                    onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))}
-                                    className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${selectedDate === format(new Date(), 'yyyy-MM-dd')
+                                    onClick={() => setSelectedDate(getIstanbulToday())}
+                                    className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${selectedDate === getIstanbulToday()
                                         ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
                                         : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
                                         }`}

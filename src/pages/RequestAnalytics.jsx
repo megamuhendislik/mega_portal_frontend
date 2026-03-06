@@ -1269,7 +1269,7 @@ export default function RequestAnalytics() {
             {/* ── Footer ────────────────────────────────────────── */}
             <div className="text-center py-4">
                 <p className="text-[10px] text-slate-400 font-medium">
-                    Son güncelleme: {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    Son güncelleme: {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                     {period && ` | ${period.months} aylık dönem`}
                 </p>
             </div>

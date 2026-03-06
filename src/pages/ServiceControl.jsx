@@ -6,9 +6,10 @@ import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling';
+import { getIstanbulDateOffset } from '../utils/dateUtils';
 
 const ServiceControl = () => {
-    const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
+    const [selectedDate, setSelectedDate] = useState(getIstanbulDateOffset(-1));
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState(null);
     const [message, setMessage] = useState('');
@@ -177,7 +178,7 @@ const ServiceControl = () => {
                     ) : (
                         logs.map((log) => (
                             <div key={log.id} className="flex gap-2 hover:bg-slate-800 p-0.5 rounded">
-                                <span className="text-slate-500 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                                <span className="text-slate-500 shrink-0">[{new Date(log.timestamp).toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}]</span>
                                 <span className={clsx(
                                     "font-bold shrink-0 w-16",
                                     log.level === 'INFO' && "text-blue-400",

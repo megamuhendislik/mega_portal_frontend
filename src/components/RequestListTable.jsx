@@ -269,7 +269,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             <span className="font-medium text-slate-700">{formatDate(req.created_at)}</span>
                                             {req.created_at && (
                                                 <span className="text-[10px] text-slate-400">
-                                                    {new Date(req.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(req.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                                                 </span>
                                             )}
                                         </div>

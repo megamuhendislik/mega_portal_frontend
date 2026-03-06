@@ -56,7 +56,7 @@ function formatTime(timeStr) {
     if (timeStr.includes('T')) {
         try {
             const d = new Date(timeStr);
-            return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Istanbul' });
         } catch {
             return timeStr;
         }

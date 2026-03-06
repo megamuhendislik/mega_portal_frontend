@@ -31,13 +31,13 @@ const getStatusBadge = (statusKey) => {
 const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Istanbul' });
 };
 
 const formatDateTime = (dtStr) => {
     if (!dtStr) return '-';
     const d = new Date(dtStr);
-    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
 };
 
 const HealthReports = () => {

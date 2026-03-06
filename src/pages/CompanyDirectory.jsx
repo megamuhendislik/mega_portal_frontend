@@ -210,7 +210,7 @@ const CompanyDirectory = () => {
                         Tüm çalışanların güncel durum bilgisi
                         {lastRefresh && (
                             <span className="text-slate-400 ml-2">
-                                Son güncelleme: {lastRefresh.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                Son güncelleme: {lastRefresh.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                             </span>
                         )}
                     </p>

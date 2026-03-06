@@ -9,6 +9,7 @@ import {
 import YearCalendar from '../components/YearCalendar';
 import FiscalCalendarView from '../components/FiscalCalendarView';
 import TemplateEditor from '../components/TemplateEditor';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 const TABS = [
     { key: 'templates', label: 'Şablonlar', icon: Layers },
@@ -38,7 +39,7 @@ const WorkSchedules = () => {
 
     // Day Assignments State
     const [dayAssignments, setDayAssignments] = useState({});
-    const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+    const [calendarYear, setCalendarYear] = useState(Number(getIstanbulToday().split('-')[0]));
 
     useEffect(() => {
         fetchCalendars();
@@ -333,8 +334,7 @@ const WorkSchedules = () => {
             });
 
             // Step 3: Queue async recalculation
-            const now = new Date();
-            const y = now.getFullYear();
+            const y = Number(getIstanbulToday().split('-')[0]);
             const startOfYear = `${y}-01-01`;
             const endOfYear = `${y}-12-31`;
 
@@ -372,7 +372,7 @@ const WorkSchedules = () => {
     const handleCreate = async () => {
         const name = prompt("Yeni Takvim Adı (Örn: 2027 Genel):");
         if (!name) return;
-        const yearInput = prompt("Yıl:", new Date().getFullYear() + 1);
+        const yearInput = prompt("Yıl:", Number(getIstanbulToday().split('-')[0]) + 1);
         if (!yearInput) return;
         const year = parseInt(yearInput);
 
@@ -849,13 +849,13 @@ const PeriodsSettingsForm = ({ data, refresh }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {periods.map(p => {
                         // Detect fiscal month: if day >= 26, we're in next month's fiscal period
-                        const _today = new Date();
-                        const _fiscalMonth = _today.getDate() >= 26
-                            ? (_today.getMonth() + 2 > 12 ? 1 : _today.getMonth() + 2)
-                            : _today.getMonth() + 1;
-                        const _fiscalYear = _today.getDate() >= 26 && _today.getMonth() === 11
-                            ? _today.getFullYear() + 1
-                            : _today.getFullYear();
+                        const [_ty, _tm, _td] = getIstanbulToday().split('-').map(Number);
+                        const _fiscalMonth = _td >= 26
+                            ? (_tm + 1 > 12 ? 1 : _tm + 1)
+                            : _tm;
+                        const _fiscalYear = _td >= 26 && _tm === 12
+                            ? _ty + 1
+                            : _ty;
                         const isCurrentMonth = _fiscalMonth === p.month && _fiscalYear === p.year;
                         const edits = editedPeriods[p.id] || {};
                         const isEdited = !!editedPeriods[p.id];
@@ -1202,7 +1202,7 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
 };
 
 const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdateSelection, onNewHolidayCreated, onHolidayDeleted }) => {
-    const [year, setYear] = useState(new Date().getFullYear());
+    const [year, setYear] = useState(Number(getIstanbulToday().split('-')[0]));
     const selectedDates = useMemo(() => {
         const dates = new Set();
         selectedHolidayIds.forEach(id => {

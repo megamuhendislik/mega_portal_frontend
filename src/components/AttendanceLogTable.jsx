@@ -3,12 +3,12 @@ import { Calendar } from 'lucide-react';
 
 const formatTime = (isoString) => {
     if (!isoString) return '-';
-    return new Date(isoString).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(isoString).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
 };
 
 const formatDate = (isoString) => {
     if (!isoString) return '-';
-    return new Date(isoString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
+    return new Date(isoString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long', timeZone: 'Europe/Istanbul' });
 };
 
 const getStatusBadge = (log) => {
