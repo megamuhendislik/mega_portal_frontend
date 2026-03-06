@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/tr';
@@ -6,11 +6,10 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
-import DayDetailModal from '../components/DayDetailModal';
+import CalendarSidePanel from '../components/CalendarSidePanel';
+import TeamGanttBar from '../components/TeamGanttBar';
 import useInterval from '../hooks/useInterval';
-import FiscalCalendarView from '../components/FiscalCalendarView'; // Imported
-import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft, Settings, CalendarCheck, ClipboardList, Heart, FileText, CreditCard, MapPin, UsersRound } from 'lucide-react';
-import TeamTimeline from '../components/TeamTimeline';
+import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Briefcase, Calendar as CalendarIcon, CalendarCheck, ClipboardList, Heart, CreditCard, MapPin, UsersRound, Building2 } from 'lucide-react';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -31,30 +30,32 @@ const messages = {
 };
 
 const CalendarPage = () => {
-    const { user, hasPermission } = useAuth();
+    const { user } = useAuth();
     const [events, setEvents] = useState([]);
-    const [holidays, setHolidays] = useState(new Set()); // Strings 'YYYY-MM-DD'
+    const [holidays, setHolidays] = useState(new Set());
+    const [halfDayHolidays, setHalfDayHolidays] = useState(new Set());
     const [loading, setLoading] = useState(false);
 
     // View State
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [mode, setMode] = useState('YEAR'); // 'YEAR' | 'CALENDAR' | 'FISCAL'
-    const [calendarView, setCalendarView] = useState('month'); // Internal view for big-calendar
+    const [calendarView, setCalendarView] = useState('month');
+
+    // Side Panel State
+    const [sidePanelOpen, setSidePanelOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
-    const [showDayDetail, setShowDayDetail] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [selectedEventData, setSelectedEventData] = useState(null);
 
     // Filter Toggles
-    const [showWorkEvents, setShowWorkEvents] = useState(false);
     const [showOTAssignments, setShowOTAssignments] = useState(false);
     const [showOTRequests, setShowOTRequests] = useState(false);
-    const [showLeaves, setShowLeaves] = useState(true);  // Default ON
-    const [showHealthReports, setShowHealthReports] = useState(true);  // Default ON
+    const [showLeaves, setShowLeaves] = useState(true);
+    const [showHealthReports, setShowHealthReports] = useState(true);
     const [showCardless, setShowCardless] = useState(false);
-    const [showTeamTimeline, setShowTeamTimeline] = useState(false);
+    const [showTeamView, setShowTeamView] = useState(false);
 
     // Managed employees (for OT assignment)
     const [managedEmployees, setManagedEmployees] = useState([]);
@@ -65,21 +66,17 @@ const CalendarPage = () => {
             try {
                 const res = await api.get('/employees/subordinates/');
                 setManagedEmployees(res.data || []);
-            } catch { /* not a manager, empty list */ }
+            } catch { /* not a manager */ }
         };
         fetchManaged();
     }, []);
 
     useEffect(() => {
-        if (mode === 'CALENDAR' || mode === 'YEAR') {
-            fetchCalendarData();
-        }
-    }, [currentDate, calendarView, showWorkEvents, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless, mode]);
+        fetchCalendarData();
+    }, [currentDate, calendarView, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless]);
 
-    // Live Updates (Every 60s) - Only active in Calendar mode to save resources?
-    // Or keep it active if we want indicators on Year view (optional complexity).
     useInterval(() => {
-        if (!loading && !showModal && mode === 'CALENDAR') {
+        if (!loading && !showModal && !sidePanelOpen) {
             fetchCalendarData();
         }
     }, 60000);
@@ -87,23 +84,22 @@ const CalendarPage = () => {
     const fetchCalendarData = async () => {
         setLoading(true);
         try {
-            // Determine range based on view
             const mDate = moment(currentDate);
             let start, end;
 
-            if (mode === 'YEAR') {
-                // Fetch full year
-                start = mDate.clone().startOf('year').format('YYYY-MM-DD');
-                end = mDate.clone().endOf('year').format('YYYY-MM-DD');
-            } else if (calendarView === 'month') {
+            if (calendarView === 'month') {
                 start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
                 end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
             } else if (calendarView === 'week') {
                 start = mDate.clone().startOf('week').format('YYYY-MM-DD');
                 end = mDate.clone().endOf('week').format('YYYY-MM-DD');
-            } else {
+            } else if (calendarView === 'day') {
                 start = mDate.clone().subtract(1, 'day').format('YYYY-MM-DD');
                 end = mDate.clone().add(1, 'day').format('YYYY-MM-DD');
+            } else {
+                // agenda view
+                start = mDate.clone().startOf('month').format('YYYY-MM-DD');
+                end = mDate.clone().endOf('month').format('YYYY-MM-DD');
             }
 
             let url = `/calendar-events/?start=${start}&end=${end}`;
@@ -114,17 +110,21 @@ const CalendarPage = () => {
             if (showCardless) url += '&include_cardless=true';
 
             const response = await api.get(url);
-
             const rawEvents = response.data || [];
             const parsedEvents = [];
             const newHolidays = new Set();
+            const newHalfDays = new Set();
 
             rawEvents.forEach(evt => {
                 const eventStart = new Date(evt.start);
                 const eventEnd = new Date(evt.end);
 
                 if (evt.type === 'HOLIDAY') {
-                    newHolidays.add(moment(eventStart).format('YYYY-MM-DD'));
+                    const dateStr = moment(eventStart).format('YYYY-MM-DD');
+                    newHolidays.add(dateStr);
+                    if (evt.is_half_day) {
+                        newHalfDays.add(dateStr);
+                    }
                 }
 
                 parsedEvents.push({
@@ -137,7 +137,7 @@ const CalendarPage = () => {
 
             setEvents(parsedEvents);
             setHolidays(newHolidays);
-
+            setHalfDayHolidays(newHalfDays);
         } catch (error) {
             console.error("Calendar fetch error:", error);
         } finally {
@@ -145,34 +145,43 @@ const CalendarPage = () => {
         }
     };
 
-    // Styling
+    // --- Event Styling ---
     const eventPropGetter = (event) => {
         let backgroundColor = event.color || '#3b82f6';
         let borderColor = 'transparent';
 
         if (event.type === 'PERSONAL') {
-            if (event.is_shared && !event.is_owner) {
+            // Visibility-based coloring
+            if (event.visibility === 'PUBLIC') {
                 backgroundColor = '#10b981';
                 borderColor = '#047857';
-            } else if (event.is_shared && event.is_owner) {
-                backgroundColor = '#8b5cf6';
+            } else if (event.visibility === 'DEPARTMENT') {
+                backgroundColor = '#14b8a6';
+                borderColor = '#0d9488';
+            } else if (!event.is_owner) {
+                backgroundColor = '#10b981';
+                borderColor = '#047857';
+            }
+            // Meeting type override
+            if (event.event_type === 'MEETING') {
+                backgroundColor = event.visibility === 'PUBLIC' ? '#10b981' : '#14b8a6';
+            } else if (event.event_type === 'REMINDER') {
+                backgroundColor = '#eab308';
+                borderColor = '#ca8a04';
             }
         }
 
         if (event.status === 'HOLIDAY') {
             backgroundColor = '#ef4444';
         }
-
         if (event.type === 'OVERTIME_ASSIGNMENT') {
             backgroundColor = '#8b5cf6';
             borderColor = '#7c3aed';
         }
-
         if (event.type === 'OVERTIME_REQUEST') {
             backgroundColor = event.status === 'APPROVED' ? '#22c55e' : '#f59e0b';
             borderColor = event.status === 'APPROVED' ? '#16a34a' : '#d97706';
         }
-
         if (event.type === 'LEAVE_REQUEST') {
             backgroundColor = '#06b6d4';
             borderColor = '#0891b2';
@@ -207,38 +216,35 @@ const CalendarPage = () => {
         const dateStr = moment(date).format('YYYY-MM-DD');
         const dayOfWeek = date.getDay();
         const isHoliday = holidays.has(dateStr);
+        const isHalfDay = halfDayHolidays.has(dateStr);
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isToday = moment(date).isSame(moment(), 'day');
         const isBeforeToday = moment(date).isBefore(moment(), 'day');
 
-        // Priority 1: Today
         if (isToday) {
             return {
                 className: 'bg-indigo-50/90 border-2 border-indigo-200',
-                style: {
-                    backgroundColor: '#e0e7ff',
-                    color: '#1e1b4b'
-                }
+                style: { backgroundColor: '#e0e7ff', color: '#1e1b4b' }
             };
         }
 
-        // Base Styles
-        let className = "";
+        let className = '';
         let style = {};
 
-        if (isHoliday) {
+        if (isHalfDay) {
+            className = 'half-day-holiday';
+            style = {};
+        } else if (isHoliday) {
             className = 'bg-red-50/70';
             style = { backgroundColor: 'rgba(254, 226, 226, 0.4)' };
             if (isBeforeToday) className += ' grayscale-[0.4]';
         } else if (isWeekend) {
             className = 'bg-slate-100/80';
-            style = { backgroundColor: '#f1f5f9' }; // Plain distinct slate for weekend
+            style = { backgroundColor: '#f1f5f9' };
         }
 
-        // Priority 2: Past Days (Crossed Off Effect)
         if (isBeforeToday) {
-            // Append Cross Hatch to whatever background exists
-            className += ' crossed-day opacity-80'; // Add class
+            className += ' crossed-day opacity-80';
             style = { ...style, color: '#94a3b8' };
         }
 
@@ -246,22 +252,13 @@ const CalendarPage = () => {
     };
 
     // --- Handlers ---
-
-    const handleMonthClick = (date) => {
-        setCurrentDate(date);
-        setMode('CALENDAR');
-        setCalendarView('month');
-    };
-
     const handleSelectSlot = ({ start }) => {
-        // Open Detail View first
-        setSelectedSlot(start);
-        setShowDayDetail(true);
+        setSelectedDate(start);
+        setSidePanelOpen(true);
     };
 
     const handleSelectEvent = (event) => {
-        // Directly open Edit Modal for specific event
-        if (event.type === 'PERSONAL') {
+        if (event.type === 'PERSONAL' && event.is_owner) {
             setSelectedEventData({
                 id: event.db_id,
                 title: event.title,
@@ -273,31 +270,37 @@ const CalendarPage = () => {
                 shared_with: event.shared_with,
                 shared_departments: event.shared_departments,
                 reminders: event.reminders,
-                is_owner: event.is_owner
+                is_owner: event.is_owner,
+                visibility: event.visibility,
+                event_type: event.event_type,
+                location: event.location,
             });
             setShowModal(true);
+        } else {
+            // For non-personal events, open side panel on that date
+            setSelectedDate(event.start);
+            setSidePanelOpen(true);
         }
     };
 
-    const handleDayDetailAdd = () => {
-        setShowDayDetail(false); // Close detail
-        setSelectedEventData(null); // Clear data
-        setShowModal(true); // Open Create Modal
+    const handleSidePanelAdd = () => {
+        setSelectedSlot(selectedDate || new Date());
+        setSelectedEventData(null);
+        setSidePanelOpen(false);
+        setShowModal(true);
     };
 
-    const handleDayDetailEdit = (evt) => {
-        setShowDayDetail(false);
+    const handleSidePanelEdit = (evt) => {
+        setSidePanelOpen(false);
         handleSelectEvent(evt);
     };
 
     const handleModalSuccess = () => {
         setShowModal(false);
-        if (mode === 'CALENDAR') fetchCalendarData();
+        fetchCalendarData();
     };
 
-    // --- Sub-Components ---
-
-    // Localization formats (Fail-safe using Native Intl)
+    // --- Localization ---
     const formats = useMemo(() => {
         const trIntlDay = new Intl.DateTimeFormat('tr-TR', { weekday: 'long' });
         const trIntlMonthYear = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' });
@@ -306,7 +309,6 @@ const CalendarPage = () => {
         return {
             dateFormat: 'DD',
             dayFormat: (date) => {
-                // "01 Pazartesi" format
                 const day = date.getDate().toString().padStart(2, '0');
                 const name = trIntlDay.format(date);
                 return `${day} ${name}`;
@@ -320,6 +322,7 @@ const CalendarPage = () => {
         };
     }, []);
 
+    // --- Toolbar ---
     const CustomToolbar = (toolbar) => {
         const goToBack = () => { toolbar.onNavigate('PREV'); };
         const goToNext = () => { toolbar.onNavigate('NEXT'); };
@@ -328,286 +331,187 @@ const CalendarPage = () => {
         const title = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(toolbar.date);
 
         return (
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => setMode('YEAR')}
-                        className="px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"
-                    >
-                        <ArrowLeft size={16} /> Yıl Görünümü
-                    </button>
-
-                    <div className="h-6 w-px bg-slate-200 mx-2"></div>
-
-                    <button onClick={goToToday} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-                        Bugün
-                    </button>
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        <button onClick={goToBack} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                            <ChevronLeft size={20} />
+            <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                {/* Row 1: Navigation + View Switcher */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button onClick={goToToday} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                            Bugün
                         </button>
-                        <button onClick={goToNext} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                            <ChevronRight size={20} />
-                        </button>
+                        <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                            <button onClick={goToBack} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                                <ChevronLeft size={20} />
+                            </button>
+                            <button onClick={goToNext} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                                <ChevronRight size={20} />
+                            </button>
+                        </div>
+                        <span className="capitalize font-bold text-xl text-slate-800 ml-2">
+                            {title}
+                        </span>
                     </div>
-                    <span className="capitalize font-bold text-xl text-slate-800 ml-2">
-                        {title}
-                    </span>
+
+                    <div className="flex items-center gap-2">
+                        {['month', 'week', 'day', 'agenda'].map(view => (
+                            <button
+                                key={view}
+                                onClick={() => toolbar.onView(view)}
+                                className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-all ${calendarView === view ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                            >
+                                {view === 'month' ? 'Ay' : view === 'week' ? 'Hafta' : view === 'day' ? 'Gün' : 'Ajanda'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
-                    <button
-                        onClick={() => setShowWorkEvents(!showWorkEvents)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showWorkEvents ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
-                        <Briefcase size={16} />
-                        {showWorkEvents ? 'İş Planı Açık' : 'İş Planı Gizli'}
-                    </button>
-
+                {/* Row 2: Filters + Actions */}
+                <div className="flex items-center gap-2 flex-wrap">
                     <button
                         onClick={() => setShowOTAssignments(!showOTAssignments)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showOTAssignments ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showOTAssignments ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
-                        <CalendarCheck size={16} />
-                        Ek Mesai Görevleri
+                        <CalendarCheck size={14} />
+                        Mesai Görevleri
                     </button>
 
                     <button
                         onClick={() => setShowOTRequests(!showOTRequests)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showOTRequests ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showOTRequests ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
-                        <ClipboardList size={16} />
-                        Ek Mesai Talepleri
+                        <ClipboardList size={14} />
+                        Mesai Talepleri
                     </button>
 
-                    <div className="w-px h-8 bg-slate-200 mx-1"></div>
+                    <div className="w-px h-6 bg-slate-200"></div>
 
                     <button
                         onClick={() => setShowLeaves(!showLeaves)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showLeaves ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showLeaves ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
-                        <CalendarIcon size={16} />
+                        <CalendarIcon size={14} />
                         İzinler
                     </button>
 
                     <button
                         onClick={() => setShowHealthReports(!showHealthReports)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showHealthReports ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showHealthReports ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
-                        <Heart size={16} />
+                        <Heart size={14} />
                         Sağlık Raporu
                     </button>
 
                     <button
                         onClick={() => setShowCardless(!showCardless)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showCardless ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showCardless ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
-                        <CreditCard size={16} />
+                        <CreditCard size={14} />
                         Kartsız Giriş
                     </button>
 
                     {isManager && (
                         <>
-                            <div className="w-px h-8 bg-slate-200 mx-1"></div>
+                            <div className="w-px h-6 bg-slate-200"></div>
                             <button
-                                onClick={() => setShowTeamTimeline(!showTeamTimeline)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showTeamTimeline ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                                onClick={() => setShowTeamView(!showTeamView)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showTeamView ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                             >
-                                <UsersRound size={16} />
+                                <UsersRound size={14} />
                                 Ekip Görünümü
                             </button>
                         </>
                     )}
 
-                    <button
-                        onClick={() => { setSelectedSlot(new Date()); setSelectedEventData(null); setShowModal(true); }}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all active:scale-95"
-                    >
-                        <Plus size={20} />
-                        <span className="hidden sm:inline">Ekle</span>
-                    </button>
+                    <div className="ml-auto">
+                        <button
+                            onClick={() => { setSelectedSlot(new Date()); setSelectedEventData(null); setShowModal(true); }}
+                            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all active:scale-95"
+                        >
+                            <Plus size={18} />
+                            <span className="hidden sm:inline">Etkinlik Ekle</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     };
 
+    // --- Custom Event Renderer ---
     const CustomEvent = ({ event }) => {
+        const getIcon = () => {
+            if (event.type === 'PERSONAL') {
+                if (event.event_type === 'MEETING') return <Users size={12} className="shrink-0 opacity-80" />;
+                if (event.event_type === 'REMINDER') return <Bell size={12} className="shrink-0 opacity-80" />;
+                if (event.visibility === 'PUBLIC') return <Globe size={12} className="shrink-0 opacity-80" />;
+                if (event.visibility === 'DEPARTMENT') return <Building2 size={12} className="shrink-0 opacity-80" />;
+                return <Lock size={12} className="shrink-0 opacity-70" />;
+            }
+            if (event.type === 'OVERTIME_ASSIGNMENT') return <CalendarCheck size={12} className="shrink-0 opacity-90" />;
+            if (event.type === 'OVERTIME_REQUEST') return <ClipboardList size={12} className="shrink-0 opacity-90" />;
+            if (event.type === 'LEAVE_REQUEST') return <CalendarIcon size={12} className="shrink-0 opacity-90" />;
+            if (event.type === 'EXTERNAL_DUTY') return <MapPin size={12} className="shrink-0 opacity-90" />;
+            if (event.type === 'HEALTH_REPORT') return <Heart size={12} className="shrink-0 opacity-90" />;
+            if (event.type === 'CARDLESS_ENTRY') return <CreditCard size={12} className="shrink-0 opacity-90" />;
+            return null;
+        };
+
         return (
             <div className="flex items-center gap-1.5 overflow-hidden">
-                {event.type === 'PERSONAL' && event.is_shared && <Users size={12} className="shrink-0 opacity-80" />}
-                {event.type === 'PERSONAL' && !event.is_shared && <Lock size={12} className="shrink-0 opacity-70" />}
-                {event.type === 'OVERTIME_ASSIGNMENT' && <CalendarCheck size={12} className="shrink-0 opacity-90" />}
-                {event.type === 'OVERTIME_REQUEST' && <ClipboardList size={12} className="shrink-0 opacity-90" />}
-                {event.type === 'LEAVE_REQUEST' && <CalendarIcon size={12} className="shrink-0 opacity-90" />}
-                {event.type === 'EXTERNAL_DUTY' && <MapPin size={12} className="shrink-0 opacity-90" />}
-                {event.type === 'HEALTH_REPORT' && <Heart size={12} className="shrink-0 opacity-90" />}
-                {event.type === 'CARDLESS_ENTRY' && <CreditCard size={12} className="shrink-0 opacity-90" />}
-                {event.reminders?.on_event && <Bell size={10} className="shrink-0" />}
+                {getIcon()}
                 <span className="truncate">{event.title}</span>
             </div>
         );
     };
 
-    const YearView = () => {
-        const year = currentDate.getFullYear();
-        // Explicitly defining Turkish months to ensure localization
-        const months = [
-            'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-            'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-        ];
-
-        return (
-            <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-8 animate-in fade-in duration-500">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-black text-slate-800">{year}</h2>
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setCurrentDate(moment(currentDate).subtract(1, 'year').toDate())} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft /></button>
-                        <button onClick={() => setCurrentDate(moment(currentDate).add(1, 'year').toDate())} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight /></button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    {months.map((monthName, index) => {
-                        const monthDate = moment().year(year).month(index);
-                        const daysInMonth = monthDate.daysInMonth();
-                        const startDay = monthDate.startOf('month').day(); // 0=Sun
-
-                        // Adjust for Monday start (Turkey)
-                        // 0(Sun) -> 6, 1(Mon) -> 0
-                        const adjustedStartDay = startDay === 0 ? 6 : startDay - 1;
-
-                        const days = [];
-                        for (let i = 0; i < adjustedStartDay; i++) days.push(null);
-                        for (let i = 1; i <= daysInMonth; i++) days.push(i);
-
-                        return (
-                            <div
-                                key={monthName}
-                                onClick={() => handleMonthClick(monthDate.toDate())}
-                                className="group cursor-pointer hover:ring-2 hover:ring-indigo-100 rounded-2xl p-4 transition-all hover:bg-slate-50 border border-transparent hover:border-indigo-200"
-                            >
-                                <h3 className="font-bold text-lg text-slate-800 mb-3 group-hover:text-indigo-600 transition-colors">{monthName}</h3>
-                                <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                                    {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
-                                        <span key={d} className="text-slate-400 font-medium py-1">{d}</span>
-                                    ))}
-                                    {days.map((d, i) => {
-                                        if (!d) return <div key={i}></div>;
-
-                                        // Adjust index to match 0-11 for moment months
-                                        const currentDayDate = moment([year, index, d]);
-                                        const dateStr = currentDayDate.format('YYYY-MM-DD');
-                                        const isToday = currentDayDate.isSame(moment(), 'day');
-                                        const isBeforeToday = currentDayDate.isBefore(moment(), 'day');
-                                        const isHoliday = holidays.has(dateStr);
-                                        const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;
-
-                                        let className = "py-1.5 rounded-lg flex items-center justify-center transition-all font-medium relative overflow-hidden";
-                                        let style = {};
-
-                                        // 1. Base Colors
-                                        if (isToday) {
-                                            className += " bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200";
-                                        } else if (isHoliday) {
-                                            className += " bg-red-50 text-red-600 font-bold ring-1 ring-red-100";
-                                            if (isBeforeToday) className += " opacity-60 grayscale-[0.5]";
-                                        } else if (isWeekend) {
-                                            className += " bg-slate-100 text-slate-500 font-medium";
-                                            // Distinct weekend color (Gray/Slate)
-                                        } else {
-                                            className += " text-slate-600 hover:bg-indigo-50";
-                                        }
-
-                                        // 2. Past Day Overlay ("Crossed Off")
-                                        if (isBeforeToday && !isToday) {
-                                            className += " crossed-day";
-                                            // Ensure text is readable but faded
-                                            if (!isHoliday) className += " text-slate-400";
-                                        }
-
-                                        return (
-                                            <div key={i} className={className} style={style}>
-                                                {d}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
+    // --- Legend ---
     const Legend = () => (
-        <div className="flex flex-wrap gap-3 md:gap-4 mt-6 p-3 md:p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-xs">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm text-xs">
+            <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                <span className="text-slate-600 font-bold">Genel</span>
+                <span className="text-slate-600 font-bold">Kişisel</span>
             </div>
-            <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
-                <span className="text-slate-600 font-bold">Toplantı</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-                <span className="text-slate-600 font-bold">Not</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span className="text-slate-600 font-bold">Hatırlatma</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                <span className="text-slate-600 font-bold">Acil / Tatil</span>
-            </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span className="text-slate-600 font-bold">İzin / Seyahat</span>
+                <span className="text-slate-600 font-bold">Herkese Açık</span>
             </div>
-
-            <div className="w-px h-4 bg-slate-200 mx-2"></div>
-
-            <div className="flex items-center gap-2" title="Sizinle paylaşılan etkinlikler">
-                <Globe size={14} className="text-slate-400" />
-                <span className="text-slate-500 font-medium italic">Paylaşılan</span>
+            <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+                <span className="text-slate-600 font-bold">Departman</span>
             </div>
-
-            {showWorkEvents && (
-                <div className="flex items-center gap-2 ml-auto border-l pl-4 border-slate-100">
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                    <span className="text-slate-600 font-medium">İş Kaydı</span>
-                </div>
-            )}
+            <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                <span className="text-slate-600 font-bold">Hatırlatıcı</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <span className="text-slate-600 font-bold">Tatil</span>
+            </div>
+            <div className="w-px h-4 bg-slate-200"></div>
             {showOTAssignments && (
-                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
-                    <span className="text-slate-600 font-medium">Ek Mesai Görevi</span>
+                    <span className="text-slate-600 font-medium">Mesai Görevi</span>
                 </div>
             )}
             {showOTRequests && (
-                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                    <span className="text-slate-600 font-medium">Ek Mesai Talebi</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ml-2"></span>
-                    <span className="text-slate-600 font-medium">Onaylı</span>
+                    <span className="text-slate-600 font-medium">Mesai Talebi</span>
                 </div>
             )}
             {showLeaves && (
-                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
                     <span className="text-slate-600 font-medium">İzin</span>
                 </div>
             )}
             {showHealthReports && (
-                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-pink-500"></span>
                     <span className="text-slate-600 font-medium">Sağlık Raporu</span>
                 </div>
             )}
             {showCardless && (
-                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
                     <span className="text-slate-600 font-medium">Kartsız Giriş</span>
                 </div>
@@ -615,9 +519,7 @@ const CalendarPage = () => {
         </div>
     );
 
-    // --- Handlers ---
-    // ...
-
+    // --- Date Header with Cross ---
     const CustomDateHeader = ({ label, date }) => {
         const isBeforeToday = moment(date).isBefore(moment(), 'day');
         return (
@@ -639,10 +541,10 @@ const CalendarPage = () => {
         );
     };
 
+    // --- Render ---
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-8">
             <style>{`
-                /* Year View Cross Style */
                 .crossed-day {
                     position: relative;
                 }
@@ -660,131 +562,113 @@ const CalendarPage = () => {
                     filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
                 }
 
-                /* Month View - NUCLEAR LAYERING FIX */
-                
-                /* 1. Global Overflow Unlock */
+                .half-day-holiday {
+                    background: repeating-linear-gradient(
+                        -45deg,
+                        rgba(249, 115, 22, 0.12),
+                        rgba(249, 115, 22, 0.12) 4px,
+                        rgba(254, 226, 226, 0.3) 4px,
+                        rgba(254, 226, 226, 0.3) 8px
+                    ) !important;
+                }
+
                 .rbc-calendar, .rbc-month-view, .rbc-month-row, .rbc-row, .rbc-row-content, .rbc-date-cell {
                     overflow: visible !important;
                 }
-
-                /* 2. Target the Specific Row Containers */
-                /* The FIRST row in rbc-row-content is ALWAYS the "Header Row" (Date Numbers) */
                 .rbc-row-content > .rbc-row:first-child {
-                    z-index: 9999 !important; /* Forces this row (and the cross) to be on top of everything */
+                    z-index: 9999 !important;
                     position: relative !important;
-                    pointer-events: none !important; /* Crucial: Let clicks pass through empty space */
+                    pointer-events: none !important;
                 }
-
-                /* 3. Re-enable pointer events for the Date Link/Button inside the Header Row */
                 .rbc-row-content > .rbc-row:first-child .rbc-date-cell button,
                 .rbc-row-content > .rbc-row:first-child .rbc-date-cell a {
                     pointer-events: auto !important;
                     position: relative;
-                    z-index: 10000; /* Ensure button is clickable */
+                    z-index: 10000;
                 }
-
-                /* 4. Target Event Rows (Subsequent rows) */
-                /* Force them to be visually separate but stacked BELOW row 1 */
                 .rbc-row-content > .rbc-row:not(:first-child) {
                     z-index: 5 !important;
                     position: relative !important;
                 }
-                
-                /* Event cells themselves */
                 .rbc-event {
-                    z-index: auto !important; /* Rely on row z-index */
+                    z-index: auto !important;
                 }
             `}</style>
 
+            {/* Header */}
             <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                {/* ... Header content ... */}
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                         <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                             Ajandam
                         </span>
-                        <span className="text-sm font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                            {mode === 'YEAR' ? 'Yıllık Görünüm' : mode === 'FISCAL' ? 'Mali Takvim (Yönetici)' : 'Ajanda Modu'}
-                        </span>
                     </h1>
-                    <div className="flex flex-wrap items-center gap-4 mt-2">
-                        <p className="text-slate-500 font-medium">
-                            Planlarınızı yönetin ve takip edin.
-                        </p>
-
-                        {/* Admin Fiscal Toggle */}
-                        {hasPermission('SYSTEM_FULL_ACCESS') && (
-                            <button
-                                onClick={() => setMode(mode === 'FISCAL' ? 'CALENDAR' : 'FISCAL')}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${mode === 'FISCAL' ? 'bg-slate-800 text-white shadow-lg shadow-slate-300' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'}`}
-                            >
-                                <Settings size={14} />
-                                {mode === 'FISCAL' ? 'Kişisel Takvime Dön' : 'Şirket Takvimi Düzenle'}
-                            </button>
-                        )}
-                    </div>
+                    <p className="text-slate-500 font-medium mt-1">
+                        Planlarınızı, toplantılarınızı ve etkinliklerinizi yönetin.
+                    </p>
                 </div>
-                {mode !== 'FISCAL' && <Legend />}
+                <Legend />
             </div>
 
-            {mode === 'FISCAL' && <FiscalCalendarView />}
+            {/* Calendar + Side Panel Layout */}
+            <div className="relative">
+                <div className={`transition-all duration-300 ${sidePanelOpen ? 'mr-[420px]' : ''}`}>
+                    <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-4 md:p-6 h-[500px] md:h-[800px]">
+                        <Calendar
+                            localizer={localizer}
+                            culture="tr"
+                            formats={formats}
+                            events={events}
+                            startAccessor="start"
+                            endAccessor="end"
+                            style={{ height: '100%' }}
+                            messages={messages}
+                            date={currentDate}
+                            onNavigate={date => setCurrentDate(date)}
+                            view={calendarView}
+                            onView={v => setCalendarView(v)}
+                            selectable
+                            onSelectSlot={handleSelectSlot}
+                            onSelectEvent={handleSelectEvent}
+                            eventPropGetter={eventPropGetter}
+                            dayPropGetter={dayPropGetter}
+                            components={{
+                                toolbar: CustomToolbar,
+                                event: CustomEvent,
+                                month: {
+                                    header: CustomDateHeader
+                                }
+                            }}
+                            popup
+                        />
+                    </div>
 
-            {mode === 'YEAR' && <YearView />}
-
-            {mode === 'CALENDAR' && !showTeamTimeline && (
-                <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-4 md:p-6 h-[500px] md:h-[800px] animate-in zoom-in-95 duration-300">
-                    <Calendar
-                        localizer={localizer}
-                        culture="tr"
-                        formats={formats}
-                        events={events}
-                        startAccessor="start"
-                        endAccessor="end"
-                        style={{ height: '100%' }}
-                        messages={messages}
-                        date={currentDate}
-                        onNavigate={date => setCurrentDate(date)}
-                        view={calendarView}
-                        onView={v => setCalendarView(v)}
-                        selectable
-                        onSelectSlot={handleSelectSlot}
-                        onSelectEvent={handleSelectEvent}
-                        eventPropGetter={eventPropGetter}
-                        dayPropGetter={dayPropGetter}
-                        components={{
-                            toolbar: CustomToolbar,
-                            event: CustomEvent,
-                            month: {
-                                header: CustomDateHeader
-                            }
-                        }}
-                        popup
-                    />
+                    {/* Team Gantt Bar (below calendar) */}
+                    {showTeamView && isManager && (
+                        <TeamGanttBar
+                            startDate={moment(currentDate).startOf('month').toDate()}
+                            endDate={moment(currentDate).endOf('month').toDate()}
+                            currentDate={currentDate}
+                        />
+                    )}
                 </div>
-            )}
 
-            {mode === 'CALENDAR' && showTeamTimeline && (
-                <TeamTimeline
-                    startDate={moment(currentDate).startOf('month').toDate()}
-                    endDate={moment(currentDate).endOf('month').toDate()}
-                    currentDate={currentDate}
-                />
-            )}
+                {/* Side Panel */}
+                {sidePanelOpen && (
+                    <CalendarSidePanel
+                        date={selectedDate}
+                        events={events}
+                        onClose={() => setSidePanelOpen(false)}
+                        onAddEvent={handleSidePanelAdd}
+                        onEditEvent={handleSidePanelEdit}
+                        isManager={isManager}
+                        managedEmployees={managedEmployees}
+                        onOTAssignSuccess={fetchCalendarData}
+                    />
+                )}
+            </div>
 
-            {/* Modals ... */}
-
-            {showDayDetail && (
-                <DayDetailModal
-                    date={selectedSlot}
-                    events={events}
-                    onClose={() => setShowDayDetail(false)}
-                    onAddEvent={handleDayDetailAdd}
-                    onEditEvent={handleDayDetailEdit}
-                    isManager={isManager}
-                    managedEmployees={managedEmployees}
-                />
-            )}
-
+            {/* Event Create/Edit Modal */}
             {showModal && (
                 <AgendaEventModal
                     onClose={() => setShowModal(false)}

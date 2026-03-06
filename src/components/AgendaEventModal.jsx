@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, AlignLeft, Users, Building, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight } from 'lucide-react';
+import { X, Clock, AlignLeft, Users, Building, Building2, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight, MapPin } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
 import toast, { Toaster } from 'react-hot-toast';
@@ -10,6 +10,11 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [groups, setGroups] = useState([]);
+
+    // New fields
+    const [visibility, setVisibility] = useState(initialData?.visibility || 'PRIVATE');
+    const [eventType, setEventType] = useState(initialData?.event_type || 'PERSONAL');
+    const [location, setLocation] = useState(initialData?.location || '');
 
     // UI State
     const [shareMode, setShareMode] = useState(initialData?.shared_with?.length > 0 || initialData?.shared_departments?.length > 0 ? 'SHARED' : 'PRIVATE');
@@ -162,7 +167,10 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                 color: formData.color,
                 reminders: formData.reminders,
                 shared_with: shareMode === 'SHARED' ? formData.shared_with : [],
-                shared_departments: shareMode === 'SHARED' ? formData.shared_departments : []
+                shared_departments: shareMode === 'SHARED' ? formData.shared_departments : [],
+                visibility,
+                event_type: eventType,
+                location,
             };
 
             if (initialData?.id) {
@@ -324,6 +332,63 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                                             {type.name}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Event Type */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">ETKİNLİK KATEGORİSİ</label>
+                                <div className="flex bg-slate-100 p-1 rounded-lg">
+                                    {[
+                                        { value: 'PERSONAL', label: 'Kişisel', icon: <Lock size={14} /> },
+                                        { value: 'MEETING', label: 'Toplantı', icon: <Users size={14} /> },
+                                        { value: 'REMINDER', label: 'Hatırlatıcı', icon: <Bell size={14} /> },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => setEventType(opt.value)}
+                                            className={`flex-1 px-3 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${eventType === opt.value ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {opt.icon} {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Visibility */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">GÖRÜNÜRLÜK</label>
+                                <div className="flex bg-slate-100 p-1 rounded-lg">
+                                    {[
+                                        { value: 'PRIVATE', label: 'Kişisel', icon: <Lock size={14} /> },
+                                        { value: 'DEPARTMENT', label: 'Departman', icon: <Building2 size={14} /> },
+                                        { value: 'PUBLIC', label: 'Herkese Açık', icon: <Globe size={14} /> },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => setVisibility(opt.value)}
+                                            className={`flex-1 px-3 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${visibility === opt.value ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {opt.icon} {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Location */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">KONUM</label>
+                                <div className="relative">
+                                    <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={location}
+                                        onChange={(e) => setLocation(e.target.value)}
+                                        className="w-full pl-9 pr-3 p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-sm"
+                                        placeholder="Örn: Toplantı Odası A, Ofis Katı 3"
+                                    />
                                 </div>
                             </div>
                         </div>
