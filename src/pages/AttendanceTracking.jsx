@@ -16,7 +16,7 @@ import {
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
 import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
-import OvertimeCalendarModal from '../components/OvertimeCalendarModal';
+import OvertimeAssignDrawer from '../components/overtime/OvertimeAssignDrawer';
 import UnifiedOvertimePanel from '../components/overtime/UnifiedOvertimePanel';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
@@ -61,7 +61,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [sortMode, setSortMode] = useState('NAME');
     const [hierarchySort, setHierarchySort] = useState(true);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [calendarTarget, setCalendarTarget] = useState(null);
+    const [otDrawerTarget, setOtDrawerTarget] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics' | 'overtime'
 
@@ -431,7 +431,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         hierarchySort={hierarchySort}
                         onEmployeeClick={handleEmployeeClick}
                         onDetailClick={setSelectedEmployee}
-                        onAssignOvertime={emp => setCalendarTarget(emp)}
+                        onAssignOvertime={emp => setOtDrawerTarget(emp)}
                     />
                     {hasChildren && showChildren && renderHierarchyRows(node.children, depth + 1)}
                 </React.Fragment>
@@ -755,7 +755,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             hierarchySort={hierarchySort}
                                             onEmployeeClick={handleEmployeeClick}
                                             onDetailClick={setSelectedEmployee}
-                                            onAssignOvertime={emp => setCalendarTarget(emp)}
+                                            onAssignOvertime={emp => setOtDrawerTarget(emp)}
                                         />
                                     ))
                                 )
@@ -816,7 +816,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                     {emp.department && <span className="text-xs text-slate-500">{emp.department}</span>}
                                                 </div>
                                                 <button
-                                                    onClick={() => setCalendarTarget({ ...emp, _substituteFor: team.principal_id })}
+                                                    onClick={() => setOtDrawerTarget({ ...emp, _substituteFor: team.principal_id })}
                                                     className="text-xs px-2 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
                                                     title="Ek mesai ata"
                                                 >
@@ -838,13 +838,12 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 onClose={() => setSelectedEmployee(null)}
             />
 
-            {/* OVERTIME CALENDAR MODAL */}
-            <OvertimeCalendarModal
-                visible={!!calendarTarget}
-                onClose={() => setCalendarTarget(null)}
-                employee={calendarTarget}
-                actingAsSubstituteFor={calendarTarget?._substituteFor}
-                onSuccess={() => { setCalendarTarget(null); }}
+            {/* OVERTIME ASSIGN DRAWER */}
+            <OvertimeAssignDrawer
+                open={!!otDrawerTarget}
+                onClose={() => setOtDrawerTarget(null)}
+                employee={otDrawerTarget}
+                onSuccess={() => { setOtDrawerTarget(null); handleRefresh(); }}
             />
         </div >
     );
