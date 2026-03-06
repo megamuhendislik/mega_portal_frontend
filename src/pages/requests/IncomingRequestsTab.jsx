@@ -191,8 +191,10 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
         employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
         employee_position: r.employee_position || '',
+        employee_id: r.employee?.id || r.employee_id || r.employee || null,
         target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
         approved_by_name: r.approved_by_name || r.approved_by_detail?.full_name || '',
+        approver_target: r.approver_target || null,
         leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
         start_date: r.start_date || r.date || r.created_at,
         type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN'),
@@ -209,13 +211,15 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         // PENDING incoming requests (target_approver = current user)
         (incomingRequests || []).forEach(r => {
             if (r.status !== 'PENDING') return;
+            // Sadece doğrudan bana yönlendirilmiş talepleri göster
+            if (r.approver_target?.id !== currentUserEmployeeId) return;
             const key = `${r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : r.type}-${r.id}`;
             if (seen.has(key)) return;
             seen.add(key);
             items.push(normalizeRequest(r, r.level === 'direct' ? 'DIRECT' : 'INDIRECT'));
         });
 
-        // Substitute requests
+        // Substitute requests (vekalet — her zaman doğrudan gelen'de)
         if (substituteData) {
             const authorities = substituteData.authorities || [];
             (substituteData.leave_requests || []).forEach(r => {
@@ -242,15 +246,18 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
-    }, [incomingRequests, substituteData]);
+    }, [incomingRequests, substituteData, currentUserEmployeeId]);
 
     // --- SUB-TAB 2: Ekip Talepleri (all team members, all statuses including history) ---
+    // Doğrudan bana yönlendirilmiş talepleri hariç tut — sadece alt yöneticilerin talepleri
     const teamItems = useMemo(() => {
         const items = [];
         const seen = new Set();
 
-        // All incoming team requests (all statuses)
+        // All incoming team requests (all statuses) — doğrudan bana gelenler hariç
         (incomingRequests || []).forEach(r => {
+            // Doğrudan bana yönlendirilmiş talepleri ekip taleplerinden hariç tut
+            if (r.approver_target?.id === currentUserEmployeeId) return;
             const type = r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN');
             const key = `${type}-${r.id}`;
             if (seen.has(key)) return;
@@ -258,8 +265,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             items.push(normalizeRequest(r, r.level === 'direct' ? 'DIRECT' : 'INDIRECT'));
         });
 
-        // History (leave requests — don't duplicate)
+        // History (leave requests — don't duplicate) — doğrudan bana gelenler hariç
         (teamHistoryRequests || []).forEach(r => {
+            // Leave history farklı alan adı kullanabilir: target_approver
+            if (r.target_approver?.id === currentUserEmployeeId) return;
+            if (r.approver_target?.id === currentUserEmployeeId) return;
             const histType = r.type || 'LEAVE';
             const key = `${histType}-${r.id}`;
             if (seen.has(key)) return;
@@ -273,7 +283,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
-    }, [incomingRequests, teamHistoryRequests, directSubordinateIds]);
+    }, [incomingRequests, teamHistoryRequests, directSubordinateIds, currentUserEmployeeId]);
 
     // Current items based on sub-tab
     const currentItems = activeSubTab === 'direct_incoming' ? directIncomingItems : teamItems;
