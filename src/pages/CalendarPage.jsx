@@ -9,7 +9,8 @@ import AgendaEventModal from '../components/AgendaEventModal';
 import DayDetailModal from '../components/DayDetailModal';
 import useInterval from '../hooks/useInterval';
 import FiscalCalendarView from '../components/FiscalCalendarView'; // Imported
-import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft, Settings, CalendarCheck, ClipboardList } from 'lucide-react';
+import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Share2, Briefcase, Calendar as CalendarIcon, ArrowLeft, Settings, CalendarCheck, ClipboardList, Heart, FileText, CreditCard, MapPin, UsersRound } from 'lucide-react';
+import TeamTimeline from '../components/TeamTimeline';
 
 moment.locale('tr');
 const localizer = momentLocalizer(moment);
@@ -50,6 +51,10 @@ const CalendarPage = () => {
     const [showWorkEvents, setShowWorkEvents] = useState(false);
     const [showOTAssignments, setShowOTAssignments] = useState(false);
     const [showOTRequests, setShowOTRequests] = useState(false);
+    const [showLeaves, setShowLeaves] = useState(true);  // Default ON
+    const [showHealthReports, setShowHealthReports] = useState(true);  // Default ON
+    const [showCardless, setShowCardless] = useState(false);
+    const [showTeamTimeline, setShowTeamTimeline] = useState(false);
 
     // Managed employees (for OT assignment)
     const [managedEmployees, setManagedEmployees] = useState([]);
@@ -69,7 +74,7 @@ const CalendarPage = () => {
         if (mode === 'CALENDAR' || mode === 'YEAR') {
             fetchCalendarData();
         }
-    }, [currentDate, calendarView, showWorkEvents, showOTAssignments, showOTRequests, mode]);
+    }, [currentDate, calendarView, showWorkEvents, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless, mode]);
 
     // Live Updates (Every 60s) - Only active in Calendar mode to save resources?
     // Or keep it active if we want indicators on Year view (optional complexity).
@@ -104,6 +109,9 @@ const CalendarPage = () => {
             let url = `/calendar-events/?start=${start}&end=${end}`;
             if (showOTAssignments) url += '&include_ot_assignments=true';
             if (showOTRequests) url += '&include_ot_requests=true';
+            if (showLeaves) url += '&include_leaves=true';
+            if (showHealthReports) url += '&include_health_reports=true';
+            if (showCardless) url += '&include_cardless=true';
 
             const response = await api.get(url);
 
@@ -115,23 +123,16 @@ const CalendarPage = () => {
                 const eventStart = new Date(evt.start);
                 const eventEnd = new Date(evt.end);
 
-                if (evt.status === 'HOLIDAY') {
+                if (evt.type === 'HOLIDAY') {
                     newHolidays.add(moment(eventStart).format('YYYY-MM-DD'));
                 }
 
-                const isWorkEvent = ['ATTENDANCE', 'LEAVE_REQUEST', 'OVERTIME_REQUEST'].includes(evt.type);
-                const isPersonal = evt.type === 'PERSONAL';
-                const isOTAssignment = evt.type === 'OVERTIME_ASSIGNMENT';
-                const isOTRequest = evt.type === 'OVERTIME_REQUEST';
-
-                if (evt.status === 'HOLIDAY' || isPersonal || (showWorkEvents && isWorkEvent) || isOTAssignment || isOTRequest) {
-                    parsedEvents.push({
-                        ...evt,
-                        start: eventStart,
-                        end: eventEnd,
-                        is_shared: evt.shared_with?.length > 0 || evt.shared_departments?.length > 0
-                    });
-                }
+                parsedEvents.push({
+                    ...evt,
+                    start: eventStart,
+                    end: eventEnd,
+                    is_shared: evt.shared_with?.length > 0 || evt.shared_departments?.length > 0
+                });
             });
 
             setEvents(parsedEvents);
@@ -170,6 +171,23 @@ const CalendarPage = () => {
         if (event.type === 'OVERTIME_REQUEST') {
             backgroundColor = event.status === 'APPROVED' ? '#22c55e' : '#f59e0b';
             borderColor = event.status === 'APPROVED' ? '#16a34a' : '#d97706';
+        }
+
+        if (event.type === 'LEAVE_REQUEST') {
+            backgroundColor = '#06b6d4';
+            borderColor = '#0891b2';
+        }
+        if (event.type === 'EXTERNAL_DUTY') {
+            backgroundColor = '#a855f7';
+            borderColor = '#9333ea';
+        }
+        if (event.type === 'HEALTH_REPORT') {
+            backgroundColor = '#ec4899';
+            borderColor = '#db2777';
+        }
+        if (event.type === 'CARDLESS_ENTRY') {
+            backgroundColor = '#f97316';
+            borderColor = '#ea580c';
         }
 
         return {
@@ -362,6 +380,45 @@ const CalendarPage = () => {
                         Ek Mesai Talepleri
                     </button>
 
+                    <div className="w-px h-8 bg-slate-200 mx-1"></div>
+
+                    <button
+                        onClick={() => setShowLeaves(!showLeaves)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showLeaves ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                    >
+                        <CalendarIcon size={16} />
+                        İzinler
+                    </button>
+
+                    <button
+                        onClick={() => setShowHealthReports(!showHealthReports)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showHealthReports ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                    >
+                        <Heart size={16} />
+                        Sağlık Raporu
+                    </button>
+
+                    <button
+                        onClick={() => setShowCardless(!showCardless)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showCardless ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                    >
+                        <CreditCard size={16} />
+                        Kartsız Giriş
+                    </button>
+
+                    {isManager && (
+                        <>
+                            <div className="w-px h-8 bg-slate-200 mx-1"></div>
+                            <button
+                                onClick={() => setShowTeamTimeline(!showTeamTimeline)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${showTeamTimeline ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                            >
+                                <UsersRound size={16} />
+                                Ekip Görünümü
+                            </button>
+                        </>
+                    )}
+
                     <button
                         onClick={() => { setSelectedSlot(new Date()); setSelectedEventData(null); setShowModal(true); }}
                         className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all active:scale-95"
@@ -381,6 +438,10 @@ const CalendarPage = () => {
                 {event.type === 'PERSONAL' && !event.is_shared && <Lock size={12} className="shrink-0 opacity-70" />}
                 {event.type === 'OVERTIME_ASSIGNMENT' && <CalendarCheck size={12} className="shrink-0 opacity-90" />}
                 {event.type === 'OVERTIME_REQUEST' && <ClipboardList size={12} className="shrink-0 opacity-90" />}
+                {event.type === 'LEAVE_REQUEST' && <CalendarIcon size={12} className="shrink-0 opacity-90" />}
+                {event.type === 'EXTERNAL_DUTY' && <MapPin size={12} className="shrink-0 opacity-90" />}
+                {event.type === 'HEALTH_REPORT' && <Heart size={12} className="shrink-0 opacity-90" />}
+                {event.type === 'CARDLESS_ENTRY' && <CreditCard size={12} className="shrink-0 opacity-90" />}
                 {event.reminders?.on_event && <Bell size={10} className="shrink-0" />}
                 <span className="truncate">{event.title}</span>
             </div>
@@ -533,6 +594,24 @@ const CalendarPage = () => {
                     <span className="text-slate-600 font-medium">Onaylı</span>
                 </div>
             )}
+            {showLeaves && (
+                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                    <span className="text-slate-600 font-medium">İzin</span>
+                </div>
+            )}
+            {showHealthReports && (
+                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-pink-500"></span>
+                    <span className="text-slate-600 font-medium">Sağlık Raporu</span>
+                </div>
+            )}
+            {showCardless && (
+                <div className="flex items-center gap-2 border-l pl-4 border-slate-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+                    <span className="text-slate-600 font-medium">Kartsız Giriş</span>
+                </div>
+            )}
         </div>
     );
 
@@ -652,7 +731,7 @@ const CalendarPage = () => {
 
             {mode === 'YEAR' && <YearView />}
 
-            {mode === 'CALENDAR' && (
+            {mode === 'CALENDAR' && !showTeamTimeline && (
                 <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-4 md:p-6 h-[500px] md:h-[800px] animate-in zoom-in-95 duration-300">
                     <Calendar
                         localizer={localizer}
@@ -682,6 +761,14 @@ const CalendarPage = () => {
                         popup
                     />
                 </div>
+            )}
+
+            {mode === 'CALENDAR' && showTeamTimeline && (
+                <TeamTimeline
+                    startDate={moment(currentDate).startOf('month').toDate()}
+                    endDate={moment(currentDate).endOf('month').toDate()}
+                    currentDate={currentDate}
+                />
             )}
 
             {/* Modals ... */}

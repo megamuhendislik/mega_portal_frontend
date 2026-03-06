@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Calendar as CalendarIcon, Clock, MapPin, AlignLeft, User, Users, Bell, Globe, Check, Lock, CalendarCheck, ClipboardList, UserPlus, Send } from 'lucide-react';
+import { X, Plus, Calendar as CalendarIcon, Clock, MapPin, AlignLeft, User, Users, Bell, Globe, Check, Lock, CalendarCheck, ClipboardList, UserPlus, Send, Heart, CreditCard } from 'lucide-react';
 import moment from 'moment';
 import api from '../services/api';
 
@@ -31,6 +31,10 @@ const DayDetailModal = ({ date, events, onClose, onAddEvent, onEditEvent, isMana
             case 'ATTENDANCE': return <Clock size={16} className="text-slate-500" />;
             case 'OVERTIME_ASSIGNMENT': return <CalendarCheck size={16} className="text-violet-500" />;
             case 'OVERTIME_REQUEST': return <ClipboardList size={16} className="text-amber-500" />;
+            case 'LEAVE_REQUEST': return <CalendarIcon size={16} className="text-cyan-500" />;
+            case 'EXTERNAL_DUTY': return <MapPin size={16} className="text-purple-500" />;
+            case 'HEALTH_REPORT': return <Heart size={16} className="text-pink-500" />;
+            case 'CARDLESS_ENTRY': return <CreditCard size={16} className="text-orange-500" />;
             default: return <AlignLeft size={16} className="text-indigo-500" />;
         }
     };
