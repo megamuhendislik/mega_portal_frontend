@@ -1,16 +1,13 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
-    Search, Clock, Utensils, CreditCard, User, Users,
-    ArrowRightLeft, Shield, FileText, Inbox
+    Search, Users, Shield, Inbox
 } from 'lucide-react';
 import api from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-import RequestListTable from '../../components/RequestListTable';
+import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
+import EmployeeRequestGroup from '../../components/requests/EmployeeRequestGroup';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
 const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
-    const { user } = useAuth();
-
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -31,6 +28,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedRequestType, setSelectedRequestType] = useState(null);
+
+    // Expandable row state for direct incoming (flat table)
+    const [directExpandedId, setDirectExpandedId] = useState(null);
+
+    // Open groups state for team requests (employee accordion)
+    const [openGroups, setOpenGroups] = useState(new Set());
 
     // Compute directSubordinateIds
     const directSubordinateIds = useMemo(() => {
@@ -302,6 +305,49 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         teamItems.filter(r => r.status === 'PENDING').length
     , [teamItems]);
 
+    // Group filtered items by employee for team_requests sub-tab
+    const groupedByEmployee = useMemo(() => {
+        if (activeSubTab !== 'team_requests') return [];
+        const groups = {};
+        filtered.forEach(r => {
+            const empKey = r.employee_id || r.employee || r.employee_name || 'unknown';
+            const name = r.employee_name || 'Bilinmiyor';
+            if (!groups[empKey]) {
+                groups[empKey] = {
+                    employeeKey: String(empKey),
+                    employeeName: name,
+                    employeeDepartment: r.employee_department || '',
+                    employeePosition: r.employee_position || '',
+                    requests: [],
+                };
+            }
+            groups[empKey].requests.push(r);
+        });
+        return Object.values(groups).sort((a, b) => {
+            const aPending = a.requests.filter(r => r.status === 'PENDING').length;
+            const bPending = b.requests.filter(r => r.status === 'PENDING').length;
+            if (bPending !== aPending) return bPending - aPending;
+            return a.employeeName.localeCompare(b.employeeName, 'tr');
+        });
+    }, [filtered, activeSubTab]);
+
+    // Initialize open groups only once when first switching to team_requests
+    const groupsInitialized = useRef(false);
+    useEffect(() => {
+        if (activeSubTab === 'team_requests' && groupedByEmployee.length > 0 && !groupsInitialized.current) {
+            const pendingGroups = new Set(
+                groupedByEmployee
+                    .filter(g => g.requests.some(r => r.status === 'PENDING'))
+                    .map(g => g.employeeKey)
+            );
+            setOpenGroups(pendingGroups);
+            groupsInitialized.current = true;
+        }
+        if (activeSubTab !== 'team_requests') {
+            groupsInitialized.current = false;
+        }
+    }, [activeSubTab, groupedByEmployee]);
+
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
     const authorities = substituteData?.authorities || [];
@@ -417,21 +463,81 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                     </h3>
                     <p className="text-sm text-slate-500 mt-1">Seçili kriterlere uygun talep bulunmamaktadır.</p>
                 </div>
+            ) : activeSubTab === 'direct_incoming' ? (
+                /* Doğrudan Gelen — flat expandable table */
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
+                                    <th className="pl-3 pr-1 py-2 w-8"></th>
+                                    <th className="px-3 py-2 font-bold">Talep Eden</th>
+                                    <th className="px-3 py-2 font-bold">Tür</th>
+                                    <th className="px-3 py-2 font-bold">Tarih</th>
+                                    <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                    <th className="px-3 py-2 font-bold">Süre</th>
+                                    <th className="px-3 py-2 font-bold">Durum</th>
+                                    <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {filtered.map(req => (
+                                    <ExpandableRequestRow
+                                        key={`${req.type}-${req.id}`}
+                                        req={req}
+                                        isExpanded={directExpandedId === `${req.type}-${req.id}`}
+                                        onToggle={() => {
+                                            const key = `${req.type}-${req.id}`;
+                                            setDirectExpandedId(prev => prev === key ? null : key);
+                                        }}
+                                        onViewDetails={handleViewDetails}
+                                        onApprove={(r, notes) => {
+                                            if (r._isSubstitute) handleSubstituteApprove(r);
+                                            else handleApprove(r, notes);
+                                        }}
+                                        onReject={(r, reason) => {
+                                            if (r._isSubstitute) handleSubstituteReject(r, reason);
+                                            else handleReject(r, reason);
+                                        }}
+                                        showEmployeeColumn={true}
+                                        mode="incoming"
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             ) : (
-                <RequestListTable
-                    requests={filtered}
-                    onViewDetails={handleViewDetails}
-                    onApprove={(req, notes) => {
-                        if (req._isSubstitute) handleSubstituteApprove(req);
-                        else handleApprove(req, notes);
-                    }}
-                    onReject={(req, reason) => {
-                        if (req._isSubstitute) handleSubstituteReject(req, reason);
-                        else handleReject(req, reason);
-                    }}
-                    showSourceBadge={true}
-                    showEmployeeColumn={true}
-                />
+                /* Ekip Talepleri — employee-grouped accordion */
+                <div className="space-y-3">
+                    {groupedByEmployee.map(group => (
+                        <EmployeeRequestGroup
+                            key={group.employeeKey}
+                            employeeName={group.employeeName}
+                            employeeDepartment={group.employeeDepartment}
+                            employeePosition={group.employeePosition}
+                            requests={group.requests}
+                            isOpen={openGroups.has(group.employeeKey)}
+                            onToggle={() => {
+                                setOpenGroups(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(group.employeeKey)) next.delete(group.employeeKey);
+                                    else next.add(group.employeeKey);
+                                    return next;
+                                });
+                            }}
+                            onViewDetails={handleViewDetails}
+                            onApprove={(req, notes) => {
+                                if (req._isSubstitute) handleSubstituteApprove(req);
+                                else handleApprove(req, notes);
+                            }}
+                            onReject={(req, reason) => {
+                                if (req._isSubstitute) handleSubstituteReject(req, reason);
+                                else handleReject(req, reason);
+                            }}
+                        />
+                    ))}
+                </div>
             )}
 
             {/* Detail Modal */}
