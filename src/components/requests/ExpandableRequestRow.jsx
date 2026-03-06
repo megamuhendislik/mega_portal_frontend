@@ -147,7 +147,13 @@ const TimeRange = ({ req }) => {
                 </span>
             );
         }
-        return <span className="text-xs text-slate-400">Tam gün</span>;
+        const days = req.total_days || 1;
+        const totalH = days * 9;
+        return (
+            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                {totalH} saat <span className="text-blue-400 font-normal">(Tam gün{days > 1 ? ` × ${days}` : ''})</span>
+            </span>
+        );
     }
     if (req.type === 'MEAL') {
         return <span className="text-xs text-slate-300">&mdash;</span>;

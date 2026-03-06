@@ -292,6 +292,10 @@ const OvertimePanel = ({ req, mode }) => {
 const LeavePanel = ({ req, mode }) => {
     const balance = req.employee_annual_leave_balance || {};
     const totalDays = req.total_days || 0;
+    const totalHours = req.start_time && req.end_time
+        ? (() => { const [sh,sm] = req.start_time.split(':').map(Number); const [eh,em] = req.end_time.split(':').map(Number); let m = (eh*60+em)-(sh*60+sm); if(m<0) m+=1440; return (m/60).toFixed(1); })()
+        : (totalDays * 9).toFixed(1);
+    const isFullDay = !req.start_time || !req.end_time;
 
     return (
         <>
@@ -305,7 +309,7 @@ const LeavePanel = ({ req, mode }) => {
                 {req.start_time && req.end_time && (
                     <InfoRow label="Saat" value={`${formatTime(req.start_time)} → ${formatTime(req.end_time)}`} />
                 )}
-                <InfoRow label="Toplam" value={`${totalDays} gün`} highlight />
+                <InfoRow label="Toplam" value={`${totalHours} saat${isFullDay ? ' (Tam gün)' : ''}`} highlight />
                 {req.reason && <InfoRow label="Sebep" value={req.reason} />}
             </Section>
 
