@@ -785,7 +785,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 </div>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold text-slate-800 mb-0.5">İzin Talebi</h3>
-                    <p className="text-sm text-slate-500">Yıllık izin, mazeret izni veya hastalık izni.</p>
+                    <p className="text-sm text-slate-500">Yıllık izin ve mazeret izni.</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                     <ChevronRight size={18} />
