@@ -199,12 +199,15 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         return <span className="text-slate-300">—</span>;
     };
 
+    // Turkish-aware lowercase for search (handles İ/I/ı/i correctly)
+    const trLower = (s) => (s || '').toLocaleLowerCase('tr');
+
     // Filter Logic (Common for List)
     const avgOT = stats.length > 0 ? stats.reduce((a, c) => a + (c.total_overtime || 0), 0) / stats.length : 0;
 
     const filteredStats = stats.filter(item => {
-        const matchesSearch = (item.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (item.department || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = trLower(item.employee_name).includes(trLower(searchTerm)) ||
+            trLower(item.department).includes(trLower(searchTerm));
 
         if (!matchesSearch) return false;
 
@@ -343,8 +346,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         if (node.type !== 'GROUP') {
             const s = node.stats || {};
             const nameMatch = searchTerm === '' ||
-                (node.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (node.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+                trLower(node.name).includes(trLower(searchTerm)) ||
+                trLower(node.title).includes(trLower(searchTerm));
             let statusMatch = true;
             if (filterStatus === 'ONLINE') statusMatch = s.is_online;
             else if (filterStatus === 'OVERTIME') statusMatch = (s.total_overtime || 0) > 0;
@@ -394,8 +397,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             // Apply Search & Status Filter
             const matchesSearch = searchTerm === '' ||
-                (node.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (node.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+                trLower(node.name).includes(trLower(searchTerm)) ||
+                trLower(node.title).includes(trLower(searchTerm));
 
             let matchesStatus = true;
             if (filterStatus === 'ONLINE') matchesStatus = s.is_online;
