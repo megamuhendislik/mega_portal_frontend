@@ -17,7 +17,7 @@ import {
 } from './attendance-tracking/AttendanceComponents';
 import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
 import OvertimeCalendarModal from '../components/OvertimeCalendarModal';
-import OvertimeCalendarView from '../components/overtime/OvertimeCalendarView';
+import UnifiedOvertimePanel from '../components/overtime/UnifiedOvertimePanel';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -25,6 +25,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
     const [secondaryTeam, setSecondaryTeam] = useState([]);
     const [showSecondaryTeam, setShowSecondaryTeam] = useState(false);
+    const [substituteTeams, setSubstituteTeams] = useState(null);
+    const [showSubstituteTeam, setShowSubstituteTeam] = useState(false);
 
     // State — propMonth is 0-based (from Attendance.jsx), convert to 1-based for API
     // Default to fiscal month: if day >= 26, we're in next month's fiscal period
@@ -98,10 +100,11 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             if (selectedDept) params.department_id = selectedDept;
             params.include_inactive = 'true';
 
-            const [statsRes, hierarchyRes, secondaryRes] = await Promise.allSettled([
+            const [statsRes, hierarchyRes, secondaryRes, substituteRes] = await Promise.allSettled([
                 api.get('/dashboard/stats/', { params, timeout: 60000 }),
                 api.get('/dashboard/team_hierarchy/', { timeout: 60000 }),
-                api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' }, timeout: 30000 })
+                api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' }, timeout: 30000 }),
+                api.get('/dashboard/substitute_team/', { timeout: 30000 })
             ]);
 
             // Process stats
@@ -133,6 +136,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             if (secondaryRes.status === 'fulfilled') {
                 const secData = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : [];
                 setSecondaryTeam(secData);
+            }
+
+            // Process substitute team
+            if (substituteRes.status === 'fulfilled') {
+                const subData = substituteRes.value.data;
+                if (subData?.teams && Object.keys(subData.teams).length > 0) {
+                    setSubstituteTeams(subData);
+                } else {
+                    setSubstituteTeams(null);
+                }
             }
             if (initialLoad && hData.length) {
                 const initialExpanded = {};
@@ -650,7 +663,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             {/* Overtime Calendar View */}
             {viewMode === 'overtime' && (
-                <OvertimeCalendarView mode="manager" />
+                <UnifiedOvertimePanel />
             )}
 
             {/* Main Table */}
@@ -774,6 +787,48 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </div>
             )}
 
+            {/* SUBSTITUTE TEAM */}
+            {substituteTeams && Object.keys(substituteTeams.teams).length > 0 && (
+                <div className="mt-4 border-t border-indigo-200/50 pt-4">
+                    <button
+                        onClick={() => setShowSubstituteTeam(!showSubstituteTeam)}
+                        className="flex items-center gap-2 text-sm font-bold text-indigo-700 hover:text-indigo-800 mb-3 transition-colors"
+                    >
+                        {showSubstituteTeam ? '▼' : '▶'}
+                        Vekalet Ettiğim Ekip Üyeleri ({Object.values(substituteTeams.teams).reduce((sum, t) => sum + t.employees.length, 0)} kişi)
+                    </button>
+                    {showSubstituteTeam && (
+                        <div className="space-y-3">
+                            {Object.values(substituteTeams.teams).map(team => (
+                                <div key={team.principal_id} className="border border-indigo-100 rounded-lg p-3 bg-indigo-50/30">
+                                    <div className="text-xs font-semibold text-indigo-600 mb-2">
+                                        {team.principal_name} adına vekalet ({team.valid_from} — {team.valid_to})
+                                    </div>
+                                    <div className="space-y-1">
+                                        {team.employees.map(emp => (
+                                            <div key={emp.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
+                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">Vekalet</span>
+                                                    {emp.department && <span className="text-xs text-slate-500">{emp.department}</span>}
+                                                </div>
+                                                <button
+                                                    onClick={() => setCalendarTarget({ ...emp, _substituteFor: team.principal_id })}
+                                                    className="text-xs px-2 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                                                    title="Ek mesai ata"
+                                                >
+                                                    OT Ata
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* DETAIL MODAL */}
             <EmployeeDetailModal
                 employee={selectedEmployee}
@@ -785,6 +840,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 visible={!!calendarTarget}
                 onClose={() => setCalendarTarget(null)}
                 employee={calendarTarget}
+                actingAsSubstituteFor={calendarTarget?._substituteFor}
                 onSuccess={() => { setCalendarTarget(null); }}
             />
         </div >

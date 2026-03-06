@@ -159,7 +159,7 @@ const MainLayout = () => {
 
         { path: '/requests', label: 'Talepler', icon: FileText, permission: null },
         { path: '/feedback', label: 'Dilek ve Şikayetler', icon: MessageSquare, permission: null },
-        { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: null },
+        { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: null, visibleWhen: (u) => u?.has_substitute_context || u?.is_manager || u?.user?.is_superuser },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_ORDERS' },
@@ -177,6 +177,9 @@ const MainLayout = () => {
 
         // Hide Admin only items from non-superusers (unless they have explicit permission, but Health Check is critical)
         if (item.adminOnly) return false;
+
+        // Custom visibility check (e.g., Vekalet Yönetimi only for managers/substitutes)
+        if (item.visibleWhen && !item.visibleWhen(user)) return false;
 
         if (!item.permission) return true;
         const permissions = Array.isArray(item.permission) ? item.permission : [item.permission];

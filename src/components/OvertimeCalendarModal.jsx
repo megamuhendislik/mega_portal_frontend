@@ -48,7 +48,7 @@ function getDayOfWeek(date) {
     return (date.getDay() + 6) % 7;
 }
 
-const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
+const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess, actingAsSubstituteFor }) => {
     const [year, setYear] = useState(new Date().getFullYear());
     const [calendarData, setCalendarData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -170,7 +170,8 @@ const OvertimeCalendarModal = ({ visible, onClose, employee, onSuccess }) => {
                     max_duration_hours: d.hours
                 })),
                 notes: notes || undefined,
-                task_description: taskDescription || undefined
+                task_description: taskDescription || undefined,
+                ...(actingAsSubstituteFor ? { acting_as_substitute_for: actingAsSubstituteFor } : {})
             });
             setSuccess(true);
             setTaskDescription('');
