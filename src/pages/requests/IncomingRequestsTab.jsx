@@ -195,6 +195,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
         approved_by_name: r.approved_by_name || r.approved_by_detail?.full_name || '',
         approver_target: r.approver_target || null,
+        request_scope: r.request_scope || null,
         leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
         start_date: r.start_date || r.date || r.created_at,
         type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN'),
@@ -203,16 +204,15 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         _principalName: principalName,
     });
 
-    // --- SUB-TAB 1: Doğrudan Gelen (target_approver = me, PENDING + substitute) ---
+    // --- SUB-TAB 1: Doğrudan Gelen (request_scope = 'direct', PENDING + substitute) ---
     const directIncomingItems = useMemo(() => {
         const items = [];
         const seen = new Set();
 
-        // PENDING incoming requests (target_approver = current user)
+        // PENDING incoming requests — sadece doğrudan bana yönlendirilmiş (backend request_scope)
         (incomingRequests || []).forEach(r => {
             if (r.status !== 'PENDING') return;
-            // Sadece doğrudan bana yönlendirilmiş talepleri göster
-            if (r.approver_target?.id !== currentUserEmployeeId) return;
+            if (r.request_scope !== 'direct') return;
             const key = `${r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : r.type}-${r.id}`;
             if (seen.has(key)) return;
             seen.add(key);
@@ -246,18 +246,17 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
-    }, [incomingRequests, substituteData, currentUserEmployeeId]);
+    }, [incomingRequests, substituteData]);
 
-    // --- SUB-TAB 2: Ekip Talepleri (all team members, all statuses including history) ---
-    // Doğrudan bana yönlendirilmiş talepleri hariç tut — sadece alt yöneticilerin talepleri
+    // --- SUB-TAB 2: Ekip Talepleri (alt yöneticilere gelen talepler, tüm durumlar) ---
+    // Sadece alt yöneticilere yönlendirilmiş talepleri göster — doğrudan bana gelenler hariç
     const teamItems = useMemo(() => {
         const items = [];
         const seen = new Set();
 
-        // All incoming team requests (all statuses) — doğrudan bana gelenler hariç
+        // Team requests — backend request_scope='team' olanlar (alt yöneticilere gelen)
         (incomingRequests || []).forEach(r => {
-            // Doğrudan bana yönlendirilmiş talepleri ekip taleplerinden hariç tut
-            if (r.approver_target?.id === currentUserEmployeeId) return;
+            if (r.request_scope === 'direct') return;
             const type = r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN');
             const key = `${type}-${r.id}`;
             if (seen.has(key)) return;
@@ -265,22 +264,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             items.push(normalizeRequest(r, r.level === 'direct' ? 'DIRECT' : 'INDIRECT'));
         });
 
-        // History (leave requests — don't duplicate) — doğrudan bana gelenler hariç
+        // History (leave requests — don't duplicate) — sadece dolaylı çalışanların geçmişi
         (teamHistoryRequests || []).forEach(r => {
-            // Leave history: target_approver integer FK veya object olabilir
+            // Doğrudan bana rapor eden çalışanların geçmişini hariç tut
+            const empId = r.employee?.id || r.employee;
+            if (directSubordinateIds.has(empId)) return;
+            // target_approver FK ile de kontrol et (integer veya object olabilir)
             const histTargetId = typeof r.target_approver === 'object'
                 ? r.target_approver?.id
                 : r.target_approver;
             if (histTargetId === currentUserEmployeeId) return;
-            if (r.approver_target?.id === currentUserEmployeeId) return;
             const histType = r.type || 'LEAVE';
             const key = `${histType}-${r.id}`;
             if (seen.has(key)) return;
             seen.add(key);
-            const empId = r.employee?.id || r.employee;
             items.push(normalizeRequest(
                 { ...r, type: histType },
-                directSubordinateIds.has(empId) ? 'DIRECT' : 'INDIRECT'
+                'INDIRECT'
             ));
         });
 
