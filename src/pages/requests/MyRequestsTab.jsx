@@ -85,6 +85,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
     const [expandedRowId, setExpandedRowId] = useState(null);
 
+    // Month/year filter
+    const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+    const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+
     // Fetch all data
     const fetchData = useCallback(async () => {
         try {
@@ -273,6 +277,13 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
+            // Month/year filter
+            const reqDate = new Date(r._sortDate || r.start_date || r.date || r.created_at);
+            if (!isNaN(reqDate.getTime())) {
+                if (reqDate.getFullYear() !== filterYear || (reqDate.getMonth() + 1) !== filterMonth) {
+                    return false;
+                }
+            }
             if (typeFilter !== 'ALL' && r._type !== typeFilter) return false;
             if (statusFilter !== 'ALL') {
                 const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELLED': 'REJECTED' };
@@ -282,10 +293,17 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             if (!showPotential && r.status === 'POTENTIAL') return false;
             return true;
         });
-    }, [allMyRequests, typeFilter, statusFilter, showPotential]);
+    }, [allMyRequests, typeFilter, statusFilter, showPotential, filterYear, filterMonth]);
 
     const counts = useMemo(() => {
-        const actual = allMyRequests.filter(r => r.status !== 'POTENTIAL');
+        const monthFiltered = allMyRequests.filter(r => {
+            const reqDate = new Date(r._sortDate || r.start_date || r.date || r.created_at);
+            if (!isNaN(reqDate.getTime())) {
+                return reqDate.getFullYear() === filterYear && (reqDate.getMonth() + 1) === filterMonth;
+            }
+            return true;
+        });
+        const actual = monthFiltered.filter(r => r.status !== 'POTENTIAL');
         return {
             all: actual.length,
             leave: actual.filter(r => r._type === 'LEAVE').length,
@@ -298,7 +316,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
             rejected: actual.filter(r => ['REJECTED', 'CANCELLED'].includes(r.status)).length,
         };
-    }, [allMyRequests]);
+    }, [allMyRequests, filterYear, filterMonth]);
 
     // Custom onEdit that routes OVERTIME to edit modal, others to view
     const handleEdit = useCallback((req) => {
@@ -345,6 +363,31 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" />
                 <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" />
                 <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
+            </div>
+
+            {/* Ay/Yıl Seçici */}
+            <div className="flex items-center gap-2 mb-4">
+                <Calendar size={16} className="text-slate-400" />
+                <select
+                    value={filterMonth}
+                    onChange={(e) => setFilterMonth(Number(e.target.value))}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                    {['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+                    ].map((name, i) => (
+                        <option key={i + 1} value={i + 1}>{name}</option>
+                    ))}
+                </select>
+                <select
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(Number(e.target.value))}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                    {[2024, 2025, 2026, 2027].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                    ))}
+                </select>
             </div>
 
             {/* Filter Chips */}
