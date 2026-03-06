@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Clock, Calendar, FileText, AlertCircle, Shield, Lock, CheckCircle, XCircle, Briefcase, User } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User } from 'lucide-react';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -41,6 +41,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             start_time: request.start_time || null,
             end_time: request.end_time || null,
             employee_id: request.employee,
+            date_segments: request.date_segments || null,
           });
           setDutyPreview(resp.data);
         } catch (err) {
@@ -430,6 +431,23 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                       </div>
                     </div>
 
+                    {/* Gün Bazlı Çalışma Detayı (date_segments) */}
+                    {request.duty_work_info?.date_segments && request.duty_work_info.date_segments.length > 0 && (
+                      <div className="mb-3">
+                        <span className="text-[10px] font-bold text-purple-600 uppercase mb-1 block">Gün Bazlı Çalışma Detayı</span>
+                        <div className="space-y-1">
+                          {request.duty_work_info.date_segments.map((seg, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-purple-100">
+                              <span className="text-slate-600 font-medium">
+                                {new Date(seg.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })}
+                              </span>
+                              <span className="text-purple-700 font-bold">{seg.start_time} - {seg.end_time}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Attendance Kayıtları */}
                     {request.duty_work_info.attendance_records?.length > 0 && (
                       <div className="space-y-1.5 mb-2">
@@ -475,7 +493,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                           <span className="text-[10px] font-bold text-indigo-600 uppercase">Tahmini Hesaplama</span>
                           <span className="text-[9px] text-slate-400">(onay sonrası kesinleşir)</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div className="grid grid-cols-2 gap-2 mb-3">
                           <div className="bg-white p-2 rounded-lg border border-emerald-100 text-center">
                             <span className="block text-[10px] text-slate-400 font-bold uppercase">Normal Mesai</span>
                             <span className="block font-black text-emerald-600 text-lg">
@@ -489,34 +507,71 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                             </span>
                           </div>
                         </div>
+
+                        {/* Header row */}
+                        <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase px-2.5 mb-1">
+                          <span className="w-20">Tarih</span>
+                          <span className="w-24 text-center">Çalışma</span>
+                          <span className="w-24 text-center">Vardiya</span>
+                          <span className="w-20 text-center">Normal</span>
+                          <span className="w-20 text-right">Ek Mesai</span>
+                        </div>
+
+                        {/* Day rows */}
                         <div className="space-y-1">
                           {dutyPreview.days.map((day, i) => (
-                            <div key={i} className={`flex items-center justify-between text-xs p-2 rounded-lg border ${
+                            <div key={i} className={`flex items-center text-xs p-2.5 rounded-lg border ${
                               day.is_off_day ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'
                             }`}>
-                              <div className="w-16">
+                              <div className="w-20">
                                 <span className="font-bold text-slate-700">
                                   {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
                                 </span>
                                 <span className="block text-[10px] text-slate-400">{day.day_name}</span>
                               </div>
-                              <span className="text-slate-500 text-center">{day.duty_start} - {day.duty_end}</span>
-                              <div className="text-center">
+                              <span className="w-24 text-center text-slate-600 font-medium">
+                                {day.duty_start} - {day.duty_end}
+                              </span>
+                              <span className="w-24 text-center text-[10px] text-slate-400">
+                                {day.is_off_day ? 'Tatil/İzin' : `${day.shift_start}-${day.shift_end}`}
+                              </span>
+                              <div className="w-20 text-center">
                                 {day.normal_work_minutes > 0 ? (
                                   <span className="text-emerald-600 font-bold">
                                     {Math.floor(day.normal_work_minutes / 60)}s {day.normal_work_minutes % 60}dk
                                   </span>
-                                ) : <span className="text-slate-300">—</span>}
+                                ) : <span className="text-slate-300">&mdash;</span>}
                               </div>
-                              <div className="text-right">
+                              <div className="w-20 text-right">
                                 {day.overtime_minutes > 0 ? (
                                   <span className="text-amber-600 font-bold">
                                     {Math.floor(day.overtime_minutes / 60)}s {day.overtime_minutes % 60}dk
                                   </span>
-                                ) : <span className="text-slate-300">—</span>}
+                                ) : <span className="text-slate-300">&mdash;</span>}
                               </div>
                             </div>
                           ))}
+                        </div>
+
+                        {/* Totals row */}
+                        <div className="flex items-center text-xs p-2.5 mt-1 rounded-lg border border-slate-200 bg-slate-50 font-bold">
+                          <span className="w-20 text-slate-600">TOPLAM</span>
+                          <span className="w-24 text-center text-slate-500">
+                            {dutyPreview.totals.total_days} gün
+                          </span>
+                          <span className="w-24 text-center text-[10px] text-slate-400">
+                            {dutyPreview.totals.working_days} iş / {dutyPreview.totals.off_days} tatil
+                          </span>
+                          <div className="w-20 text-center">
+                            <span className="text-emerald-700">
+                              {Math.floor(dutyPreview.totals.total_normal_work_minutes / 60)}s {dutyPreview.totals.total_normal_work_minutes % 60}dk
+                            </span>
+                          </div>
+                          <div className="w-20 text-right">
+                            <span className="text-amber-700">
+                              {Math.floor(dutyPreview.totals.total_overtime_minutes / 60)}s {dutyPreview.totals.total_overtime_minutes % 60}dk
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ) : dutyPreviewLoading ? (
@@ -729,6 +784,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </div>
             )}
           </div>
+
+          {/* OT Auto-Approval Warning for External Duty */}
+          {request?.request_type_detail?.category === 'EXTERNAL_DUTY' &&
+           request?.status === 'PENDING' &&
+           dutyPreview?.totals?.total_overtime_minutes > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-700 flex items-center gap-2 mb-3">
+              <AlertTriangle size={14} className="shrink-0" />
+              <span>
+                Onay ile birlikte <strong>
+                {Math.floor(dutyPreview.totals.total_overtime_minutes / 60)}s {dutyPreview.totals.total_overtime_minutes % 60}dk
+                </strong> ek mesai otomatik onaylanacaktır.
+              </span>
+            </div>
+          )}
 
           {/* Manager Cancel Button */}
           {requestType === 'LEAVE' && request.status === 'APPROVED' && !timeLockInfo?.is_locked && (hasPermission('APPROVAL_LEAVE') || hasPermission('SYSTEM_FULL_ACCESS')) && (
