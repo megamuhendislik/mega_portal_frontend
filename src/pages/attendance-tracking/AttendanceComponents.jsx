@@ -21,7 +21,7 @@ const round2 = (v) => Math.round((v || 0) * 100) / 100;
    EmployeeAttendanceRow
    ───────────────────────────────────────────── */
 export const EmployeeAttendanceRow = ({
-    s, name, title, id,
+    s, name, id,
     depth = 0,
     isManager = false,
     nodeStats = null,
@@ -89,7 +89,6 @@ export const EmployeeAttendanceRow = ({
                                 </span>
                             )}
                         </div>
-                        <span className="text-[11px] text-slate-400 truncate block">{title}</span>
                         {s.weekly_ot_limit_hours > 0 && (() => {
                             const used = round2(s.weekly_ot_used_seconds / 3600);
                             const limit = s.weekly_ot_limit_hours;
@@ -195,7 +194,7 @@ export const EmployeeAttendanceRow = ({
                 <div className="flex items-center justify-end gap-2">
                     {onAssignOvertime && (
                         <button
-                            onClick={() => onAssignOvertime({ id: s.employee_id, name: s.employee_name || name, department: s.department || title })}
+                            onClick={() => onAssignOvertime({ id: s.employee_id, name: s.employee_name || name, department: s.department || '' })}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 transition-all whitespace-nowrap"
                             title="Ek Mesai İsteği Gönder"
                         >

@@ -191,8 +191,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
     const filteredStats = stats.filter(item => {
         const matchesSearch = (item.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (item.department || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (item.job_title || '').toLowerCase().includes(searchTerm.toLowerCase());
+            (item.department || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         if (!matchesSearch) return false;
 
