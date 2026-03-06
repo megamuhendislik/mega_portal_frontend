@@ -283,7 +283,10 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                 {req.type === 'LEAVE' && (
                                                     <>
                                                         <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded">
-                                                            {req.total_days} Gün
+                                                            {req.start_time && req.end_time
+                                                                ? calculateDuration(req.start_time, req.end_time)
+                                                                : `${(req.total_days || 1) * 9} Saat`}
+                                                            {(!req.start_time || !req.end_time) && <span className="text-blue-400 font-normal"> (Tam gün)</span>}
                                                         </span>
                                                         {req.leave_type_name && (
                                                             <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">

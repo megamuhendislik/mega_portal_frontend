@@ -229,7 +229,7 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                 <div className="flex items-center gap-2.5 text-sm text-slate-600">
                     <Calendar size={16} className="text-slate-400 shrink-0" />
                     {type === 'LEAVE' && (
-                        <span className="font-medium">{formatDate(request.start_date)} - {formatDate(request.end_date)} <span className="text-slate-400 font-normal">({request.total_days} Gün)</span></span>
+                        <span className="font-medium">{formatDate(request.start_date)} - {formatDate(request.end_date)} <span className="text-slate-400 font-normal">({(request.total_days || 1) * 9} Saat{!request.start_time && ' - Tam gün'})</span></span>
                     )}
                     {type === 'OVERTIME' && (
                         <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.start_time)} - {formatTime(request.end_time)}</span>

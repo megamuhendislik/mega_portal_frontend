@@ -167,7 +167,14 @@ const DurationCell = ({ req }) => {
         return <span className="text-xs text-slate-400">-</span>;
     }
     if (req.type === 'LEAVE') {
-        return <span className="text-xs font-bold text-blue-700">{req.total_days || '-'} Gün</span>;
+        if (req.start_time && req.end_time) {
+            return <span className="text-xs font-bold text-blue-700">{calculateDuration(req.start_time, req.end_time)}</span>;
+        }
+        const hours = (req.total_days || 1) * 9;
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        const label = m > 0 ? `${h}s ${m}dk` : `${h} Saat`;
+        return <span className="text-xs font-bold text-blue-700">{label} <span className="text-blue-400 font-normal">(Tam gün)</span></span>;
     }
     if (req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time) {
         return <span className="text-xs font-bold text-purple-700">{calculateDuration(req.check_in_time, req.check_out_time)}</span>;
@@ -254,6 +261,11 @@ const ExpandableRequestRow = ({
                         <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
                             {getTypeLabel(req)}
                         </span>
+                        {req.leave_type_code === 'BIRTHDAY_LEAVE' && (
+                            <span className="ml-1 px-2 py-0.5 bg-pink-50 text-pink-600 rounded-full text-[10px] font-bold">
+                                🎂
+                            </span>
+                        )}
                     </div>
                 </td>
 
