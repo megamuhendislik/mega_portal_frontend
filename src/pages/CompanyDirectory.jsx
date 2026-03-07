@@ -184,6 +184,11 @@ const CompanyDirectory = () => {
                         {cfg.label}
                     </span>
                 </td>
+                <td className="px-4 py-3 text-xs text-slate-500 hidden md:table-cell">
+                    {emp.email && (
+                        <a href={`mailto:${emp.email}`} className="hover:text-blue-600 transition-colors">{emp.email}</a>
+                    )}
+                </td>
                 <td className="px-4 py-3 text-xs text-slate-500 hidden lg:table-cell">
                     {emp.phone && (
                         <a href={`tel:${emp.phone}`} className="hover:text-blue-600 transition-colors">{emp.phone}</a>
@@ -335,6 +340,7 @@ const CompanyDirectory = () => {
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Çalışan</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden lg:table-cell">Durum</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden md:table-cell">E-posta</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase hidden lg:table-cell">Telefon</th>
                                 <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase hidden md:table-cell">Ulaşılabilir</th>
                             </tr>
