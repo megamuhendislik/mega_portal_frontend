@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
     Table,
     Upload,
@@ -32,6 +32,8 @@ import {
     ReloadOutlined,
     EditOutlined,
     DownloadOutlined,
+    LoadingOutlined,
+    CodeOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -574,6 +576,14 @@ export default function PdksCompareTab() {
     const [previewing, setPreviewing] = useState(false);
     const [executing, setExecuting] = useState(false);
 
+    // Real-time log modal state
+    const [logModalOpen, setLogModalOpen] = useState(false);
+    const [resetLogs, setResetLogs] = useState([]);
+    const [resetProgress, setResetProgress] = useState(null); // {status, current_item, total_items, ...}
+    const logEndRef = useRef(null);
+    const pollRef = useRef(null);
+    const sessionIdRef = useRef(null);
+
     // Mode switch handler — clears all state
     const handleModeChange = useCallback((newMode) => {
         setMode(newMode);
@@ -584,6 +594,20 @@ export default function PdksCompareTab() {
         setResetResults(null);
         setShowOnlyDiff(false);
         setCategoryFilter(null);
+    }, []);
+
+    // Auto-scroll log to bottom
+    useEffect(() => {
+        if (logEndRef.current) {
+            logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [resetLogs]);
+
+    // Cleanup polling on unmount
+    useEffect(() => {
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
     }, []);
 
     // -----------------------------------------------------------------------
@@ -918,6 +942,32 @@ export default function PdksCompareTab() {
         }
     }, [file]);
 
+    // Start polling reset progress from backend
+    const startProgressPolling = useCallback((sid) => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        let lastLogCount = 0;
+        pollRef.current = setInterval(async () => {
+            try {
+                const res = await api.get(`/system/health-check/pdks-reset-progress/?session_id=${sid}`);
+                const data = res.data;
+                if (data.status === 'not_found') return;
+                setResetProgress(data);
+                // Append only new logs
+                if (data.logs && data.logs.length > lastLogCount) {
+                    const newEntries = data.logs.slice(lastLogCount);
+                    lastLogCount = data.logs.length;
+                    setResetLogs((prev) => [...prev, ...newEntries]);
+                }
+                if (data.status === 'completed' || data.status === 'error') {
+                    clearInterval(pollRef.current);
+                    pollRef.current = null;
+                }
+            } catch {
+                // Ignore polling errors (execute still running)
+            }
+        }, 1000);
+    }, []);
+
     const handleResetExecute = useCallback(() => {
         if (!file) {
             message.warning('Lütfen önce bir CSV dosyası seçin.');
@@ -955,15 +1005,41 @@ export default function PdksCompareTab() {
             okButtonProps: { danger: true },
             cancelText: 'İptal',
             onOk: async () => {
+                // Generate unique session ID for progress tracking
+                const sid = `rst_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                sessionIdRef.current = sid;
+
+                // Open log modal & reset state
+                setResetLogs([{ time: new Date().toLocaleTimeString('tr-TR'), msg: 'Başlatılıyor...', type: 'step' }]);
+                setResetProgress({ status: 'running', current_item: 0, total_items: 0 });
+                setLogModalOpen(true);
+                setExecuting(true);
+
+                // Start polling for progress
+                startProgressPolling(sid);
+
                 const formData = new FormData();
                 formData.append('file', file);
-                setExecuting(true);
                 try {
                     const res = await api.post('/system/health-check/pdks-full-reset-execute/', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                            'X-Reset-Session-Id': sid,
+                        },
+                        timeout: 1800000, // 30 min
                     });
                     setResetResults(res.data);
                     const s = res.data.summary || {};
+                    // Add final log entry
+                    setResetLogs((prev) => [
+                        ...prev,
+                        {
+                            time: new Date().toLocaleTimeString('tr-TR'),
+                            msg: `İşlem tamamlandı: ${s.success || 0} başarılı, ${s.skipped || 0} atlandı, ${s.failed || 0} hata`,
+                            type: (s.failed || 0) === 0 ? 'done' : 'error',
+                        },
+                    ]);
+                    setResetProgress((p) => ({ ...p, status: 'completed' }));
                     if ((s.failed || 0) === 0) {
                         message.success(`Tam reset tamamlandı: ${s.success || 0} başarılı, ${s.skipped || 0} atlandı.`);
                     } else {
@@ -974,13 +1050,22 @@ export default function PdksCompareTab() {
                         e.response?.data?.error ||
                         e.response?.data?.detail ||
                         e.message;
+                    setResetLogs((prev) => [
+                        ...prev,
+                        { time: new Date().toLocaleTimeString('tr-TR'), msg: `HATA: ${errMsg}`, type: 'error' },
+                    ]);
+                    setResetProgress((p) => ({ ...p, status: 'error' }));
                     message.error('Tam reset hatası: ' + errMsg);
                 } finally {
                     setExecuting(false);
+                    if (pollRef.current) {
+                        clearInterval(pollRef.current);
+                        pollRef.current = null;
+                    }
                 }
             },
         });
-    }, [file, resetPreview]);
+    }, [file, resetPreview, startProgressPolling]);
 
     // -----------------------------------------------------------------------
     // Export preview as TXT
@@ -3178,6 +3263,122 @@ export default function PdksCompareTab() {
                     background-color: #dbeafe !important;
                 }
             `}</style>
+
+            {/* ============================================================= */}
+            {/* Real-time Reset Log Modal                                      */}
+            {/* ============================================================= */}
+            <Modal
+                open={logModalOpen}
+                title={
+                    <div className="flex items-center gap-2">
+                        <CodeOutlined />
+                        <span>PDKS Tam Reset — Canlı İşlem Logu</span>
+                        {resetProgress?.status === 'running' && (
+                            <LoadingOutlined spin style={{ color: '#1677ff', marginLeft: 8 }} />
+                        )}
+                        {resetProgress?.status === 'completed' && (
+                            <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 8 }} />
+                        )}
+                        {resetProgress?.status === 'error' && (
+                            <CloseCircleOutlined style={{ color: '#ff4d4f', marginLeft: 8 }} />
+                        )}
+                    </div>
+                }
+                width={720}
+                footer={
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                            {resetProgress?.status === 'running' && resetProgress?.total_items > 0 && (
+                                <span>
+                                    İşleniyor: {resetProgress.current_item} / {resetProgress.total_items}
+                                    {' — '}
+                                    {Math.round((resetProgress.current_item / resetProgress.total_items) * 100)}%
+                                </span>
+                            )}
+                            {resetProgress?.status === 'completed' && (
+                                <span className="text-green-600 font-medium">
+                                    Tamamlandı: {resetProgress.success_count || 0} başarılı, {resetProgress.skip_count || 0} atlandı, {resetProgress.fail_count || 0} hata
+                                </span>
+                            )}
+                        </div>
+                        <Button
+                            onClick={() => setLogModalOpen(false)}
+                            disabled={resetProgress?.status === 'running'}
+                        >
+                            {resetProgress?.status === 'running' ? 'İşlem devam ediyor...' : 'Kapat'}
+                        </Button>
+                    </div>
+                }
+                closable={resetProgress?.status !== 'running'}
+                maskClosable={false}
+                onCancel={() => {
+                    if (resetProgress?.status !== 'running') setLogModalOpen(false);
+                }}
+            >
+                {/* Progress bar */}
+                {resetProgress?.status === 'running' && resetProgress?.total_items > 0 && (
+                    <div className="mb-3">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                                className="h-2 rounded-full transition-all duration-300"
+                                style={{
+                                    width: `${Math.round((resetProgress.current_item / resetProgress.total_items) * 100)}%`,
+                                    backgroundColor: '#1677ff',
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* Terminal-style log area */}
+                <div
+                    style={{
+                        background: '#1a1a2e',
+                        borderRadius: 8,
+                        padding: '12px 16px',
+                        height: 400,
+                        overflowY: 'auto',
+                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+                        fontSize: 12,
+                        lineHeight: '1.7',
+                    }}
+                >
+                    {resetLogs.map((entry, idx) => {
+                        const colors = {
+                            step: '#60a5fa',    // blue
+                            info: '#d1d5db',    // gray
+                            success: '#4ade80', // green
+                            warning: '#fbbf24', // yellow
+                            error: '#f87171',   // red
+                            done: '#34d399',    // emerald
+                        };
+                        const icons = {
+                            step: '▸',
+                            info: ' ',
+                            success: '✓',
+                            warning: '⚠',
+                            error: '✗',
+                            done: '★',
+                        };
+                        const color = colors[entry.type] || '#d1d5db';
+                        const icon = icons[entry.type] || ' ';
+                        return (
+                            <div key={idx} style={{ color, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                <span style={{ color: '#6b7280', marginRight: 8 }}>{entry.time}</span>
+                                <span style={{ marginRight: 6 }}>{icon}</span>
+                                {entry.msg}
+                            </div>
+                        );
+                    })}
+                    {resetProgress?.status === 'running' && (
+                        <div style={{ color: '#6b7280' }}>
+                            <LoadingOutlined spin style={{ marginRight: 6 }} />
+                            İşleniyor...
+                        </div>
+                    )}
+                    <div ref={logEndRef} />
+                </div>
+            </Modal>
         </div>
     );
 }
