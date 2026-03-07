@@ -31,6 +31,7 @@ import {
     SafetyOutlined,
     ReloadOutlined,
     EditOutlined,
+    DownloadOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -868,6 +869,251 @@ export default function PdksCompareTab() {
             },
         });
     }, [file, resetPreview]);
+
+    // -----------------------------------------------------------------------
+    // Export preview as TXT
+    // -----------------------------------------------------------------------
+
+    const handleExportPreviewTxt = useCallback(() => {
+        if (!resetPreview) return;
+        const s = resetPreview.summary || {};
+        const lines = [];
+        const sep = '='.repeat(80);
+        const sep2 = '-'.repeat(60);
+
+        lines.push(sep);
+        lines.push('PDKS TAM RESET — DRY-RUN RAPORU');
+        lines.push(`Tarih: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`);
+        lines.push(sep);
+        lines.push('');
+
+        // Summary
+        lines.push('ÖZET');
+        lines.push(sep2);
+        lines.push(`Eşleşen Çalışan       : ${s.matched_employees || 0}`);
+        lines.push(`Toplam Çalışan-Gün     : ${s.total_employee_days || 0}`);
+        lines.push(`Silinecek Attendance   : ${s.total_attendance_to_delete || 0}`);
+        lines.push(`Oluşturulacak Session  : ${s.total_csv_sessions_to_create || 0}`);
+        lines.push(`Silinecek Potansiyel OT: ${s.total_potential_ot_to_delete || 0}`);
+        if (s.total_broken_ot) lines.push(`Bozuk OT (İptal)      : ${s.total_broken_ot}`);
+        if (s.total_revised_ot) lines.push(`OT Revize (Düzeltme)   : ${s.total_revised_ot}`);
+        if (s.days_with_leave) lines.push(`İzinli Günler          : ${s.days_with_leave}`);
+        if (s.date_range?.length === 2) lines.push(`Tarih Aralığı          : ${formatDate(s.date_range[0])} — ${formatDate(s.date_range[1])}`);
+        lines.push('');
+
+        // Unmatched
+        if (resetPreview.unmatched_employees?.length > 0) {
+            lines.push('EŞLEŞMEYEN SİCİL NO\'LAR');
+            lines.push(sep2);
+            lines.push(resetPreview.unmatched_employees.join(', '));
+            lines.push('');
+        }
+
+        // DB employees not in CSV
+        if (resetPreview.db_employees_not_in_csv?.length > 0) {
+            lines.push('CSV\'DE OLMAYAN ÇALIŞANLAR (SİSTEMDE MEVCUT)');
+            lines.push(sep2);
+            for (const e of resetPreview.db_employees_not_in_csv) {
+                lines.push(`  ${e.employee_code} — ${e.employee_name} (${e.department_name || '-'})`);
+            }
+            lines.push('');
+        }
+
+        // Parse errors
+        if (resetPreview.parse_errors?.length > 0) {
+            lines.push('CSV PARSE HATALARI');
+            lines.push(sep2);
+            for (const err of resetPreview.parse_errors) {
+                lines.push(`  Satır ${err.row || '?'}: ${err.error || err}`);
+            }
+            lines.push('');
+        }
+
+        // Per-employee detail
+        if (resetPreview.preview?.length > 0) {
+            // Group by employee
+            const empMap = new Map();
+            for (const item of resetPreview.preview) {
+                if (!empMap.has(item.employee_id)) {
+                    empMap.set(item.employee_id, { ...item, days: [] });
+                }
+                empMap.get(item.employee_id).days.push(item);
+            }
+
+            lines.push(sep);
+            lines.push('DETAYLI ÇALIŞAN-GÜN RAPORU');
+            lines.push(sep);
+
+            for (const [, emp] of empMap) {
+                lines.push('');
+                lines.push(`${'#'.repeat(60)}`);
+                lines.push(`ÇALIŞAN: ${emp.employee_code} — ${emp.employee_name}`);
+                lines.push(`Departman: ${emp.department_name || '-'}`);
+                lines.push(`Gün Sayısı: ${emp.days.length}`);
+                lines.push(`${'#'.repeat(60)}`);
+
+                for (const day of emp.days.sort((a, b) => (a.work_date || '').localeCompare(b.work_date || ''))) {
+                    lines.push('');
+                    lines.push(`  ${sep2}`);
+                    lines.push(`  TARİH: ${formatDate(day.work_date)}`);
+                    lines.push(`  Aksiyon: ${day.action || '-'}`);
+                    lines.push(`  Değişiklik: ${day.has_changes ? 'EVET' : 'Hayır'}`);
+                    if (day.changes_summary) lines.push(`  Özet: ${day.changes_summary}`);
+
+                    // Before
+                    if (day.before) {
+                        const b = day.before;
+                        lines.push('');
+                        lines.push('  ── MEVCUT DURUM (SİLİNECEK) ──');
+                        lines.push(`    Attendance: ${b.attendance_count || 0}`);
+                        lines.push(`    Toplam   : ${b.total_hours || 0} sa`);
+                        lines.push(`    Normal   : ${b.normal_hours || 0} sa`);
+                        lines.push(`    Mesai    : ${b.overtime_hours || 0} sa`);
+                        lines.push(`    Mola     : ${b.break_minutes || 0} dk`);
+                        lines.push(`    Eksik    : ${b.missing_minutes || 0} dk`);
+                        if (b.sessions?.length > 0) {
+                            lines.push('    Oturumlar:');
+                            for (const sess of b.sessions) {
+                                lines.push(`      ${sess.check_in || '?'} — ${sess.check_out || '?'} [${sess.status || '?'}] kaynak:${sess.source || '?'} normal:${formatSeconds(sess.normal_seconds)} ot:${formatSeconds(sess.overtime_seconds)}`);
+                            }
+                        }
+                        if (b.potential_ot_count > 0) {
+                            lines.push(`    Potansiyel OT: ${b.potential_ot_count} adet`);
+                            if (b.potential_ot_details?.length) {
+                                for (const pot of b.potential_ot_details) {
+                                    lines.push(`      ${pot.start_time || '?'} — ${pot.end_time || '?'} (${formatSeconds(pot.duration_seconds)})`);
+                                }
+                            }
+                        }
+                    }
+
+                    // After
+                    if (day.after) {
+                        const a = day.after;
+                        lines.push('');
+                        lines.push('  ── YENİ DURUM (HESAPLANAN) ──');
+                        lines.push(`    Attendance: ${a.attendance_count || 0}`);
+                        lines.push(`    Toplam   : ${a.total_hours || 0} sa`);
+                        lines.push(`    Normal   : ${a.normal_hours || 0} sa`);
+                        lines.push(`    Mesai    : ${a.overtime_hours || 0} sa`);
+                        lines.push(`    Mola     : ${a.break_minutes || 0} dk`);
+                        lines.push(`    Eksik    : ${a.missing_minutes || 0} dk`);
+                        if (a.sessions?.length > 0) {
+                            lines.push('    Oturumlar:');
+                            for (const sess of a.sessions) {
+                                lines.push(`      ${sess.check_in || '?'} — ${sess.check_out || '?'} [${sess.status || '?'}] kaynak:${sess.source || '?'} normal:${formatSeconds(sess.normal_seconds)} ot:${formatSeconds(sess.overtime_seconds)}`);
+                            }
+                        }
+                        if (a.potential_ot_count > 0) {
+                            lines.push(`    Potansiyel OT: ${a.potential_ot_count} adet`);
+                            if (a.potential_ot_details?.length) {
+                                for (const pot of a.potential_ot_details) {
+                                    lines.push(`      ${pot.start_time || '?'} — ${pot.end_time || '?'} (${formatSeconds(pot.duration_seconds)})`);
+                                }
+                            }
+                        }
+                    }
+
+                    // CSV Sessions
+                    if (day.csv_sessions?.length > 0) {
+                        lines.push('');
+                        lines.push(`  ── CSV OTURUMLARI (${day.csv_session_count || day.csv_sessions.length}) ──`);
+                        for (const cs of day.csv_sessions) {
+                            lines.push(`    ${cs.check_in || '?'} — ${cs.check_out || 'AÇIK'}`);
+                        }
+                    }
+
+                    // Preserved OT
+                    if (day.preserved_ot_requests?.length > 0) {
+                        lines.push('');
+                        lines.push(`  ── KORUNAN OT TALEPLERİ (${day.preserved_ot_count || day.preserved_ot_requests.length}) ──`);
+                        for (const ot of day.preserved_ot_requests) {
+                            lines.push(`    #${ot.id} [${ot.status}] ${ot.start_time || '?'}-${ot.end_time || '?'} (${formatSeconds(ot.duration_seconds)}) — ${ot.reason || ''}`);
+                        }
+                    }
+
+                    // Broken OT
+                    if (day.broken_ot_requests?.length > 0) {
+                        lines.push('');
+                        lines.push(`  ── BOZUK OT (İPTAL EDİLECEK) (${day.broken_ot_count || day.broken_ot_requests.length}) ──`);
+                        for (const ot of day.broken_ot_requests) {
+                            lines.push(`    #${ot.id} [${ot.status}] ${ot.start_time || '?'}-${ot.end_time || '?'} (${formatSeconds(ot.duration_seconds)}) — ${ot.reason || ''}`);
+                        }
+                    }
+
+                    // Revised OT
+                    if (day.revised_ot_requests?.length > 0) {
+                        const changed = day.revised_ot_requests.filter(r => r.changed);
+                        if (changed.length > 0) {
+                            lines.push('');
+                            lines.push(`  ── REVİZE EDİLEN OT (${changed.length}) ──`);
+                            for (const ot of changed) {
+                                lines.push(`    #${ot.id} [${ot.status}]`);
+                                lines.push(`      Eski: ${ot.old_start || '?'}-${ot.old_end || '?'} (${formatSeconds(ot.old_duration)})`);
+                                lines.push(`      Yeni: ${ot.new_start || '?'}-${ot.new_end || '?'} (${formatSeconds(ot.new_duration)})`);
+                                if (ot.no_match) lines.push('      ⚠ Eşleşme bulunamadı — silinecek');
+                            }
+                        }
+                    }
+
+                    // Approved leaves
+                    if (day.approved_leaves?.length > 0) {
+                        lines.push('');
+                        lines.push(`  ── ONAYLANMIŞ İZİNLER ──`);
+                        for (const lv of day.approved_leaves) {
+                            lines.push(`    ${lv.request_type || lv.type || '-'}: ${lv.start_date || '?'} — ${lv.end_date || '?'} [${lv.status || '?'}]`);
+                        }
+                    }
+
+                    // Cardless entries
+                    if (day.approved_cardless_entries?.length > 0) {
+                        lines.push('');
+                        lines.push(`  ── KARTSIZ GİRİŞLER ──`);
+                        for (const ce of day.approved_cardless_entries) {
+                            lines.push(`    #${ce.id} ${ce.check_in_time || '?'}-${ce.check_out_time || '?'} — ${ce.reason || ''}`);
+                        }
+                    }
+
+                    // External duties
+                    if (day.external_duties?.length > 0) {
+                        lines.push('');
+                        lines.push(`  ── DIŞ GÖREVLER ──`);
+                        for (const ed of day.external_duties) {
+                            lines.push(`    #${ed.id} ${ed.start_time || '?'}-${ed.end_time || '?'} [${ed.status || '?'}] — ${ed.destination || ed.request_type_name || ''}`);
+                        }
+                    }
+
+                    // Health reports
+                    if (day.health_report_count > 0) {
+                        lines.push(`  Sağlık Raporu Attendance: ${day.health_report_count}`);
+                    }
+
+                    // Calculation logs
+                    if (day.calculation_logs?.length > 0) {
+                        lines.push('');
+                        lines.push('  ── HESAPLAMA LOGLARI ──');
+                        for (const log of day.calculation_logs) {
+                            lines.push(`    ${log}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        lines.push('');
+        lines.push(sep);
+        lines.push('RAPOR SONU');
+        lines.push(sep);
+
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pdks-dry-run-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        message.success('Dry-run raporu indirildi.');
+    }, [resetPreview]);
 
     // -----------------------------------------------------------------------
     // Upload props
@@ -2071,6 +2317,17 @@ export default function PdksCompareTab() {
                     {/* --- Preview Results --- */}
                     {resetPreview && !resetResults && (
                         <div ref={previewResultsRef} className="space-y-4">
+                            {/* Header with export button */}
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-base font-semibold m-0">Dry-Run Analiz Sonuçları</h4>
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    onClick={handleExportPreviewTxt}
+                                    size="small"
+                                >
+                                    TXT Rapor İndir
+                                </Button>
+                            </div>
                             {/* Summary stat cards */}
                             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
                                 <SummaryCard
@@ -2427,8 +2684,15 @@ export default function PdksCompareTab() {
                                 </div>
                             )}
 
-                            {/* Execute button */}
-                            <div className="flex justify-center pt-2">
+                            {/* Execute + Export buttons */}
+                            <div className="flex justify-center gap-3 pt-2">
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    size="large"
+                                    onClick={handleExportPreviewTxt}
+                                >
+                                    TXT Rapor İndir
+                                </Button>
                                 <Button
                                     type="primary"
                                     danger
