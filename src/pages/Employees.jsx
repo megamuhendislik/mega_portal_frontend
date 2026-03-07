@@ -1611,7 +1611,17 @@ const Employees = () => {
         const empTreeHasMatch = (emp) => {
             if (matchesSearch(emp)) return true;
             if (emp.children && emp.children.length > 0) {
-                return emp.children.some(child => empTreeHasMatch(child));
+                return emp.children.some(child => {
+                    // Child might be a department node (merged by head detection)
+                    if (child.employees !== undefined) {
+                        return deptHasMatch(child);
+                    }
+                    return empTreeHasMatch(child);
+                });
+            }
+            // Also check if this is a department node with employees array
+            if (emp.employees && emp.employees.length > 0) {
+                return emp.employees.some(sub => empTreeHasMatch(sub));
             }
             return false;
         };
@@ -1652,7 +1662,7 @@ const Employees = () => {
             const empData = getEmpData(emp.id);
             const hasChildren = (emp.children && emp.children.length > 0);
             const nodeKey = `emp-${parentKey}-${emp.id}`;
-            const isCollapsed = collapsedNodes[nodeKey];
+            const isCollapsed = (searchTerm || departmentFilter) ? false : collapsedNodes[nodeKey];
             const show = !searchTerm || empTreeHasMatch(emp);
 
             if (!show) return null;
