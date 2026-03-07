@@ -28,6 +28,7 @@ import {
     ExclamationTriangleIcon,
     RocketLaunchIcon,
     CreditCardIcon,
+    GiftIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -77,6 +78,9 @@ const STAGES = [
     { id: 44, name: 'Takvim Zenginleştirme & Ekip Timeline', icon: CalendarDaysIcon, color: 'lime', description: 'Takvim zenginleştirme ve ekip timeline testleri' },
     { id: 45, name: 'Birleşik OT Panel Backend', icon: ClockIcon, color: 'stone', description: 'Geçmiş tarihli assignment iptal kontrolü, PENDING request saat düzenleme (yönetici)' },
     { id: 46, name: 'Ek Mesai Talep Yolları', icon: ClipboardDocumentCheckIcon, color: 'rose', description: '28 test — create_from_attendance (POTENTIAL→PENDING dönüşüm, duplikat engeli, CANCELLED/REJECTED tekrar talep, OT yoksa engel, başka çalışan engeli, çift tıklama koruması), claim-potential (ID/attendance bazlı, overlap çakışma, farklı çalışan engeli, atama çakışma), claim INTENDED (başarılı talep, aktif talep engeli, EXPIRED/CANCELLED engeli), Cross-path edge cases (son POTENTIAL seçimi, auth kontrolü, parametre validasyonu, reason fallback)' },
+    { id: 47, name: 'Retroaktif Kayıt Bölme', icon: BoltIcon, color: 'violet', description: '16 test — _retroactive_split_records fonksiyonu, pre-shift/post-shift/3-yönlü bölme, SKIP_SOURCES kontrolü, deficit-fill ile post_split_dt hesaplama' },
+    { id: 48, name: 'Doğum Günü İzni', icon: GiftIcon, color: 'pink', description: '20 test — BirthdayLeaveEntitlement model, doğum ayı validasyonu, onay/red/iptal entitlement sync, birthday-balance endpoint, edge case (29 Şubat, birth_date yok)' },
+    { id: 49, name: 'Şirket Rehberi & İzin Durumu', icon: UserGroupIcon, color: 'sky', description: '16 test — Şirket rehberi izin durumu (yıllık/mazeret/doğum günü İzinde gösterimi), live-status ON_LEAVE entegrasyonu, saatli izin sona erdiğinde gerçek duruma geçiş, izin önceliği attendance üzerinde, PENDING izin filtreleme' },
 ];
 
 export default function SpecTestsTab() {
