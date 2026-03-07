@@ -110,6 +110,7 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
 // Live Employee Detail Modal
 const EmployeeDetailModal = ({ employee, onClose }) => {
     const navigate = useNavigate();
+    const { hasPermission } = useAuth();
     const [liveData, setLiveData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -237,6 +238,7 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
                 </div>
 
                 {/* Footer */}
+                {hasPermission('PAGE_EMPLOYEES') && (
                 <div className="px-4 pb-4 pt-1 shrink-0">
                     <button
                         onClick={() => { onClose(); navigate(`/employees/${employee.id}`); }}
@@ -245,6 +247,7 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
                         Tam Profili Görüntüle
                     </button>
                 </div>
+                )}
             </div>
         </div>,
         document.body
@@ -633,6 +636,7 @@ const OrganizationChart = () => {
     const [showEmployees, setShowEmployees] = useState(true); // Default ON to show hierarchy heads
     const [showTags, setShowTags] = useState(false); // Default OFF
     const [showDebug, setShowDebug] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
@@ -707,6 +711,45 @@ const OrganizationChart = () => {
         });
     };
 
+    // Filter out the specific "Admin" user from the tree
+    const filterAdminUser = (nodes) => {
+        if (!nodes) return [];
+        return nodes.reduce((acc, node) => {
+            // Check if this is the specific "Admin" employee (not a department/group)
+            const isAdminEmployee = !node.code && !node.employees && node.type !== 'group' && node.type !== 'department'
+                && node.name && node.name.toLowerCase() === 'admin';
+            if (isAdminEmployee) return acc;
+
+            const filtered = { ...node };
+            if (filtered.employees) {
+                filtered.employees = filterAdminUser(filtered.employees);
+            }
+            if (filtered.children) {
+                filtered.children = filterAdminUser(filtered.children);
+            }
+            acc.push(filtered);
+            return acc;
+        }, []);
+    };
+
+    // Fullscreen toggle
+    const toggleFullscreen = useCallback(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        if (!document.fullscreenElement) {
+            el.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    }, []);
+
+    // Listen for fullscreen changes
+    useEffect(() => {
+        const handler = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handler);
+        return () => document.removeEventListener('fullscreenchange', handler);
+    }, []);
+
     const fetchHierarchy = async () => {
         setLoading(true);
         try {
@@ -750,7 +793,8 @@ const OrganizationChart = () => {
             };
 
             const processedData = applyFlatteningToTree(data);
-            setTreeData(processedData);
+            const finalData = filterAdminUser(processedData);
+            setTreeData(finalData);
 
         } catch (err) {
             console.error('Error fetching hierarchy:', err);
@@ -880,14 +924,18 @@ const OrganizationChart = () => {
     const handleTouchEnd = () => setIsDragging(false);
 
 
-    // Wheel Zoom
-    const handleWheel = (e) => {
-        if (e.ctrlKey) {
+    // Wheel Zoom (no Ctrl needed) — attached as native listener for { passive: false }
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const handler = (e) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const delta = e.deltaY > 0 ? -0.05 : 0.05;
             setScale(prev => Math.min(Math.max(prev + delta, 0.15), 2));
-        }
-    };
+        };
+        el.addEventListener('wheel', handler, { passive: false });
+        return () => el.removeEventListener('wheel', handler);
+    }, []);
 
     if (loading) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
@@ -974,21 +1022,8 @@ const OrganizationChart = () => {
                         <span className="hidden sm:inline">{showDebug ? 'Debug Kapat' : 'Debug Aç'}</span>
                     </button>
 
-                    <button
-                        onClick={() => setShowTags(!showTags)}
-                        className={`
-                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap
-                            ${showTags
-                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                            }
-                        `}
-                    >
-                        <Building size={16} />
-                        <span className="hidden sm:inline">{showTags ? 'Etiketleri Gizle' : 'Etiketleri Göster'}</span>
-                    </button>
-
-                    {hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN') && (
+                    {/* Düzenle butonu — gizli tutuldu, kodu korunuyor */}
+                    {false && hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN') && (
                         <button
                             onClick={() => setIsEditMode(!isEditMode)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap ${isEditMode ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
@@ -1003,7 +1038,8 @@ const OrganizationChart = () => {
                         <span className="text-xs font-mono w-10 md:w-12 text-center">{(scale * 100).toFixed(0)}%</span>
                         <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18} /></button>
                         <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                        <button onClick={handleResetZoom} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600" title="Sıfırla"><Maximize size={18} /></button>
+                        <button onClick={handleResetZoom} className="p-1.5 md:p-2 hover:bg-slate-100 rounded text-slate-600" title="Sığdır"><ZoomOut size={14} className="opacity-50" /></button>
+                        <button onClick={toggleFullscreen} className={`p-1.5 md:p-2 hover:bg-slate-100 rounded ${isFullscreen ? 'text-blue-600' : 'text-slate-600'}`} title={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'}><Maximize size={18} /></button>
                     </div>
                 </div>
             </div>
@@ -1021,7 +1057,7 @@ const OrganizationChart = () => {
 
             <div
                 ref={containerRef}
-                className="card bg-slate-50/50 flex-1 h-[calc(100vh-90px)] min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner"
+                className={`card bg-slate-50/50 flex-1 ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-90px)]'} min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -1029,7 +1065,6 @@ const OrganizationChart = () => {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                onWheel={handleWheel}
             >
                 <div
                     ref={contentRef}
