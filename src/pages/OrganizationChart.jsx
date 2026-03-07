@@ -243,7 +243,7 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile }) => {
                         onClick={() => { onClose(); navigate(`/employees/${employee.id}`); }}
                         className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-sm hover:shadow-md transition-all"
                     >
-                        Tam Profili Görüntüle
+                        Mesai Takibini Görüntüle
                     </button>
                 </div>
                 )}
@@ -640,8 +640,9 @@ const OrganizationChart = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
     const [managerEditTarget, setManagerEditTarget] = useState(null); // { id, name } for ManagerEditModal
-    const { hasPermission } = useAuth();
+    const { hasPermission, user } = useAuth();
     const canReassign = hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN');
+    const [subordinateIds, setSubordinateIds] = useState(new Set());
 
     // Zoom & Pan State
     const [scale, setScale] = useState(0.5);
@@ -787,6 +788,11 @@ const OrganizationChart = () => {
 
     useEffect(() => {
         fetchHierarchy();
+        // Fetch subordinate IDs for profile button visibility
+        api.get('/employees/subordinates/').then(res => {
+            const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+            setSubordinateIds(new Set(data.map(e => e.id)));
+        }).catch(() => {});
     }, []);
 
     // Fit-to-screen: measure content via scrollWidth/scrollHeight (unaffected by CSS transforms)
@@ -972,7 +978,11 @@ const OrganizationChart = () => {
                 <EmployeeDetailModal
                     employee={selectedEmployee}
                     onClose={() => setSelectedEmployee(null)}
-                    canViewProfile={hasPermission('PAGE_EMPLOYEES')}
+                    canViewProfile={
+                        hasPermission('PAGE_EMPLOYEES') ||
+                        (user && selectedEmployee && user.id === selectedEmployee.id) ||
+                        (selectedEmployee && subordinateIds.has(selectedEmployee.id))
+                    }
                 />
             )}
 
