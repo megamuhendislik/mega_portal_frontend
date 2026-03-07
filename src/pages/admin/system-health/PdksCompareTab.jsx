@@ -95,11 +95,14 @@ function formatHours(h) {
 // ---------------------------------------------------------------------------
 
 const CATEGORY_CONFIG = {
-    MATCH:            { label: 'Eşleşiyor',         color: 'green',  icon: '✓' },
-    TIME_DIFF:        { label: 'Saat Farkı',         color: 'orange', icon: '⏱' },
-    SESSION_MISMATCH: { label: 'Oturum Uyumsuz',     color: 'red',    icon: '⚡' },
-    NO_SYSTEM_RECORD: { label: 'Sistemde Kayıt Yok', color: 'volcano', icon: '⚠' },
-    ABSENT_IN_SYSTEM: { label: 'Devamsız (ABSENT)',   color: 'purple', icon: '👤' },
+    MATCH:             { label: 'Eşleşiyor',         color: 'green',   icon: '✓' },
+    LEAVE_DAY:         { label: 'İzin Günü',          color: 'blue',    icon: '📋' },
+    PARTIAL_LEAVE:     { label: 'Kısmi İzin',         color: 'geekblue', icon: '📝' },
+    HEALTH_REPORT_DAY: { label: 'Sağlık Raporu',      color: 'cyan',    icon: '🏥' },
+    TIME_DIFF:         { label: 'Saat Farkı',         color: 'orange',  icon: '⏱' },
+    SESSION_MISMATCH:  { label: 'Oturum Uyumsuz',     color: 'red',     icon: '⚡' },
+    NO_SYSTEM_RECORD:  { label: 'Sistemde Kayıt Yok', color: 'volcano', icon: '⚠' },
+    ABSENT_IN_SYSTEM:  { label: 'Devamsız (ABSENT)',   color: 'purple',  icon: '👤' },
 };
 
 function getCategoryTag(cat) {
@@ -107,6 +110,18 @@ function getCategoryTag(cat) {
     if (!cfg) return <Tag>{cat || '-'}</Tag>;
     return <Tag color={cfg.color}>{cfg.icon} {cfg.label}</Tag>;
 }
+
+/** Source label mapping */
+const SOURCE_LABELS = {
+    CARD: 'Kart',
+    SPLIT: 'Bölünmüş',
+    AUTO_SPLIT: 'Oto-Bölünmüş',
+    DUTY: 'Görev/İzin',
+    HEALTH_REPORT: 'Sağlık Raporu',
+    HOSPITAL_VISIT: 'Hastane Ziyareti',
+    MANUAL: 'Manuel',
+    SYSTEM: 'Sistem',
+};
 
 /** Generate Turkish problem description for a record */
 function getProblemDescription(record) {
@@ -118,8 +133,30 @@ function getProblemDescription(record) {
     const has2359 = sessions.some(s => s.sys_check_out === '23:59:59');
     const csvCount = record.csv_session_count || 0;
     const sysCount = record.sys_session_count || 0;
+    const dutySessions = record.duty_sessions || [];
 
-    if (cat === 'ABSENT_IN_SYSTEM') {
+    if (cat === 'LEAVE_DAY') {
+        lines.push('Bu gün onaylı izin günü — sistemde DUTY (görev/izin) kaydı mevcut.');
+        lines.push(`CSV'de ${csvCount} kart okuyucu oturumu var ama izinli olduğu için CARD kaydı oluşturulmamış.`);
+        if (dutySessions.length > 0) {
+            const ds = dutySessions[0];
+            lines.push(`İzin kaydı: ${ds.check_in || '-'} — ${ds.check_out || '-'} (${SOURCE_LABELS[ds.source] || ds.source})`);
+        }
+    } else if (cat === 'PARTIAL_LEAVE') {
+        lines.push('Kısmi izin günü — hem CARD hem DUTY kaydı mevcut.');
+        lines.push('Kart kayıtları izin saatleriyle çakışmamak için kırpılmış, bu nedenle saat farkı beklenen bir durumdur.');
+        if (dutySessions.length > 0) {
+            const ds = dutySessions[0];
+            lines.push(`İzin kaydı: ${ds.check_in || '-'} — ${ds.check_out || '-'} (${SOURCE_LABELS[ds.source] || ds.source})`);
+        }
+    } else if (cat === 'HEALTH_REPORT_DAY') {
+        lines.push('Sağlık raporu günü — sistemde sağlık raporu veya hastane ziyareti kaydı mevcut.');
+        if (dutySessions.length > 0) {
+            for (const ds of dutySessions) {
+                lines.push(`${SOURCE_LABELS[ds.source] || ds.source}: ${ds.check_in || '-'} — ${ds.check_out || '-'}`);
+            }
+        }
+    } else if (cat === 'ABSENT_IN_SYSTEM') {
         lines.push('Kart okuyucu verileri sisteme ulaşmamış — çalışan ABSENT (devamsız) olarak işaretlenmiş.');
         lines.push(`CSV'de ${csvCount} oturum mevcut ama sistemde hiçbir giriş/çıkış kaydı yok.`);
     } else if (cat === 'NO_SYSTEM_RECORD') {
@@ -185,8 +222,11 @@ const SummaryCard = ({ title, value, color, icon, suffix }) => (
 const ExpandedRowContent = ({ record, onFix, fixing }) => {
     const sessions = record.sessions || [];
     const csvEvents = record.csv_events || [];
+    const dutySessions = record.duty_sessions || [];
+    const sourceBreakdown = record.source_breakdown || {};
     const problemLines = getProblemDescription(record);
     const preview = record.problem_category !== 'MATCH' ? getChangePreview(record) : null;
+    const isLeaveCategory = ['LEAVE_DAY', 'PARTIAL_LEAVE', 'HEALTH_REPORT_DAY'].includes(record.problem_category);
 
     const sessionColumns = [
         {
@@ -240,6 +280,13 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
             },
         },
         {
+            title: 'Kaynak',
+            dataIndex: 'sys_source',
+            key: 'source',
+            width: 90,
+            render: (v) => v ? <Tag color="blue" className="text-xs">{SOURCE_LABELS[v] || v}</Tag> : <span className="text-xs text-gray-300">-</span>,
+        },
+        {
             title: 'Durum',
             key: 'sess_status',
             width: 130,
@@ -257,9 +304,9 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
             {/* Problem description */}
             {problemLines && problemLines.length > 0 && (
                 <Alert
-                    type={record.problem_category === 'ABSENT_IN_SYSTEM' ? 'error' : record.problem_category === 'NO_SYSTEM_RECORD' ? 'error' : 'warning'}
+                    type={isLeaveCategory ? 'info' : record.problem_category === 'ABSENT_IN_SYSTEM' ? 'error' : record.problem_category === 'NO_SYSTEM_RECORD' ? 'error' : 'warning'}
                     showIcon
-                    icon={<ExclamationCircleOutlined />}
+                    icon={isLeaveCategory ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
                     message={
                         <span className="font-semibold">
                             Sorun: {CATEGORY_CONFIG[record.problem_category]?.label || record.problem_category}
@@ -362,6 +409,55 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
                 )}
             </div>
 
+            {/* Duty/Leave sessions */}
+            {dutySessions.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-semibold mb-2 text-blue-700">
+                        📋 Görev/İzin Kayıtları ({dutySessions.length})
+                        <span className="ml-2 text-xs font-normal text-gray-400">
+                            (CSV karşılaştırmasına dahil değil)
+                        </span>
+                    </h4>
+                    <Table
+                        dataSource={dutySessions}
+                        rowKey={(s) => s.attendance_id}
+                        size="small"
+                        pagination={false}
+                        bordered
+                        columns={[
+                            {
+                                title: 'Giriş',
+                                dataIndex: 'check_in',
+                                key: 'ci',
+                                width: 100,
+                                render: (v) => <span className="font-mono text-xs text-blue-700">{v || '-'}</span>,
+                            },
+                            {
+                                title: 'Çıkış',
+                                dataIndex: 'check_out',
+                                key: 'co',
+                                width: 100,
+                                render: (v) => <span className="font-mono text-xs text-blue-700">{v || '-'}</span>,
+                            },
+                            {
+                                title: 'Kaynak',
+                                dataIndex: 'source',
+                                key: 'source',
+                                width: 140,
+                                render: (v) => <Tag color="blue">{SOURCE_LABELS[v] || v}</Tag>,
+                            },
+                            {
+                                title: 'Durum',
+                                dataIndex: 'status',
+                                key: 'status',
+                                width: 120,
+                                render: (v) => <Tag>{v}</Tag>,
+                            },
+                        ]}
+                    />
+                </div>
+            )}
+
             {/* System summary + Raw events side by side */}
             <div className="flex flex-col lg:flex-row gap-4">
                 {/* System totals */}
@@ -388,6 +484,18 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
                                 <span className="text-gray-500">Fazla Mesai Talep:</span>
                                 <span className="ml-2 font-semibold">{record.overtime_request_count || 0}</span>
                             </div>
+                            {Object.keys(sourceBreakdown).length > 0 && (
+                                <div className="col-span-2 bg-blue-50 rounded p-2">
+                                    <span className="text-gray-500">Kaynak Dağılımı:</span>
+                                    <span className="ml-2">
+                                        {Object.entries(sourceBreakdown).map(([src, cnt]) => (
+                                            <Tag key={src} color="blue" className="text-xs ml-1">
+                                                {SOURCE_LABELS[src] || src}: {cnt}
+                                            </Tag>
+                                        ))}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -486,10 +594,13 @@ export default function PdksCompareTab() {
         if (!results?.matches) return null;
         const matches = results.matches;
         const total = matches.length;
-        const withDiff = matches.filter((m) => m.has_difference).length;
-        const matching = matches.filter((m) => m.has_attendance && !m.has_difference).length;
+        const leaveCats = ['LEAVE_DAY', 'PARTIAL_LEAVE', 'HEALTH_REPORT_DAY'];
+        const realDiffs = matches.filter((m) => m.has_difference && !leaveCats.includes(m.problem_category));
+        const withDiff = realDiffs.length;
+        const matching = matches.filter((m) => m.problem_category === 'MATCH').length;
+        const leaveDays = matches.filter((m) => leaveCats.includes(m.problem_category)).length;
         const noAttendance = matches.filter((m) => !m.has_attendance).length;
-        return { total, withDiff, matching, noAttendance };
+        return { total, withDiff, matching, leaveDays, noAttendance };
     }, [results]);
 
     const categorySummary = useMemo(() => {
@@ -500,7 +611,8 @@ export default function PdksCompareTab() {
         if (!results?.matches) return [];
         let data = [...results.matches];
         if (showOnlyDiff) {
-            data = data.filter((m) => m.has_difference || !m.has_attendance);
+            const expectedCats = ['MATCH', 'LEAVE_DAY', 'PARTIAL_LEAVE', 'HEALTH_REPORT_DAY'];
+            data = data.filter((m) => !expectedCats.includes(m.problem_category));
         }
         if (categoryFilter) {
             data = data.filter((m) => m.problem_category === categoryFilter);
@@ -1276,11 +1388,13 @@ export default function PdksCompareTab() {
                 render: (_, record) => {
                     const csvC = record.csv_session_count || 0;
                     const sysC = record.sys_session_count || 0;
+                    const dutyC = record.duty_session_count || 0;
                     const differs = csvC !== sysC;
+                    const isLeave = ['LEAVE_DAY', 'PARTIAL_LEAVE', 'HEALTH_REPORT_DAY'].includes(record.problem_category);
                     return (
-                        <Tooltip title={`CSV: ${csvC} oturum, Sistem: ${sysC} oturum`}>
-                            <span className={`text-xs font-mono ${differs ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
-                                {csvC}/{sysC}
+                        <Tooltip title={`CSV: ${csvC}, Kart: ${sysC}${dutyC > 0 ? `, Görev: ${dutyC}` : ''}`}>
+                            <span className={`text-xs font-mono ${isLeave ? 'text-blue-600' : differs ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
+                                {csvC}/{sysC}{dutyC > 0 ? <span className="text-blue-500">+{dutyC}</span> : ''}
                             </span>
                         </Tooltip>
                     );
@@ -1936,7 +2050,7 @@ export default function PdksCompareTab() {
                     {/* --- Step 2: Summary Cards --- */}
                     {results && summary && (
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                                 <SummaryCard
                                     title="Toplam Gün"
                                     value={summary.total}
@@ -1944,16 +2058,22 @@ export default function PdksCompareTab() {
                                     icon={<FileTextOutlined className="text-blue-500" />}
                                 />
                                 <SummaryCard
-                                    title="Fark Var"
-                                    value={summary.withDiff}
-                                    color="bg-red-50 border-red-200"
-                                    icon={<CloseCircleOutlined className="text-red-500" />}
-                                />
-                                <SummaryCard
                                     title="Eşleşme"
                                     value={summary.matching}
                                     color="bg-green-50 border-green-200"
                                     icon={<CheckCircleOutlined className="text-green-500" />}
+                                />
+                                <SummaryCard
+                                    title="İzin/Rapor Günü"
+                                    value={summary.leaveDays}
+                                    color="bg-cyan-50 border-cyan-200"
+                                    icon={<SafetyOutlined className="text-cyan-500" />}
+                                />
+                                <SummaryCard
+                                    title="Fark Var"
+                                    value={summary.withDiff}
+                                    color="bg-red-50 border-red-200"
+                                    icon={<CloseCircleOutlined className="text-red-500" />}
                                 />
                                 <SummaryCard
                                     title="Sistemde Kayıt Yok"
@@ -1991,7 +2111,7 @@ export default function PdksCompareTab() {
                             )}
 
                             {/* "Select all in category" quick action */}
-                            {categoryFilter && categoryFilter !== 'MATCH' && (
+                            {categoryFilter && !['MATCH', 'LEAVE_DAY', 'PARTIAL_LEAVE', 'HEALTH_REPORT_DAY'].includes(categoryFilter) && (
                                 <div className="flex items-center gap-2">
                                     <Button
                                         size="small"
@@ -2157,6 +2277,7 @@ export default function PdksCompareTab() {
                                 rowClassName={(record) => {
                                     if (!record.has_attendance) return 'pdks-row-missing';
                                     if (record.problem_category === 'ABSENT_IN_SYSTEM') return 'pdks-row-absent';
+                                    if (['LEAVE_DAY', 'PARTIAL_LEAVE', 'HEALTH_REPORT_DAY'].includes(record.problem_category)) return 'pdks-row-leave';
                                     if (record.has_difference) return 'pdks-row-diff';
                                     return 'pdks-row-match';
                                 }}
@@ -2859,6 +2980,12 @@ export default function PdksCompareTab() {
                 }
                 .pdks-row-absent:hover td {
                     background-color: #f3e8ff !important;
+                }
+                .pdks-row-leave td {
+                    background-color: #ecfeff !important;
+                }
+                .pdks-row-leave:hover td {
+                    background-color: #cffafe !important;
                 }
                 .pdks-row-system-only td {
                     background-color: #eff6ff !important;
