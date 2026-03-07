@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale, Zap } from 'lucide-react';
+import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale } from 'lucide-react';
 
 const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
@@ -649,38 +649,6 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 </div>
             )}
 
-            {/* 3. Stats Grid with Colors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Net Surplus Card */}
-                <div className={`p-6 rounded-[2rem] border flex flex-col justify-between transition-all hover:shadow-xl ${stats.isSurplus ? 'bg-emerald-50/50 border-emerald-100/50 hover:bg-emerald-50' : 'bg-white border-slate-200 shadow-lg shadow-slate-200'}`}>
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className={`p-2 rounded-xl ${stats.isSurplus ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 text-slate-500'}`}>
-                            <Scale size={20} />
-                        </div>
-                        <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Ayın Bakiyesi</span>
-                    </div>
-                    <div>
-                        <span className={`text-4xl font-black tracking-tighter ${stats.isSurplus ? 'text-emerald-600' : 'text-slate-300'}`}>
-                            {stats.isSurplus ? `+${stats.surplusHours}` : '0.0'}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400 ml-1 uppercase">sa</span>
-                    </div>
-                </div>
-
-                {/* Total Overtime Card (Raw) */}
-                <div className="bg-white p-6 rounded-[2rem] border border-indigo-100 shadow-lg shadow-indigo-100 flex flex-col justify-between hover:shadow-xl hover:shadow-indigo-500/10 transition-all">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/30">
-                            <Zap size={20} />
-                        </div>
-                        <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Toplam Ek Mesai</span>
-                    </div>
-                    <div>
-                        <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.overtimeHours}</span>
-                        <span className="text-xs font-bold text-slate-400 ml-1 uppercase">sa</span>
-                    </div>
-                </div>
-            </div>
 
         </div>
     );
