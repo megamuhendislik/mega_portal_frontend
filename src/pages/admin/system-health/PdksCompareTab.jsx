@@ -3128,9 +3128,9 @@ export default function PdksCompareTab() {
                                     message={`Denetim: ${resetResults.audit_summary.total_issues} sorun tespit edildi`}
                                     description={
                                         <div className="mt-1 text-xs">
-                                            {Object.entries(resetResults.audit_summary.categories || {}).map(([cat, count]) => (
+                                            {Object.entries(resetResults.audit_summary.categories || {}).map(([cat, val]) => (
                                                 <div key={cat}>
-                                                    <strong>{cat}:</strong> {count}
+                                                    <strong>{cat}:</strong> {typeof val === 'object' ? (val.count ?? JSON.stringify(val)) : val}
                                                 </div>
                                             ))}
                                         </div>
