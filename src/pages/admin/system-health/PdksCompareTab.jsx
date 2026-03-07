@@ -1237,6 +1237,182 @@ export default function PdksCompareTab() {
     }, [resetPreview]);
 
     // -----------------------------------------------------------------------
+    // Export compare results as TXT
+    // -----------------------------------------------------------------------
+
+    const handleExportCompareTxt = useCallback(() => {
+        if (!results?.matches) return;
+        const matches = results.matches;
+        const s = results.summary || {};
+        const catSummary = s.category_summary || {};
+        const lines = [];
+        const sep = '='.repeat(80);
+        const sep2 = '-'.repeat(60);
+
+        lines.push(sep);
+        lines.push('PDKS KARŞILAŞTIRMA RAPORU');
+        lines.push(`Tarih: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`);
+        lines.push(sep);
+        lines.push('');
+
+        // Summary
+        lines.push('ÖZET');
+        lines.push(sep2);
+        lines.push(`Toplam CSV Grubu       : ${s.total_csv_groups || 0}`);
+        lines.push(`Eşleşen Çalışan-Gün    : ${s.total_matched || 0}`);
+        lines.push(`Eşleşmeyen Sicil       : ${s.total_unmatched || 0}`);
+        lines.push(`Fark Olan              : ${s.with_difference || 0}`);
+        lines.push(`Sistemde Kayıt Yok     : ${s.without_attendance || 0}`);
+        lines.push('');
+
+        // Category breakdown
+        if (Object.keys(catSummary).length > 0) {
+            lines.push('KATEGORİ DAĞILIMI');
+            lines.push(sep2);
+            for (const [cat, count] of Object.entries(catSummary)) {
+                const cfg = CATEGORY_CONFIG[cat];
+                lines.push(`  ${cfg?.icon || '?'} ${cfg?.label || cat}: ${count}`);
+            }
+            lines.push('');
+        }
+
+        // Unmatched
+        if (results.unmatched_employees?.length > 0) {
+            lines.push('EŞLEŞMEYEN SİCİL NO\'LAR');
+            lines.push(sep2);
+            for (const e of results.unmatched_employees) {
+                const status = e.match_status === 'INACTIVE' ? 'İnaktif' : 'Bulunamadı';
+                const name = e.employee_name || e.csv_name || '';
+                lines.push(`  ${e.sicil_id} — ${status}${name ? ` (${name})` : ''}`);
+            }
+            lines.push('');
+        }
+
+        // Parse errors
+        if (results.parse_errors?.length > 0) {
+            lines.push('CSV PARSE HATALARI');
+            lines.push(sep2);
+            for (const err of results.parse_errors) {
+                lines.push(`  ${typeof err === 'string' ? err : `Satır ${err.row || '?'}: ${err.error || err}`}`);
+            }
+            lines.push('');
+        }
+
+        // Group by employee
+        const empMap = new Map();
+        for (const m of matches) {
+            if (!empMap.has(m.employee_id)) {
+                empMap.set(m.employee_id, {
+                    employee_code: m.employee_code,
+                    employee_name: m.employee_name,
+                    department_name: m.department_name,
+                    days: [],
+                });
+            }
+            empMap.get(m.employee_id).days.push(m);
+        }
+
+        lines.push(sep);
+        lines.push('DETAYLI ÇALIŞAN-GÜN RAPORU');
+        lines.push(sep);
+
+        for (const [, emp] of empMap) {
+            const empDays = emp.days.sort((a, b) => (a.work_date || '').localeCompare(b.work_date || ''));
+            const empMatches = empDays.filter(d => d.problem_category === 'MATCH').length;
+            const empDiffs = empDays.length - empMatches;
+
+            lines.push('');
+            lines.push('#'.repeat(60));
+            lines.push(`ÇALIŞAN: ${emp.employee_code} — ${emp.employee_name}`);
+            lines.push(`Departman: ${emp.department_name || '-'}`);
+            lines.push(`Gün Sayısı: ${empDays.length} (${empMatches} eşleşme, ${empDiffs} fark)`);
+            lines.push('#'.repeat(60));
+
+            for (const day of empDays) {
+                const cat = day.problem_category;
+                const catLabel = CATEGORY_CONFIG[cat]?.label || cat;
+                lines.push('');
+                lines.push(`  ${sep2}`);
+                lines.push(`  TARİH: ${formatDate(day.work_date)}  |  Kategori: ${catLabel}`);
+
+                // CSV vs System summary
+                lines.push(`  CSV Giriş : ${day.csv_check_in || '-'}  Çıkış: ${day.csv_check_out || '-'}  Toplam: ${formatHours(day.csv_total_hours || 0)}`);
+                lines.push(`  Sistem Giriş: ${day.sys_check_in || '-'}  Çıkış: ${day.sys_check_out || '-'}  Toplam: ${formatHours(day.sys_total_hours || 0)}  OT: ${formatHours(day.sys_overtime_hours || 0)}`);
+                lines.push(`  Oturum — CSV: ${day.csv_session_count || 0}, Sistem(Kart): ${day.card_session_count ?? day.sys_session_count ?? 0}${day.duty_session_count ? `, Görev: ${day.duty_session_count}` : ''}`);
+
+                // Source breakdown
+                if (day.source_breakdown && Object.keys(day.source_breakdown).length > 0) {
+                    const srcParts = Object.entries(day.source_breakdown).map(([src, cnt]) => `${SOURCE_LABELS[src] || src}:${cnt}`);
+                    lines.push(`  Kaynak Dağılımı: ${srcParts.join(', ')}`);
+                }
+
+                // Session comparison
+                const sessions = day.sessions || [];
+                if (sessions.length > 0) {
+                    lines.push('');
+                    lines.push('  ── OTURUM KARŞILAŞTIRMA ──');
+                    for (const sess of sessions) {
+                        let status = '';
+                        if (sess.only_in_csv) status = '[SADECE CSV]';
+                        else if (sess.only_in_system) status = '[SADECE SİSTEM]';
+                        else if (sess.check_in_differs || sess.check_out_differs) status = '[FARK VAR]';
+                        else status = '[EŞLEŞİYOR]';
+                        const srcTag = sess.sys_source ? ` (${SOURCE_LABELS[sess.sys_source] || sess.sys_source})` : '';
+                        lines.push(`    #${sess.session_index} ${status}${srcTag}`);
+                        lines.push(`      CSV    : ${sess.csv_check_in || '-'} — ${sess.csv_check_out || '-'}`);
+                        lines.push(`      Sistem : ${sess.sys_check_in || '-'} — ${sess.sys_check_out || '-'}`);
+                    }
+                }
+
+                // Duty sessions
+                const dutySessions = day.duty_sessions || [];
+                if (dutySessions.length > 0) {
+                    lines.push('');
+                    lines.push('  ── GÖREV/İZİN KAYITLARI ──');
+                    for (const ds of dutySessions) {
+                        lines.push(`    ${ds.check_in || '-'} — ${ds.check_out || '-'}  [${SOURCE_LABELS[ds.source] || ds.source}] (${ds.status})`);
+                    }
+                }
+
+                // OT requests
+                const otList = day.overtime_requests || [];
+                if (otList.length > 0) {
+                    lines.push('');
+                    lines.push(`  ── EK MESAİ TALEPLERİ (${otList.length}) ──`);
+                    for (const ot of otList) {
+                        lines.push(`    #${ot.id} [${ot.status}] ${formatSeconds(ot.duration_seconds)}`);
+                    }
+                }
+
+                // Raw CSV events
+                const csvEvents = day.csv_events || [];
+                if (csvEvents.length > 0) {
+                    lines.push('');
+                    lines.push(`  ── HAM CSV OLAYLARI (${csvEvents.length}) ──`);
+                    for (const ev of csvEvents) {
+                        const dir = ev.direction === 'GIRIS' || ev.direction === 'IN' ? 'GİRİŞ' : 'ÇIKIŞ';
+                        lines.push(`    ${formatTime(ev.time)} ${dir}  (${ev.event_id || '-'})`);
+                    }
+                }
+            }
+        }
+
+        lines.push('');
+        lines.push(sep);
+        lines.push('RAPOR SONU');
+        lines.push(sep);
+
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pdks-karsilastirma-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        message.success('Karşılaştırma raporu indirildi.');
+    }, [results]);
+
+    // -----------------------------------------------------------------------
     // Upload props
     // -----------------------------------------------------------------------
 
@@ -2107,6 +2283,14 @@ export default function PdksCompareTab() {
                                             Filtreyi Kaldır
                                         </Button>
                                     )}
+                                    <Button
+                                        size="small"
+                                        icon={<DownloadOutlined />}
+                                        onClick={handleExportCompareTxt}
+                                        className="ml-auto"
+                                    >
+                                        TXT Rapor İndir
+                                    </Button>
                                 </div>
                             )}
 
