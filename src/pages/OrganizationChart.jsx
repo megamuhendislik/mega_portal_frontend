@@ -108,9 +108,8 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
 
 // Simple Modal Component for Employee Details
 // Live Employee Detail Modal
-const EmployeeDetailModal = ({ employee, onClose }) => {
+const EmployeeDetailModal = ({ employee, onClose, canViewProfile }) => {
     const navigate = useNavigate();
-    const { hasPermission } = useAuth();
     const [liveData, setLiveData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -238,7 +237,7 @@ const EmployeeDetailModal = ({ employee, onClose }) => {
                 </div>
 
                 {/* Footer */}
-                {hasPermission('PAGE_EMPLOYEES') && (
+                {canViewProfile && (
                 <div className="px-4 pb-4 pt-1 shrink-0">
                     <button
                         onClick={() => { onClose(); navigate(`/employees/${employee.id}`); }}
@@ -974,6 +973,7 @@ const OrganizationChart = () => {
                 <EmployeeDetailModal
                     employee={selectedEmployee}
                     onClose={() => setSelectedEmployee(null)}
+                    canViewProfile={hasPermission('PAGE_EMPLOYEES')}
                 />
             )}
 
