@@ -32,7 +32,7 @@ const CompanyDirectory = () => {
     const [searchText, setSearchText] = useState('');
     const [selectedDepartment, setSelectedDepartment] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
-    const [viewMode, setViewMode] = useState('grid');
+    const [viewMode, setViewMode] = useState('list');
     const [summary, setSummary] = useState({ total: 0, inside: 0, remote: 0, on_leave: 0, outside: 0, left: 0 });
     const [lastRefresh, setLastRefresh] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
