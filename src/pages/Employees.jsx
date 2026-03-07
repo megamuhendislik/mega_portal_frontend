@@ -1576,11 +1576,35 @@ const Employees = () => {
 
     if (viewMode === 'list') {
         // Search filter for hierarchy
+        // Find employee data from employees array by id
+        const getEmpData = (empId) => {
+            const id = typeof empId === 'string' && empId.includes('-') ? null : empId;
+            return id ? employees.find(e => e.id === id) : null;
+        };
+
+        // Normalize Turkish characters for fuzzy/similarity matching
+        const normalize = (str) => (str || '').toLocaleLowerCase('tr-TR')
+            .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+            .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
         const searchLower = searchTerm.toLocaleLowerCase('tr-TR');
+        const searchNorm = normalize(searchTerm);
         const matchesSearch = (emp) => {
             if (!searchTerm) return true;
-            return (emp.name || '').toLocaleLowerCase('tr-TR').includes(searchLower) ||
-                (emp.title || '').toLocaleLowerCase('tr-TR').includes(searchLower);
+            const empData = getEmpData(emp.id);
+            const fields = [
+                emp.name, emp.title,
+                empData?.employee_code, empData?.email,
+                empData?.department_name || empData?.department?.name,
+                empData?.first_name, empData?.last_name,
+            ];
+            return fields.some(f => {
+                if (!f) return false;
+                const val = String(f).toLocaleLowerCase('tr-TR');
+                if (val.includes(searchLower)) return true;
+                // Normalized similarity (İ→i, ğ→g etc.)
+                if (normalize(f).includes(searchNorm)) return true;
+                return false;
+            });
         };
 
         // Check if an employee or any of its subordinates match the search
@@ -1601,6 +1625,11 @@ const Employees = () => {
                 return childMatch;
             }
             if (!searchTerm) return true;
+            // Department name itself matches search
+            const deptName = (dept.name || '').toLocaleLowerCase('tr-TR');
+            const deptCode = (dept.code || '').toLocaleLowerCase('tr-TR');
+            if (deptName.includes(searchLower) || normalize(dept.name).includes(searchNorm) ||
+                deptCode.includes(searchLower)) return true;
             // Check employees in this department (including their subordinate trees)
             const empMatch = (dept.employees || []).some(emp => {
                 if (emp.type === 'group' && emp.employees) {
@@ -1616,12 +1645,6 @@ const Employees = () => {
         // Toggle collapse
         const toggleNode = (nodeId) => {
             setCollapsedNodes(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
-        };
-
-        // Find employee data from employees array by id
-        const getEmpData = (empId) => {
-            const id = typeof empId === 'string' && empId.includes('-') ? null : empId;
-            return id ? employees.find(e => e.id === id) : null;
         };
 
         // Render a single employee row in the tree
