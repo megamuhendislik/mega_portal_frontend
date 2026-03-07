@@ -905,7 +905,15 @@ export default function PdksCompareTab() {
         if (resetPreview.unmatched_employees?.length > 0) {
             lines.push('EŞLEŞMEYEN SİCİL NO\'LAR');
             lines.push(sep2);
-            lines.push(resetPreview.unmatched_employees.join(', '));
+            for (const e of resetPreview.unmatched_employees) {
+                if (typeof e === 'string') {
+                    lines.push(`  ${e}`);
+                } else {
+                    const status = e.match_status === 'INACTIVE' ? 'İnaktif' : 'Bulunamadı';
+                    const name = e.employee_name || e.csv_name || '';
+                    lines.push(`  ${e.sicil_id} — ${status}${name ? ` (${name})` : ''}`);
+                }
+            }
             lines.push('');
         }
 
@@ -1052,6 +1060,7 @@ export default function PdksCompareTab() {
                                 lines.push(`      Eski: ${ot.old_start || '?'}-${ot.old_end || '?'} (${formatSeconds(ot.old_duration)})`);
                                 lines.push(`      Yeni: ${ot.new_start || '?'}-${ot.new_end || '?'} (${formatSeconds(ot.new_duration)})`);
                                 if (ot.no_match) lines.push('      ⚠ Eşleşme bulunamadı — silinecek');
+                                if (ot.inherited_from_day) lines.push('      ✓ Gün bazlı talep devri (mevcut talep gününe göre)');
                             }
                         }
                     }
@@ -1061,7 +1070,7 @@ export default function PdksCompareTab() {
                         lines.push('');
                         lines.push(`  ── ONAYLANMIŞ İZİNLER ──`);
                         for (const lv of day.approved_leaves) {
-                            lines.push(`    ${lv.request_type || lv.type || '-'}: ${lv.start_date || '?'} — ${lv.end_date || '?'} [${lv.status || '?'}]`);
+                            lines.push(`    ${lv.type_name || lv.request_type || lv.type || '-'}: ${lv.start_date || '?'} — ${lv.end_date || '?'}${lv.start_time ? ` (${lv.start_time}-${lv.end_time})` : ''} [${lv.category || '?'}]`);
                         }
                     }
 
