@@ -1632,7 +1632,11 @@ const Employees = () => {
             // Department filter check
             if (departmentFilter && dept.id !== parseInt(departmentFilter)) {
                 const childMatch = (dept.children || []).some(child => deptHasMatch(child));
+                console.log(`[deptHasMatch] dept="${dept.name}" id=${dept.id} !== filter=${departmentFilter}, children=${(dept.children||[]).length}, childMatch=${childMatch}`);
                 return childMatch;
+            }
+            if (departmentFilter && dept.id === parseInt(departmentFilter)) {
+                console.log(`[deptHasMatch] EXACT MATCH dept="${dept.name}" id=${dept.id} === filter=${departmentFilter}`);
             }
             if (!searchTerm) return true;
             // Department name itself matches search
@@ -1743,6 +1747,11 @@ const Employees = () => {
             const isFilterTarget = departmentFilter && dept.id === parseInt(departmentFilter);
             const filterMatch = insideFilteredDept || isFilterTarget;
 
+            if (departmentFilter) {
+                const hasMatch = deptHasMatch(dept);
+                console.log(`[renderDept] "${dept.name}" id=${dept.id}, filterMatch=${filterMatch}, insideFiltered=${insideFilteredDept}, isFilterTarget=${isFilterTarget}, deptHasMatch=${hasMatch}, children=${(dept.children||[]).length}, employees=${(dept.employees||[]).length}`);
+            }
+
             // Skip departments with no matching employees when filtering
             if (!filterMatch && (searchTerm || departmentFilter) && !deptHasMatch(dept)) return [];
 
@@ -1850,7 +1859,7 @@ const Employees = () => {
                         </div>
                         <select
                             value={departmentFilter}
-                            onChange={e => setDepartmentFilter(e.target.value)}
+                            onChange={e => { console.log(`[FILTER] selected value="${e.target.value}", departments:`, departments.find(d => String(d.id) === e.target.value)); setDepartmentFilter(e.target.value); }}
                             className="h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium text-sm min-w-[180px]"
                         >
                             <option value="">Tüm Departmanlar</option>
@@ -1899,6 +1908,7 @@ const Employees = () => {
                     </div>
 
                     {/* Hierarchical Tree View */}
+                    {departmentFilter && console.log(`[RENDER] departmentFilter="${departmentFilter}", hierarchyData roots:`, hierarchyData.map(d => ({id:d.id, name:d.name, children: (d.children||[]).length, employees: (d.employees||[]).length})))}
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                         {hierarchyData.length > 0 ? (
                             <div className="divide-y divide-slate-50">
