@@ -731,31 +731,6 @@ const OrganizationChart = () => {
         }, []);
     };
 
-    // Fullscreen toggle
-    const toggleFullscreen = useCallback(() => {
-        const el = containerRef.current;
-        if (!el) return;
-        if (!document.fullscreenElement) {
-            el.requestFullscreen().catch(() => {});
-        } else {
-            document.exitFullscreen().catch(() => {});
-        }
-    }, []);
-
-    // Listen for fullscreen changes + auto fit
-    useEffect(() => {
-        const handler = () => {
-            const fs = !!document.fullscreenElement;
-            setIsFullscreen(fs);
-            if (fs) {
-                // Fit chart after fullscreen transition settles
-                setTimeout(() => fitToScreen(), 200);
-            }
-        };
-        document.addEventListener('fullscreenchange', handler);
-        return () => document.removeEventListener('fullscreenchange', handler);
-    }, [fitToScreen]);
-
     const fetchHierarchy = async () => {
         setLoading(true);
         try {
@@ -853,6 +828,30 @@ const OrganizationChart = () => {
             return () => clearTimeout(timer);
         }
     }, [treeData, fitToScreen]);
+
+    // Fullscreen toggle
+    const toggleFullscreen = useCallback(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        if (!document.fullscreenElement) {
+            el.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    }, []);
+
+    // Listen for fullscreen changes + auto fit
+    useEffect(() => {
+        const handler = () => {
+            const fs = !!document.fullscreenElement;
+            setIsFullscreen(fs);
+            if (fs) {
+                setTimeout(() => fitToScreen(), 200);
+            }
+        };
+        document.addEventListener('fullscreenchange', handler);
+        return () => document.removeEventListener('fullscreenchange', handler);
+    }, [fitToScreen]);
 
     // Drag & Drop for employee reassignment (must be after fetchHierarchy definition)
     const dnd = useOrgChartDnD({ isEditMode: isEditMode && canReassign, onReassignComplete: fetchHierarchy });
