@@ -1658,7 +1658,7 @@ const Employees = () => {
         };
 
         // Render a single employee row in the tree
-        const renderEmployeeRow = (emp, depth = 0, parentKey = '') => {
+        const renderEmployeeRow = (emp, depth = 0, parentKey = '', insideFilteredDept = false) => {
             const empData = getEmpData(emp.id);
             const hasChildren = (emp.children && emp.children.length > 0);
             const nodeKey = `emp-${parentKey}-${emp.id}`;
@@ -1726,9 +1726,9 @@ const Employees = () => {
                 emp.children.forEach(child => {
                     // If child is a department
                     if (child.employees !== undefined) {
-                        rows.push(...renderDepartmentNode(child, depth + 1, nodeKey));
+                        rows.push(...renderDepartmentNode(child, depth + 1, nodeKey, insideFilteredDept));
                     } else {
-                        const childRows = renderEmployeeRow(child, depth + 1, nodeKey);
+                        const childRows = renderEmployeeRow(child, depth + 1, nodeKey, insideFilteredDept);
                         if (childRows) rows.push(...(Array.isArray(childRows) ? childRows : [childRows]));
                     }
                 });
@@ -1738,9 +1738,13 @@ const Employees = () => {
         };
 
         // Render a department node in the tree
-        const renderDepartmentNode = (dept, depth = 0, parentKey = '') => {
+        const renderDepartmentNode = (dept, depth = 0, parentKey = '', insideFilteredDept = false) => {
+            // Check if this department IS the filter target or is inside it
+            const isFilterTarget = departmentFilter && dept.id === parseInt(departmentFilter);
+            const filterMatch = insideFilteredDept || isFilterTarget;
+
             // Skip departments with no matching employees when filtering
-            if ((searchTerm || departmentFilter) && !deptHasMatch(dept)) return [];
+            if (!filterMatch && (searchTerm || departmentFilter) && !deptHasMatch(dept)) return [];
 
             const nodeKey = `dept-${parentKey}-${dept.id}`;
             const isCollapsed = (searchTerm || departmentFilter) ? false : collapsedNodes[nodeKey]; // Auto-expand when searching
@@ -1768,27 +1772,27 @@ const Employees = () => {
                     if (emp.type === 'group' && emp.employees) {
                         // Merged admin group — render each employee
                         emp.employees.forEach(subEmp => {
-                            const subRows = renderEmployeeRow(subEmp, depth + 1, nodeKey);
+                            const subRows = renderEmployeeRow(subEmp, depth + 1, nodeKey, filterMatch);
                             if (subRows) rows.push(...(Array.isArray(subRows) ? subRows : [subRows]));
                         });
                         // Render children departments of the merged group
                         (emp.children || []).forEach(child => {
                             if (child.employees !== undefined) {
-                                rows.push(...renderDepartmentNode(child, depth + 1, nodeKey));
+                                rows.push(...renderDepartmentNode(child, depth + 1, nodeKey, filterMatch));
                             } else {
-                                const childRows = renderEmployeeRow(child, depth + 1, nodeKey);
+                                const childRows = renderEmployeeRow(child, depth + 1, nodeKey, filterMatch);
                                 if (childRows) rows.push(...(Array.isArray(childRows) ? childRows : [childRows]));
                             }
                         });
                     } else {
-                        const empRows = renderEmployeeRow(emp, depth + 1, nodeKey);
+                        const empRows = renderEmployeeRow(emp, depth + 1, nodeKey, filterMatch);
                         if (empRows) rows.push(...(Array.isArray(empRows) ? empRows : [empRows]));
                     }
                 });
 
                 // Render child departments
                 (dept.children || []).forEach(child => {
-                    rows.push(...renderDepartmentNode(child, depth + 1, nodeKey));
+                    rows.push(...renderDepartmentNode(child, depth + 1, nodeKey, filterMatch));
                 });
             }
 
