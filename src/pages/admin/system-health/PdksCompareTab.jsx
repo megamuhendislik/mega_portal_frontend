@@ -1020,12 +1020,10 @@ export default function PdksCompareTab() {
 
                 const formData = new FormData();
                 formData.append('file', file);
+                formData.append('session_id', sid);
                 try {
                     const res = await api.post('/system/health-check/pdks-full-reset-execute/', formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                            'X-Reset-Session-Id': sid,
-                        },
+                        headers: { 'Content-Type': 'multipart/form-data' },
                         timeout: 1800000, // 30 min
                     });
                     setResetResults(res.data);
