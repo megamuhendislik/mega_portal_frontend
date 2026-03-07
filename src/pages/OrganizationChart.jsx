@@ -743,12 +743,19 @@ const OrganizationChart = () => {
         }
     }, []);
 
-    // Listen for fullscreen changes
+    // Listen for fullscreen changes + auto fit
     useEffect(() => {
-        const handler = () => setIsFullscreen(!!document.fullscreenElement);
+        const handler = () => {
+            const fs = !!document.fullscreenElement;
+            setIsFullscreen(fs);
+            if (fs) {
+                // Fit chart after fullscreen transition settles
+                setTimeout(() => fitToScreen(), 200);
+            }
+        };
         document.addEventListener('fullscreenchange', handler);
         return () => document.removeEventListener('fullscreenchange', handler);
-    }, []);
+    }, [fitToScreen]);
 
     const fetchHierarchy = async () => {
         setLoading(true);
@@ -925,6 +932,7 @@ const OrganizationChart = () => {
 
 
     // Wheel Zoom (no Ctrl needed) — attached as native listener for { passive: false }
+    // Re-runs when loading completes so containerRef.current is available
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -935,7 +943,7 @@ const OrganizationChart = () => {
         };
         el.addEventListener('wheel', handler, { passive: false });
         return () => el.removeEventListener('wheel', handler);
-    }, []);
+    }, [loading, treeData]);
 
     if (loading) return <div className="p-8 text-center text-slate-500">Yükleniyor...</div>;
 
@@ -1057,7 +1065,7 @@ const OrganizationChart = () => {
 
             <div
                 ref={containerRef}
-                className={`card bg-slate-50/50 flex-1 ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-90px)]'} min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner`}
+                className={`card flex-1 ${isFullscreen ? 'h-screen bg-white' : 'h-[calc(100vh-90px)] bg-slate-50/50'} min-h-[400px] sm:min-h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-200 rounded-xl touch-none shadow-inner`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
