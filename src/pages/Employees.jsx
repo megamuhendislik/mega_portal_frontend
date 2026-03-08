@@ -1709,7 +1709,7 @@ const Employees = () => {
                                 {(!empData?.is_admin || hasPermission('SYSTEM_FULL_ACCESS')) && (
                                     <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
                                 )}
-                                {hasPermission('PAGE_EMPLOYEES') && empData && !empData.is_admin && (
+                                {hasPermission('SENSITIVE_DATA_CHANGE') && empData && !empData.is_admin && (
                                     <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                                 )}
                             </>
@@ -1810,7 +1810,7 @@ const Employees = () => {
                             <p className="text-slate-500 mt-1 flex items-center gap-2"><Network size={16} /> Hiyerarşik Görünüm</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            {hasPermission('PAGE_EMPLOYEES') && (
+                            {hasPermission('EMPLOYEE_UPDATE') && (
                                 <button
                                     onClick={() => setShowSettings(!showSettings)}
                                     className={`
@@ -1826,7 +1826,7 @@ const Employees = () => {
                                 </button>
                             )}
 
-                            {hasPermission('PAGE_EMPLOYEES') && (
+                            {hasPermission('EMPLOYEE_UPDATE') && (
                                 <button
                                     onClick={handleAddNew}
                                     className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
@@ -2036,8 +2036,8 @@ const Employees = () => {
                                     <StepPersonal
                                         formData={formData}
                                         handleChange={handleInputChange}
-                                        canEditSensitive={hasPermission('PAGE_EMPLOYEES')}
-                                        canChangePassword={hasPermission('PAGE_EMPLOYEES')}
+                                        canEditSensitive={hasPermission('SENSITIVE_DATA_CHANGE')}
+                                        canChangePassword={hasPermission('SENSITIVE_DATA_CHANGE')}
                                     />
                                 </section>
 
@@ -2062,7 +2062,7 @@ const Employees = () => {
                                 </section>
 
                                 {/* Section 5: Permissions */}
-                                {hasPermission('SYSTEM_FULL_ACCESS') && (
+                                {hasPermission('SENSITIVE_DATA_CHANGE') && (
                                     <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
                                         <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />
                                     </section>
@@ -2099,13 +2099,13 @@ const Employees = () => {
                                         </div>
                                     </div>
                                 )}
-                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={true} canChangePassword={true} />}
+                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={hasPermission('SENSITIVE_DATA_CHANGE')} canChangePassword={hasPermission('SENSITIVE_DATA_CHANGE')} />}
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} showManagerValidation={showManagerValidation} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
                                 {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
-                                {currentStep === 6 && hasPermission('SYSTEM_FULL_ACCESS') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
-                                {currentStep === 6 && !hasPermission('SYSTEM_FULL_ACCESS') && (
+                                {currentStep === 6 && hasPermission('SENSITIVE_DATA_CHANGE') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
+                                {currentStep === 6 && !hasPermission('SENSITIVE_DATA_CHANGE') && (
                                     <div className="flex flex-col items-center justify-center h-full p-4 md:p-10 text-center animate-fade-in">
                                         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400"><Key size={32} /></div>
                                         <h3 className="text-xl font-bold text-slate-700">Yetkilendirme Erişimi Kısıtlı</h3>

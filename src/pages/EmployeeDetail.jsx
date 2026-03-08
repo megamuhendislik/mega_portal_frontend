@@ -18,11 +18,11 @@ const EmployeeDetail = () => {
     const [targetIsAdmin, setTargetIsAdmin] = useState(false);
 
     const isCurrentUserAdmin = hasPermission('SYSTEM_FULL_ACCESS');
-    // Admin çalışanları sadece adminler düzenleyebilir
-    const canEdit = hasPermission('PAGE_EMPLOYEES') && (!targetIsAdmin || isCurrentUserAdmin);
-    const canEditSensitive = canEdit;
-    const canChangePassword = canEdit;
-    const canManageRoles = hasPermission('SYSTEM_FULL_ACCESS');
+    // 3 katmanlı yetki modeli: PAGE_EMPLOYEES (görüntüle) → EMPLOYEE_UPDATE (düzenle) → SENSITIVE_DATA_CHANGE (hassas)
+    const canEdit = hasPermission('EMPLOYEE_UPDATE') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canEditSensitive = hasPermission('SENSITIVE_DATA_CHANGE') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canChangePassword = hasPermission('SENSITIVE_DATA_CHANGE') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canManageRoles = hasPermission('SENSITIVE_DATA_CHANGE') && (!targetIsAdmin || isCurrentUserAdmin);
 
     // Data Sources
     const [departments, setDepartments] = useState([]);
@@ -264,7 +264,7 @@ const EmployeeDetail = () => {
                         </p>
                     </div>
                 </div>
-                {targetIsAdmin && !isCurrentUserAdmin && hasPermission('PAGE_EMPLOYEES') && (
+                {targetIsAdmin && !isCurrentUserAdmin && hasPermission('EMPLOYEE_UPDATE') && (
                     <div className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-medium border border-red-200">
                         <Shield size={16} />
                         Admin kullanıcı — sadece adminler düzenleyebilir
