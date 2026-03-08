@@ -1854,20 +1854,9 @@ const Employees = () => {
                             className="h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium text-sm min-w-[180px]"
                         >
                             <option value="">Tüm Departmanlar</option>
-                            {(() => {
-                                // Extract departments from hierarchy tree (only shows accessible departments)
-                                const extractDepts = (nodes) => {
-                                    const result = [];
-                                    (nodes || []).forEach(d => {
-                                        result.push({ id: d.id, name: d.name });
-                                        if (d.children) result.push(...extractDepts(d.children));
-                                    });
-                                    return result;
-                                };
-                                return extractDepts(hierarchyData)
-                                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'))
-                                    .map(d => <option key={d.id} value={d.id}>{d.name}</option>);
-                            })()}
+                            {departments.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
                         </select>
                         {(searchTerm || departmentFilter) && (
                             <button
