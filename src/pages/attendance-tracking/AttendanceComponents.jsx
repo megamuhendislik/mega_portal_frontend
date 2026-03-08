@@ -213,11 +213,6 @@ export const EmployeeAttendanceRow = ({
                 )}
             </td>
 
-            {/* İşlemler */}
-            <td className="py-3.5 px-4">
-                <div className="flex items-center justify-end gap-2">
-                </div>
-            </td>
         </tr>
 
         </>
@@ -291,7 +286,6 @@ export const HierarchyGroupRow = ({
                     <span className="text-[11px] text-emerald-400 font-semibold">ort. {formatMinutes(weeklyAvg.overtime)}/hft fazla</span>
                 ) : null}
             </td>
-            <td className="py-2.5 px-3" />
         </tr>
     );
 };

@@ -821,7 +821,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <th colSpan="3" className="p-1.5 text-center">
                                     <span className="text-[9px] font-bold text-violet-500 uppercase tracking-[0.12em] bg-violet-50/80 px-2.5 py-0.5 rounded-full border border-violet-100/80">Aylık Birikimli</span>
                                 </th>
-                                <th className="p-1.5 text-right pr-5"></th>
                             </tr>
                             {/* Column headers */}
                             <tr className="border-b border-slate-200/60 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -833,14 +832,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <th className="py-2.5 px-3 text-center w-24">Çalışma</th>
                                 <th className="py-2.5 px-3 text-center w-24">F. Mesai</th>
                                 <th className="py-2.5 px-3 text-center w-32">Net Durum</th>
-                                <th className="py-2.5 px-3 text-right w-44">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {loading ? (
-                                <tr><td colSpan="9" className="p-12 text-center text-slate-400 animate-pulse">Yükleniyor...</td></tr>
+                                <tr><td colSpan="8" className="p-12 text-center text-slate-400 animate-pulse">Yükleniyor...</td></tr>
                             ) : fetchError ? (
-                                <tr><td colSpan="9" className="p-12 text-center">
+                                <tr><td colSpan="8" className="p-12 text-center">
                                     <div className="text-red-500 font-semibold mb-2">{fetchError}</div>
                                     <button onClick={handleRefresh} className="text-sm text-indigo-600 hover:text-indigo-800 font-bold">Tekrar Dene</button>
                                 </td></tr>
@@ -849,13 +847,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 (() => {
                                     const mergedData = getMergedHierarchy();
                                     return mergedData.length === 0
-                                        ? <tr><td colSpan="9" className="p-12 text-center text-slate-400">Veri bulunamadı.</td></tr>
+                                        ? <tr><td colSpan="8" className="p-12 text-center text-slate-400">Veri bulunamadı.</td></tr>
                                         : renderHierarchyRows(mergedData);
                                 })()
                             ) : (
                                 /* FLAT LIST MODE */
                                 sortedStats.length === 0 ? (
-                                    <tr><td colSpan="9" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
+                                    <tr><td colSpan="8" className="p-12 text-center text-slate-400">Görüntülenecek veri bulunamadı.</td></tr>
                                 ) : (
                                     sortedStats.map(item => (
                                         <EmployeeAttendanceRow
