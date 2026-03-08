@@ -894,29 +894,27 @@ const OrganizationChart = () => {
             setTreeData(finalData);
 
             // Diagnostic: compare tree count with total employees
-            try {
-                const empRes = await api.get('/employees/?page_size=1');
-                const apiTotal = empRes.data.count || (Array.isArray(empRes.data) ? empRes.data.length : 0);
-                const collectIds = (nodes) => {
-                    const ids = new Set();
-                    const walk = (n) => {
-                        if (n.id && !n.code && n.type !== 'group' && n.type !== 'department') ids.add(n.id);
-                        if (n.employees) n.employees.forEach(walk);
-                        if (n.children) n.children.forEach(walk);
-                    };
-                    nodes.forEach(walk);
-                    return ids;
+            console.warn('[OrgChart] Diagnostic başladı...');
+            const collectIds = (nodes) => {
+                const ids = new Set();
+                const walk = (n) => {
+                    if (n.id && !n.code && n.type !== 'group' && n.type !== 'department') ids.add(n.id);
+                    if (n.employees) n.employees.forEach(walk);
+                    if (n.children) n.children.forEach(walk);
                 };
-                const rawIds = collectIds(response.data || []);
-                const treeIds = collectIds(finalData);
-                if (apiTotal !== treeIds.size) {
-                    console.info(`[OrgChart Diagnostic] API toplam: ${apiTotal}, Ham hierarchy: ${rawIds.size}, Filtre sonrası tree: ${treeIds.size}, Fark: ${apiTotal - treeIds.size}`);
-                    // Find IDs in raw but not in final tree
-                    const filtered = [...rawIds].filter(id => !treeIds.has(id));
-                    if (filtered.length > 0) console.info('[OrgChart] Frontend filtrelenen ID\'ler:', filtered);
-                    console.info(`[OrgChart] Backend hierarchy'de olmayan: ${apiTotal - rawIds.size} kişi (ROOT_FUNC/Fonksiyonel dept veya departmansız)`);
-                }
-            } catch { /* diagnostic only */ }
+                nodes.forEach(walk);
+                return ids;
+            };
+            const rawIds = collectIds(response.data || []);
+            const treeIds = collectIds(finalData);
+            console.warn(`[OrgChart] Ham hierarchy: ${rawIds.size} kişi, Filtre sonrası: ${treeIds.size} kişi`);
+            const filtered = [...rawIds].filter(id => !treeIds.has(id));
+            if (filtered.length > 0) console.warn('[OrgChart] Frontend filtrelenen ID\'ler:', filtered);
+            api.get('/employees/?page_size=1').then(empRes => {
+                const apiTotal = empRes.data.count || 0;
+                console.warn(`[OrgChart] Employees API toplam: ${apiTotal}, Tree: ${treeIds.size}, Fark: ${apiTotal - treeIds.size}`);
+                console.warn(`[OrgChart] Backend hierarchy'de olmayan: ${apiTotal - rawIds.size} kişi`);
+            }).catch(e => console.warn('[OrgChart] Employees API hatası:', e.message));
 
         } catch (err) {
             console.error('Error fetching hierarchy:', err);
