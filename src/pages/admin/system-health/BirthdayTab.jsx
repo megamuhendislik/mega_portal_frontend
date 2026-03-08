@@ -150,8 +150,8 @@ export default function BirthdayTab() {
                                     contentStyle={{ borderRadius: 8, fontSize: 12 }}
                                 />
                                 <Bar dataKey="count" name="Doğum Günü" radius={[4, 4, 0, 0]}>
-                                    {(stats?.monthly_distribution || []).map((entry, i) => (
-                                        <Cell key={i} fill={entry.month === selectedMonth ? '#ec4899' : '#fce7f3'} />
+                                    {(stats?.monthly_distribution || []).map((entry) => (
+                                        <Cell key={`month-${entry.month}`} fill={entry.month === selectedMonth ? '#ec4899' : '#fce7f3'} />
                                     ))}
                                 </Bar>
                                 <Bar dataKey="leave_used" name="İzin Kullanıldı" fill="#10b981" radius={[4, 4, 0, 0]} />
