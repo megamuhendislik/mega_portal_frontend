@@ -776,7 +776,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     employees={secondaryTeam.map(e => ({
                         id: e.id,
                         name: `${e.first_name} ${e.last_name}`,
-                        department: e.department || '',
+                        department: typeof e.department === 'object' ? e.department?.name : (e.department || ''),
                     }))}
                     onRefresh={handleRefresh}
                 />
@@ -906,7 +906,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             </div>
                                             <div>
                                                 <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
-                                                {emp.department && <span className="text-[11px] text-slate-400 ml-2">{emp.department}</span>}
+                                                {emp.department && <span className="text-[11px] text-slate-400 ml-2">{typeof emp.department === 'object' ? emp.department.name : emp.department}</span>}
                                             </div>
                                             {otTotal > 0 && (
                                                 <span className="text-[10px] font-bold text-amber-600 tabular-nums bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
@@ -960,7 +960,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
                                                     <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">Vekalet</span>
-                                                    {emp.department && <span className="text-xs text-slate-500">{emp.department}</span>}
+                                                    {emp.department && <span className="text-xs text-slate-500">{typeof emp.department === 'object' ? emp.department.name : emp.department}</span>}
                                                 </div>
                                             </div>
                                         ))}

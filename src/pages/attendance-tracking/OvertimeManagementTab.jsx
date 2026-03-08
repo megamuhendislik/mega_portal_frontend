@@ -421,7 +421,7 @@ export default function OvertimeManagementTab({ employees, onRefresh }) {
     if (!employees?.length) return [];
     return employees.map(e => ({
       value: e.id,
-      label: `${e.name}${e.department ? ` — ${e.department}` : ''}`,
+      label: `${e.name}${e.department ? ` — ${typeof e.department === 'object' ? e.department.name : e.department}` : ''}`,
     }));
   }, [employees]);
 
@@ -640,7 +640,7 @@ export default function OvertimeManagementTab({ employees, onRefresh }) {
                           {selectedEmployee?.name || 'Çalışan'}
                         </h3>
                         <p className="text-[11px] text-slate-500 truncate">
-                          {selectedEmployee?.department || ''}
+                          {typeof selectedEmployee?.department === 'object' ? selectedEmployee.department.name : (selectedEmployee?.department || '')}
                         </p>
                       </div>
                     </div>
