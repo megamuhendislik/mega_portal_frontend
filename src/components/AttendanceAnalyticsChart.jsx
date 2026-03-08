@@ -445,8 +445,13 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                         avg_missing: w.missing || 0,
                         avg_break: w.break || 0,
                         // Weekly totals (lines)
-                        total_work: w.total_normal ?? parseFloat(((w.normal || 0) * (w.day_count || 1)).toFixed(1)),
-                        total_ot: w.total_overtime ?? parseFloat(((w.overtime || 0) * (w.day_count || 1)).toFixed(1)),
+                        total_work: parseFloat((
+                            (w.total_normal ?? (w.normal || 0) * (w.day_count || 1)) +
+                            (w.total_overtime ?? (w.overtime || 0) * (w.day_count || 1))
+                        ).toFixed(1)),
+                        total_ot: parseFloat((
+                            w.total_overtime ?? (w.overtime || 0) * (w.day_count || 1)
+                        ).toFixed(1)),
                     })));
                 }
             } catch (err) {
@@ -476,19 +481,19 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Breaks toggle (weekly + monthly) */}
                     {scope !== 'YEARLY' && (
-                        <label className="flex items-center cursor-pointer">
+                        <label className="flex items-center cursor-pointer relative">
                             <input type="checkbox" className="sr-only peer" checked={showBreaks} onChange={(e) => setShowBreaks(e.target.checked)} />
-                            <div className="w-8 h-4.5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-amber-400 relative"></div>
-                            <span className="ml-1.5 text-[10px] font-bold text-slate-500">Mola</span>
+                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-400"></div>
+                            <span className="ml-2 text-[10px] font-bold text-slate-500">Mola</span>
                         </label>
                     )}
 
                     {/* Totals toggle (monthly only) */}
                     {scope === 'MONTHLY' && (
-                        <label className="flex items-center cursor-pointer">
+                        <label className="flex items-center cursor-pointer relative">
                             <input type="checkbox" className="sr-only peer" checked={showTotals} onChange={(e) => setShowTotals(e.target.checked)} />
-                            <div className="w-8 h-4.5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-indigo-500 relative"></div>
-                            <span className="ml-1.5 text-[10px] font-bold text-slate-500">Toplam</span>
+                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+                            <span className="ml-2 text-[10px] font-bold text-slate-500">Toplam</span>
                         </label>
                     )}
 
