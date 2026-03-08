@@ -893,7 +893,7 @@ const OrganizationChart = () => {
             const finalData = filterAdminUser(processedData);
             setTreeData(finalData);
 
-            // Diagnostic: compare tree count with total employees
+            // Diagnostic: find counting bug
             console.warn('[OrgChart] Diagnostic başladı...');
             const collectIds = (nodes) => {
                 const ids = new Set();
@@ -905,16 +905,26 @@ const OrganizationChart = () => {
                 nodes.forEach(walk);
                 return ids;
             };
-            const rawIds = collectIds(response.data || []);
             const treeIds = collectIds(finalData);
-            console.warn(`[OrgChart] Ham hierarchy: ${rawIds.size} kişi, Filtre sonrası: ${treeIds.size} kişi`);
-            const filtered = [...rawIds].filter(id => !treeIds.has(id));
-            if (filtered.length > 0) console.warn('[OrgChart] Frontend filtrelenen ID\'ler:', filtered);
-            api.get('/employees/?page_size=1').then(empRes => {
-                const apiTotal = empRes.data.count || 0;
-                console.warn(`[OrgChart] Employees API toplam: ${apiTotal}, Tree: ${treeIds.size}, Fark: ${apiTotal - treeIds.size}`);
-                console.warn(`[OrgChart] Backend hierarchy'de olmayan: ${apiTotal - rawIds.size} kişi`);
-            }).catch(e => console.warn('[OrgChart] Employees API hatası:', e.message));
+            // Compare with countEmployeesRecursive
+            const rootNode = finalData[0];
+            if (rootNode) {
+                const counted = countEmployeesRecursive(rootNode);
+                console.warn(`[OrgChart] collectIds: ${treeIds.size}, countEmployeesRecursive: ${counted.total}, Fark: ${treeIds.size - counted.total}`);
+                // Deep dive: per-department counting
+                const checkDept = (node, path) => {
+                    const ids = collectIds([node]);
+                    const cnt = countEmployeesRecursive(node);
+                    if (ids.size !== cnt.total) {
+                        console.warn(`[OrgChart] FARK: ${path} → collectIds=${ids.size}, count=${cnt.total}, fark=${ids.size - cnt.total}`);
+                    }
+                    if (node.children) node.children.forEach(c => checkDept(c, `${path}/${c.name || c.title || c.code || c.id}`));
+                    if (node.employees) node.employees.forEach(e => {
+                        if (e.type === 'group' || e.employees || e.code) checkDept(e, `${path}/${e.title || e.name || e.id}`);
+                    });
+                };
+                checkDept(rootNode, rootNode.name || rootNode.code);
+            }
 
         } catch (err) {
             console.error('Error fetching hierarchy:', err);
