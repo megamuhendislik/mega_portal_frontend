@@ -533,7 +533,7 @@ const helpContent = [
             { type: 'warning', text: 'Çalışan silme işlemi geri alınamaz ve ilişkili tüm kayıtları etkiler. Ayrılan personeli silmek yerine "Pasif" durumuna geçirmeniz şiddetle önerilir.' },
             { type: 'info', text: 'Departman ve pozisyon bilgisi, çalışana atanan yönetici ilişkisinden (EmployeeManager) otomatik türetilebilir. Yönetici değişikliği yapıldığında departman/unvan bilgisi güncellenebilir.' },
             { type: 'info', text: 'Çalışanın 1:1 Django User kaydı vardır. Kullanıcı adı (username) ve e-posta ile giriş yapılabilir (FlexiblePermissionBackend). Şifre sıfırlama Sistem Yönetimi sayfasından yapılabilir.' },
-            { type: 'info', text: 'Çalışan listesini görüntüleme (list/retrieve) tüm giriş yapmış kullanıcılara açıktır — bu API birçok frontend bileşeni tarafından kullanılır. Ancak çalışan ekleme, düzenleme ve silme (CUD) işlemleri PAGE_EMPLOYEES yetkisi gerektirir.', permission: 'PAGE_EMPLOYEES' },
+            { type: 'info', text: 'Çalışan listesini görüntüleme (list/retrieve) tüm giriş yapmış kullanıcılara açıktır. Ekleme/düzenleme EMPLOYEE_UPDATE, silme/dondurma/hassas veri düzenleme SENSITIVE_DATA_CHANGE yetkisi gerektirir.', permission: 'PAGE_EMPLOYEES' },
             { type: 'success', text: 'Çalışan listesini Excel olarak dışa aktarabilirsiniz. Dışa aktarma tüm aktif çalışanları ve seçili filtre kriterlerini içerir.' }
         ],
         faq: [
