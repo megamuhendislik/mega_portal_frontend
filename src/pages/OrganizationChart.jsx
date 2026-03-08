@@ -108,7 +108,7 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
 
 // Simple Modal Component for Employee Details
 // Live Employee Detail Modal
-const EmployeeDetailModal = ({ employee, onClose, canViewProfile }) => {
+const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) => {
     const navigate = useNavigate();
     const [liveData, setLiveData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -241,10 +241,10 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile }) => {
                 </div>
 
                 {/* Footer */}
-                {canViewProfile && (
+                {isInTeam && (
                 <div className="px-4 pb-4 pt-1 shrink-0">
                     <button
-                        onClick={() => { onClose(); navigate(`/employees/${employee.id}`); }}
+                        onClick={() => { onClose(); navigate(`/attendance?employee_id=${employee.id}`); }}
                         className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-sm hover:shadow-md transition-all"
                     >
                         Mesai Takibini Görüntüle
@@ -277,6 +277,26 @@ const InfoCell = ({ icon, label, value, color }) => {
             </div>
         </div>
     );
+};
+
+// Recursive employee count: department + all sub-departments
+const countEmployeesRecursive = (node) => {
+    let count = 0;
+    if (node.employees) {
+        node.employees.forEach(emp => {
+            if (emp.type === 'group' && emp.employees) {
+                count += emp.employees.length;
+            } else if (!emp.code && !emp.employees) {
+                count += 1;
+            }
+        });
+    }
+    if (node.children) {
+        node.children.forEach(child => {
+            count += countEmployeesRecursive(child);
+        });
+    }
+    return count;
 };
 
 // Employee Card
@@ -355,7 +375,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
 };
 
 // Department Card
-const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd }) => {
+const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, cumulativeCount, totalCompany, directCount }) => {
     const isDragTarget = dnd?.dropTargetId === node.id;
 
     return (
@@ -379,6 +399,18 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd })
             <h3 className="font-bold text-[10px] uppercase tracking-wide text-slate-700 leading-tight">
                 {node.name}
             </h3>
+            {typeof cumulativeCount === 'number' && totalCompany > 0 && (
+                <div className="flex flex-col items-center gap-0.5 mt-1">
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+                        {cumulativeCount}/{totalCompany}
+                    </span>
+                    {directCount > 0 && directCount < cumulativeCount && (
+                        <span className="text-[8px] text-slate-400 font-medium">
+                            ({directCount} kişi bu seviyede)
+                        </span>
+                    )}
+                </div>
+            )}
         </div>
 
         {/* Edit Actions */}
@@ -455,7 +487,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
     );
 };
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu, totalCompany }) => {
     // 1. Determine Type Dynamically
     // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
     // because groups have 'employees' property which triggers the department logic
@@ -592,6 +624,21 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         onEdit={onEdit}
                         onDelete={onDelete}
                         dnd={dnd}
+                        cumulativeCount={countEmployeesRecursive(node)}
+                        totalCompany={totalCompany}
+                        directCount={(() => {
+                            let direct = 0;
+                            if (node.employees) {
+                                node.employees.forEach(emp => {
+                                    if (emp.type === 'group' && emp.employees) {
+                                        direct += emp.employees.length;
+                                    } else if (!emp.code && !emp.employees) {
+                                        direct += 1;
+                                    }
+                                });
+                            }
+                            return direct;
+                        })()}
                     />
                 ) : node.type === 'group' ? (
                     <GroupNode
@@ -624,6 +671,7 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onContextMenu={onContextMenu}
+                            totalCompany={totalCompany}
                         />
                     ))}
                 </ul>
@@ -647,6 +695,9 @@ const OrganizationChart = () => {
     const { hasPermission, user } = useAuth();
     const canReassign = hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN');
     const [subordinateIds, setSubordinateIds] = useState(new Set());
+    const totalCompanyCount = React.useMemo(() => {
+        return treeData.reduce((sum, node) => sum + countEmployeesRecursive(node), 0);
+    }, [treeData]);
 
     // Zoom & Pan State
     const [scale, setScale] = useState(0.5);
@@ -987,6 +1038,10 @@ const OrganizationChart = () => {
                         (user && selectedEmployee && user.id === selectedEmployee.id) ||
                         (selectedEmployee && subordinateIds.has(selectedEmployee.id))
                     }
+                    isInTeam={
+                        user?.user?.is_superuser ||
+                        (selectedEmployee && subordinateIds.has(selectedEmployee.id))
+                    }
                 />
             )}
 
@@ -1117,6 +1172,7 @@ const OrganizationChart = () => {
                                     onDelete={handleDeleteDepartment}
                                     dnd={isEditMode && canReassign ? dnd : undefined}
                                     onContextMenu={isEditMode && canReassign ? dnd.handleContextMenu : undefined}
+                                    totalCompany={totalCompanyCount}
                                 />
                             ))}
                         </ul>
