@@ -893,6 +893,31 @@ const OrganizationChart = () => {
             const finalData = filterAdminUser(processedData);
             setTreeData(finalData);
 
+            // Diagnostic: compare tree count with total employees
+            try {
+                const empRes = await api.get('/employees/?page_size=1');
+                const apiTotal = empRes.data.count || (Array.isArray(empRes.data) ? empRes.data.length : 0);
+                const collectIds = (nodes) => {
+                    const ids = new Set();
+                    const walk = (n) => {
+                        if (n.id && !n.code && n.type !== 'group' && n.type !== 'department') ids.add(n.id);
+                        if (n.employees) n.employees.forEach(walk);
+                        if (n.children) n.children.forEach(walk);
+                    };
+                    nodes.forEach(walk);
+                    return ids;
+                };
+                const rawIds = collectIds(response.data || []);
+                const treeIds = collectIds(finalData);
+                if (apiTotal !== treeIds.size) {
+                    console.info(`[OrgChart Diagnostic] API toplam: ${apiTotal}, Ham hierarchy: ${rawIds.size}, Filtre sonrası tree: ${treeIds.size}, Fark: ${apiTotal - treeIds.size}`);
+                    // Find IDs in raw but not in final tree
+                    const filtered = [...rawIds].filter(id => !treeIds.has(id));
+                    if (filtered.length > 0) console.info('[OrgChart] Frontend filtrelenen ID\'ler:', filtered);
+                    console.info(`[OrgChart] Backend hierarchy'de olmayan: ${apiTotal - rawIds.size} kişi (ROOT_FUNC/Fonksiyonel dept veya departmansız)`);
+                }
+            } catch { /* diagnostic only */ }
+
         } catch (err) {
             console.error('Error fetching hierarchy:', err);
             setError('Organizasyon şemasını görüntüleme yetkiniz yok.');
