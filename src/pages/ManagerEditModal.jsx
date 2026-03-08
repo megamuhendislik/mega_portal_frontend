@@ -272,6 +272,11 @@ const ManagerEditModal = ({ employeeId, employeeName, onClose, onSaved }) => {
                 </h4>
             </div>
             <div className="space-y-2">
+                {managers.length === 0 && type === 'primary' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+                        Birincil yönetici atanmamış — Yönetim kurulu ve sistem yöneticileri yöneticisiz kaydedilebilir.
+                    </div>
+                )}
                 {managers.map((m) => renderManagerCard(m, type))}
                 {addingTo === type ? renderAddForm() : (
                     <button
