@@ -179,25 +179,33 @@ export const EmployeeAttendanceRow = ({
                     const potentialOt = s.ot_potential_minutes || 0;
                     const devWithPotential = dev + potentialOt;
 
+                    const renderNetBadge = (val, label) => {
+                        if (val < 0) return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
+                                <ArrowDownRight size={10} />
+                                {formatMinutes(Math.abs(val))} Eksik
+                            </span>
+                        );
+                        if (val > 0) return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                                <ArrowUpRight size={10} />
+                                {formatMinutes(val)} Fazla
+                            </span>
+                        );
+                        return <span className="text-[10px] text-slate-400 font-medium">Dengede</span>;
+                    };
+
                     return (
-                        <div className="flex flex-col items-center gap-0.5">
-                            {dev < 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
-                                    <ArrowDownRight size={10} />
-                                    {formatMinutes(Math.abs(dev))} Eksik
-                                </span>
-                            ) : dev > 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
-                                    <ArrowUpRight size={10} />
-                                    {formatMinutes(dev)} Fazla
-                                </span>
-                            ) : (
-                                <span className="text-[10px] text-slate-400 font-medium">Dengede</span>
-                            )}
-                            {potentialOt > 0 && devWithPotential !== 0 && (
-                                <span className={`text-[9px] tabular-nums ${devWithPotential > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                    pot: {devWithPotential > 0 ? '+' : '-'}{formatMinutes(Math.abs(devWithPotential))}
-                                </span>
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="flex flex-col items-center">
+                                <span className="text-[8px] text-slate-400 uppercase tracking-wider font-semibold">Pot. Hariç</span>
+                                {renderNetBadge(dev)}
+                            </div>
+                            {potentialOt > 0 && (
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[8px] text-slate-400 uppercase tracking-wider font-semibold">Pot. Dahil</span>
+                                    {renderNetBadge(devWithPotential)}
+                                </div>
                             )}
                         </div>
                     );
