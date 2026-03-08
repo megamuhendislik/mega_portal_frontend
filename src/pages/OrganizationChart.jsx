@@ -808,13 +808,30 @@ const OrganizationChart = () => {
         try {
             const response = await api.get('/departments/hierarchy/');
             let data = response.data;
-            // Filter Functional Groups
+            // Filter Functional Groups and Debug departments
             if (Array.isArray(data)) {
                 data = data.filter(node =>
                     node.is_chart_visible !== false &&
                     !node.code.includes('ROOT_FUNC') &&
-                    !node.name.includes('Fonksiyonel')
+                    !node.name.includes('Fonksiyonel') &&
+                    !node.code.startsWith('DBG') &&
+                    !node.code.startsWith('COMP_DBG')
                 );
+            }
+
+            // Merge ROOT (Yönetim) into BOARD (Yönetim Kurulu) — system admins appear under management board
+            if (Array.isArray(data)) {
+                const boardIdx = data.findIndex(n => n.code === 'BOARD');
+                const rootIdx = data.findIndex(n => n.code === 'ROOT');
+                if (boardIdx >= 0 && rootIdx >= 0) {
+                    const rootDept = data[rootIdx];
+                    data[boardIdx] = {
+                        ...data[boardIdx],
+                        employees: [...(data[boardIdx].employees || []), ...(rootDept.employees || [])],
+                        children: [...(data[boardIdx].children || []), ...(rootDept.children || [])]
+                    };
+                    data = data.filter((_, i) => i !== rootIdx);
+                }
             }
 
             if (Array.isArray(data) && data.length > 1) {
