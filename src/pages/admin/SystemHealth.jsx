@@ -44,6 +44,7 @@ import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
 import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksCompareTab from './system-health/PdksCompareTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
+import ManagerPermissionTab from './system-health/ManagerPermissionTab';
 import DataBrowserTab from './system-health/DataBrowserTab';
 import BirthdayTab from './system-health/BirthdayTab';
 
@@ -120,6 +121,7 @@ export default function SystemHealth() {
                         { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
                         { id: 'pdks_compare', name: 'PDKS Düzeltme', icon: CreditCardIcon },
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
+                        { id: 'manager_permission', name: 'Yönetici Yetki', icon: ShieldCheckIcon },
                         { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
                         { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
                     ].map((tab) => (
@@ -168,6 +170,7 @@ export default function SystemHealth() {
                 {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
                 {activeTab === 'pdks_compare' && <PdksCompareTab />}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
+                {activeTab === 'manager_permission' && <ManagerPermissionTab />}
                 {activeTab === 'data_browser' && <DataBrowserTab />}
                 {activeTab === 'birthdays' && <BirthdayTab />}
             </div>
