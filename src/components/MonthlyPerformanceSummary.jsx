@@ -131,6 +131,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     // Current fiscal month from backend
                     currentFiscalMonth: periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || (new Date().getMonth() + 1),
 
+                    // System start fiscal month (months before this should be hidden)
+                    systemStartFiscalMonth: periodSummary.cumulative.system_start_fiscal_month || 1,
+
                     // PASSING THE DATA form WITH CUMULATIVE CALCULATION
                     breakdown: (periodSummary.cumulative.breakdown || []).reduce((acc, month, idx) => {
                         const prevBalance = idx === 0
@@ -318,7 +321,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <div>
                                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
                                     <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
-                                    2026 Yıllık Performans
+                                    {new Date().getFullYear()} Yıllık Performans
                                 </h3>
                                 <p className="text-xs text-slate-400 font-medium pl-3.5 mt-1">Yılbaşından bugüne kümülatif durum.</p>
                             </div>
@@ -387,16 +390,28 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block"></span><span className="text-slate-500">Onaylı</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 1px, #f59e0b 1px, #f59e0b 2px)' }}></span><span className="text-slate-500">Bekleyen</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 1px, #94a3b8 1px, #94a3b8 2px)' }}></span><span className="text-slate-500">Potansiyel</span></span>
+                                            <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-dashed border-slate-400 inline-block"></span><span className="text-slate-500">Hedef</span></span>
                                         </div>
                                     </div>
 
-                                    <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
-                                        {stats.cumulative.breakdown.map((m, idx) => {
-                                            // Use fiscal month from backend (1-indexed), convert to 0-indexed for comparison with idx
-                                            const currentFiscalIdx = (stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1)) - 1;
-                                            const isCurrentMonth = idx === currentFiscalIdx;
-                                            const isPast = idx < currentFiscalIdx;
-                                            const isFuture = idx > currentFiscalIdx;
+                                    {(() => {
+                                        const currentFiscalIdx = (stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1)) - 1;
+                                        const systemStartIdx = (stats.cumulative.systemStartFiscalMonth || 1) - 1;
+                                        // Only show months from system start to current fiscal month
+                                        const visibleMonths = stats.cumulative.breakdown.slice(systemStartIdx, currentFiscalIdx + 1);
+                                        // Global max for consistent Y-axis scaling across all months
+                                        const globalMax = visibleMonths.reduce((mx, m) => {
+                                            const otA = m.ot_approved || 0, otP = m.ot_pending || 0;
+                                            let otPot = m.ot_potential || 0;
+                                            if (!otA && !otP && !otPot && m.overtime > 0) otPot = m.overtime;
+                                            return Math.max(mx, Math.max(m.target || 0, (m.completed || 0) + otA + otP + otPot));
+                                        }, 1);
+                                        return (
+                                    <div className="flex w-full h-32 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
+                                        {visibleMonths.map((m, idx) => {
+                                            const currentFiscalMonth = currentFiscalIdx + 1;
+                                            const isCurrentMonth = m.month === currentFiscalMonth;
+                                            const isPast = m.month < currentFiscalMonth;
 
                                             const target = m.target;
                                             const completed = m.completed;
@@ -411,8 +426,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             }
                                             const otTotalSec = otApprovedSec + otPendingSec + otPotentialSec;
 
-                                            // Bar percentages (everything fits within 100%)
-                                            const totalForBar = Math.max(target, completed + otTotalSec) || 1;
+                                            // Bar percentages using global scale for cross-month comparison
+                                            const totalForBar = globalMax;
                                             let pctNormal = 0;
                                             let pctMissing = 0;
                                             let pctOtApproved = 0;
@@ -433,8 +448,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             }
 
                                             // Colors
-                                            let containerBg = isFuture ? 'bg-slate-50/80' : 'bg-transparent';
-                                            if (!isFuture && completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
+                                            let containerBg = 'bg-transparent';
+                                            if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
 
                                             const balanceHours = (balance / 3600).toFixed(1);
                                             // Cumulative from reduced breakdown
@@ -444,7 +459,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             return (
                                                 <div
                                                     key={idx}
-                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 ${isFuture ? 'opacity-30' : 'hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1'}`}
+                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1`}
                                                 >
                                                     {/* Normal Work Bar (Indigo) */}
                                                     <div className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
@@ -468,10 +483,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             style={{ bottom: `${pctNormal + pctOtApproved + pctOtPending}%`, height: `${pctOtPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 2px, #94a3b8 2px, #94a3b8 4px)' }} />
                                                     )}
 
-                                                    {/* Target reference line (when OT extends above normal) */}
-                                                    {otTotalSec > 0 && target > 0 && totalForBar > target && (
+                                                    {/* Target dashed reference line */}
+                                                    {target > 0 && (
                                                         <div className="absolute left-0 w-full z-20 pointer-events-none" style={{ bottom: `${(target / totalForBar) * 100}%` }}>
-                                                            <div className="w-full border-t border-dashed border-white/60" />
+                                                            <div className="w-full border-t-2 border-dashed border-slate-400/60" />
                                                         </div>
                                                     )}
 
@@ -487,24 +502,22 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     )}
 
                                                     {/* Label Inside */}
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-1">
-                                                        <span className={`text-[10px] font-bold mb-0.5 ${isFuture ? 'text-slate-300' : 'text-slate-500/80 mix-blend-multiply'}`}>{m.month}</span>
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-end z-10 pointer-events-none p-1 pb-1">
+                                                        <span className="text-[10px] font-bold mb-0.5 text-slate-500/80 mix-blend-multiply">{m.month}</span>
 
-                                                        {isFuture ? (
-                                                            <span className="text-[10px] text-slate-300">-</span>
-                                                        ) : isCurrentMonth ? (
-                                                            <div className="flex flex-col items-center mt-1">
+                                                        {isCurrentMonth ? (
+                                                            <div className="flex flex-col items-center mt-0.5">
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mb-0.5"></div>
                                                             </div>
                                                         ) : (
                                                             <span className={`text-[10px] font-black drop-shadow-sm ${balance >= 0 ? 'text-white' : 'text-rose-600/90'}`}>
-                                                                {balance !== 0 ? (balance > 0 ? '' : balanceHours) : '-'}
+                                                                {balance > 0 ? `+${balanceHours}` : balance < 0 ? balanceHours : '0'}
                                                             </span>
                                                         )}
                                                     </div>
 
-                                                    {/* Tooltip (hide for future months) */}
-                                                    {!isFuture && <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">}
+                                                    {/* Tooltip */}
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
                                                         <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
                                                             <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
@@ -561,11 +574,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             )}
                                                         </div>
                                                         <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
-                                                    </div>}
+                                                    </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* B. Table (Detail) */}
@@ -591,9 +606,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             <tbody className="divide-y divide-slate-100">
                                                 {stats.cumulative.breakdown
                                                     .filter(m => {
-                                                        // Use fiscal month from backend
+                                                        // Use fiscal month from backend + system start filter
                                                         const fiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
-                                                        return m.month <= fiscalMonth;
+                                                        const systemStart = stats.cumulative.systemStartFiscalMonth || 1;
+                                                        return m.month >= systemStart && m.month <= fiscalMonth;
                                                     })
                                                     .map((m, idx) => {
                                                         const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
