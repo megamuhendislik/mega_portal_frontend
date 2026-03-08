@@ -47,7 +47,7 @@ const ManagerAssignmentSection = ({
     const label = isPrimary ? 'Birincil Yöneticiler' : 'İkincil Yöneticiler';
     const helpText = isPrimary
         ? 'İzin ve mesai onayı verecek yöneticiler. Ekip listesinde görünür.'
-        : 'Sadece talep onayı verebilir, ekip listesinde görünmez.';
+        : 'Sadece ek mesai onayı verebilir, ekip listesinde görünmez.';
     const Icon = isPrimary ? UserPlus : Users;
 
     // Zorunlu ilk satır: primary + non-board → mount'ta boş satır ekle
@@ -80,16 +80,15 @@ const ManagerAssignmentSection = ({
         const arr = [...managers];
         arr[idx] = { ...arr[idx], manager_id: managerId };
 
-        if (managerId) {
+        if (managerId && isPrimary) {
             const mgr = employeeList.find(e => String(e.id) === String(managerId));
             if (mgr) {
-                // Yöneticinin kendi departman ve pozisyonunu otomatik doldur
                 const deptId = mgr.department?.id || mgr.department || '';
                 const posId = mgr.job_position?.id || mgr.job_position || '';
                 arr[idx].department_id = deptId;
                 arr[idx].job_position_id = posId;
             }
-        } else {
+        } else if (!managerId && isPrimary) {
             arr[idx].department_id = '';
             arr[idx].job_position_id = '';
         }
@@ -104,7 +103,11 @@ const ManagerAssignmentSection = ({
     };
 
     const addRow = () => {
-        onChange([...managers, { manager_id: '', department_id: '', job_position_id: '' }]);
+        if (isPrimary) {
+            onChange([...managers, { manager_id: '', department_id: '', job_position_id: '' }]);
+        } else {
+            onChange([...managers, { manager_id: '' }]);
+        }
     };
 
     const removeRow = (idx) => {
@@ -118,9 +121,10 @@ const ManagerAssignmentSection = ({
         if (!showValidation) return {};
         const errs = {};
         if (!entry.manager_id) errs.manager_id = 'Zorunlu';
-        if (!entry.department_id) errs.department_id = 'Zorunlu';
-        if (!entry.job_position_id) errs.job_position_id = 'Zorunlu';
-        // Duplicate kontrolü
+        if (isPrimary) {
+            if (!entry.department_id) errs.department_id = 'Zorunlu';
+            if (!entry.job_position_id) errs.job_position_id = 'Zorunlu';
+        }
         const othersSelected = managers
             .filter((_, i) => i !== idx)
             .map(m => String(m.manager_id || ''))
@@ -219,39 +223,43 @@ const ManagerAssignmentSection = ({
                                     {rowErrors.manager_id && <p className="text-[10px] text-red-500 mt-0.5">{rowErrors.manager_id}</p>}
                                 </div>
 
-                                {/* Departman */}
-                                <div className="flex-1 min-w-0">
-                                    <label className="block text-xs text-slate-500 mb-0.5">Departman <span className="text-red-400">*</span></label>
-                                    <select
-                                        value={entry.department_id || ''}
-                                        onChange={e => handleFieldChange(idx, 'department_id', e.target.value)}
-                                        disabled={disabled}
-                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.department_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
-                                    >
-                                        <option value="">Seçiniz...</option>
-                                        {departments.map(d => (
-                                            <option key={d.id} value={d.id}>{d.name}</option>
-                                        ))}
-                                    </select>
-                                    {rowErrors.department_id && <p className="text-[10px] text-red-500 mt-0.5">{rowErrors.department_id}</p>}
-                                </div>
+                                {/* Departman — sadece PRIMARY */}
+                                {isPrimary && (
+                                    <div className="flex-1 min-w-0">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Departman <span className="text-red-400">*</span></label>
+                                        <select
+                                            value={entry.department_id || ''}
+                                            onChange={e => handleFieldChange(idx, 'department_id', e.target.value)}
+                                            disabled={disabled}
+                                            className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.department_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
+                                        >
+                                            <option value="">Seçiniz...</option>
+                                            {departments.map(d => (
+                                                <option key={d.id} value={d.id}>{d.name}</option>
+                                            ))}
+                                        </select>
+                                        {rowErrors.department_id && <p className="text-[10px] text-red-500 mt-0.5">{rowErrors.department_id}</p>}
+                                    </div>
+                                )}
 
-                                {/* Pozisyon */}
-                                <div className="flex-1 min-w-0">
-                                    <label className="block text-xs text-slate-500 mb-0.5">Pozisyon <span className="text-red-400">*</span></label>
-                                    <select
-                                        value={entry.job_position_id || ''}
-                                        onChange={e => handleFieldChange(idx, 'job_position_id', e.target.value)}
-                                        disabled={disabled}
-                                        className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.job_position_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
-                                    >
-                                        <option value="">Seçiniz...</option>
-                                        {jobPositions.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                    {rowErrors.job_position_id && <p className="text-[10px] text-red-500 mt-0.5">{rowErrors.job_position_id}</p>}
-                                </div>
+                                {/* Pozisyon — sadece PRIMARY */}
+                                {isPrimary && (
+                                    <div className="flex-1 min-w-0">
+                                        <label className="block text-xs text-slate-500 mb-0.5">Pozisyon <span className="text-red-400">*</span></label>
+                                        <select
+                                            value={entry.job_position_id || ''}
+                                            onChange={e => handleFieldChange(idx, 'job_position_id', e.target.value)}
+                                            disabled={disabled}
+                                            className={`w-full p-1.5 bg-white border rounded-lg text-sm focus:ring-2 ${colors.inputRing} outline-none ${rowErrors.job_position_id ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
+                                        >
+                                            <option value="">Seçiniz...</option>
+                                            {jobPositions.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                        {rowErrors.job_position_id && <p className="text-[10px] text-red-500 mt-0.5">{rowErrors.job_position_id}</p>}
+                                    </div>
+                                )}
 
                                 {/* Silme butonu */}
                                 {canDelete(idx) ? (
