@@ -12,6 +12,7 @@ import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import HeroDailySummary from '../components/HeroDailySummary';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
+import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
 import Skeleton from '../components/Skeleton';
 import AttendanceTracking from './AttendanceTracking';
 import { format } from 'date-fns';
@@ -341,6 +342,7 @@ const Attendance = () => {
                         {/* Includes 3-part progress bar and Net Status Card */}
                         <div id="attendance-content-start" className="bg-white p-1 rounded-3xl scroll-mt-24">
                             <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} />
+                            <MonthlyBalanceCarousel periodSummary={periodSummary} />
                         </div>
 
                         {/* 3. Charts Row */}

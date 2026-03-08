@@ -15,8 +15,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             // Fix: Backend sends 'total_work_seconds', not 'net_work_seconds'
             const netWorkSec = periodSummary.total_work_seconds || periodSummary.net_work_seconds || 0; // Normal + OT
 
-            // True Balance computation if not provided
-            const netBalanceReal = periodSummary.net_balance_seconds || (netWorkSec - targetSec);
+            // True Balance: cari ay için past_target_balance kullan (gelecek günler dahil değil)
+            const netBalanceReal = periodSummary.past_target_balance_seconds ?? periodSummary.net_balance_seconds ?? (netWorkSec - targetSec);
 
             const breakSec = periodSummary.total_break_seconds || 0;
             const lateSec = periodSummary.total_late_seconds || 0;

@@ -6,6 +6,7 @@ import UpcomingEventsCard from '../components/UpcomingEventsCard';
 
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
+import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
@@ -544,6 +545,7 @@ const Dashboard = () => {
                     <h3 className="text-lg font-bold text-slate-800">Aylık Performans Özeti</h3>
                 </div>
                 <MonthlyPerformanceSummary logs={logs} periodSummary={monthlySummary} />
+                <MonthlyBalanceCarousel periodSummary={monthlySummary} />
             </div>
 
 
