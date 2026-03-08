@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
-    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope
+    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -65,6 +65,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
     const [healthReports, setHealthReports] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
+    const [birthdayBalance, setBirthdayBalance] = useState(null);
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
     const [currentUserInfo, setCurrentUserInfo] = useState({ name: '', department: '' });
     const [loading, setLoading] = useState(true);
@@ -100,9 +101,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 api.get('/meal-requests/'),
                 api.get('/cardless-entry-requests/'),
                 api.get('/health-reports/'),
+                api.get('/leave-requests/birthday-balance/'),
             ]);
 
-            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes] = results;
+            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes, birthdayRes] = results;
 
             if (meRes.status === 'fulfilled') {
                 const me = meRes.value.data;
@@ -129,6 +131,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             }
             if (healthRes.status === 'fulfilled') {
                 setHealthReports(healthRes.value.data.results || healthRes.value.data);
+            }
+            if (birthdayRes.status === 'fulfilled') {
+                setBirthdayBalance(birthdayRes.value.data);
             }
         } catch (e) {
             console.error('MyRequestsTab fetchData error:', e);
@@ -246,6 +251,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             ...r, ...myInfo, _type: 'LEAVE', type: 'LEAVE',
             _sortDate: r.start_date || r.created_at,
             leave_type_name: r.leave_type_name || requestTypes.find(t => t.id === r.request_type)?.name || r.request_type_detail?.name || '',
+            leave_type_code: r.leave_type_code || requestTypes.find(t => t.id === r.request_type)?.code || r.request_type_detail?.code || '',
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
             approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
@@ -356,6 +362,28 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     Yeni Talep
                 </button>
             </div>
+
+            {/* Birthday Banner */}
+            {birthdayBalance?.is_birthday_month && !birthdayBalance?.is_used && (
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎂</span>
+                        <div>
+                            <p className="font-bold text-pink-700">Doğum günü ayınız!</p>
+                            <p className="text-sm text-pink-600">1 günlük doğum günü izni hakkınız var</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => {
+                            setCreateModalInitialData({ preselect_type: 'BIRTHDAY_LEAVE' });
+                            setShowCreateModal(true);
+                        }}
+                        className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-2"
+                    >
+                        <Cake size={16} /> Doğum Günü İzni Talep Et
+                    </button>
+                </div>
+            )}
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

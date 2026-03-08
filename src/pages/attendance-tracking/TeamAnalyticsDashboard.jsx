@@ -64,6 +64,7 @@ const AnalyticsCard = ({ title, subtitle, icon: Icon, children, className = '' }
 const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
     if (!person) return null;
 
+    const isSecondary = person?.relationship_type === 'SECONDARY';
     const completed = person.completed_minutes || person.total_worked || 0;
     const pastTarget = person.past_target_minutes || person.monthly_required || 0;
     const efficiency = person.efficiency || (pastTarget > 0 ? Math.round((completed / pastTarget) * 100) : 0);
@@ -110,16 +111,25 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             {(person.employee_name || '').charAt(0)}
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-slate-800">{person.employee_name}</h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-slate-800">{person.employee_name}</h3>
+                                {isSecondary && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600">
+                                        Ikincil
+                                    </span>
+                                )}
+                            </div>
                             <p className="text-[11px] text-slate-400">{person.department || '-'} · {person.job_title || '-'}</p>
                         </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
-                            (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
-                            'bg-red-100 text-red-700'
-                        }`}>
-                            Katılım %{Math.round(person.attendance_rate || 100)}
-                        </span>
+                        {!isSecondary && (
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
+                                (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
+                                'bg-red-100 text-red-700'
+                            }`}>
+                                Katılım %{Math.round(person.attendance_rate || 100)}
+                            </span>
+                        )}
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                         <X size={18} className="text-slate-400" />
@@ -127,7 +137,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                 </div>
 
                 <div className="px-6 py-5 space-y-5">
-                    {/* Çalışma Özeti */}
+                    {/* Çalışma Özeti — HIDE for SECONDARY */}
+                    {!isSecondary && (
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Çalışma Özeti</h4>
                         <div className="grid grid-cols-2 gap-3">
@@ -151,8 +162,10 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             </div>
                         </div>
                     </div>
+                    )}
 
-                    {/* Katılım Durumu */}
+                    {/* Katılım Durumu — HIDE for SECONDARY */}
+                    {!isSecondary && (
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Katılım Durumu</h4>
                         <div className="grid grid-cols-3 gap-3">
@@ -172,8 +185,10 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             </div>
                         </div>
                     </div>
+                    )}
 
-                    {/* Günlük Ortalamalar */}
+                    {/* Günlük Ortalamalar — HIDE for SECONDARY */}
+                    {!isSecondary && (
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Günlük Ortalamalar</h4>
                         <div className="grid grid-cols-3 gap-3">
@@ -191,6 +206,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* Ek Mesai Analizi */}
                     <div>
@@ -303,8 +319,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                         </div>
                     )}
 
-                    {/* İzin Durumu */}
-                    {(person.annual_leave_entitlement > 0 || person.annual_leave_used > 0) && (
+                    {/* İzin Durumu — HIDE for SECONDARY */}
+                    {!isSecondary && (person.annual_leave_entitlement > 0 || person.annual_leave_used > 0) && (
                         <div>
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">İzin Durumu</h4>
                             <div className="grid grid-cols-4 gap-2">
@@ -328,7 +344,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                         </div>
                     )}
 
-                    {/* Net Bakiye */}
+                    {/* Net Bakiye — HIDE for SECONDARY */}
+                    {!isSecondary && (
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Net Bakiye</h4>
                         <div className="flex items-center justify-between mb-2">
@@ -355,6 +372,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                             <span>+{formatMinutes(target)}</span>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -460,87 +478,109 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
     // ── COMPUTED ANALYTICS DATA ──
     const analytics = useMemo(() => {
         if (!filteredStats || filteredStats.length === 0) return null;
-        const count = filteredStats.length;
 
-        // Totals
-        const totalWorked = filteredStats.reduce((a, c) => a + (c.total_worked || 0), 0);
-        const totalCompleted = filteredStats.reduce((a, c) => a + (c.completed_minutes || c.total_worked || 0), 0); // Normal work (no OT)
+        // Split stats: PRIMARY for work/leave/attendance, ALL for OT/meal
+        const primaryStats = filteredStats.filter(s => s.relationship_type !== 'SECONDARY');
+        const allStats = filteredStats; // Includes SECONDARY employees
+        const primaryCount = primaryStats.length;
+        const allCount = allStats.length;
+        const count = allCount; // Total count for display
+
+        // Totals — work/leave/attendance from PRIMARY only
+        const totalWorked = primaryStats.reduce((a, c) => a + (c.total_worked || 0), 0);
+        const totalCompleted = primaryStats.reduce((a, c) => a + (c.completed_minutes || c.total_worked || 0), 0); // Normal work (no OT)
         // OT: Use approved OT requests (intended+potential+manual) as primary source,
-        // fallback to MWS total_overtime if request data unavailable
-        const totalOTFromRequests = filteredStats.reduce((a, c) => a + (c.ot_intended_minutes || 0) + (c.ot_potential_minutes || 0) + (c.ot_manual_minutes || 0), 0);
-        const totalOTFromMWS = filteredStats.reduce((a, c) => a + (c.total_overtime || 0), 0);
+        // fallback to MWS total_overtime if request data unavailable — ALL employees
+        const totalOTFromRequests = allStats.reduce((a, c) => a + (c.ot_intended_minutes || 0) + (c.ot_potential_minutes || 0) + (c.ot_manual_minutes || 0), 0);
+        const totalOTFromMWS = allStats.reduce((a, c) => a + (c.total_overtime || 0), 0);
         const totalOT = totalOTFromRequests > 0 ? totalOTFromRequests : totalOTFromMWS;
-        const totalMissing = filteredStats.reduce((a, c) => a + (c.total_missing || 0), 0);
-        const totalRequired = filteredStats.reduce((a, c) => a + (c.monthly_required || 0), 0);
-        const totalPastTarget = filteredStats.reduce((a, c) => a + (c.past_target_minutes || c.monthly_required || 0), 0);
+        const totalMissing = primaryStats.reduce((a, c) => a + (c.total_missing || 0), 0);
+        const totalRequired = primaryStats.reduce((a, c) => a + (c.monthly_required || 0), 0);
+        const totalPastTarget = primaryStats.reduce((a, c) => a + (c.past_target_minutes || c.monthly_required || 0), 0);
 
         // Work days from backend (accurate fiscal period days) with fallback
-        const _sample = filteredStats[0] || {};
+        const _sample = primaryStats[0] || allStats[0] || {};
         const elapsedWorkDays = Math.max(1, _sample.elapsed_work_days || Math.round(new Date().getDate() * 5 / 7));
         const totalWorkDaysInMonth = _sample.total_work_days || 22;
         const remainingWorkDays = Math.max(0, _sample.remaining_work_days ?? (totalWorkDaysInMonth - elapsedWorkDays));
 
-        // Averages
-        const avgWorked = Math.round(totalWorked / count);
-        const avgOT = Math.round(totalOT / count);
-        const avgMissing = Math.round(totalMissing / count);
-        const avgRequired = Math.round(totalRequired / count);
+        // Averages — work metrics use primaryCount, OT uses allCount
+        const avgWorked = primaryCount > 0 ? Math.round(totalWorked / primaryCount) : 0;
+        const avgOT = allCount > 0 ? Math.round(totalOT / allCount) : 0;
+        const avgMissing = primaryCount > 0 ? Math.round(totalMissing / primaryCount) : 0;
+        const avgRequired = primaryCount > 0 ? Math.round(totalRequired / primaryCount) : 0;
 
-        // EFFICIENCY: completed (normal work) vs past_target (pro-rated to today)
+        // EFFICIENCY: completed (normal work) vs past_target (pro-rated to today) — PRIMARY only
         const efficiency = totalPastTarget > 0 ? Math.round((totalCompleted / totalPastTarget) * 100) : 0;
 
-        // Daily average missing per person
-        const dailyAvgMissing = Math.round(totalMissing / count / elapsedWorkDays);
+        // Daily average missing per person — PRIMARY only
+        const dailyAvgMissing = primaryCount > 0 ? Math.round(totalMissing / primaryCount / elapsedWorkDays) : 0;
 
-        // Projected end-of-month balance
-        const avgDeviation = Math.round(filteredStats.reduce((a, c) => a + (c.monthly_deviation || 0), 0) / count);
+        // Projected end-of-month balance — PRIMARY only
+        const avgDeviation = primaryCount > 0 ? Math.round(primaryStats.reduce((a, c) => a + (c.monthly_deviation || 0), 0) / primaryCount) : 0;
         const dailyAvgDeviation = elapsedWorkDays > 0 ? avgDeviation / elapsedWorkDays : 0;
         const projectedBalance = Math.round(avgDeviation + dailyAvgDeviation * remainingWorkDays);
 
-        // Balance distribution: completed vs past_target (deviation-based)
-        const totalDeviation = filteredStats.reduce((a, c) => a + (c.monthly_deviation || 0), 0);
-        const positiveBalance = filteredStats.filter(s => (s.monthly_deviation || 0) > 0).length;
-        const negativeBalance = filteredStats.filter(s => (s.monthly_deviation || 0) < 0).length;
-        const zeroBalance = count - positiveBalance - negativeBalance;
+        // Balance distribution: completed vs past_target (deviation-based) — PRIMARY only
+        const totalDeviation = primaryStats.reduce((a, c) => a + (c.monthly_deviation || 0), 0);
+        const positiveBalance = primaryStats.filter(s => (s.monthly_deviation || 0) > 0).length;
+        const negativeBalance = primaryStats.filter(s => (s.monthly_deviation || 0) < 0).length;
+        const zeroBalance = primaryCount - positiveBalance - negativeBalance;
 
         // Department breakdown (for "Tum Ekibim" tab)
+        // Work/leave/attendance from PRIMARY, OT from ALL
         const deptMap = {};
-        filteredStats.forEach(s => {
+        primaryStats.forEach(s => {
             const dept = s.department || 'Bilinmiyor';
-            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, worked: 0, completed: 0, ot: 0, missing: 0, required: 0, pastTarget: 0, deviation: 0, positiveBalance: 0, attendanceRateSum: 0, weekendOT: 0, weekdayOT: 0, leaveUsed: 0, leaveTotal: 0 };
+            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, primaryCount: 0, worked: 0, completed: 0, ot: 0, missing: 0, required: 0, pastTarget: 0, deviation: 0, positiveBalance: 0, attendanceRateSum: 0, weekendOT: 0, weekdayOT: 0, leaveUsed: 0, leaveTotal: 0 };
             deptMap[dept].count++;
+            deptMap[dept].primaryCount++;
             deptMap[dept].worked += (s.total_worked || 0);
             deptMap[dept].completed += (s.completed_minutes || s.total_worked || 0);
-            // OT: use approved OT requests (intended+potential+manual) for accuracy
-            const _empOT = (s.ot_intended_minutes || 0) + (s.ot_potential_minutes || 0) + (s.ot_manual_minutes || 0);
-            deptMap[dept].ot += _empOT > 0 ? _empOT : (s.total_overtime || 0);
             deptMap[dept].missing += (s.total_missing || 0);
             deptMap[dept].required += (s.monthly_required || 0);
             deptMap[dept].pastTarget += (s.past_target_minutes || s.monthly_required || 0);
             deptMap[dept].deviation += (s.monthly_deviation || 0);
             deptMap[dept].attendanceRateSum += (s.attendance_rate || 100);
-            deptMap[dept].weekendOT += (s.ot_weekend_minutes || 0);
-            deptMap[dept].weekdayOT += (s.ot_weekday_minutes || 0);
             deptMap[dept].leaveUsed += (s.annual_leave_used || 0);
             deptMap[dept].leaveTotal += ((s.annual_leave_entitlement || 0) > 0 ? (s.annual_leave_entitlement || 0) : 0);
             if ((s.monthly_deviation || 0) > 0) deptMap[dept].positiveBalance++;
         });
+        // Add OT from ALL employees (including SECONDARY)
+        allStats.forEach(s => {
+            const dept = s.department || 'Bilinmiyor';
+            if (!deptMap[dept]) deptMap[dept] = { name: dept, count: 0, primaryCount: 0, worked: 0, completed: 0, ot: 0, missing: 0, required: 0, pastTarget: 0, deviation: 0, positiveBalance: 0, attendanceRateSum: 0, weekendOT: 0, weekdayOT: 0, leaveUsed: 0, leaveTotal: 0 };
+            // Only count SECONDARY employees in total count (not double-counting PRIMARY)
+            if (s.relationship_type === 'SECONDARY') deptMap[dept].count++;
+            // OT: use approved OT requests (intended+potential+manual) for accuracy
+            const _empOT = (s.ot_intended_minutes || 0) + (s.ot_potential_minutes || 0) + (s.ot_manual_minutes || 0);
+            deptMap[dept].ot += _empOT > 0 ? _empOT : (s.total_overtime || 0);
+            deptMap[dept].weekendOT += (s.ot_weekend_minutes || 0);
+            deptMap[dept].weekdayOT += (s.ot_weekday_minutes || 0);
+        });
         const departments = Object.values(deptMap).sort((a, b) => b.count - a.count);
 
-        // Per-person computed fields
-        const ranked = [...filteredStats].map(s => {
+        // Per-person computed fields — ALL employees for ranking table
+        const ranked = [...allStats].map(s => {
+            const isSecondary = s.relationship_type === 'SECONDARY';
             const pCompleted = s.completed_minutes || s.total_worked || 0;
             const pPastTarget = s.past_target_minutes || s.monthly_required || 0;
             return {
                 ...s,
-                efficiency: pPastTarget > 0 ? Math.round((pCompleted / pPastTarget) * 100) : 0,
-                dailyMissing: Math.round((s.total_missing || 0) / elapsedWorkDays),
-                projected: elapsedWorkDays > 0 ? Math.round((s.monthly_deviation || 0) + ((s.monthly_deviation || 0) / elapsedWorkDays) * remainingWorkDays) : 0,
+                efficiency: isSecondary ? null : (pPastTarget > 0 ? Math.round((pCompleted / pPastTarget) * 100) : 0),
+                dailyMissing: isSecondary ? null : Math.round((s.total_missing || 0) / elapsedWorkDays),
+                projected: isSecondary ? null : (elapsedWorkDays > 0 ? Math.round((s.monthly_deviation || 0) + ((s.monthly_deviation || 0) / elapsedWorkDays) * remainingWorkDays) : 0),
             };
-        }).sort((a, b) => (a.total_missing || 0) - (b.total_missing || 0));
+        }).sort((a, b) => {
+            // SECONDARY employees go to the bottom
+            const aIsSecondary = a.relationship_type === 'SECONDARY';
+            const bIsSecondary = b.relationship_type === 'SECONDARY';
+            if (aIsSecondary !== bIsSecondary) return aIsSecondary ? 1 : -1;
+            return (a.total_missing || 0) - (b.total_missing || 0);
+        });
 
-        // Performance chart data (top 20)
-        const performanceData = [...filteredStats]
+        // Performance chart data (top 20) — PRIMARY only (work metrics)
+        const performanceData = [...primaryStats]
             .sort((a, b) => (a.employee_name || '').localeCompare(b.employee_name || '', 'tr'))
             .slice(0, 20)
             .map(s => ({
@@ -552,39 +592,41 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 target: s.monthly_required || 0,
             }));
 
-        // OT vs Missing comparison (use approved OT requests)
+        // OT vs Missing comparison (use approved OT requests) — ALL for OT, PRIMARY for missing side
         const _getPersonOT = (s) => ((s.ot_intended_minutes || 0) + (s.ot_potential_minutes || 0) + (s.ot_manual_minutes || 0)) || (s.total_overtime || 0);
-        const comparisonData = [...filteredStats]
-            .filter(s => _getPersonOT(s) > 0 || (s.total_missing || 0) > 0)
+        const comparisonData = [...allStats]
+            .filter(s => _getPersonOT(s) > 0 || (s.relationship_type !== 'SECONDARY' && (s.total_missing || 0) > 0))
             .sort((a, b) => _getPersonOT(b) - _getPersonOT(a))
             .slice(0, 15)
             .map(s => ({
                 name: (s.employee_name || '').split(' ').slice(0, 2).join(' '),
                 'Fazla Mesai': _getPersonOT(s),
-                'Eksik Zaman': -(s.total_missing || 0),
+                'Eksik Zaman': s.relationship_type === 'SECONDARY' ? 0 : -(s.total_missing || 0),
             }));
 
-        // Work distribution pie
+        // Work distribution pie — PRIMARY for work/missing
         const workDistribution = [
             { name: 'Normal Mesai', value: Math.max(0, totalWorked - totalOT), color: '#6366f1' },
             { name: 'Fazla Mesai', value: totalOT, color: '#f59e0b' },
             { name: 'Kayıp Zaman', value: totalMissing, color: '#ef4444' },
         ].filter(d => d.value > 0);
 
+        // Balance distribution — PRIMARY only
         const balanceDist = [
             { name: 'Pozitif', value: positiveBalance, color: '#10b981' },
             { name: 'Sıfır', value: zeroBalance, color: '#94a3b8' },
             { name: 'Negatif', value: negativeBalance, color: '#ef4444' },
         ].filter(d => d.value > 0);
 
-        // Spotlight — ranked is sorted by total_missing ASC, so [0]=least missing, [last]=most missing
-        const leastMissing = ranked[0];
-        const mostMissing = ranked[ranked.length - 1];
-        const mostOT = [...filteredStats].sort((a, b) => (b.total_overtime || 0) - (a.total_overtime || 0))[0];
-        const mostEfficient = [...ranked].sort((a, b) => b.efficiency - a.efficiency)[0];
+        // Spotlight — PRIMARY for work/missing/efficiency, ALL for OT
+        const primaryRanked = ranked.filter(s => s.relationship_type !== 'SECONDARY');
+        const leastMissing = primaryRanked[0];
+        const mostMissing = primaryRanked[primaryRanked.length - 1];
+        const mostOT = [...allStats].sort((a, b) => (b.total_overtime || 0) - (a.total_overtime || 0))[0];
+        const mostEfficient = [...primaryRanked].sort((a, b) => (b.efficiency || 0) - (a.efficiency || 0))[0];
 
-        // Leave data
-        const leaveData = filteredStats
+        // Leave data — PRIMARY only (SECONDARY has null leave fields)
+        const leaveData = primaryStats
             .filter(s => s.annual_leave_entitlement > 0 || s.annual_leave_used > 0)
             .map(s => ({
                 name: (s.employee_name || '').split(' ').slice(0, 2).join(' '),
@@ -596,10 +638,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             }))
             .sort((a, b) => a.remaining - b.remaining);
 
-        // Risk detection (use approved OT + deviation-based balance)
-        const highOTRisk = filteredStats.filter(s => _getPersonOT(s) > 900); // > 15 saat
-        const highMissingRisk = filteredStats.filter(s => (s.monthly_required || 0) > 0 && (s.total_missing || 0) > (s.monthly_required * 0.2));
-        const criticalBalanceRisk = filteredStats.filter(s => (s.monthly_deviation || 0) < -600); // < -10 saat
+        // Risk detection — OT risk from ALL, missing/balance from PRIMARY
+        const highOTRisk = allStats.filter(s => _getPersonOT(s) > 900); // > 15 saat
+        const highMissingRisk = primaryStats.filter(s => (s.monthly_required || 0) > 0 && (s.total_missing || 0) > (s.monthly_required * 0.2));
+        const criticalBalanceRisk = primaryStats.filter(s => (s.monthly_deviation || 0) < -600); // < -10 saat
 
         // Radar data for departments (only for "Tum Ekibim")
         const radarData = departments.length > 1 ? (() => {
@@ -626,13 +668,13 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             });
         })() : [];
 
-        // OT Source Breakdown (monthly approved by source type)
-        const totalOTIntendedMin = filteredStats.reduce((a, c) => a + (c.ot_intended_minutes || 0), 0);
-        const totalOTPotentialMin = filteredStats.reduce((a, c) => a + (c.ot_potential_minutes || 0), 0);
-        const totalOTManualMin = filteredStats.reduce((a, c) => a + (c.ot_manual_minutes || 0), 0);
-        const totalOTIntendedCount = filteredStats.reduce((a, c) => a + (c.ot_intended_count || 0), 0);
-        const totalOTPotentialCount = filteredStats.reduce((a, c) => a + (c.ot_potential_count || 0), 0);
-        const totalOTManualCount = filteredStats.reduce((a, c) => a + (c.ot_manual_count || 0), 0);
+        // OT Source Breakdown (monthly approved by source type) — ALL employees
+        const totalOTIntendedMin = allStats.reduce((a, c) => a + (c.ot_intended_minutes || 0), 0);
+        const totalOTPotentialMin = allStats.reduce((a, c) => a + (c.ot_potential_minutes || 0), 0);
+        const totalOTManualMin = allStats.reduce((a, c) => a + (c.ot_manual_minutes || 0), 0);
+        const totalOTIntendedCount = allStats.reduce((a, c) => a + (c.ot_intended_count || 0), 0);
+        const totalOTPotentialCount = allStats.reduce((a, c) => a + (c.ot_potential_count || 0), 0);
+        const totalOTManualCount = allStats.reduce((a, c) => a + (c.ot_manual_count || 0), 0);
         const totalOTSourceMin = totalOTIntendedMin + totalOTPotentialMin + totalOTManualMin;
 
         const otSourceDistribution = [
@@ -644,48 +686,48 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
         const otNormalRatio = totalWorked > 0 ? Math.round((totalOT / totalWorked) * 100) : 0;
 
         // --- NEW ANALYTICS v3.0 ---
-        // Katılım oranı (departman ortalaması)
-        const avgAttendanceRate = count > 0
-            ? Math.round(filteredStats.reduce((s, p) => s + (p.attendance_rate || 100), 0) / count)
+        // Katılım oranı (departman ortalaması) — PRIMARY only
+        const avgAttendanceRate = primaryCount > 0
+            ? Math.round(primaryStats.reduce((s, p) => s + (p.attendance_rate || 100), 0) / primaryCount)
             : 100;
-        const totalAttendanceDays = filteredStats.reduce((s, p) => s + (p.attendance_days || 0), 0);
-        const totalAbsentDays = filteredStats.reduce((s, p) => s + (p.absent_days || 0), 0);
+        const totalAttendanceDays = primaryStats.reduce((s, p) => s + (p.attendance_days || 0), 0);
+        const totalAbsentDays = primaryStats.reduce((s, p) => s + (p.absent_days || 0), 0);
 
-        // Günlük ortalama normal mesai (dk)
-        const dailyAvgNormalMin = elapsedWorkDays > 0
-            ? Math.round(totalCompleted / count / elapsedWorkDays)
+        // Günlük ortalama normal mesai (dk) — PRIMARY only
+        const dailyAvgNormalMin = elapsedWorkDays > 0 && primaryCount > 0
+            ? Math.round(totalCompleted / primaryCount / elapsedWorkDays)
             : 0;
 
-        // OT/Normal oranı (%)
+        // OT/Normal oranı (%) — OT from ALL, completed from PRIMARY
         const otNormalPercent = totalCompleted > 0
             ? Math.round(totalOT / totalCompleted * 100)
             : 0;
 
-        // Hafta sonu OT toplamları
-        const totalWeekendOTMin = filteredStats.reduce((s, p) => s + (p.ot_weekend_minutes || 0), 0);
-        const totalWeekdayOTMin = filteredStats.reduce((s, p) => s + (p.ot_weekday_minutes || 0), 0);
+        // Hafta sonu OT toplamları — ALL employees
+        const totalWeekendOTMin = allStats.reduce((s, p) => s + (p.ot_weekend_minutes || 0), 0);
+        const totalWeekdayOTMin = allStats.reduce((s, p) => s + (p.ot_weekday_minutes || 0), 0);
         const weekendOTRatio = (totalWeekendOTMin + totalWeekdayOTMin) > 0
             ? Math.round(totalWeekendOTMin / (totalWeekendOTMin + totalWeekdayOTMin) * 100)
             : 0;
 
-        // Yemek & OT-yemek korelasyonu
-        const totalMealOrdered = filteredStats.reduce((s, p) => s + (p.meal_ordered || 0), 0);
-        const totalOTMealOverlap = filteredStats.reduce((s, p) => s + (p.ot_meal_overlap || 0), 0);
-        const totalOTDays = filteredStats.reduce((s, p) => s + (p.ot_days_total || 0), 0);
+        // Yemek & OT-yemek korelasyonu — ALL employees
+        const totalMealOrdered = allStats.reduce((s, p) => s + (p.meal_ordered || 0), 0);
+        const totalOTMealOverlap = allStats.reduce((s, p) => s + (p.ot_meal_overlap || 0), 0);
+        const totalOTDays = allStats.reduce((s, p) => s + (p.ot_days_total || 0), 0);
         const otMealRate = totalOTDays > 0 ? Math.round(totalOTMealOverlap / totalOTDays * 100) : 0;
 
-        // İzin kullanım oranı
-        const totalLeaveUsed = filteredStats.reduce((s, p) => s + (p.annual_leave_used || 0), 0);
-        const totalLeaveRemaining = filteredStats.reduce((s, p) => s + (p.annual_leave_balance || 0), 0);
-        const avgLeaveUsage = count > 0
-            ? Math.round(filteredStats.reduce((s, p) => {
+        // İzin kullanım oranı — PRIMARY only
+        const totalLeaveUsed = primaryStats.reduce((s, p) => s + (p.annual_leave_used || 0), 0);
+        const totalLeaveRemaining = primaryStats.reduce((s, p) => s + (p.annual_leave_balance || 0), 0);
+        const avgLeaveUsage = primaryCount > 0
+            ? Math.round(primaryStats.reduce((s, p) => {
                 const total = p.annual_leave_entitlement || 0;
                 return s + (total > 0 ? (p.annual_leave_used || 0) / total * 100 : 0);
-            }, 0) / count)
+            }, 0) / primaryCount)
             : 0;
 
-        // Weekend OT top 10 for chart
-        const weekendOTData = [...filteredStats]
+        // Weekend OT top 10 for chart — ALL employees
+        const weekendOTData = [...allStats]
             .filter(s => (s.ot_weekend_minutes || 0) > 0 || (s.ot_weekday_minutes || 0) > 0)
             .sort((a, b) => ((b.ot_weekend_minutes || 0) + (b.ot_weekday_minutes || 0)) - ((a.ot_weekend_minutes || 0) + (a.ot_weekday_minutes || 0)))
             .slice(0, 10)
@@ -695,7 +737,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 'H.Sonu FM': s.ot_weekend_minutes || 0,
             }));
 
-        // Leave usage by department
+        // Leave usage by department — uses PRIMARY data from departments
         const leaveByDept = departments
             .filter(d => d.leaveTotal > 0)
             .map(d => ({
@@ -705,7 +747,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             .sort((a, b) => b.usage - a.usage);
 
         return {
-            count, totalWorked, totalCompleted, totalOT, totalMissing, totalRequired, totalPastTarget,
+            count, primaryCount, allCount,
+            totalWorked, totalCompleted, totalOT, totalMissing, totalRequired, totalPastTarget,
             avgWorked, avgOT, avgMissing, avgRequired, efficiency,
             dailyAvgMissing, projectedBalance, avgDeviation, totalDeviation, elapsedWorkDays, totalWorkDaysInMonth, remainingWorkDays,
             positiveBalance, negativeBalance, zeroBalance,
@@ -1374,7 +1417,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         key={i}
                                         className="h-full transition-all duration-700"
                                         style={{
-                                            width: `${(d.value / analytics.count) * 100}%`,
+                                            width: `${(d.value / (analytics.primaryCount || analytics.count)) * 100}%`,
                                             backgroundColor: d.color,
                                         }}
                                         title={`${d.name}: ${d.value} kişi`}
@@ -1606,52 +1649,62 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         </thead>
                         <tbody>
                             {analytics.ranked.map((person, idx) => {
+                                const isSecondary = person.relationship_type === 'SECONDARY';
                                 const balance = person.monthly_deviation || 0;
-                                const effBadge = getEfficiencyBadge(person.efficiency);
+                                const effBadge = isSecondary ? { cls: 'bg-slate-100 text-slate-400' } : getEfficiencyBadge(person.efficiency);
                                 return (
                                     <tr key={person.employee_id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => setDetailPerson(person)}>
                                         <td className="px-3 py-2 font-bold text-slate-400">{idx + 1}</td>
                                         <td className="px-3 py-2">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-slate-700">{person.employee_name}</span>
+                                                {isSecondary && (
+                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600">
+                                                        Ikincil
+                                                    </span>
+                                                )}
                                             </div>
                                             {person.job_title && (
                                                 <span className="text-[10px] text-slate-400">{person.job_title}</span>
                                             )}
                                         </td>
                                         <td className="px-3 py-2 text-slate-500">{person.department || '-'}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-indigo-600 tabular-nums">{formatMinutes(person.total_worked || 0)}</td>
-                                        <td className="px-3 py-2 text-right text-slate-500 tabular-nums">{formatMinutes(person.monthly_required || 0)}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-indigo-600 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.total_worked || 0)}</td>
+                                        <td className="px-3 py-2 text-right text-slate-500 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.monthly_required || 0)}</td>
                                         <td className="px-3 py-2 text-right">
-                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${effBadge.cls}`}>
-                                                %{person.efficiency}
-                                            </span>
+                                            {isSecondary ? <span className="text-slate-300">&mdash;</span> : (
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${effBadge.cls}`}>
+                                                    %{person.efficiency}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">{(() => { const _pOT = ((person.ot_intended_minutes || 0) + (person.ot_potential_minutes || 0) + (person.ot_manual_minutes || 0)) || (person.total_overtime || 0); return _pOT > 0 ? formatMinutes(_pOT) : <span className="text-slate-300">&mdash;</span>; })()}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-indigo-500 tabular-nums">{(person.ot_intended_minutes || 0) > 0 ? formatMinutes(person.ot_intended_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-amber-500 tabular-nums">{(person.ot_potential_minutes || 0) > 0 ? formatMinutes(person.ot_potential_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-violet-500 tabular-nums">{(person.ot_manual_minutes || 0) > 0 ? formatMinutes(person.ot_manual_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${(person.total_missing || 0) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                                            {(person.total_missing || 0) > 0 ? formatMinutes(person.total_missing) : <span className="text-emerald-500">0</span>}
+                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : (person.total_missing || 0) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                            {isSecondary ? <span>&mdash;</span> : (person.total_missing || 0) > 0 ? formatMinutes(person.total_missing) : <span className="text-emerald-500">0</span>}
                                         </td>
-                                        <td className="px-3 py-2 text-right font-semibold text-slate-600 tabular-nums">{formatMinutes(person.dailyMissing)}</td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${(person.monthly_deviation || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {(person.monthly_deviation || 0) >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.monthly_deviation || 0))}
+                                        <td className="px-3 py-2 text-right font-semibold text-slate-600 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.dailyMissing)}</td>
+                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : (person.monthly_deviation || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            {isSecondary ? <span>&mdash;</span> : <>{(person.monthly_deviation || 0) >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.monthly_deviation || 0))}</>}
                                         </td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${person.projected >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {person.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.projected))}
+                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : person.projected >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            {isSecondary ? <span>&mdash;</span> : <>{person.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.projected))}</>}
                                         </td>
                                         <td className="px-3 py-2 text-right font-semibold text-violet-600 tabular-nums">
-                                            {person.annual_leave_balance != null ? `${person.annual_leave_balance}g` : '-'}
+                                            {isSecondary ? <span className="text-slate-300">&mdash;</span> : person.annual_leave_balance != null ? `${person.annual_leave_balance}g` : '-'}
                                         </td>
                                         <td className="px-3 py-2 text-right">
-                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                                (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
-                                                (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
-                                                'bg-red-100 text-red-700'
-                                            }`}>
-                                                %{Math.round(person.attendance_rate || 100)}
-                                            </span>
+                                            {isSecondary ? <span className="text-slate-300">&mdash;</span> : (
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                    (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
+                                                    (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }`}>
+                                                    %{Math.round(person.attendance_rate || 100)}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">
                                             {(person.ot_weekend_minutes || 0) > 0 ? formatMinutes(person.ot_weekend_minutes) : <span className="text-slate-300">&mdash;</span>}
@@ -2051,10 +2104,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {analytics.ranked.map((person, idx) => {
+                        const _isSecondary = person.relationship_type === 'SECONDARY';
                         const missing = person.total_missing || 0;
                         const deviation = person.monthly_deviation || 0;
-                        const effBadge = getEfficiencyBadge(person.efficiency);
-                        const missingLevel = missing === 0 ? 'none' : missing < 60 ? 'low' : missing < 300 ? 'medium' : 'high';
+                        const effBadge = _isSecondary ? { cls: 'bg-blue-100 text-blue-600' } : getEfficiencyBadge(person.efficiency);
+                        const missingLevel = _isSecondary ? 'none' : missing === 0 ? 'none' : missing < 60 ? 'low' : missing < 300 ? 'medium' : 'high';
                         const borderCls = {
                             none: 'border-emerald-200/60 bg-gradient-to-br from-white to-emerald-50/30',
                             low: 'border-blue-200/60 bg-gradient-to-br from-white to-blue-50/30',
@@ -2067,7 +2121,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         return (
                             <div
                                 key={person.employee_id || idx}
-                                className={`p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${borderCls}`}
+                                className={`p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${_isSecondary ? 'border-blue-200/60 bg-gradient-to-br from-white to-blue-50/30' : borderCls}`}
                                 onClick={() => setDetailPerson(person)}
                             >
                                 {/* Header */}
@@ -2076,17 +2130,25 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-[10px] font-bold text-slate-300 tabular-nums w-5">#{idx + 1}</span>
                                             <p className="text-xs font-bold text-slate-800 truncate">{person.employee_name}</p>
+                                            {_isSecondary && (
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600 flex-shrink-0">
+                                                    Ikincil
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-[10px] text-slate-400 truncate ml-5">{person.department || '-'} · {person.job_title || '-'}</p>
                                     </div>
-                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ml-2 ${effBadge.cls}`}>
-                                        %{person.efficiency}
-                                    </span>
+                                    {!_isSecondary && (
+                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ml-2 ${effBadge.cls}`}>
+                                            %{person.efficiency}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Badges Row */}
                                 <div className="flex flex-wrap gap-1 mb-2">
-                                    {/* Attendance Rate Badge */}
+                                    {/* Attendance Rate Badge — HIDE for SECONDARY */}
+                                    {!_isSecondary && (
                                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                         (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
                                         (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
@@ -2094,6 +2156,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     }`}>
                                         Katılım %{Math.round(person.attendance_rate || 100)}
                                     </span>
+                                    )}
                                     {/* Weekend OT Badge */}
                                     {(person.ot_weekend_minutes || 0) > 0 && (
                                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700">
@@ -2128,7 +2191,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] mb-2">
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">Çalışma</span>
-                                        <span className="font-bold text-indigo-600 tabular-nums">{formatMinutes(person.total_worked || 0)}</span>
+                                        <span className="font-bold text-indigo-600 tabular-nums">{_isSecondary ? '\u2014' : formatMinutes(person.total_worked || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">F. Mesai</span>
@@ -2136,15 +2199,16 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-red-400 font-semibold">Kayıp</span>
-                                        <span className={`font-bold tabular-nums ${missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{missing > 0 ? formatMinutes(missing) : '0'}</span>
+                                        <span className={`font-bold tabular-nums ${_isSecondary ? 'text-slate-300' : missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{_isSecondary ? '\u2014' : missing > 0 ? formatMinutes(missing) : '0'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">FM/Normal</span>
-                                        <span className="font-bold text-amber-500 tabular-nums">%{personOTNormalRatio}</span>
+                                        <span className="font-bold text-amber-500 tabular-nums">{_isSecondary ? '\u2014' : `%${personOTNormalRatio}`}</span>
                                     </div>
                                 </div>
 
-                                {/* Net Bakiye bar + value */}
+                                {/* Net Bakiye bar + value — HIDE for SECONDARY */}
+                                {!_isSecondary && (
                                 <div className="pt-2 border-t border-slate-100/80">
                                     <div className="flex items-center justify-between text-[10px] mb-1">
                                         <span className="text-slate-400 font-semibold">Net Bakiye</span>
@@ -2156,7 +2220,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                                             <div
                                                 className={`h-full rounded-full transition-all duration-500 ${deviation >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
-                                                style={{ width: `${Math.min(100, Math.abs(person.efficiency))}%` }}
+                                                style={{ width: `${Math.min(100, Math.abs(person.efficiency || 0))}%` }}
                                             />
                                         </div>
                                         <span className="text-[10px] text-slate-400 font-semibold tabular-nums">
@@ -2164,9 +2228,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                         </span>
                                     </div>
                                 </div>
+                                )}
 
-                                {/* Leave info */}
-                                {(person.annual_leave_entitlement > 0 || person.annual_leave_used > 0) && (
+                                {/* Leave info — HIDE for SECONDARY */}
+                                {!_isSecondary && (person.annual_leave_entitlement > 0 || person.annual_leave_used > 0) && (
                                     <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
                                         <span className="text-slate-400 flex items-center gap-1">
                                             <Palmtree size={10} />

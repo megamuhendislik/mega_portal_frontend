@@ -19,6 +19,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
 
+    // Birthday balance
+    const [birthdayBalance, setBirthdayBalance] = useState(null);
+
     useEffect(() => {
         if (isOpen && initialData) {
             if (initialData.type === 'OVERTIME') {
@@ -32,6 +35,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     attendance: initialData.data.attendance || null
                 }));
                 setOvertimeManualOpen(true);
+            } else if (initialData.preselect_type === 'BIRTHDAY_LEAVE') {
+                handleTypeSelect('LEAVE');
+                // Pre-select BIRTHDAY_LEAVE type after a tick (types need to load)
+                setTimeout(() => {
+                    const bdType = requestTypes?.find(t => t.code === 'BIRTHDAY_LEAVE');
+                    if (bdType) {
+                        setLeaveForm(prev => ({ ...prev, request_type: bdType.id }));
+                    }
+                }, 100);
             }
         }
     }, [isOpen, initialData]);
@@ -377,6 +389,17 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         }
     }, [leaveForm.request_type, requestTypes]);
 
+    // Fetch birthday leave balance when BIRTHDAY_LEAVE is selected or LEAVE type opens
+    useEffect(() => {
+        if (selectedType === 'LEAVE') {
+            api.get('/leave-requests/birthday-balance/')
+                .then(res => setBirthdayBalance(res.data))
+                .catch(() => setBirthdayBalance(null));
+        } else {
+            setBirthdayBalance(null);
+        }
+    }, [selectedType]);
+
     // FIFO Preview fetch
     useEffect(() => {
         if (selectedType !== 'LEAVE' || !workingDaysInfo?.working_days) {
@@ -489,6 +512,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 // Mazeret izni: end_date = start_date, include start_time/end_time
                 const leaveTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
                 if (leaveTypeObj?.code === 'EXCUSE_LEAVE') {
+                    leavePayload.end_date = leavePayload.start_date;
+                }
+                // Birthday leave: end_date = start_date
+                if (leaveTypeObj?.code === 'BIRTHDAY_LEAVE') {
                     leavePayload.end_date = leavePayload.start_date;
                 }
                 // Remove empty time fields for non-excuse leave
@@ -1006,6 +1033,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     recentLeaveHistory={recentLeaveHistory}
                                     fifoPreview={fifoPreview}
                                     excuseBalance={excuseBalance}
+                                    birthdayBalance={birthdayBalance}
                                 />
                             )}
                             {selectedType === 'OVERTIME' && (

@@ -21,11 +21,13 @@ export const LeaveRequestForm = ({
     recentLeaveHistory,
     fifoPreview,
     excuseBalance,
+    birthdayBalance,
 }) => {
     const balance = leaveBalance;
     const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
     const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
     const isExcuseLeave = selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
+    const isBirthdayLeave = selectedTypeObj && selectedTypeObj.code === 'BIRTHDAY_LEAVE';
     const isInsufficient = isInsufficientBalance;
 
     return (
@@ -225,6 +227,36 @@ export const LeaveRequestForm = ({
                 </div>
             )}
 
+            {/* Birthday Leave Balance Box */}
+            {isBirthdayLeave && birthdayBalance && (
+                <div className="p-4 rounded-xl border bg-pink-50 border-pink-100 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🎂</span>
+                        <h4 className="font-bold text-pink-700">Doğum Günü İzni</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-center mb-2">
+                        <div className="bg-white/60 p-2 rounded-lg">
+                            <span className="block text-xs text-slate-500 font-bold uppercase">HAK</span>
+                            <span className="block font-black text-slate-700 text-lg">1 Gün</span>
+                        </div>
+                        <div className={`p-2 rounded-lg ${birthdayBalance.is_used ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-50 ring-1 ring-emerald-100'}`}>
+                            <span className="block text-xs font-bold uppercase text-slate-500">DURUM</span>
+                            <span className={`block font-black text-lg ${birthdayBalance.is_used ? 'text-red-600' : 'text-emerald-700'}`}>
+                                {birthdayBalance.is_used ? 'Kullanıldı' : 'Kullanılabilir'}
+                            </span>
+                        </div>
+                    </div>
+                    <p className="text-xs text-pink-600 mt-1">
+                        Doğum günü izninizi sadece {birthdayBalance.birth_month_name} ayında, 1 günlük olarak kullanabilirsiniz.
+                    </p>
+                    {birthdayBalance.is_used && (
+                        <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-1">
+                            <AlertCircle size={14} /> Bu yılın doğum günü izni hakkınız kullanılmıştır.
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Gecmis Izin Talepleri */}
             {recentLeaveHistory && recentLeaveHistory.length > 0 && (
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -274,16 +306,52 @@ export const LeaveRequestForm = ({
                 >
                     <option value="">Seçiniz</option>
                     {requestTypes
-                        .filter(t => ['ANNUAL_LEAVE', 'EXCUSE_LEAVE'].includes(t.code))
+                        .filter(t => {
+                            const allowed = ['ANNUAL_LEAVE', 'EXCUSE_LEAVE'];
+                            if (birthdayBalance?.is_birthday_month && !birthdayBalance?.is_used) {
+                                allowed.push('BIRTHDAY_LEAVE');
+                            }
+                            return allowed.includes(t.code);
+                        })
                         .filter((t, i, arr) => arr.findIndex(x => x.code === t.code) === i)
                         .map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                            <option key={t.id} value={t.id}>{t.name}{t.code === 'BIRTHDAY_LEAVE' ? ' 🎂' : ''}</option>
                         ))}
                 </select>
             </div>
 
-            {/* Mazeret İzni: Tek tarih + Saat Aralığı */}
-            {isExcuseLeave ? (
+            {/* Doğum Günü İzni: Tek tarih, doğum ayı sınırlı */}
+            {isBirthdayLeave ? (
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
+                        {(() => {
+                            const today = getIstanbulToday();
+                            const [yr] = today.split('-').map(Number);
+                            const bm = birthdayBalance?.birth_month;
+                            const minDate = bm ? `${yr}-${String(bm).padStart(2, '0')}-01` : today;
+                            // Last day of birth month
+                            const lastDay = bm ? new Date(yr, bm, 0).getDate() : 28;
+                            const maxDate = bm ? `${yr}-${String(bm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}` : today;
+                            return (
+                                <input
+                                    required
+                                    type="date"
+                                    value={leaveForm.start_date}
+                                    min={minDate}
+                                    max={maxDate}
+                                    onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
+                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 outline-none transition-all font-medium text-slate-700"
+                                />
+                            );
+                        })()}
+                    </div>
+                    <div className="p-2.5 bg-pink-50 rounded-lg border border-pink-100 flex items-center gap-2">
+                        <span className="text-base">🎂</span>
+                        <span className="text-sm font-bold text-pink-700">1 günlük doğum günü izni (tam gün)</span>
+                    </div>
+                </div>
+            ) : isExcuseLeave ? (
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>

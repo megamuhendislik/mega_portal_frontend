@@ -9,7 +9,7 @@ import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
-import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle } from 'lucide-react';
+import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle, Cake } from 'lucide-react';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -28,6 +28,7 @@ const Dashboard = () => {
     const [myRequests, setMyRequests] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [calendarEvents, setCalendarEvents] = useState([]);
+    const [birthdayBalance, setBirthdayBalance] = useState(null);
 
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
@@ -67,14 +68,15 @@ const Dashboard = () => {
 
             const { startStr, endStr } = getPeriodDates();
 
-            const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes] = await Promise.allSettled([
+            const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes, birthdayRes] = await Promise.allSettled([
                 api.get('/attendance/today_summary/'),
                 // Don't send dates — let backend auto-detect fiscal period
                 api.get(`/attendance/monthly_summary/?employee_id=${employeeId}`),
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
-                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${format(addDays(new Date(getIstanbulToday() + 'T00:00:00'), 7), 'yyyy-MM-dd')}&employee_id=${employeeId}`)
+                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${format(addDays(new Date(getIstanbulToday() + 'T00:00:00'), 7), 'yyyy-MM-dd')}&employee_id=${employeeId}`),
+                api.get('/leave-requests/birthday-balance/')
             ]);
 
             if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
@@ -109,6 +111,8 @@ const Dashboard = () => {
 
                 setCalendarEvents(agendaItems);
             }
+
+            if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
 
         } catch (error) {
             console.error("Dashboard Load Error", error);
@@ -193,6 +197,28 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Birthday Banner */}
+            {birthdayBalance?.is_birthday_month && (
+                <div className="relative overflow-hidden bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl p-5 text-white shadow-lg">
+                    {birthdayBalance.is_birthday_today && <div className="birthday-confetti" />}
+                    <div className="flex items-center gap-4">
+                        <span className="text-4xl">🎂</span>
+                        <div>
+                            <h3 className="text-lg font-black">
+                                {birthdayBalance.is_birthday_today
+                                    ? 'Doğum Gününüz Kutlu Olsun!'
+                                    : `${birthdayBalance.birth_month_name} Ayında Doğum Gününüz Var!`}
+                            </h3>
+                            <p className="text-white/80 text-sm mt-0.5">
+                                {birthdayBalance.is_used
+                                    ? 'Doğum günü izninizi kullandınız ✓'
+                                    : '1 günlük doğum günü izni hakkınız var'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
@@ -312,8 +338,8 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* Two Sections Side by Side */}
-                    <div className="grid grid-cols-2 gap-0">
+                    {/* Leave Sections Side by Side */}
+                    <div className={`grid gap-0 ${monthlySummary?.is_birthday_month ? 'grid-cols-3' : 'grid-cols-2'}`}>
                         {/* LEFT — Yıllık İzin */}
                         <div className="pr-3 border-r border-slate-100">
                             <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mb-1">YILLIK İZİN</p>
@@ -400,6 +426,34 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* THIRD — Doğum Günü İzni (sadece doğum ayında) */}
+                        {monthlySummary?.is_birthday_month && (
+                            <div className="pl-3 border-l border-slate-100">
+                                <p className="text-[10px] font-bold text-pink-500 uppercase tracking-wide mb-1">DOĞUM GÜNÜ İZNİ</p>
+                                <div className="flex items-baseline gap-1 mb-1">
+                                    <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                                        {monthlySummary?.birthday_leave_remaining ?? 1}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400">GÜN</span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-medium">
+                                    {monthlySummary?.birthday_leave_used ? (
+                                        <span className="text-emerald-600 font-bold">Kullanıldı ✓</span>
+                                    ) : (
+                                        <span className="text-pink-600 font-bold">Kullanılabilir 🎂</span>
+                                    )}
+                                </p>
+
+                                {/* Birthday info */}
+                                <div className="mt-2 pt-2 border-t border-slate-50">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">DOĞUM GÜNÜ</span>
+                                    <span className="text-xs font-bold text-pink-600">
+                                        {monthlySummary?.birth_day} {birthdayBalance?.birth_month_name}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

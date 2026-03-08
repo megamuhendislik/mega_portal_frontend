@@ -68,6 +68,30 @@
     @apply bg-slate-700 rounded-full hover:bg-slate-600 transition-colors;
 }
 
+/* Birthday Confetti Animation */
+.birthday-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.birthday-confetti::before,
+.birthday-confetti::after {
+    content: '🎊✨🎉🎂🎈';
+    position: absolute;
+    font-size: 1.5rem;
+    animation: confetti-fall 3s ease-in-out infinite;
+    opacity: 0.3;
+}
+.birthday-confetti::before { top: -20px; left: 10%; animation-delay: 0s; }
+.birthday-confetti::after { top: -20px; right: 10%; animation-delay: 1.5s; }
+
+@keyframes confetti-fall {
+    0% { transform: translateY(-10px) rotate(0deg); opacity: 0.3; }
+    50% { opacity: 0.6; }
+    100% { transform: translateY(80px) rotate(360deg); opacity: 0; }
+}
+
 /* Custom Animations */
 @keyframes fadeIn {
     from {

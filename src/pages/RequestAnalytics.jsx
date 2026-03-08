@@ -826,25 +826,33 @@ export default function RequestAnalytics() {
                                                                 {(emp.name || '?')[0]}
                                                             </div>
                                                             <span className="text-sm font-bold text-slate-700">{emp.name}</span>
+                                                            {emp.relationship_type === 'SECONDARY' && (
+                                                                <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full bg-amber-100 text-amber-700">İkincil</span>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-3 text-xs text-slate-500 font-medium">{emp.department}</td>
                                                     <td className="px-3 py-3 text-xs text-slate-500 font-medium">{emp.role}</td>
                                                     <td className="px-3 py-3 text-center">
                                                         <div className="flex flex-col items-center gap-1">
-                                                            <span className="text-sm font-black text-slate-800">{emp.total || 0}</span>
+                                                            <span className="text-sm font-black text-slate-800">
+                                                                {emp.total || 0}
+                                                                {emp.relationship_type === 'SECONDARY' && (emp.total || 0) > 0 && (
+                                                                    <span className="text-[9px] text-amber-500 ml-1">(FM+Yemek)</span>
+                                                                )}
+                                                            </span>
                                                             <div className="w-12">
                                                                 <ProgressBar value={emp.total || 0} max={maxTotal} color="bg-indigo-500" height="h-1" />
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-3 py-3 text-sm text-center text-blue-600 font-medium">{emp.leave || 0}</td>
+                                                    <td className="px-3 py-3 text-sm text-center text-blue-600 font-medium">{emp.relationship_type === 'SECONDARY' ? '—' : (emp.leave || 0)}</td>
                                                     <td className="px-3 py-3 text-sm text-center text-amber-600 font-medium">{emp.overtime || 0}</td>
                                                     <td className="px-3 py-3 text-sm text-center text-emerald-600 font-medium">{emp.meal || 0}</td>
-                                                    <td className="px-3 py-3 text-sm text-center text-violet-600 font-medium">{emp.cardless || 0}</td>
+                                                    <td className="px-3 py-3 text-sm text-center text-violet-600 font-medium">{emp.relationship_type === 'SECONDARY' ? '—' : (emp.cardless || 0)}</td>
                                                     <td className="px-3 py-3 text-sm text-center text-emerald-600 font-bold">{emp.approved || 0}</td>
                                                     <td className="px-3 py-3 text-sm text-center text-slate-600 font-medium">{(emp.overtime_hours || 0).toFixed(1)}</td>
-                                                    <td className="px-3 py-3 text-sm text-center text-slate-600 font-medium">{emp.leave_days || 0}</td>
+                                                    <td className="px-3 py-3 text-sm text-center text-slate-600 font-medium">{emp.relationship_type === 'SECONDARY' ? '—' : (emp.leave_days || 0)}</td>
                                                 </tr>
                                             );
                                         })}
@@ -1091,7 +1099,12 @@ export default function RequestAnalytics() {
                                                       'text-red-500 bg-red-50';
                                     return (
                                         <tr key={emp.employee_id || i} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-3 py-3 text-sm font-bold text-slate-700">{emp.name}</td>
+                                            <td className="px-3 py-3 text-sm font-bold text-slate-700">
+                                                {emp.name}
+                                                {emp.relationship_type === 'SECONDARY' && (
+                                                    <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full bg-amber-100 text-amber-700">İkincil</span>
+                                                )}
+                                            </td>
                                             <td className="px-3 py-3 text-xs text-slate-500 font-medium">{emp.department}</td>
                                             <td className="px-3 py-3 text-sm text-center font-medium text-slate-600">{emp.overtime_days || 0}</td>
                                             <td className="px-3 py-3 text-sm text-center font-bold text-amber-600">{(emp.overtime_hours || 0).toFixed(1)}</td>

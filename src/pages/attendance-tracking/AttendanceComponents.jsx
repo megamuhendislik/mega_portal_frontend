@@ -52,7 +52,7 @@ export const EmployeeAttendanceRow = ({
                         <div className={`rounded-full flex items-center justify-center font-bold border ${isManager ? 'w-9 h-9 text-xs bg-indigo-50 text-indigo-600 border-indigo-200' : 'w-8 h-8 text-[11px] bg-slate-50 text-slate-600 border-slate-200'}`}>
                             {(name || '?').charAt(0)}
                         </div>
-                        {s.is_online && (
+                        {s.is_online !== null && s.is_online && (
                             <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-emerald-500" />
                         )}
                     </div>
@@ -64,6 +64,9 @@ export const EmployeeAttendanceRow = ({
                             >
                                 {name}
                             </span>
+                            {s.relationship_type === 'SECONDARY' && (
+                                <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full bg-amber-100 text-amber-700">İkincil</span>
+                            )}
                             {isManager && nodeStats && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 border border-indigo-100 font-semibold shrink-0 tabular-nums">
                                     {nodeStats.count} kişi
@@ -118,19 +121,23 @@ export const EmployeeAttendanceRow = ({
 
             {/* Durum */}
             <td className="py-3.5 px-3">
-                {s.is_online ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Ofiste
-                    </span>
+                {s.is_online !== null ? (
+                    s.is_online ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Ofiste
+                        </span>
+                    ) : (
+                        <span className="text-[11px] text-slate-400">Dışarıda</span>
+                    )
                 ) : (
-                    <span className="text-[11px] text-slate-400">Dışarıda</span>
+                    <span className="text-xs text-slate-300">—</span>
                 )}
             </td>
 
             {/* Bugün: Normal */}
             <td className="py-3.5 px-3 text-center">
-                <span className="text-xs font-semibold text-slate-700 tabular-nums">{formatMinutes(s.today_normal)}</span>
+                <span className="text-xs font-semibold text-slate-700 tabular-nums">{s.today_normal !== null && s.today_normal !== undefined ? formatMinutes(s.today_normal) : '—'}</span>
             </td>
 
             {/* Bugün: F.Mesai (3 kategori) */}
@@ -147,14 +154,16 @@ export const EmployeeAttendanceRow = ({
 
             {/* Bugün: Mola */}
             <td className="py-3.5 px-3 text-center">
-                {(s.today_break || 0) > 0
-                    ? <span className="text-xs text-slate-500 tabular-nums">{formatMinutes(s.today_break)}</span>
-                    : <Dash />}
+                {s.today_break !== null && s.today_break !== undefined
+                    ? ((s.today_break || 0) > 0
+                        ? <span className="text-xs text-slate-500 tabular-nums">{formatMinutes(s.today_break)}</span>
+                        : <Dash />)
+                    : <span className="text-xs text-slate-300">—</span>}
             </td>
 
             {/* Aylık: Çalışma */}
             <td className="py-3.5 px-3 text-center">
-                <span className="text-xs font-semibold text-slate-600 tabular-nums">{formatMinutes(s.total_worked || 0)}</span>
+                <span className="text-xs font-semibold text-slate-600 tabular-nums">{s.total_worked !== null && s.total_worked !== undefined ? formatMinutes(s.total_worked || 0) : '—'}</span>
             </td>
 
             {/* Aylık: F.Mesai */}
@@ -166,7 +175,7 @@ export const EmployeeAttendanceRow = ({
 
             {/* Aylık: Net Durum */}
             <td className="py-3.5 px-3 text-center">
-                {(() => {
+                {s.total_missing !== null && s.total_missing !== undefined ? (() => {
                     const missing = s.total_missing || 0;
                     const overtime = s.total_overtime || 0;
                     if (missing > 0) {
@@ -186,7 +195,9 @@ export const EmployeeAttendanceRow = ({
                         );
                     }
                     return <Dash />;
-                })()}
+                })() : (
+                    <span className="text-xs text-slate-300">—</span>
+                )}
             </td>
 
             {/* İşlemler */}
@@ -309,7 +320,12 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             {(employee.employee_name || '?').charAt(0)}
                         </div>
                         <div>
-                            <h3 className="text-base font-bold text-slate-800">{employee.employee_name}</h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-base font-bold text-slate-800">{employee.employee_name}</h3>
+                                {employee.relationship_type === 'SECONDARY' && (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-200">İkincil</span>
+                                )}
+                            </div>
                             <p className="text-xs text-slate-400">{employee.department}</p>
                         </div>
                     </div>
@@ -322,7 +338,8 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                 </div>
 
                 <div className="p-5 space-y-5">
-                    {/* Stats */}
+                    {/* Stats — hidden for SECONDARY employees */}
+                    {employee?.relationship_type !== 'SECONDARY' && (
                     <div className="grid grid-cols-3 gap-3">
                         {[
                             { label: 'Normal', value: formatMinutes(employee.today_normal || 0), color: 'text-slate-800', bg: 'bg-slate-50 border-slate-200' },
@@ -335,6 +352,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             </div>
                         ))}
                     </div>
+                    )}
                     {/* OT Breakdown */}
                     <div className="grid grid-cols-3 gap-2">
                         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
@@ -383,7 +401,8 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                         </div>
                     )}
 
-                    {/* Timeline */}
+                    {/* Timeline — hidden for SECONDARY employees */}
+                    {employee?.relationship_type !== 'SECONDARY' && (
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Zaman Çizelgesi</h4>
                         <div className="relative w-full h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
@@ -422,8 +441,10 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             })()}
                         </div>
                     </div>
+                    )}
 
-                    {/* Giriş / Çıkış */}
+                    {/* Giriş / Çıkış — hidden for SECONDARY employees */}
+                    {employee?.relationship_type !== 'SECONDARY' && (
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                             <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400">
@@ -452,6 +473,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
         </div>

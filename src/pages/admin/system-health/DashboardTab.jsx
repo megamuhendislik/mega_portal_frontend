@@ -11,6 +11,8 @@ import {
     XCircleIcon,
     CommandLineIcon,
     TrashIcon,
+    CakeIcon,
+    GiftIcon,
 } from '@heroicons/react/24/outline';
 
 export default function DashboardTab({ stats, refresh, loading }) {
@@ -22,6 +24,8 @@ export default function DashboardTab({ stats, refresh, loading }) {
     const [systemSettings, setSystemSettings] = useState(null);
     const [startDateInput, setStartDateInput] = useState('');
     const [startDateSaving, setStartDateSaving] = useState(false);
+    const [birthdayData, setBirthdayData] = useState(null);
+    const [birthdayLoading, setBirthdayLoading] = useState(true);
 
     useEffect(() => {
         api.get('/system/health-check/get_runtime_config/')
@@ -37,6 +41,12 @@ export default function DashboardTab({ stats, refresh, loading }) {
                 setStartDateInput(data.attendance_start_date || '');
             }
         }).catch(() => {});
+
+        // Fetch birthdays this month
+        api.get('/system/health-check/birthdays-this-month/')
+            .then(res => setBirthdayData(res.data))
+            .catch(() => {})
+            .finally(() => setBirthdayLoading(false));
     }, []);
 
     const saveStartDate = async () => {
@@ -494,6 +504,103 @@ export default function DashboardTab({ stats, refresh, loading }) {
                         <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">LISTENING</span>
                     </div>
                 </div>
+            </div>
+
+            {/* Birthdays This Month */}
+            <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <CakeIcon className="w-5 h-5 text-pink-500" />
+                        Bu Ay Doğum Günleri
+                        {birthdayData && (
+                            <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">
+                                {birthdayData.month_name} — {birthdayData.count} kişi
+                            </span>
+                        )}
+                    </h3>
+                </div>
+
+                {birthdayLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-pink-300 border-t-pink-600 rounded-full animate-spin"></div>
+                    </div>
+                ) : !birthdayData || birthdayData.count === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                        <CakeIcon className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                        <p className="text-sm">Bu ay doğum günü olan çalışan yok</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {birthdayData.birthdays.map(emp => (
+                            <div
+                                key={emp.id}
+                                className={`relative p-4 rounded-xl border transition-all ${
+                                    emp.is_today
+                                        ? 'bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200 shadow-md ring-2 ring-pink-200/50'
+                                        : emp.days_until >= 0
+                                            ? 'bg-gray-50 border-gray-100 hover:border-pink-200 hover:shadow-sm'
+                                            : 'bg-gray-50/50 border-gray-100 opacity-60'
+                                }`}
+                            >
+                                {emp.is_today && (
+                                    <div className="absolute -top-2 -right-2 text-2xl animate-bounce">
+                                        🎂
+                                    </div>
+                                )}
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shrink-0 ${
+                                        emp.is_today
+                                            ? 'bg-pink-500 text-white'
+                                            : 'bg-pink-100 text-pink-600'
+                                    }`}>
+                                        {emp.birth_day}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className={`font-bold text-sm truncate ${emp.is_today ? 'text-pink-700' : 'text-gray-800'}`}>
+                                            {emp.full_name}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 font-medium truncate">
+                                            {emp.department}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <span className="text-[10px] font-bold text-gray-500">
+                                                {emp.age} yaş
+                                            </span>
+                                            {emp.is_today ? (
+                                                <span className="text-[10px] font-bold text-pink-600 bg-pink-100 px-1.5 py-0.5 rounded-full">
+                                                    BUGÜN!
+                                                </span>
+                                            ) : emp.days_until > 0 ? (
+                                                <span className="text-[10px] font-medium text-gray-400">
+                                                    {emp.days_until} gün kaldı
+                                                </span>
+                                            ) : emp.days_until === 0 ? (
+                                                <span className="text-[10px] font-bold text-pink-600">
+                                                    BUGÜN!
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-400">
+                                                    geçti
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="mt-1">
+                                            {emp.leave_used ? (
+                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                                                    <CheckCircleIcon className="w-3 h-3" /> İzin Kullanıldı
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                                                    <GiftIcon className="w-3 h-3" /> İzin Hakkı Var
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

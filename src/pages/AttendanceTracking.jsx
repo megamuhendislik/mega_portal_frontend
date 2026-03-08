@@ -777,14 +777,35 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     </button>
                     {showSecondaryTeam && (
                         <div className="space-y-1 opacity-80">
-                            {secondaryTeam.map(emp => (
-                                <div key={emp.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
-                                        <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">İkincil</span>
+                            {secondaryTeam.map(emp => {
+                                const empStats = stats.find(s => s.employee_id === emp.id);
+                                return (
+                                    <div
+                                        key={emp.id}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100 ${empStats ? 'cursor-pointer hover:bg-amber-100/50 transition-colors' : ''}`}
+                                        onClick={() => empStats && setSelectedEmployee(empStats)}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
+                                            {empStats && (empStats.total_overtime || 0) > 0 && (
+                                                <span className="text-[10px] font-bold text-amber-600 tabular-nums">
+                                                    FM: {formatMinutes(empStats.total_overtime)}
+                                                </span>
+                                            )}
+                                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">İkincil</span>
+                                        </div>
+                                        {empStats && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setOtDrawerTarget({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, department: emp.department || '' }); }}
+                                                className="text-xs px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                                                title="Ek mesai ata"
+                                            >
+                                                OT Ata
+                                            </button>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
