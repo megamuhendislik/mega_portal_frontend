@@ -353,7 +353,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
                 bg-white ${theme.border}
                 flex flex-col items-center gap-1.5 text-center
                 w-[120px] group
-                ${isDragSource ? 'opacity-40 scale-95' : ''}
+                ${isDragSource ? 'opacity-40 scale-95' : !emp.is_online ? 'opacity-50' : ''}
                 ${isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : ''}
                 ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
             `}
@@ -401,7 +401,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
 };
 
 // Department Card
-const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, onlineCount, totalCount, directCount }) => {
+const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, onlineCount, totalCount }) => {
     const isDragTarget = dnd?.dropTargetId === node.id;
 
     return (
@@ -426,20 +426,13 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, o
                 {node.name}
             </h3>
             {typeof totalCount === 'number' && totalCount > 0 && (
-                <div className="flex flex-col items-center gap-0.5 mt-1">
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
-                        onlineCount > 0
-                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                            : 'text-slate-500 bg-slate-50 border-slate-200'
-                    }`}>
-                        {onlineCount}/{totalCount}
-                    </span>
-                    {directCount > 0 && directCount < totalCount && (
-                        <span className="text-[8px] text-slate-400 font-medium">
-                            ({directCount} kişi bu seviyede)
-                        </span>
-                    )}
-                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border mt-1 ${
+                    onlineCount > 0
+                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                        : 'text-slate-500 bg-slate-50 border-slate-200'
+                }`}>
+                    {onlineCount}/{totalCount}
+                </span>
             )}
         </div>
 
@@ -656,19 +649,6 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         dnd={dnd}
                         onlineCount={countEmployeesRecursive(node).online}
                         totalCount={countEmployeesRecursive(node).total}
-                        directCount={(() => {
-                            let direct = 0;
-                            if (node.employees) {
-                                node.employees.forEach(emp => {
-                                    if (emp.type === 'group' && emp.employees) {
-                                        direct += emp.employees.length;
-                                    } else if (!emp.code && !emp.type) {
-                                        direct += 1;
-                                    }
-                                });
-                            }
-                            return direct;
-                        })()}
                     />
                 ) : node.type === 'group' ? (
                     <GroupNode
