@@ -296,18 +296,33 @@ const countEmployeeTree = (emp) => {
     return { total, online };
 };
 
-// Recursive department count: department + all sub-departments
+// Recursive department/group count: node + all sub-nodes
 const countEmployeesRecursive = (node) => {
     let total = 0;
     let online = 0;
     if (node.employees) {
         node.employees.forEach(emp => {
             if (emp.type === 'group' && emp.employees) {
+                // Group node — count its employees
                 emp.employees.forEach(ge => {
                     const sub = countEmployeeTree(ge);
                     total += sub.total;
                     online += sub.online;
                 });
+                // Also count the group's adopted children
+                if (emp.children) {
+                    emp.children.forEach(child => {
+                        if (child.code || child.type === 'department' || child.employees) {
+                            const sub = countEmployeesRecursive(child);
+                            total += sub.total;
+                            online += sub.online;
+                        } else {
+                            const sub = countEmployeeTree(child);
+                            total += sub.total;
+                            online += sub.online;
+                        }
+                    });
+                }
             } else if (!emp.code && !emp.type) {
                 const sub = countEmployeeTree(emp);
                 total += sub.total;
@@ -317,9 +332,15 @@ const countEmployeesRecursive = (node) => {
     }
     if (node.children) {
         node.children.forEach(child => {
-            const sub = countEmployeesRecursive(child);
-            total += sub.total;
-            online += sub.online;
+            if (child.type === 'group' || child.code || child.type === 'department' || child.employees) {
+                const sub = countEmployeesRecursive(child);
+                total += sub.total;
+                online += sub.online;
+            } else {
+                const sub = countEmployeeTree(child);
+                total += sub.total;
+                online += sub.online;
+            }
         });
     }
     return { total, online };
@@ -526,66 +547,55 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
     const processChildrenWithGrouping = (nodes, childType = 'employee') => {
         if (!nodes || nodes.length === 0) return [];
 
-        const groups = {};
         const resultList = [];
         const processedIds = new Set();
 
         // 1. Map Employees to Categories
-        // Check if node is employee-like (has title). If it's a sub-department, category is 'Diğer' or irrelevant.
         const nodesWithCat = nodes.map(n => ({
             ...n,
             type: n.type || childType,
-            _category: (n.employees || n.code) ? 'SUB_DEPT' : getRoleCategory(n.title) // Don't group sub-departments by title
+            _category: (n.employees || n.code) ? 'SUB_DEPT' : getRoleCategory(n.title)
         }));
 
-        // 2. Count Categories
-        const counts = {};
+        // 2. Count ALL employees per category (including ones with children)
+        const catCounts = {};
         nodesWithCat.forEach(n => {
-            const c = n._category;
-            if (c !== 'SUB_DEPT') {
-                counts[c] = (counts[c] || 0) + 1;
+            if (n._category !== 'SUB_DEPT') {
+                catCounts[n._category] = (catCounts[n._category] || 0) + 1;
             }
         });
 
-        // 3. Create Groups
+        // 3. Sort: sub-depts last, then alphabetical by category
         const sortedNodes = [...nodesWithCat].sort((a, b) => {
-            if (a._category === 'SUB_DEPT' && b._category !== 'SUB_DEPT') return 1; // Put depts at end? or keep original order? 
+            if (a._category === 'SUB_DEPT' && b._category !== 'SUB_DEPT') return 1;
             if (b._category === 'SUB_DEPT' && a._category !== 'SUB_DEPT') return -1;
-            if (a._category === 'SUB_DEPT' && b._category === 'SUB_DEPT') return 0; // Maintain relative order for sub-depts
+            if (a._category === 'SUB_DEPT' && b._category === 'SUB_DEPT') return 0;
             return a._category.localeCompare(b._category);
         });
 
-        // First pass: employees with subordinates always render individually (never grouped)
-        sortedNodes.forEach(nodeItem => {
-            if (processedIds.has(nodeItem.id)) return;
-            if (nodeItem._category === 'SUB_DEPT') return; // handle later
-            if (nodeItem.children && nodeItem.children.length > 0) {
-                processedIds.add(nodeItem.id);
-                resultList.push({ ...nodeItem });
-            }
-        });
-
-        // Second pass: leaf employees (no children) — group by category if 2+
-        // Recount only leaf employees per category
-        const leafCounts = {};
-        sortedNodes.forEach(n => {
-            if (processedIds.has(n.id) || n._category === 'SUB_DEPT') return;
-            leafCounts[n._category] = (leafCounts[n._category] || 0) + 1;
-        });
-
+        // 4. Single pass: group ALL employees of same category (2+), including ones with children
         sortedNodes.forEach(nodeItem => {
             if (processedIds.has(nodeItem.id)) return;
 
             const category = nodeItem._category;
 
-            if (category !== 'SUB_DEPT' && leafCounts[category] >= 2) {
+            if (category !== 'SUB_DEPT' && catCounts[category] >= 2) {
                 const groupMembers = sortedNodes.filter(n => n._category === category && !processedIds.has(n.id));
                 groupMembers.forEach(m => processedIds.add(m.id));
+
+                // Collect children from all members (scalp and adopt)
+                const adoptedChildren = [];
+                groupMembers.forEach(m => {
+                    if (m.children && m.children.length > 0) {
+                        adoptedChildren.push(...m.children);
+                    }
+                });
 
                 resultList.push({
                     type: 'group',
                     title: category,
-                    employees: groupMembers,
+                    employees: groupMembers.map(m => ({ ...m, children: [] })),
+                    children: adoptedChildren.length > 0 ? adoptedChildren : undefined,
                     id: `group-${category}-${nodeItem.id}`,
                     color: getColorForCategory(category)
                 });
