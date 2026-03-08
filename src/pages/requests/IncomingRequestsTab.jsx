@@ -131,7 +131,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         const teamPending = (incomingRequests || []).filter(r => r.status === 'PENDING').length;
         const subLeave = (substituteData?.leave_requests || []).length;
         const subOT = (substituteData?.overtime_requests || []).length;
-        return teamPending + subLeave + subOT;
+        const subCE = (substituteData?.cardless_entry_requests || []).length;
+        return teamPending + subLeave + subOT + subCE;
     }, [incomingRequests, substituteData]);
 
     useEffect(() => {
@@ -274,6 +275,16 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                 const principal = authorities.find(a => a.principal === r.principal_id);
                 items.push(normalizeRequest(
                     { ...r, type: 'OVERTIME' },
+                    'SUBSTITUTE', true, principal?.principal_name || ''
+                ));
+            });
+            (substituteData.cardless_entry_requests || []).forEach(r => {
+                const key = `CARDLESS_ENTRY-${r.id}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                const principal = authorities.find(a => a.principal === r.principal_id);
+                items.push(normalizeRequest(
+                    { ...r, type: 'CARDLESS_ENTRY' },
                     'SUBSTITUTE', true, principal?.principal_name || ''
                 ));
             });

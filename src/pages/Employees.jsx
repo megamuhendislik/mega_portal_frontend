@@ -30,7 +30,7 @@ const FIELD_TO_STEP = {
     service_tolerance_minutes: 4, weekly_ot_limit_hours: 4, technical_skills: 4,
     leave_entitlements: 5, annual_leave_balance: 5,
     annual_leave_advance_limit: 5, annual_leave_accrual_rate: 5, hired_date: 5,
-    roles: 6, direct_permissions: 6, excluded_permissions: 6, substitutes: 6,
+    roles: 6, direct_permissions: 6, excluded_permissions: 6,
 };
 
 // Add Shield Icon for Sensitive Data Indicator
@@ -55,7 +55,6 @@ const INITIAL_FORM_STATE = {
     assignments: [], // Matrix (Dept+Title)
     primary_managers: [], // Birincil Yöneticiler [{manager_id, department_id, job_position_id}]
     secondary_managers: [], // İkincil Yöneticiler [{manager_id, department_id, job_position_id}]
-    substitutes: [], // [NEW] Substitutes
     // functional_department: '', // REMOVED
     tags: [], // [NEW] Employee Tags
     roles: [],
@@ -426,32 +425,6 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                                 </button>
                             </div>
                         ))}
-                    </div>
-                </div>
-
-                {/* 6. SUBSTITUTES (Vekiller) */}
-                <div className="md:col-span-2">
-                    <div className="group">
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Vekiller / Onay Yetkilileri (Substitutes)</label>
-                        <div className="relative">
-                            <UserPlus className="absolute left-3 top-3 text-slate-400" size={18} />
-                            <select
-                                multiple
-                                value={formData.substitutes}
-                                onChange={e => {
-                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    handleChange('substitutes', selected);
-                                }}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-500/20 outline-none h-24"
-                            >
-                                {potentialManagers.map(mgr => ( // Re-using potentialManagers list as it contains employees
-                                    <option key={mgr.id} value={mgr.id}>
-                                        {mgr.first_name} {mgr.last_name}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-slate-400 mt-1 ml-1">Bu kişi izinli olduğunda yerine imza atabilecek kişiler. (Çoklu seçim için CTRL)</p>
-                        </div>
                     </div>
                 </div>
 
@@ -1115,14 +1088,6 @@ const StepPreview = ({ formData, departments, jobPositions, employees }) => {
                     </div>
                 </div>
 
-                {(formData.substitutes?.length > 0) && (
-                    <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors bg-indigo-50/30">
-                        <div className="w-full md:w-1/3 text-slate-500 font-medium">Vekiller</div>
-                        <div className="font-bold text-indigo-700">{formData.substitutes.length} Kişi Seçildi</div>
-                    </div>
-                )}
-
-
                 <div className="p-4 flex flex-col md:flex-row gap-1 md:gap-4 hover:bg-slate-50 transition-colors">
                     <div className="w-full md:w-1/3 text-slate-500 font-medium">Yetkiler</div>
                     <div className="font-bold text-slate-800 flex items-center gap-2">
@@ -1297,7 +1262,7 @@ const Employees = () => {
     };
 
     const handleAddNew = () => {
-        setFormData({ ...INITIAL_FORM_STATE, substitutes: [], roles: [], secondary_job_positions: [], excluded_permissions: [] });
+        setFormData({ ...INITIAL_FORM_STATE, roles: [], secondary_job_positions: [], excluded_permissions: [] });
         setViewMode('create');
         setCurrentStep(1);
         setCompletedSteps([]);
@@ -1440,8 +1405,6 @@ const Employees = () => {
                 technical_skills: data.technical_skills || [],
                 certificates: data.certificates || [],
                 foreign_languages: data.foreign_languages || [],
-
-                substitutes: data.substitutes || [], // [NEW] - Ensure this is populated if API returns IDs
                 roles: data.roles ? data.roles.map(r => r.id || r) : [],
 
                 direct_permissions: data.direct_permissions ? data.direct_permissions.map(p => p.id) : [],
