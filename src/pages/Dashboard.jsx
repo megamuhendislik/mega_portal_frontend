@@ -449,7 +449,7 @@ const Dashboard = () => {
                                 <div className="mt-2 pt-2 border-t border-slate-50">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">DOĞUM GÜNÜ</span>
                                     <span className="text-xs font-bold text-pink-600">
-                                        {monthlySummary?.birth_day} {birthdayBalance?.birth_month_name}
+                                        {monthlySummary?.birth_day} {birthdayBalance?.birth_month_name || ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'][monthlySummary?.birth_month] || ''}
                                     </span>
                                 </div>
                             </div>
