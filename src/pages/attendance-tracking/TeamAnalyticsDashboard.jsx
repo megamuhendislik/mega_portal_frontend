@@ -296,8 +296,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays }) => {
                         </div>
                     )}
 
-                    {/* Yemek Korelasyonu */}
-                    {(person.meal_ordered || 0) > 0 && (
+                    {/* Yemek Korelasyonu — HIDE for SECONDARY */}
+                    {!isSecondary && (person.meal_ordered || 0) > 0 && (
                         <div>
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yemek Korelasyonu</h4>
                             <div className="grid grid-cols-3 gap-3">

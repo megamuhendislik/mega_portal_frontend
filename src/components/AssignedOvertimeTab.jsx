@@ -516,8 +516,18 @@ const TeamItemCard = ({ item, onCancel, onEdit }) => {
 // MODALS (kept as-is, they work well)
 // ═══════════════════════════════════════════════════════════
 
-const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading }) => {
+const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, managers = [], claimType }) => {
     const [reason, setReason] = useState('');
+    const [selectedManagerId, setSelectedManagerId] = useState(null);
+    const showManagerSelect = claimType === 'POTENTIAL' && managers.length > 1;
+
+    useEffect(() => {
+        if (showManagerSelect) {
+            const primary = managers.find(m => m.relationship_type === 'PRIMARY');
+            setSelectedManagerId(primary ? primary.id : managers[0]?.id || null);
+        }
+    }, [managers, showManagerSelect]);
+
     if (!isOpen) return null;
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
@@ -527,11 +537,29 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading }) => 
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>
                 {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+                {showManagerSelect && (
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5">Onay Yöneticisi</label>
+                        <select
+                            value={selectedManagerId || ''}
+                            onChange={e => setSelectedManagerId(Number(e.target.value))}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 outline-none"
+                        >
+                            {managers.map(m => (
+                                <option key={m.id} value={m.id}>
+                                    {m.relationship_type === 'PRIMARY' ? '\u2B50 ' : '\uD83D\uDD39 '}
+                                    {m.full_name}
+                                    {m.relationship_type === 'PRIMARY' ? ' (Birincil)' : ' (İkincil)'}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <textarea rows="3" value={reason} onChange={e => setReason(e.target.value)}
                     placeholder="Açıklama (opsiyonel)..." className="input-field resize-none" />
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
-                    <button onClick={() => { onSubmit(reason); setReason(''); }} disabled={loading}
+                    <button onClick={() => { onSubmit(reason, selectedManagerId); setReason(''); }} disabled={loading}
                         className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all">
                         {loading ? 'Gönderiliyor...' : 'Talep Et'}
                     </button>
@@ -584,6 +612,7 @@ const AssignedOvertimeTab = () => {
     const [teamManagedAssignments, setTeamManagedAssignments] = useState([]);
     const [teamRequests, setTeamRequests] = useState([]);
     const [teamMembers, setTeamMembers] = useState([]);
+    const [managers, setManagers] = useState([]);
 
     // ── UI ──
     const [claimModal, setClaimModal] = useState({ open: false, type: null, target: null, title: '', subtitle: '' });
@@ -611,6 +640,7 @@ const AssignedOvertimeTab = () => {
             const calls = [
                 api.get('/overtime-assignments/claimable/'),
                 api.get('/overtime-requests/'),
+                api.get('/overtime-requests/my-managers/'),
             ];
             if (isManager) {
                 calls.push(api.get('/overtime-assignments/team/'));
@@ -621,13 +651,14 @@ const AssignedOvertimeTab = () => {
             const results = await Promise.allSettled(calls);
             if (results[0].status === 'fulfilled') setClaimableData(results[0].value.data);
             if (results[1].status === 'fulfilled') setMyRequests(results[1].value.data);
-            if (isManager && results[2]?.status === 'fulfilled') setTeamAssignments(results[2].value.data);
-            if (isManager && results[3]?.status === 'fulfilled') {
-                const d = results[3].value.data;
+            if (results[2].status === 'fulfilled') setManagers(results[2].value.data || []);
+            if (isManager && results[3]?.status === 'fulfilled') setTeamAssignments(results[3].value.data);
+            if (isManager && results[4]?.status === 'fulfilled') {
+                const d = results[4].value.data;
                 setTeamMembers(Array.isArray(d) ? d : (d.results || []));
             }
-            if (isManager && results[4]?.status === 'fulfilled') setTeamManagedAssignments(results[4].value.data);
-            if (isManager && results[5]?.status === 'fulfilled') setTeamRequests(results[5].value.data);
+            if (isManager && results[5]?.status === 'fulfilled') setTeamManagedAssignments(results[5].value.data);
+            if (isManager && results[6]?.status === 'fulfilled') setTeamRequests(results[6].value.data);
         } catch (err) { console.error('fetchData error:', err); }
         setLoading(false);
     }, [isManager]);
@@ -635,15 +666,19 @@ const AssignedOvertimeTab = () => {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     // ── Handlers ──
-    const handleClaim = async (reason) => {
+    const handleClaim = async (reason, selectedManagerId) => {
         setActionLoading(true);
         try {
             const { type, target } = claimModal;
             if (type === 'INTENDED') await api.post(`/overtime-assignments/${target.assignment_id}/claim/`, { reason: reason || undefined });
-            else if (type === 'POTENTIAL') await api.post('/overtime-requests/claim-potential/', {
+            else if (type === 'POTENTIAL') {
+                const payload = {
                     ...(target.overtime_request_id ? { overtime_request_id: target.overtime_request_id } : { attendance_id: target.attendance_id }),
                     reason: reason || undefined,
-                });
+                };
+                if (selectedManagerId) payload.target_approver_id = selectedManagerId;
+                await api.post('/overtime-requests/claim-potential/', payload);
+            }
             setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' });
             fetchData();
         } catch (err) { alert(err.response?.data?.error || 'Talep sırasında hata oluştu.'); }
@@ -1086,7 +1121,8 @@ const AssignedOvertimeTab = () => {
             {/* ═══ MODALS ═══ */}
             <ClaimModal isOpen={claimModal.open} title={claimModal.title} subtitle={claimModal.subtitle}
                 onClose={() => setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' })}
-                onSubmit={handleClaim} loading={actionLoading} />
+                onSubmit={handleClaim} loading={actionLoading}
+                managers={managers} claimType={claimModal.type} />
             <CancelModal isOpen={cancelModal.open} date={cancelModal.target ? formatDateTurkish(cancelModal.target.date) : ''}
                 onClose={() => setCancelModal({ open: false, target: null })}
                 onSubmit={handleCancel} loading={actionLoading} />

@@ -13,6 +13,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
     const [substituteData, setSubstituteData] = useState(null);
     const [subordinates, setSubordinates] = useState([]);
+    const [secondaryOnlyIds, setSecondaryOnlyIds] = useState(new Set());
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -51,12 +52,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
     const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
-            const [meRes, subsRes, teamRes, histRes, subAuthRes] = await Promise.allSettled([
+            const [meRes, subsRes, teamRes, histRes, subAuthRes, secSubRes] = await Promise.allSettled([
                 api.get('/employees/me/'),
                 api.get('/employees/subordinates/'),
                 api.get('/team-requests/'),
                 api.get('/leave/requests/team_history/'),
                 api.get('/substitute-authority/pending_requests/'),
+                api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
             ]);
 
             if (meRes.status === 'fulfilled') {
@@ -65,8 +67,17 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                 console.log('[IncomingRequestsTab] currentUserEmployeeId =', meId);
             }
             if (subsRes.status === 'fulfilled') {
-                setSubordinates(subsRes.value.data || []);
-                console.log('[IncomingRequestsTab] subordinates count =', (subsRes.value.data || []).length);
+                const allSubs = subsRes.value.data || [];
+                setSubordinates(allSubs);
+                console.log('[IncomingRequestsTab] subordinates count =', allSubs.length);
+                // Compute secondary-only IDs
+                const priSubIds = new Set(allSubs.map(s => s.id));
+                if (secSubRes.status === 'fulfilled') {
+                    const secSubs = secSubRes.value.data || [];
+                    const secIds = new Set(secSubs.map(s => s.id));
+                    const secOnly = new Set([...secIds].filter(id => !priSubIds.has(id)));
+                    setSecondaryOnlyIds(secOnly);
+                }
             }
             if (teamRes.status === 'fulfilled') {
                 const teamData = teamRes.value.data || [];
@@ -320,6 +331,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
     // Apply filters
     const filtered = useMemo(() => {
         return currentItems.filter(r => {
+            // SECONDARY-only employee safety filter: only show OT requests
+            const empId = r.employee_id || r.employee?.id || r.employee;
+            if (empId && secondaryOnlyIds.has(empId)) {
+                const rType = r.type || '';
+                if (!rType.includes('OVERTIME') && rType !== 'OVERTIME') return false;
+            }
             if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
             if (r.status === 'POTENTIAL') return false;
             if (activeSubTab === 'team_requests' && statusFilter !== 'ALL') {
@@ -333,7 +350,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
             }
             return true;
         });
-    }, [currentItems, typeFilter, statusFilter, searchText, activeSubTab]);
+    }, [currentItems, typeFilter, statusFilter, searchText, activeSubTab, secondaryOnlyIds]);
 
     // Badge counts
     const directPendingCount = useMemo(() =>

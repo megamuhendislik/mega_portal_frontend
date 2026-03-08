@@ -779,37 +779,57 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         onClick={() => setShowSecondaryTeam(!showSecondaryTeam)}
                         className="flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800 mb-3 transition-colors"
                     >
-                        {showSecondaryTeam ? '▼' : '▶'}
-                        İkincil Ekip ({secondaryTeam.length} kişi)
+                        {showSecondaryTeam ? '\u25BC' : '\u25B6'}
+                        {'\u0130'}kincil Ekip (Sadece Ek Mesai) ({secondaryTeam.length} ki{'\u015F'}i)
                     </button>
                     {showSecondaryTeam && (
-                        <div className="space-y-1 opacity-80">
+                        <div className="space-y-1">
+                            <div className="px-3 py-1.5 text-[11px] text-amber-600 bg-amber-50 rounded-lg border border-amber-100 mb-2">
+                                {'\u0130'}kincil ekip {'\u00FC'}yeleri i{'\u00E7'}in sadece ek mesai bilgileri g{'\u00F6'}r{'\u00FC'}nt{'\u00FC'}lenir.
+                            </div>
                             {secondaryTeam.map(emp => {
                                 const empStats = stats.find(s => s.employee_id === emp.id);
+                                const otTotal = empStats ? (empStats.total_overtime || 0) : 0;
+                                const otIntended = empStats?.ot_intended_minutes || 0;
+                                const otPotential = empStats?.ot_potential_minutes || 0;
+                                const otManual = empStats?.ot_manual_minutes || 0;
                                 return (
                                     <div
                                         key={emp.id}
-                                        className={`flex items-center justify-between px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100 ${empStats ? 'cursor-pointer hover:bg-amber-100/50 transition-colors' : ''}`}
-                                        onClick={() => empStats && setSelectedEmployee(empStats)}
+                                        className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-amber-50/50 border border-amber-100 hover:bg-amber-100/50 transition-colors"
                                     >
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
-                                            {empStats && (empStats.total_overtime || 0) > 0 && (
+                                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">{'\u0130'}kincil</span>
+                                            {emp.department && <span className="text-[10px] text-slate-400">{emp.department}</span>}
+                                            {otTotal > 0 && (
                                                 <span className="text-[10px] font-bold text-amber-600 tabular-nums">
-                                                    FM: {formatMinutes(empStats.total_overtime)}
+                                                    FM: {formatMinutes(otTotal)}
                                                 </span>
                                             )}
-                                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">İkincil</span>
+                                            {otIntended > 0 && (
+                                                <span className="text-[9px] px-1 py-0.5 rounded bg-indigo-100 text-indigo-600 font-bold">
+                                                    Planl{'\u0131'} {formatMinutes(otIntended)}
+                                                </span>
+                                            )}
+                                            {otPotential > 0 && (
+                                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-600 font-bold">
+                                                    Alg{'\u0131'}lanan {formatMinutes(otPotential)}
+                                                </span>
+                                            )}
+                                            {otManual > 0 && (
+                                                <span className="text-[9px] px-1 py-0.5 rounded bg-violet-100 text-violet-600 font-bold">
+                                                    Manuel {formatMinutes(otManual)}
+                                                </span>
+                                            )}
                                         </div>
-                                        {empStats && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setOtDrawerTarget({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, department: emp.department || '' }); }}
-                                                className="text-xs px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors"
-                                                title="Ek mesai ata"
-                                            >
-                                                OT Ata
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => setOtDrawerTarget({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, department: emp.department || '' })}
+                                            className="text-xs px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors flex-shrink-0"
+                                            title="Ek mesai ata"
+                                        >
+                                            OT Ata
+                                        </button>
                                     </div>
                                 );
                             })}
