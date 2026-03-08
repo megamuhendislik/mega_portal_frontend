@@ -449,7 +449,7 @@ const YearlyView = ({ data }) => {
                 <ComposedChart data={simplifiedData} barSize={isMobile ? 12 : 18} margin={{ top: 25, right: 40, left: isMobile ? 0 : -20, bottom: isMobile ? 30 : 15 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXTick />} dy={10} interval={0} />
-                    <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8' }} label={{ value: 'Saat', angle: -90, position: 'insideLeft', offset: 15, fontSize: 10, fill: '#94a3b8' }} />
+                    <YAxis yAxisId="left" domain={[0, 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8' }} label={{ value: 'Saat', angle: -90, position: 'insideLeft', offset: 15, fontSize: 10, fill: '#94a3b8' }} />
                     <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#8b5cf6' }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
