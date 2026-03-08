@@ -279,71 +279,24 @@ const InfoCell = ({ icon, label, value, color }) => {
     );
 };
 
-// Recursive employee count: department + all sub-departments
-// Count employees in an employee tree (employee → children → children...)
-const countEmployeeTree = (emp) => {
-    let total = 1;
-    let online = emp.is_online ? 1 : 0;
-    if (emp.children) {
-        emp.children.forEach(child => {
-            // Skip sub-departments that got nested inside employee children
-            if (child.code || child.type === 'department') return;
-            const sub = countEmployeeTree(child);
-            total += sub.total;
-            online += sub.online;
-        });
-    }
-    return { total, online };
-};
-
 // Recursive department/group count: node + all sub-nodes
+// Uses simple walk to count all employee leaf nodes (no code, not group/department)
 const countEmployeesRecursive = (node) => {
-    let total = 0;
+    const counted = new Set();
     let online = 0;
-    if (node.employees) {
-        node.employees.forEach(emp => {
-            if (emp.type === 'group' && emp.employees) {
-                // Group node — count its employees
-                emp.employees.forEach(ge => {
-                    const sub = countEmployeeTree(ge);
-                    total += sub.total;
-                    online += sub.online;
-                });
-                // Also count the group's adopted children
-                if (emp.children) {
-                    emp.children.forEach(child => {
-                        if (child.code || child.type === 'department' || child.employees) {
-                            const sub = countEmployeesRecursive(child);
-                            total += sub.total;
-                            online += sub.online;
-                        } else {
-                            const sub = countEmployeeTree(child);
-                            total += sub.total;
-                            online += sub.online;
-                        }
-                    });
-                }
-            } else if (!emp.code && !emp.type) {
-                const sub = countEmployeeTree(emp);
-                total += sub.total;
-                online += sub.online;
+    const walk = (n) => {
+        // Leaf employee: has id, no department code, not a group/department node
+        if (n.id && !n.code && n.type !== 'group' && n.type !== 'department') {
+            if (!counted.has(n.id)) {
+                counted.add(n.id);
+                if (n.is_online) online++;
             }
-        });
-    }
-    if (node.children) {
-        node.children.forEach(child => {
-            if (child.type === 'group' || child.code || child.type === 'department' || child.employees) {
-                const sub = countEmployeesRecursive(child);
-                total += sub.total;
-                online += sub.online;
-            } else {
-                const sub = countEmployeeTree(child);
-                total += sub.total;
-                online += sub.online;
-            }
-        });
-    }
-    return { total, online };
+        }
+        if (n.employees) n.employees.forEach(walk);
+        if (n.children) n.children.forEach(walk);
+    };
+    walk(node);
+    return { total: counted.size, online };
 };
 
 // Employee Card
@@ -892,39 +845,6 @@ const OrganizationChart = () => {
             const processedData = applyFlatteningToTree(data);
             const finalData = filterAdminUser(processedData);
             setTreeData(finalData);
-
-            // Diagnostic: find counting bug
-            console.warn('[OrgChart] Diagnostic başladı...');
-            const collectIds = (nodes) => {
-                const ids = new Set();
-                const walk = (n) => {
-                    if (n.id && !n.code && n.type !== 'group' && n.type !== 'department') ids.add(n.id);
-                    if (n.employees) n.employees.forEach(walk);
-                    if (n.children) n.children.forEach(walk);
-                };
-                nodes.forEach(walk);
-                return ids;
-            };
-            const treeIds = collectIds(finalData);
-            // Compare with countEmployeesRecursive
-            const rootNode = finalData[0];
-            if (rootNode) {
-                const counted = countEmployeesRecursive(rootNode);
-                console.warn(`[OrgChart] collectIds: ${treeIds.size}, countEmployeesRecursive: ${counted.total}, Fark: ${treeIds.size - counted.total}`);
-                // Deep dive: per-department counting
-                const checkDept = (node, path) => {
-                    const ids = collectIds([node]);
-                    const cnt = countEmployeesRecursive(node);
-                    if (ids.size !== cnt.total) {
-                        console.warn(`[OrgChart] FARK: ${path} → collectIds=${ids.size}, count=${cnt.total}, fark=${ids.size - cnt.total}`);
-                    }
-                    if (node.children) node.children.forEach(c => checkDept(c, `${path}/${c.name || c.title || c.code || c.id}`));
-                    if (node.employees) node.employees.forEach(e => {
-                        if (e.type === 'group' || e.employees || e.code) checkDept(e, `${path}/${e.title || e.name || e.id}`);
-                    });
-                };
-                checkDept(rootNode, rootNode.name || rootNode.code);
-            }
 
         } catch (err) {
             console.error('Error fetching hierarchy:', err);
