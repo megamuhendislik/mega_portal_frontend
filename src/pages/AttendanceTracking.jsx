@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Clock, AlertCircle, Users, Activity,
-    Search, ArrowUpRight, ArrowDownRight, RefreshCw,
+    Clock, AlertCircle, Users,
+    Search, RefreshCw,
     BarChart3, List
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -178,27 +178,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         }
     };
 
-    const renderDeviation = (statsObj) => {
-        const missing = statsObj.total_missing || 0;
-        const overtime = statsObj.total_overtime || 0;
-
-        if (missing > 0) {
-            return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold">
-                    <ArrowDownRight size={12} /> Eksik
-                </span>
-            );
-        }
-        if (overtime > 0) {
-            return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">
-                    <ArrowUpRight size={12} /> Fazla
-                </span>
-            );
-        }
-        return <span className="text-slate-300">—</span>;
-    };
-
     // Turkish-aware normalize for search: lowercase + strip diacritics (ışık → isik)
     const trNorm = (s) => (s || '').toLocaleLowerCase('tr').replace(/[şçöüğı]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i' })[c]);
 
@@ -251,6 +230,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 if (sortMode === 'OT_DESC') return (b.total_overtime || 0) - (a.total_overtime || 0);
                 if (sortMode === 'MISSING_DESC') return (b.total_missing || 0) - (a.total_missing || 0);
                 if (sortMode === 'NORMAL_DESC') return (b.total_worked || 0) - (a.total_worked || 0);
+                if (sortMode === 'NET_WORST') return (a.monthly_deviation || 0) - (b.monthly_deviation || 0);
+                if (sortMode === 'NET_BEST') return (b.monthly_deviation || 0) - (a.monthly_deviation || 0);
                 return (a.employee_name || '').localeCompare(b.employee_name || '', 'tr');
             });
         }
@@ -303,7 +284,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             count: 0, onlineCount: 0,
             total_worked: 0, total_overtime: 0, total_missing: 0,
             today_normal: 0, today_overtime: 0, today_break: 0,
-            monthly_deviation: 0
+            monthly_deviation: 0,
+            sum_daily_avg_worked: 0,
+            sum_daily_avg_missing: 0,
+            sum_daily_avg_overtime: 0,
         };
 
         // Count this node's own stats
@@ -318,6 +302,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             agg.today_overtime += (s.today_overtime || 0);
             agg.today_break += (s.today_break || 0);
             agg.monthly_deviation += (s.monthly_deviation || 0);
+            const days = s.elapsed_work_days || 1;
+            agg.sum_daily_avg_worked += (s.total_worked || 0) / days;
+            agg.sum_daily_avg_missing += (s.total_missing || 0) / days;
+            agg.sum_daily_avg_overtime += (s.total_overtime || 0) / days;
         }
 
         // Aggregate children (subordinates)
@@ -333,6 +321,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 agg.today_overtime += childStats.today_overtime;
                 agg.today_break += childStats.today_break;
                 agg.monthly_deviation += childStats.monthly_deviation;
+                agg.sum_daily_avg_worked += childStats.sum_daily_avg_worked;
+                agg.sum_daily_avg_missing += childStats.sum_daily_avg_missing;
+                agg.sum_daily_avg_overtime += childStats.sum_daily_avg_overtime;
             });
         }
 
@@ -363,10 +354,28 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
     const isSearchActive = searchTerm !== '' || (filterStatus !== 'ALL');
 
+    const sortChildren = (children) => {
+        if (!children || children.length === 0) return children;
+        return [...children].sort((a, b) => {
+            if (a.type === 'GROUP' && b.type !== 'GROUP') return -1;
+            if (a.type !== 'GROUP' && b.type === 'GROUP') return 1;
+            if (a.type === 'GROUP' && b.type === 'GROUP') return 0;
+            const sa = a.stats || {};
+            const sb = b.stats || {};
+            if (sortMode === 'OT_DESC') return (sb.total_overtime || 0) - (sa.total_overtime || 0);
+            if (sortMode === 'MISSING_DESC') return (sb.total_missing || 0) - (sa.total_missing || 0);
+            if (sortMode === 'NORMAL_DESC') return (sb.total_worked || 0) - (sa.total_worked || 0);
+            if (sortMode === 'NET_WORST') return (sa.monthly_deviation || 0) - (sb.monthly_deviation || 0);
+            if (sortMode === 'NET_BEST') return (sb.monthly_deviation || 0) - (sa.monthly_deviation || 0);
+            return (a.name || '').localeCompare(b.name || '', 'tr');
+        });
+    };
+
     const renderHierarchyRows = (nodes, depth = 0) => {
         if (!nodes) return null;
+        const sorted = sortChildren(nodes);
 
-        return nodes.map(node => {
+        return sorted.map(node => {
             // GROUP node (role group header)
             if (node.type === 'GROUP') {
                 // When searching, hide groups with no matching descendants
@@ -430,7 +439,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         onToggle={hasChildren ? () => toggleDept(node.id) : null}
                         hierarchySort={hierarchySort}
                         onEmployeeClick={handleEmployeeClick}
-                        onDetailClick={setSelectedEmployee}
                         onAssignOvertime={emp => setOtDrawerTarget(emp)}
                     />
                     {hasChildren && showChildren && renderHierarchyRows(node.children, depth + 1)}
@@ -682,18 +690,18 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         />
                         <span className="text-xs font-semibold text-slate-600">Hiyerarşi Görünümü</span>
                     </label>
-                    {!hierarchySort && (
-                        <select
-                            value={sortMode}
-                            onChange={(e) => setSortMode(e.target.value)}
-                            className="bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-600 py-1.5 pl-2 pr-6 cursor-pointer hover:border-indigo-300 transition-colors"
-                        >
-                            <option value="NAME">İsim (A-Z)</option>
-                            <option value="OT_DESC">En Çok Ek Mesai</option>
-                            <option value="MISSING_DESC">En Çok Eksik</option>
-                            <option value="NORMAL_DESC">En Çok Çalışma</option>
-                        </select>
-                    )}
+                    <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-600 py-1.5 pl-2 pr-6 cursor-pointer hover:border-indigo-300 transition-colors"
+                    >
+                        <option value="NAME">İsim (A-Z)</option>
+                        <option value="OT_DESC">En Çok Ek Mesai</option>
+                        <option value="MISSING_DESC">En Çok Eksik</option>
+                        <option value="NORMAL_DESC">En Çok Çalışma</option>
+                        <option value="NET_WORST">Net: En Çok Eksik</option>
+                        <option value="NET_BEST">Net: En Çok Fazla</option>
+                    </select>
                     <span className="text-[11px] text-slate-400 ml-auto tabular-nums">{stats.length} kişi</span>
                 </div>
                 <div className="overflow-x-auto">
@@ -754,7 +762,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             depth={0}
                                             hierarchySort={hierarchySort}
                                             onEmployeeClick={handleEmployeeClick}
-                                            onDetailClick={setSelectedEmployee}
                                             onAssignOvertime={emp => setOtDrawerTarget(emp)}
                                         />
                                     ))

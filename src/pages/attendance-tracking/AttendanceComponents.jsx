@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Activity,
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon,
     CalendarPlus, CalendarCheck, AlertTriangle
@@ -17,6 +16,8 @@ export const formatMinutes = (minutes) => {
 
 const round2 = (v) => Math.round((v || 0) * 100) / 100;
 
+const Dash = () => <span className="text-slate-200 select-none">—</span>;
+
 /* ─────────────────────────────────────────────
    EmployeeAttendanceRow
    ───────────────────────────────────────────── */
@@ -29,10 +30,8 @@ export const EmployeeAttendanceRow = ({
     onToggle = null,
     hierarchySort = false,
     onEmployeeClick,
-    onDetailClick,
     onAssignOvertime,
 }) => {
-    const Dash = () => <span className="text-slate-200 select-none">—</span>;
 
     return (
         <>
@@ -175,26 +174,33 @@ export const EmployeeAttendanceRow = ({
 
             {/* Aylık: Net Durum */}
             <td className="py-3.5 px-3 text-center">
-                {s.total_missing !== null && s.total_missing !== undefined ? (() => {
-                    const missing = s.total_missing || 0;
-                    const overtime = s.total_overtime || 0;
-                    if (missing > 0) {
-                        return (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
-                                <ArrowDownRight size={10} />
-                                {formatMinutes(missing)} Eksik
-                            </span>
-                        );
-                    }
-                    if (overtime > 0) {
-                        return (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
-                                <ArrowUpRight size={10} />
-                                {formatMinutes(overtime)} Fazla
-                            </span>
-                        );
-                    }
-                    return <Dash />;
+                {s.monthly_deviation !== null && s.monthly_deviation !== undefined ? (() => {
+                    const dev = s.monthly_deviation || 0;
+                    const potentialOt = s.ot_potential_minutes || 0;
+                    const devWithPotential = dev + potentialOt;
+
+                    return (
+                        <div className="flex flex-col items-center gap-0.5">
+                            {dev < 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100">
+                                    <ArrowDownRight size={10} />
+                                    {formatMinutes(Math.abs(dev))} Eksik
+                                </span>
+                            ) : dev > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                                    <ArrowUpRight size={10} />
+                                    {formatMinutes(dev)} Fazla
+                                </span>
+                            ) : (
+                                <span className="text-[10px] text-slate-400 font-medium">Dengede</span>
+                            )}
+                            {potentialOt > 0 && devWithPotential !== 0 && (
+                                <span className={`text-[9px] tabular-nums ${devWithPotential > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    pot: {devWithPotential > 0 ? '+' : '-'}{formatMinutes(Math.abs(devWithPotential))}
+                                </span>
+                            )}
+                        </div>
+                    );
                 })() : (
                     <span className="text-xs text-slate-300">—</span>
                 )}
@@ -213,13 +219,6 @@ export const EmployeeAttendanceRow = ({
                             Ek Mesai İsteği
                         </button>
                     )}
-                    <button
-                        className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        onClick={() => onDetailClick(s)}
-                        title="Günlük Detay"
-                    >
-                        <Activity size={15} />
-                    </button>
                 </div>
             </td>
         </tr>
@@ -240,10 +239,10 @@ export const HierarchyGroupRow = ({
 }) => {
     const memberCount = node.children ? node.children.length : 0;
     const cnt = nodeStats.count || 1;
-    const avg = {
-        total_worked: Math.round(nodeStats.total_worked / cnt),
-        total_overtime: Math.round(nodeStats.total_overtime / cnt),
-        total_missing: Math.round(nodeStats.total_missing / cnt),
+    const dailyAvg = {
+        worked: Math.round(nodeStats.sum_daily_avg_worked / cnt),
+        missing: Math.round(nodeStats.sum_daily_avg_missing / cnt),
+        overtime: Math.round(nodeStats.sum_daily_avg_overtime / cnt),
     };
 
     return (
@@ -273,16 +272,16 @@ export const HierarchyGroupRow = ({
             </td>
             <td colSpan={3} className="py-2.5 px-3 text-center" />
             <td className="py-2.5 px-3 text-center">
-                {avg.total_worked > 0 && <span className="text-[11px] text-slate-400 tabular-nums">ort. {formatMinutes(avg.total_worked)}</span>}
+                {dailyAvg.worked > 0 && <span className="text-[11px] text-slate-400 tabular-nums">ort. {formatMinutes(dailyAvg.worked)}/gün</span>}
             </td>
             <td className="py-2.5 px-3 text-center">
-                {avg.total_overtime > 0 && <span className="text-[11px] text-amber-500 font-semibold tabular-nums">+{formatMinutes(avg.total_overtime)}</span>}
+                {dailyAvg.overtime > 0 && <span className="text-[11px] text-amber-500 font-semibold tabular-nums">ort. {formatMinutes(dailyAvg.overtime)}/gün</span>}
             </td>
             <td className="py-2.5 px-3 text-center">
-                {avg.total_missing > 0 ? (
-                    <span className="text-[11px] text-red-400 font-semibold">{formatMinutes(avg.total_missing)} eksik</span>
-                ) : avg.total_overtime > 0 ? (
-                    <span className="text-[11px] text-emerald-400 font-semibold">{formatMinutes(avg.total_overtime)} fazla</span>
+                {dailyAvg.missing > 0 ? (
+                    <span className="text-[11px] text-red-400 font-semibold">ort. {formatMinutes(dailyAvg.missing)}/gün eksik</span>
+                ) : dailyAvg.overtime > 0 ? (
+                    <span className="text-[11px] text-emerald-400 font-semibold">ort. {formatMinutes(dailyAvg.overtime)}/gün fazla</span>
                 ) : null}
             </td>
             <td className="py-2.5 px-3" />
