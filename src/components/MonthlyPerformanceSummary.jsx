@@ -398,7 +398,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                         const currentFiscalIdx = (stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1)) - 1;
                                         const systemStartIdx = (stats.cumulative.systemStartFiscalMonth || 1) - 1;
                                         // Only show months from system start to current fiscal month
-                                        const visibleMonths = stats.cumulative.breakdown.slice(systemStartIdx, currentFiscalIdx + 1);
+                                        const visibleMonths = stats.cumulative.breakdown.slice(systemStartIdx);
                                         // Global max for consistent Y-axis scaling across all months
                                         const globalMax = visibleMonths.reduce((mx, m) => {
                                             const otA = m.ot_approved || 0, otP = m.ot_pending || 0;
@@ -448,8 +448,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             }
 
                                             // Colors
+                                            const isFuture = !isPast && !isCurrentMonth;
                                             let containerBg = 'bg-transparent';
-                                            if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
+                                            if (isFuture) containerBg = 'bg-slate-100/60';
+                                            else if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
 
                                             const balanceHours = (balance / 3600).toFixed(1);
                                             // Cumulative from reduced breakdown
@@ -461,24 +463,26 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     key={idx}
                                                     className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1`}
                                                 >
-                                                    {/* Normal Work Bar (Indigo) */}
-                                                    <div className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
-                                                        style={{ height: `${pctNormal}%` }} />
+                                                    {/* Normal Work Bar (Indigo) — sadece gecmis + mevcut */}
+                                                    {(isPast || isCurrentMonth) && (
+                                                        <div className="absolute bottom-0 left-0 w-full bg-indigo-500 transition-all duration-1000 group-hover:bg-indigo-600"
+                                                            style={{ height: `${pctNormal}%` }} />
+                                                    )}
 
-                                                    {/* OT Approved (Emerald) */}
-                                                    {pctOtApproved > 0 && (
+                                                    {/* OT Approved (Emerald) — sadece gecmis + mevcut */}
+                                                    {(isPast || isCurrentMonth) && pctOtApproved > 0 && (
                                                         <div className="absolute left-0 w-full bg-emerald-400 transition-all duration-1000 group-hover:bg-emerald-500"
                                                             style={{ bottom: `${pctNormal}%`, height: `${pctOtApproved}%` }} />
                                                     )}
 
-                                                    {/* OT Pending (Amber striped) */}
-                                                    {pctOtPending > 0 && (
+                                                    {/* OT Pending (Amber striped) — sadece gecmis + mevcut */}
+                                                    {(isPast || isCurrentMonth) && pctOtPending > 0 && (
                                                         <div className="absolute left-0 w-full transition-all duration-1000"
                                                             style={{ bottom: `${pctNormal + pctOtApproved}%`, height: `${pctOtPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 2px, #f59e0b 2px, #f59e0b 4px)' }} />
                                                     )}
 
-                                                    {/* OT Potential (Gray striped) */}
-                                                    {pctOtPotential > 0 && (
+                                                    {/* OT Potential (Gray striped) — sadece gecmis + mevcut */}
+                                                    {(isPast || isCurrentMonth) && pctOtPotential > 0 && (
                                                         <div className="absolute left-0 w-full transition-all duration-1000"
                                                             style={{ bottom: `${pctNormal + pctOtApproved + pctOtPending}%`, height: `${pctOtPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 2px, #94a3b8 2px, #94a3b8 4px)' }} />
                                                     )}
@@ -503,78 +507,92 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                                     {/* Label Inside */}
                                                     <div className="absolute inset-0 flex flex-col items-center justify-end z-10 pointer-events-none p-1 pb-1">
-                                                        <span className="text-[10px] font-bold mb-0.5 text-slate-500/80 mix-blend-multiply">{m.month}</span>
+                                                        <span className={`text-[10px] font-bold mb-0.5 ${isFuture ? 'text-slate-300' : 'text-slate-500/80'} mix-blend-multiply`}>
+                                                            {['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'][m.month - 1]}
+                                                        </span>
 
-                                                        {isCurrentMonth ? (
+                                                        {isPast ? (
+                                                            <div className="flex flex-col items-center">
+                                                                <span className="text-emerald-500 text-xs font-black leading-none">&#10003;</span>
+                                                                <span className={`text-[9px] font-black drop-shadow-sm leading-tight ${balance >= 0 ? 'text-white' : 'text-rose-600/90'}`}>
+                                                                    {balance > 0 ? `+${balanceHours}` : balance < 0 ? balanceHours : '0'}
+                                                                </span>
+                                                            </div>
+                                                        ) : isCurrentMonth ? (
                                                             <div className="flex flex-col items-center mt-0.5">
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mb-0.5"></div>
                                                             </div>
                                                         ) : (
-                                                            <span className={`text-[10px] font-black drop-shadow-sm ${balance >= 0 ? 'text-white' : 'text-rose-600/90'}`}>
-                                                                {balance > 0 ? `+${balanceHours}` : balance < 0 ? balanceHours : '0'}
-                                                            </span>
+                                                            <span className="text-[9px] text-slate-300 font-medium">&mdash;</span>
                                                         )}
                                                     </div>
 
                                                     {/* Tooltip */}
-                                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
-                                                        <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
-                                                            <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
-                                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
-                                                                {balance >= 0 ? 'FAZLA' : 'EKSİK'}
-                                                            </span>
+                                                    {isFuture ? (
+                                                        <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-slate-700/90 backdrop-blur-md text-white text-[10px] rounded-lg py-2 px-3 pointer-events-none shadow-xl z-50 whitespace-nowrap">
+                                                            <span className="font-medium">Henüz veri yok</span>
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-700/90"></div>
                                                         </div>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-slate-400">Hedef:</span>
-                                                                <span className="font-mono text-slate-200">{(target / 3600).toFixed(1)} sa</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-slate-400">Gerçekleşen:</span>
-                                                                <span className="font-mono font-bold text-indigo-400">{((Math.min(completed, target)) / 3600).toFixed(1)} sa</span>
-                                                            </div>
-                                                            {(otApprovedSec > 0 || otPendingSec > 0 || otPotentialSec > 0) && (
-                                                                <div className="space-y-1.5 pt-1">
-                                                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Ek Mesai Detayı</div>
-                                                                    {otApprovedSec > 0 && (
-                                                                        <div className="flex justify-between">
-                                                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span><span className="text-emerald-400">Onaylı:</span></span>
-                                                                            <span className="font-mono font-bold text-emerald-300">{(otApprovedSec / 3600).toFixed(1)} sa</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {otPendingSec > 0 && (
-                                                                        <div className="flex justify-between">
-                                                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span><span className="text-amber-400">Bekleyen:</span></span>
-                                                                            <span className="font-mono font-bold text-amber-300">{(otPendingSec / 3600).toFixed(1)} sa</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {otPotentialSec > 0 && (
-                                                                        <div className="flex justify-between">
-                                                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span><span className="text-slate-400">Potansiyel:</span></span>
-                                                                            <span className="font-mono font-bold text-slate-300">{(otPotentialSec / 3600).toFixed(1)} sa</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                            <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
-                                                                <span className={balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
-                                                                <span className={`font-mono font-black text-lg ${balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                                    {balance > 0 ? '+' : ''}{balanceHours}
+                                                    ) : (
+                                                        <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-60 bg-slate-900/95 backdrop-blur-md text-white text-[10px] rounded-xl py-4 px-5 pointer-events-none shadow-2xl ring-1 ring-white/10 transform origin-bottom scale-95 group-hover:scale-100 z-50">
+                                                            <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+                                                                <span className="font-bold text-sm text-white">{m.month}. Ay {isCurrentMonth ? '(Güncel)' : ''}</span>
+                                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${balance >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                                                    {balance >= 0 ? 'FAZLA' : 'EKSİK'}
                                                                 </span>
                                                             </div>
-
-                                                            {/* Cumulative Balance Section in Tooltip */}
-                                                            {(isPast || isCurrentMonth) && (
-                                                                <div className="flex justify-between pt-2 mt-2 border-t border-white/5 bg-white/5 -mx-5 px-5 py-2 -mb-4 rounded-b-xl">
-                                                                    <span className="text-slate-300 font-bold">Kümülatif Bakiye:</span>
-                                                                    <span className={`font-mono font-black ${isCumulativePos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                                        {isCumulativePos ? '+' : ''}{cumulativeHours} sa
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Hedef:</span>
+                                                                    <span className="font-mono text-slate-200">{(target / 3600).toFixed(1)} sa</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Gerçekleşen:</span>
+                                                                    <span className="font-mono font-bold text-indigo-400">{((Math.min(completed, target)) / 3600).toFixed(1)} sa</span>
+                                                                </div>
+                                                                {(otApprovedSec > 0 || otPendingSec > 0 || otPotentialSec > 0) && (
+                                                                    <div className="space-y-1.5 pt-1">
+                                                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Ek Mesai Detayı</div>
+                                                                        {otApprovedSec > 0 && (
+                                                                            <div className="flex justify-between">
+                                                                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span><span className="text-emerald-400">Onaylı:</span></span>
+                                                                                <span className="font-mono font-bold text-emerald-300">{(otApprovedSec / 3600).toFixed(1)} sa</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {otPendingSec > 0 && (
+                                                                            <div className="flex justify-between">
+                                                                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span><span className="text-amber-400">Bekleyen:</span></span>
+                                                                                <span className="font-mono font-bold text-amber-300">{(otPendingSec / 3600).toFixed(1)} sa</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {otPotentialSec > 0 && (
+                                                                            <div className="flex justify-between">
+                                                                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span><span className="text-slate-400">Potansiyel:</span></span>
+                                                                                <span className="font-mono font-bold text-slate-300">{(otPotentialSec / 3600).toFixed(1)} sa</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
+                                                                    <span className={balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
+                                                                    <span className={`font-mono font-black text-lg ${balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                        {balance > 0 ? '+' : ''}{balanceHours}
                                                                     </span>
                                                                 </div>
-                                                            )}
+
+                                                                {/* Cumulative Balance Section in Tooltip */}
+                                                                {(isPast || isCurrentMonth) && (
+                                                                    <div className="flex justify-between pt-2 mt-2 border-t border-white/5 bg-white/5 -mx-5 px-5 py-2 -mb-4 rounded-b-xl">
+                                                                        <span className="text-slate-300 font-bold">Kümülatif Bakiye:</span>
+                                                                        <span className={`font-mono font-black ${isCumulativePos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                            {isCumulativePos ? '+' : ''}{cumulativeHours} sa
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
                                                         </div>
-                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-slate-900/95"></div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -606,46 +624,62 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             <tbody className="divide-y divide-slate-100">
                                                 {stats.cumulative.breakdown
                                                     .filter(m => {
-                                                        // Use fiscal month from backend + system start filter
-                                                        const fiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
                                                         const systemStart = stats.cumulative.systemStartFiscalMonth || 1;
-                                                        return m.month >= systemStart && m.month <= fiscalMonth;
+                                                        return m.month >= systemStart;
                                                     })
                                                     .map((m, idx) => {
-                                                        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+                                                        const monthNames = ["Ocak", "\u015eubat", "Mart", "Nisan", "May\u0131s", "Haziran", "Temmuz", "A\u011fustos", "Eyl\u00fcl", "Ekim", "Kas\u0131m", "Aral\u0131k"];
+                                                        const currentFiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
+                                                        const isPast = m.month < currentFiscalMonth;
+                                                        const isCurrent = m.month === currentFiscalMonth;
+                                                        const isFuture = m.month > currentFiscalMonth;
+
                                                         const targetH = (m.target / 3600).toFixed(1);
                                                         const completedH = (m.completed / 3600).toFixed(1);
                                                         const missingH = (m.missing / 3600).toFixed(1);
-                                                        const overtimeH = (m.overtime ? m.overtime / 3600 : 0).toFixed(1);
-                                                        const balanceH = (m.balance / 3600).toFixed(1);
-                                                        // Cumulative Balance Logic
                                                         const cumulativeBalanceH = m.cumulativeBalance || '0.0';
                                                         const isCumulativePositive = m.cumulativeBalance >= 0;
 
                                                         return (
-                                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                                                            <tr key={idx} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'}`}>
                                                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
-                                                                    <div className={`w-2 h-2 rounded-full ${isCumulativePositive ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                                                                    {monthNames[m.month - 1]}
+                                                                    {isPast ? (
+                                                                        <span className="text-emerald-500 text-sm">&#10003;</span>
+                                                                    ) : isCurrent ? (
+                                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                                                                    ) : (
+                                                                        <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+                                                                    )}
+                                                                    <span className={isFuture ? 'text-slate-400' : ''}>{monthNames[m.month - 1]}</span>
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
-                                                                <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">{completedH} <span className="text-[10px] text-slate-400">sa</span></td>
+                                                                <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">
+                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : <>{completedH} <span className="text-[10px] text-slate-400">sa</span></>}
+                                                                </td>
                                                                 <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
-                                                                    {parseFloat(missingH) > 0 ? `-${missingH}` : '-'}
+                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : (parseFloat(missingH) > 0 ? `-${missingH}` : '-')}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center">
-                                                                    <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold">
-                                                                        <span className="text-emerald-600">{((m.ot_approved || 0) / 3600).toFixed(1)}</span>
-                                                                        <span className="text-slate-300">/</span>
-                                                                        <span className="text-amber-600">{((m.ot_pending || 0) / 3600).toFixed(1)}</span>
-                                                                        <span className="text-slate-300">/</span>
-                                                                        <span className="text-slate-500">{((m.ot_potential || 0) / 3600).toFixed(1)}</span>
-                                                                    </div>
+                                                                    {isFuture ? (
+                                                                        <span className="text-slate-300">&mdash;</span>
+                                                                    ) : (
+                                                                        <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold">
+                                                                            <span className="text-emerald-600">{((m.ot_approved || 0) / 3600).toFixed(1)}</span>
+                                                                            <span className="text-slate-300">/</span>
+                                                                            <span className="text-amber-600">{((m.ot_pending || 0) / 3600).toFixed(1)}</span>
+                                                                            <span className="text-slate-300">/</span>
+                                                                            <span className="text-slate-500">{((m.ot_potential || 0) / 3600).toFixed(1)}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right">
-                                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isCumulativePositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
-                                                                        {isCumulativePositive && parseFloat(cumulativeBalanceH) > 0 ? '+' : ''}{cumulativeBalanceH} sa
-                                                                    </span>
+                                                                    {isFuture ? (
+                                                                        <span className="text-slate-300 text-xs">&mdash;</span>
+                                                                    ) : (
+                                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isCumulativePositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
+                                                                            {isCumulativePositive && parseFloat(cumulativeBalanceH) > 0 ? '+' : ''}{cumulativeBalanceH} sa
+                                                                        </span>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         );

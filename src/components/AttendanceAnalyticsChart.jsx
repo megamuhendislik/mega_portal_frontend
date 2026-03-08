@@ -342,12 +342,74 @@ const YearlyView = ({ data }) => {
         total_mesai: parseFloat(((m.ot_approved || 0) + (m.ot_pending || 0) + (m.ot_potential || 0)).toFixed(1)),
     })), [data]);
 
+    const CustomBar = (props) => {
+        const { x, y, width, height, payload, fill, radius } = props;
+        const opacity = payload?._isFuture ? 0.15 : payload?._isBeforeStart ? 0.08 : 1;
+        const r = radius || [0, 0, 0, 0];
+        return <rect x={x} y={y} width={width} height={height} fill={fill} opacity={opacity} rx={r[0] || 0} ry={r[0] || 0} />;
+    };
+
+    const CustomXTick = ({ x, y, payload: tickPayload }) => {
+        const item = simplifiedData.find(d => d.name === tickPayload?.value);
+        const isPast = item?._isPast;
+        const isCurrent = item?._isCurrent;
+        const isFuture = item?._isFuture || item?._isBeforeStart;
+
+        return (
+            <g transform={`translate(${x},${y})`}>
+                <text
+                    textAnchor="middle"
+                    dy={12}
+                    fontSize={isMobile ? 9 : 11}
+                    fontWeight={isCurrent ? 800 : 600}
+                    fill={isFuture ? '#CBD5E1' : isCurrent ? '#6366F1' : '#94A3B8'}
+                >
+                    {tickPayload?.value}
+                </text>
+                {isPast && (
+                    <text textAnchor="middle" dy={25} fontSize={10} fill="#10B981" fontWeight="bold">
+                        ✓
+                    </text>
+                )}
+                {isCurrent && (
+                    <circle cx={0} cy={24} r={3} fill="#6366F1">
+                        <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                )}
+            </g>
+        );
+    };
+
+    const renderBarLabel = (props) => {
+        const { x, y, width, index } = props;
+        const item = simplifiedData[index];
+        if (!item?._isPast && !item?._isCurrent) return null;
+        const totalHours = Math.round((item.normal || 0) + (item.total_mesai || 0));
+        if (totalHours <= 0) return null;
+        return (
+            <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={isMobile ? 8 : 9} fill="#64748B" fontWeight="700">
+                {totalHours}
+            </text>
+        );
+    };
+
     const CustomTooltip = ({ active, payload, label }) => {
         if (!active || !payload || payload.length === 0) return null;
         const d = payload[0]?.payload;
+        if (d?._isBeforeStart) return null;
+
+        if (d?._isFuture) {
+            return (
+                <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 min-w-[160px]">
+                    <p className="text-sm font-bold text-slate-400 mb-1">{label}</p>
+                    <p className="text-xs text-slate-400 italic">Henüz veri yok</p>
+                </div>
+            );
+        }
+
         return (
             <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 min-w-[200px]">
-                <p className="text-sm font-bold text-slate-700 mb-2">{label}</p>
+                <p className="text-sm font-bold text-slate-700 mb-2">{label} {d?._isCurrent ? '(Aktif)' : ''}</p>
                 <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Normal</span>
@@ -382,21 +444,25 @@ const YearlyView = ({ data }) => {
     };
 
     return (
-        <div className="w-full pt-2" style={{ height: isMobile ? 220 : 320 }}>
+        <div className="w-full pt-2" style={{ height: isMobile ? 250 : 350 }}>
             <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                <ComposedChart data={simplifiedData} barSize={isMobile ? 14 : 22} margin={{ top: 10, right: 40, left: isMobile ? 0 : -20, bottom: isMobile ? 20 : 0 }}>
+                <ComposedChart data={simplifiedData} barSize={isMobile ? 12 : 18} margin={{ top: 25, right: 40, left: isMobile ? 0 : -20, bottom: isMobile ? 30 : 15 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8', fontWeight: 600 }} dy={10} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXTick />} dy={10} interval={0} />
                     <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8' }} label={{ value: 'Saat', angle: -90, position: 'insideLeft', offset: 15, fontSize: 10, fill: '#94a3b8' }} />
                     <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#8b5cf6' }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
 
-                    <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" />
-                    <Bar yAxisId="left" dataKey="total_mesai" stackId="a" fill="#10b981" name="Mesai (Sa)" />
-                    <Bar yAxisId="left" dataKey="missing" stackId="a" fill="#fb7185" radius={[4, 4, 0, 0]} name="Eksik (Sa)" />
+                    <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" shape={<CustomBar />} label={renderBarLabel} />
+                    <Bar yAxisId="left" dataKey="total_mesai" stackId="a" fill="#10b981" name="Mesai (Sa)" shape={<CustomBar />} />
+                    <Bar yAxisId="left" dataKey="missing" stackId="a" fill="#fb7185" radius={[4, 4, 0, 0]} name="Eksik (Sa)" shape={<CustomBar />} />
 
-                    <Line yAxisId="right" type="monotone" dataKey="cumulative_net_hours" name="Kümülatif Net (Sa)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                    <Line yAxisId="right" type="monotone" dataKey="cumulative_net_hours" name="Kümülatif Net (Sa)" stroke="#8b5cf6" strokeWidth={3} dot={(dotProps) => {
+                        const { cx, cy, payload } = dotProps;
+                        if (payload?._isFuture || payload?._isBeforeStart) return <circle cx={0} cy={0} r={0} fill="transparent" />;
+                        return <circle cx={cx} cy={cy} r={4} fill="#8b5cf6" strokeWidth={2} stroke="#fff" />;
+                    }} activeDot={{ r: 6 }} />
                 </ComposedChart>
             </ResponsiveContainer>
         </div>
@@ -422,15 +488,25 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                 const res = await api.get('/attendance/stats/', { params });
 
                 if (scope === 'YEARLY') {
-                    setYearlyData(res.data.map(m => ({
+                    const months = res.data.months || res.data;
+                    const meta = {
+                        systemStartFiscalMonth: res.data.system_start_fiscal_month || 1,
+                        currentFiscalMonth: res.data.current_fiscal_month || new Date().getMonth() + 1,
+                    };
+                    setYearlyData(months.map(m => ({
                         name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }),
+                        month: m.month,
                         normal: m.normal_hours,
                         overtime: m.overtime_hours,
                         ot_approved: m.ot_approved_hours || 0,
                         ot_pending: m.ot_pending_hours || 0,
                         ot_potential: m.ot_potential_hours || 0,
                         missing: m.missing_hours,
-                        cumulative_net_hours: m.cumulative_net_hours
+                        cumulative_net_hours: m.cumulative_net_hours,
+                        _isPast: m.month < meta.currentFiscalMonth && m.month >= meta.systemStartFiscalMonth,
+                        _isCurrent: m.month === meta.currentFiscalMonth,
+                        _isFuture: m.month > meta.currentFiscalMonth,
+                        _isBeforeStart: m.month < meta.systemStartFiscalMonth,
                     })));
                 } else if (scope === 'MONTHLY') {
                     setMonthlyBarData(res.data.map(w => ({
