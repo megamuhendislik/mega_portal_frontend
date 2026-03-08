@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Clock, Calendar, Users, User, Filter, Download
+    Clock, Calendar, Users, User, Filter
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -383,16 +383,12 @@ const Attendance = () => {
 
                         {/* 4. Detailed Logs Table */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <div className="p-6 border-b border-slate-100">
                                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                                     <Clock size={20} className="text-slate-400" />
                                     Detaylı Günlük Hareketler
                                     {viewScope === 'DAILY' && <span className="text-xs text-slate-400 font-medium ml-2">({selectedDate})</span>}
                                 </h3>
-                                <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2">
-                                    <Download size={14} />
-                                    Excel İndir
-                                </button>
                             </div>
                             <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === selectedDate) : logs} />
                         </div>
