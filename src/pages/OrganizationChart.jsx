@@ -116,17 +116,21 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile }) => {
     useEffect(() => {
         const fetchStatus = async () => {
             if (!employee) return;
+            if (!canViewProfile) {
+                setLoading(false);
+                return;
+            }
             try {
                 const res = await api.get(`/attendance/live-status/${employee.id}/status/`);
                 setLiveData(res.data);
-            } catch (err) {
-                console.error("Status fetch failed", err);
+            } catch {
+                // 403 or other errors — skip silently, show basic info only
             } finally {
                 setLoading(false);
             }
         };
         fetchStatus();
-    }, [employee]);
+    }, [employee, canViewProfile]);
 
     if (!employee) return null;
 
