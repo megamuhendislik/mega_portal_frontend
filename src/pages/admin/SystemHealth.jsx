@@ -43,6 +43,7 @@ import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
 import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksCompareTab from './system-health/PdksCompareTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
+import DataBrowserTab from './system-health/DataBrowserTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -117,6 +118,7 @@ export default function SystemHealth() {
                         { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
                         { id: 'pdks_compare', name: 'PDKS Düzeltme', icon: CreditCardIcon },
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
+                        { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -163,6 +165,7 @@ export default function SystemHealth() {
                 {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
                 {activeTab === 'pdks_compare' && <PdksCompareTab />}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
+                {activeTab === 'data_browser' && <DataBrowserTab />}
             </div>
 
         </div>
