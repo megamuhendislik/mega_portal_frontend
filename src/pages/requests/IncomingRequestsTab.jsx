@@ -54,7 +54,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
         try {
             const [meRes, subsRes, teamRes, histRes, subAuthRes, secSubRes] = await Promise.allSettled([
                 api.get('/employees/me/'),
-                api.get('/employees/subordinates/'),
+                api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
                 api.get('/team-requests/'),
                 api.get('/leave/requests/team_history/'),
                 api.get('/substitute-authority/pending_requests/'),

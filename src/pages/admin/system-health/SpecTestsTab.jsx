@@ -394,6 +394,11 @@ export default function SpecTestsTab() {
                                 {results.total_passed}/{results.total_tests} test başarılı
                                 {results.total_failed > 0 && ` — ${results.total_failed} başarısız`}
                             </p>
+                            {results.cleanup && Object.keys(results.cleanup.deleted || {}).length > 0 && (
+                                <p className="text-xs text-amber-600 mt-1">
+                                    Temizlik: {Object.entries(results.cleanup.deleted).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
