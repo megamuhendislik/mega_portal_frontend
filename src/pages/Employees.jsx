@@ -1848,19 +1848,9 @@ const Employees = () => {
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <select
-                            value={departmentFilter}
-                            onChange={e => setDepartmentFilter(e.target.value)}
-                            className="h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all font-medium text-sm min-w-[180px]"
-                        >
-                            <option value="">Tüm Departmanlar</option>
-                            {departments.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr')).map(d => (
-                                <option key={d.id} value={d.id}>{d.name}</option>
-                            ))}
-                        </select>
-                        {(searchTerm || departmentFilter) && (
+                        {searchTerm && (
                             <button
-                                onClick={() => { setSearchTerm(''); setDepartmentFilter(''); }}
+                                onClick={() => setSearchTerm('')}
                                 className="h-12 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold flex items-center gap-1.5 transition-all text-sm shrink-0"
                             >
                                 <X size={16} /> Temizle
