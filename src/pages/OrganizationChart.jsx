@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactDOM from 'react-dom';
-import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star, Clock } from 'lucide-react';
+import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star, Clock, Users, Eye, EyeOff, CheckSquare } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
@@ -141,6 +141,8 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) =>
     const detailedUnit = liveData?.unit_detailed || employee.department_name || 'Ana Birim';
     const managerName = liveData?.manager_name || '-';
     const secondaryRoles = liveData?.secondary_roles || [];
+    const empPrimaryMgrs = employee.primary_managers || [];
+    const empSecondaryMgrs = employee.secondary_managers || [];
 
     const statusDotColor = statusColor === 'green' ? 'bg-emerald-400' : statusColor === 'amber' ? 'bg-amber-400' : 'bg-slate-300';
     const statusBgColor = statusColor === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : statusColor === 'amber' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200';
@@ -201,7 +203,21 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) =>
                     {/* Info Grid */}
                     <div className="grid grid-cols-2 gap-2.5">
                         <InfoCell icon={<Building size={16} />} label="Departman" value={detailedUnit} color="blue" />
-                        <InfoCell icon={<User size={16} />} label="Yönetici" value={managerName} color="indigo" />
+                        {empPrimaryMgrs.length > 1 ? (
+                            <div className="col-span-1 flex flex-col gap-1 p-2.5 bg-blue-50/80 rounded-lg border border-blue-100">
+                                <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Birincil Yöneticiler</p>
+                                {empPrimaryMgrs.map(m => (
+                                    <div key={m.id} className="flex items-center gap-1.5">
+                                        <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                                            <span className="text-[8px] text-white font-bold">{m.name.charAt(0)}</span>
+                                        </div>
+                                        <span className="text-xs font-semibold text-blue-800 truncate">{m.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <InfoCell icon={<User size={16} />} label="Yönetici" value={empPrimaryMgrs.length === 1 ? empPrimaryMgrs[0].name : managerName} color="indigo" />
+                        )}
                         {liveData?.duration && (
                             <InfoCell icon={<Clock size={16} />} label="Süre" value={liveData.duration} color="emerald" />
                         )}
@@ -209,6 +225,21 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) =>
                             <InfoCell icon={<Star size={16} />} label="Atama" value="İkincil Görevlendirme" color="amber" />
                         )}
                     </div>
+
+                    {/* Secondary Managers from hierarchy data */}
+                    {empSecondaryMgrs.length > 0 && (
+                        <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-100">
+                            <p className="text-[10px] text-amber-600 font-bold mb-1.5 uppercase tracking-wider">İkincil Yöneticiler</p>
+                            <div className="space-y-1">
+                                {empSecondaryMgrs.map(m => (
+                                    <div key={m.id} className="flex items-center gap-1.5 text-xs text-amber-800 font-medium">
+                                        <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+                                        <span className="truncate">{m.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Secondary Roles */}
                     {secondaryRoles.length > 0 && (
@@ -300,7 +331,7 @@ const countEmployeesRecursive = (node) => {
 };
 
 // Employee Card
-const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }) => {
+const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu, showManagerInfo, showSecondaryManagers, isSelected, onSelect }) => {
     const category = getRoleCategory(emp.title);
     const colorKey = getColorForCategory(category);
     const theme = getThemeClasses(colorKey);
@@ -314,6 +345,10 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
         department_id: emp.department_id, job_position_id: emp.job_position_id,
     };
 
+    const primaryMgrs = emp.primary_managers || [];
+    const secondaryMgrs = emp.secondary_managers || [];
+    const hasMultiplePrimary = primaryMgrs.length > 1;
+
     return (
         <div
             draggable={canDrag}
@@ -326,18 +361,30 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
                 relative z-10 p-2.5 rounded-lg border shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-pointer
                 bg-white ${theme.border}
                 flex flex-col items-center gap-1.5 text-center
-                w-[120px] group
+                w-[140px] group
                 ${isDragSource ? 'opacity-40 scale-95' : !emp.is_online ? 'opacity-50' : ''}
                 ${isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : ''}
                 ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
+                ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/30' : ''}
             `}
             onClick={(e) => {
                 e.stopPropagation();
-                if (onClick) onClick(emp);
+                if (onSelect) {
+                    onSelect(emp.id);
+                } else if (onClick) {
+                    onClick(emp);
+                }
             }}
             onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
             onContextMenu={isEditMode && onContextMenu ? (e) => onContextMenu(e, empData) : undefined}
         >
+            {/* Checkbox */}
+            {onSelect && (
+                <div className={`absolute top-1 left-1 w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300 group-hover:border-blue-400'}`}>
+                    {isSelected && <CheckSquare size={10} className="text-white" />}
+                </div>
+            )}
+
             {/* Avatar */}
             <div className="relative shrink-0">
                 <div className={`
@@ -363,6 +410,50 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
                     </p>
                 )}
             </div>
+
+            {/* Multiple Primary Managers Badge */}
+            {showManagerInfo && hasMultiplePrimary && (
+                <div className="w-full mt-0.5" title={primaryMgrs.map(m => m.name).join(', ')}>
+                    <div className="flex items-center justify-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-1.5 py-0.5">
+                        <Users size={9} className="text-blue-600 shrink-0" />
+                        <span className="text-[8px] font-bold text-blue-700">{primaryMgrs.length} Yönetici</span>
+                    </div>
+                    <div className="mt-0.5 space-y-px">
+                        {primaryMgrs.map(m => (
+                            <div key={m.id} className="flex items-center gap-0.5 justify-center">
+                                <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                                    <span className="text-[6px] text-white font-bold">{m.name.charAt(0)}</span>
+                                </div>
+                                <span className="text-[7px] text-blue-700 font-medium truncate max-w-[90px]">{m.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Single Primary Manager Info */}
+            {showManagerInfo && primaryMgrs.length === 1 && (
+                <div className="w-full mt-0.5" title={`Yönetici: ${primaryMgrs[0].name}`}>
+                    <div className="flex items-center gap-1 justify-center bg-slate-50 rounded-md px-1.5 py-0.5">
+                        <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                            <span className="text-[6px] text-white font-bold">{primaryMgrs[0].name.charAt(0)}</span>
+                        </div>
+                        <span className="text-[7px] text-slate-600 font-medium truncate max-w-[90px]">{primaryMgrs[0].name}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Secondary Managers */}
+            {showSecondaryManagers && secondaryMgrs.length > 0 && (
+                <div className="w-full mt-0.5" title={secondaryMgrs.map(m => `İkincil: ${m.name}`).join(', ')}>
+                    {secondaryMgrs.map(m => (
+                        <div key={m.id} className="flex items-center gap-0.5 justify-center mt-px">
+                            <Star size={7} className="text-amber-500 fill-amber-400 shrink-0" />
+                            <span className="text-[7px] text-amber-700 font-medium truncate max-w-[90px]">{m.name}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {emp.is_secondary && (
                 <div className="absolute -top-1 -right-1 flex items-center gap-0.5 bg-amber-100 border border-amber-300 rounded-full px-1.5 py-0.5" title="İkincil Görevlendirme — Bu kişi başka bir departmandan atanmıştır">
@@ -426,7 +517,7 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, o
 
 // Stacked Group Node (New)
 // Grid Group Node (Modified)
-const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onContextMenu }) => {
+const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onContextMenu, showManagerInfo, showSecondaryManagers, selectedIds, onSelect }) => {
     // Define Color Styles
     const colors = {
         'blue': 'bg-blue-50/50 border-blue-200 text-blue-900',
@@ -471,11 +562,15 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
                     <div key={emp.id} className="transform transition-transform hover:scale-105 active:scale-95">
                         <EmployeeNode
                             emp={{ ...emp, is_secondary: false }} // Ensure clean props
-                            onClick={onClick}
+                            onClick={onSelect ? undefined : onClick}
                             showTags={showTags}
                             dnd={dnd}
                             isEditMode={isEditMode}
                             onContextMenu={onContextMenu}
+                            showManagerInfo={showManagerInfo}
+                            showSecondaryManagers={showSecondaryManagers}
+                            isSelected={selectedIds?.has(emp.id)}
+                            onSelect={onSelect}
                         />
                     </div>
                 ))}
@@ -484,7 +579,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
     );
 };
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu, showManagerInfo, showSecondaryManagers, selectedIds, onSelect }) => {
     // 1. Determine Type Dynamically
     // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
     // because groups have 'employees' property which triggers the department logic
@@ -622,9 +717,24 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         dnd={dnd}
                         isEditMode={isEditMode}
                         onContextMenu={onContextMenu}
+                        showManagerInfo={showManagerInfo}
+                        showSecondaryManagers={showSecondaryManagers}
+                        selectedIds={selectedIds}
+                        onSelect={onSelect}
                     />
                 ) : (
-                    <EmployeeNode emp={node} onClick={onEmployeeClick} showTags={showTags} dnd={dnd} isEditMode={isEditMode} onContextMenu={onContextMenu} />
+                    <EmployeeNode
+                        emp={node}
+                        onClick={onSelect ? undefined : onEmployeeClick}
+                        showTags={showTags}
+                        dnd={dnd}
+                        isEditMode={isEditMode}
+                        onContextMenu={onContextMenu}
+                        showManagerInfo={showManagerInfo}
+                        showSecondaryManagers={showSecondaryManagers}
+                        isSelected={selectedIds?.has(node.id)}
+                        onSelect={onSelect}
+                    />
                 )}
             </div>
 
@@ -644,6 +754,10 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onContextMenu={onContextMenu}
+                            showManagerInfo={showManagerInfo}
+                            showSecondaryManagers={showSecondaryManagers}
+                            selectedIds={selectedIds}
+                            onSelect={onSelect}
                         />
                     ))}
                 </ul>
@@ -659,6 +773,10 @@ const OrganizationChart = () => {
     const [showEmployees, setShowEmployees] = useState(true); // Default ON to show hierarchy heads
     const [showTags, setShowTags] = useState(false); // Default OFF
     const [showDebug, setShowDebug] = useState(false);
+    const [showManagerInfo, setShowManagerInfo] = useState(false);
+    const [showSecondaryManagers, setShowSecondaryManagers] = useState(false);
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(new Set());
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -959,6 +1077,16 @@ const OrganizationChart = () => {
         }
     };
 
+    // Selection handler
+    const handleToggleSelect = useCallback((empId) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(empId)) next.delete(empId);
+            else next.add(empId);
+            return next;
+        });
+    }, []);
+
     // Zoom Handlers
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.15));
@@ -1095,7 +1223,38 @@ const OrganizationChart = () => {
                     <h2 className="text-xl md:text-2xl font-bold text-slate-800">Organizasyon Şeması</h2>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                    {/* Toggle Checkboxes */}
+                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors" title="Yönetici bilgilerini kartlarda göster">
+                            <input type="checkbox" checked={showManagerInfo} onChange={(e) => setShowManagerInfo(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                            <Users size={13} className="text-blue-500" />
+                            <span className="text-[11px] font-medium text-slate-600 hidden lg:inline">Yöneticiler</span>
+                        </label>
+                        <div className="w-px h-4 bg-slate-200" />
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors" title="İkincil yöneticileri göster">
+                            <input type="checkbox" checked={showSecondaryManagers} onChange={(e) => setShowSecondaryManagers(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
+                            <Star size={13} className="text-amber-500" />
+                            <span className="text-[11px] font-medium text-slate-600 hidden lg:inline">İkincil</span>
+                        </label>
+                        <div className="w-px h-4 bg-slate-200" />
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors" title="Seçim modu">
+                            <input type="checkbox" checked={selectionMode} onChange={(e) => { setSelectionMode(e.target.checked); if (!e.target.checked) setSelectedIds(new Set()); }} className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
+                            <CheckSquare size={13} className="text-emerald-500" />
+                            <span className="text-[11px] font-medium text-slate-600 hidden lg:inline">Seçim</span>
+                        </label>
+                    </div>
+
+                    {/* Selection count badge */}
+                    {selectionMode && selectedIds.size > 0 && (
+                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1">
+                            <span className="text-[11px] font-bold text-blue-700">{selectedIds.size} kişi seçili</span>
+                            <button onClick={() => setSelectedIds(new Set())} className="text-blue-400 hover:text-blue-600 transition-colors" title="Seçimi temizle">
+                                <XIcon size={12} />
+                            </button>
+                        </div>
+                    )}
+
                     <button
                         onClick={() => setShowDebug(!showDebug)}
                         className={`
@@ -1177,13 +1336,17 @@ const OrganizationChart = () => {
                                     node={{ ...node, type: node.type || 'department' }}
                                     showAllEmployees={true} // ALWAYS FORCE SHOW
                                     showTags={showTags}
-                                    onEmployeeClick={setSelectedEmployee}
+                                    onEmployeeClick={selectionMode ? undefined : setSelectedEmployee}
                                     isEditMode={isEditMode}
                                     onAddChild={(node) => setModalConfig({ mode: 'create', node })}
                                     onEdit={(node) => setModalConfig({ mode: 'edit', node })}
                                     onDelete={handleDeleteDepartment}
                                     dnd={isEditMode && canReassign ? dnd : undefined}
                                     onContextMenu={isEditMode && canReassign ? dnd.handleContextMenu : undefined}
+                                    showManagerInfo={showManagerInfo}
+                                    showSecondaryManagers={showSecondaryManagers}
+                                    selectedIds={selectionMode ? selectedIds : undefined}
+                                    onSelect={selectionMode ? handleToggleSelect : undefined}
                                 />
                             ))}
                         </ul>
