@@ -280,23 +280,49 @@ const InfoCell = ({ icon, label, value, color }) => {
 };
 
 // Recursive employee count: department + all sub-departments
+// Count employees in an employee tree (employee → children → children...)
+const countEmployeeTree = (emp) => {
+    let total = 1;
+    let online = emp.is_online ? 1 : 0;
+    if (emp.children) {
+        emp.children.forEach(child => {
+            // Skip sub-departments that got nested inside employee children
+            if (child.code || child.type === 'department') return;
+            const sub = countEmployeeTree(child);
+            total += sub.total;
+            online += sub.online;
+        });
+    }
+    return { total, online };
+};
+
+// Recursive department count: department + all sub-departments
 const countEmployeesRecursive = (node) => {
-    let count = 0;
+    let total = 0;
+    let online = 0;
     if (node.employees) {
         node.employees.forEach(emp => {
             if (emp.type === 'group' && emp.employees) {
-                count += emp.employees.length;
-            } else if (!emp.code && !emp.employees) {
-                count += 1;
+                emp.employees.forEach(ge => {
+                    const sub = countEmployeeTree(ge);
+                    total += sub.total;
+                    online += sub.online;
+                });
+            } else if (!emp.code && !emp.type) {
+                const sub = countEmployeeTree(emp);
+                total += sub.total;
+                online += sub.online;
             }
         });
     }
     if (node.children) {
         node.children.forEach(child => {
-            count += countEmployeesRecursive(child);
+            const sub = countEmployeesRecursive(child);
+            total += sub.total;
+            online += sub.online;
         });
     }
-    return count;
+    return { total, online };
 };
 
 // Employee Card
@@ -375,7 +401,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu }
 };
 
 // Department Card
-const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, cumulativeCount, totalCompany, directCount }) => {
+const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, onlineCount, totalCount, directCount }) => {
     const isDragTarget = dnd?.dropTargetId === node.id;
 
     return (
@@ -399,12 +425,16 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, c
             <h3 className="font-bold text-[10px] uppercase tracking-wide text-slate-700 leading-tight">
                 {node.name}
             </h3>
-            {typeof cumulativeCount === 'number' && totalCompany > 0 && (
+            {typeof totalCount === 'number' && totalCount > 0 && (
                 <div className="flex flex-col items-center gap-0.5 mt-1">
-                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
-                        {cumulativeCount}/{totalCompany}
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                        onlineCount > 0
+                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                            : 'text-slate-500 bg-slate-50 border-slate-200'
+                    }`}>
+                        {onlineCount}/{totalCount}
                     </span>
-                    {directCount > 0 && directCount < cumulativeCount && (
+                    {directCount > 0 && directCount < totalCount && (
                         <span className="text-[8px] text-slate-400 font-medium">
                             ({directCount} kişi bu seviyede)
                         </span>
@@ -487,7 +517,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
     );
 };
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu, totalCompany }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu }) => {
     // 1. Determine Type Dynamically
     // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
     // because groups have 'employees' property which triggers the department logic
@@ -624,15 +654,15 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         onEdit={onEdit}
                         onDelete={onDelete}
                         dnd={dnd}
-                        cumulativeCount={countEmployeesRecursive(node)}
-                        totalCompany={totalCompany}
+                        onlineCount={countEmployeesRecursive(node).online}
+                        totalCount={countEmployeesRecursive(node).total}
                         directCount={(() => {
                             let direct = 0;
                             if (node.employees) {
                                 node.employees.forEach(emp => {
                                     if (emp.type === 'group' && emp.employees) {
                                         direct += emp.employees.length;
-                                    } else if (!emp.code && !emp.employees) {
+                                    } else if (!emp.code && !emp.type) {
                                         direct += 1;
                                     }
                                 });
@@ -671,7 +701,6 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onContextMenu={onContextMenu}
-                            totalCompany={totalCompany}
                         />
                     ))}
                 </ul>
@@ -695,9 +724,6 @@ const OrganizationChart = () => {
     const { hasPermission, user } = useAuth();
     const canReassign = hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN');
     const [subordinateIds, setSubordinateIds] = useState(new Set());
-    const totalCompanyCount = React.useMemo(() => {
-        return treeData.reduce((sum, node) => sum + countEmployeesRecursive(node), 0);
-    }, [treeData]);
 
     // Zoom & Pan State
     const [scale, setScale] = useState(0.5);
@@ -1039,8 +1065,7 @@ const OrganizationChart = () => {
                         (selectedEmployee && subordinateIds.has(selectedEmployee.id))
                     }
                     isInTeam={
-                        user?.user?.is_superuser ||
-                        (selectedEmployee && subordinateIds.has(selectedEmployee.id))
+                        selectedEmployee && subordinateIds.has(selectedEmployee.id)
                     }
                 />
             )}
@@ -1172,7 +1197,6 @@ const OrganizationChart = () => {
                                     onDelete={handleDeleteDepartment}
                                     dnd={isEditMode && canReassign ? dnd : undefined}
                                     onContextMenu={isEditMode && canReassign ? dnd.handleContextMenu : undefined}
-                                    totalCompany={totalCompanyCount}
                                 />
                             ))}
                         </ul>
