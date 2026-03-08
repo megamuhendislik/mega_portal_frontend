@@ -21,7 +21,8 @@ import {
     UsersIcon,
     BuildingOfficeIcon,
     CreditCardIcon,
-    UserGroupIcon
+    UserGroupIcon,
+    CakeIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -44,6 +45,7 @@ import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksCompareTab from './system-health/PdksCompareTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
 import DataBrowserTab from './system-health/DataBrowserTab';
+import BirthdayTab from './system-health/BirthdayTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -119,6 +121,7 @@ export default function SystemHealth() {
                         { id: 'pdks_compare', name: 'PDKS Düzeltme', icon: CreditCardIcon },
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
                         { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
+                        { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -166,6 +169,7 @@ export default function SystemHealth() {
                 {activeTab === 'pdks_compare' && <PdksCompareTab />}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
                 {activeTab === 'data_browser' && <DataBrowserTab />}
+                {activeTab === 'birthdays' && <BirthdayTab />}
             </div>
 
         </div>

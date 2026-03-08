@@ -198,27 +198,64 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Birthday Banner */}
-            {birthdayBalance?.is_birthday_month && (
-                <div className="relative overflow-hidden bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl p-5 text-white shadow-lg">
-                    {birthdayBalance.is_birthday_today && <div className="birthday-confetti" />}
-                    <div className="flex items-center gap-4">
-                        <span className="text-4xl">🎂</span>
-                        <div>
-                            <h3 className="text-lg font-black">
-                                {birthdayBalance.is_birthday_today
-                                    ? 'Doğum Gününüz Kutlu Olsun!'
-                                    : `${birthdayBalance.birth_month_name} Ayında Doğum Gününüz Var!`}
-                            </h3>
-                            <p className="text-white/80 text-sm mt-0.5">
-                                {birthdayBalance.is_used
-                                    ? 'Doğum günü izninizi kullandınız ✓'
-                                    : '1 günlük doğum günü izni hakkınız var'}
-                            </p>
+            {/* Birthday Banner — Hatırlatma (ay boyunca) veya Kutlama (doğum günü) */}
+            {birthdayBalance?.is_birthday_month && (() => {
+                const todayKey = new Date().toISOString().slice(0, 10);
+                const yearKey = String(new Date().getFullYear());
+                const dismissed = localStorage.getItem(`birthday_banner_dismissed_${yearKey}`);
+                const seenToday = localStorage.getItem(`birthday_banner_seen_${todayKey}`);
+                if (dismissed || seenToday) return null;
+                // Mark as seen for today
+                if (!seenToday) localStorage.setItem(`birthday_banner_seen_${todayKey}`, '1');
+
+                const isToday = birthdayBalance.is_birthday_today;
+                const handleDismiss = () => {
+                    localStorage.setItem(`birthday_banner_dismissed_${yearKey}`, '1');
+                    // Force re-render by updating state
+                    window.location.reload();
+                };
+
+                return isToday ? (
+                    /* Kutlama Banner */
+                    <div className="relative overflow-hidden bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl p-5 text-white shadow-lg">
+                        <div className="birthday-confetti" />
+                        <button onClick={handleDismiss} className="absolute top-3 right-3 text-white/60 hover:text-white text-xs font-medium bg-white/10 px-2 py-1 rounded-full transition-colors">
+                            Bir daha gösterme
+                        </button>
+                        <div className="flex items-center gap-4">
+                            <span className="text-4xl">🎂</span>
+                            <div>
+                                <h3 className="text-lg font-black">Doğum Gününüz Kutlu Olsun!</h3>
+                                <p className="text-white/80 text-sm mt-0.5">
+                                    {birthdayBalance.is_used
+                                        ? 'Doğum günü izninizi kullandınız'
+                                        : '1 günlük doğum günü izni hakkınız var'}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                ) : (
+                    /* Hatırlatma Banner */
+                    <div className="relative overflow-hidden bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 rounded-2xl p-5 text-white shadow-lg">
+                        <button onClick={handleDismiss} className="absolute top-3 right-3 text-white/60 hover:text-white text-xs font-medium bg-white/10 px-2 py-1 rounded-full transition-colors">
+                            Bir daha gösterme
+                        </button>
+                        <div className="flex items-center gap-4">
+                            <span className="text-4xl">🎁</span>
+                            <div>
+                                <h3 className="text-lg font-black">
+                                    {birthdayBalance.birth_month_name} Ayında Doğum Gününüz Var!
+                                </h3>
+                                <p className="text-white/80 text-sm mt-0.5">
+                                    {birthdayBalance.is_used
+                                        ? 'Doğum günü izninizi kullandınız'
+                                        : 'İzin hakkınızı kullanmayı unutmayın!'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* 1. Daily Stats Grid (From Today Summary) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
