@@ -712,7 +712,7 @@ const OrganizationChart = () => {
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
     const [managerEditTarget, setManagerEditTarget] = useState(null); // { id, name } for ManagerEditModal
     const { hasPermission, user } = useAuth();
-    const canReassign = hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN');
+    const canReassign = hasPermission('ACTION_ORG_CHART_EDIT');
     const [subordinateIds, setSubordinateIds] = useState(new Set());
 
     // Zoom & Pan State
@@ -819,18 +819,45 @@ const OrganizationChart = () => {
                 );
             }
 
-            // Merge ROOT (Yönetim) into BOARD (Yönetim Kurulu) — system admins appear under management board
+            // Merge ROOT (Yönetim) into BOARD (Yönetim Kurulu) — system admins as head group with sub-depts under them
             if (Array.isArray(data)) {
                 const boardIdx = data.findIndex(n => n.code === 'BOARD');
                 const rootIdx = data.findIndex(n => n.code === 'ROOT');
                 if (boardIdx >= 0 && rootIdx >= 0) {
+                    const board = data[boardIdx];
                     const rootDept = data[rootIdx];
-                    data[boardIdx] = {
-                        ...data[boardIdx],
-                        employees: [...(data[boardIdx].employees || []), ...(rootDept.employees || [])],
-                        children: [...(data[boardIdx].children || []), ...(rootDept.children || [])]
-                    };
+                    const allEmployees = [...(board.employees || []), ...(rootDept.employees || [])];
+                    const allChildren = [...(board.children || []), ...(rootDept.children || [])];
+
+                    // System admins become a group node; all sub-departments hang under the group
+                    if (allEmployees.length > 0) {
+                        board.employees = [{
+                            type: 'group',
+                            title: 'Sistem Yönetimi',
+                            id: 'group-sys-admin-board',
+                            color: 'violet',
+                            employees: allEmployees,
+                            children: allChildren
+                        }];
+                        board.children = [];
+                    } else {
+                        board.children = allChildren;
+                    }
                     data = data.filter((_, i) => i !== rootIdx);
+                } else if (boardIdx >= 0) {
+                    // No ROOT dept, but BOARD has employees and children — same restructure
+                    const board = data[boardIdx];
+                    if (board.employees?.length > 0 && board.children?.length > 0) {
+                        board.employees = [{
+                            type: 'group',
+                            title: 'Sistem Yönetimi',
+                            id: 'group-sys-admin-board',
+                            color: 'violet',
+                            employees: board.employees,
+                            children: board.children
+                        }];
+                        board.children = [];
+                    }
                 }
             }
 
@@ -1131,7 +1158,7 @@ const OrganizationChart = () => {
                     </button>
 
                     {/* Düzenle butonu — gizli tutuldu, kodu korunuyor */}
-                    {false && hasPermission('ACTION_ORG_CHART_MANAGER_ASSIGN') && (
+                    {false && hasPermission('ACTION_ORG_CHART_EDIT') && (
                         <button
                             onClick={() => setIsEditMode(!isEditMode)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors border shadow-sm whitespace-nowrap ${isEditMode ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
