@@ -181,7 +181,8 @@ const EmployeeDetail = () => {
         // Pre-save yönetici validasyonu
         const deptObj = departments.find(d => String(d.id) === String(formData.department));
         const posObj = jobPositions.find(p => String(p.id) === String(formData.job_position));
-        const boardExempt = deptObj?.code?.startsWith('BOARD') || posObj?.key?.startsWith('BOARD_') || false;
+        const hasSystemAdminRole = formData.roles?.length > 0 && allRoles.some(r => formData.roles.includes(r.id) && r.key === 'SYSTEM_ADMIN');
+        const boardExempt = deptObj?.code?.startsWith('BOARD') || posObj?.key?.startsWith('BOARD_') || hasSystemAdminRole || false;
 
         if (!boardExempt) {
             const pm = formData.primary_managers || [];
@@ -202,9 +203,11 @@ const EmployeeDetail = () => {
         }
 
         try {
-            // Prepare payload
+            // Prepare payload — filter out incomplete manager entries (empty manager_id)
             const payload = {
                 ...formData,
+                primary_managers: (formData.primary_managers || []).filter(m => m.manager_id),
+                secondary_managers: (formData.secondary_managers || []).filter(m => m.manager_id),
                 work_schedule: formData.work_schedule || null,
                 department: formData.department || null,
                 job_position: formData.job_position || null,
@@ -235,7 +238,8 @@ const EmployeeDetail = () => {
     // Board muafiyet kontrolü
     const selectedDept = departments.find(d => String(d.id) === String(formData.department));
     const selectedPos = jobPositions.find(p => String(p.id) === String(formData.job_position));
-    const isBoardMember = selectedDept?.code?.startsWith('BOARD') || selectedPos?.key?.startsWith('BOARD_') || false;
+    const hasSystemAdminRoleForSection = formData.roles?.length > 0 && allRoles.some(r => formData.roles.includes(r.id) && r.key === 'SYSTEM_ADMIN');
+    const isBoardMember = selectedDept?.code?.startsWith('BOARD') || selectedPos?.key?.startsWith('BOARD_') || hasSystemAdminRoleForSection || false;
 
     if (loading) return <div className="p-8 text-center">Yükleniyor...</div>;
 
