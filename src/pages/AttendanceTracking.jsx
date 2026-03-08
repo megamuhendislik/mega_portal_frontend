@@ -278,11 +278,36 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         }
     };
 
+    // Elapsed weeks (Monday-to-Monday) in the current fiscal period
+    const getElapsedWeeks = () => {
+        // Fiscal period: 26th of (month-1) to 25th of month
+        const fiscalStart = moment([year, month - 2, 26]); // moment 0-based month
+        const fiscalEnd = moment([year, month - 1, 25]);
+        const today = moment();
+        const effectiveEnd = moment.min(today, fiscalEnd);
+
+        if (effectiveEnd.isBefore(fiscalStart)) return 1;
+
+        // Find first Monday on or after fiscal start
+        const firstMonday = fiscalStart.clone();
+        while (firstMonday.day() !== 1) firstMonday.add(1, 'day');
+
+        // Days from first Monday to effective end
+        const daysFromFirstMonday = effectiveEnd.diff(firstMonday, 'days');
+        if (daysFromFirstMonday < 0) return 1; // Haven't reached first Monday yet
+
+        // Complete weeks + current partial week
+        return Math.floor(daysFromFirstMonday / 7) + 1;
+    };
+
+    const elapsedWeeks = getElapsedWeeks();
+
     // Recursive function to aggregate stats for a node and its children (subordinates)
     const calculateNodeStats = (node) => {
         let agg = {
             count: 0, onlineCount: 0,
             total_worked: 0, total_overtime: 0, total_missing: 0,
+            past_target_minutes: 0,
             today_normal: 0, today_overtime: 0, today_break: 0,
             monthly_deviation: 0,
             sum_daily_avg_worked: 0,
@@ -298,6 +323,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             agg.total_worked += (s.total_worked || 0);
             agg.total_overtime += (s.total_overtime || 0);
             agg.total_missing += (s.total_missing || 0);
+            agg.past_target_minutes += (s.past_target_minutes || 0);
             agg.today_normal += (s.today_normal || 0);
             agg.today_overtime += (s.today_overtime || 0);
             agg.today_break += (s.today_break || 0);
@@ -317,6 +343,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 agg.total_worked += childStats.total_worked;
                 agg.total_overtime += childStats.total_overtime;
                 agg.total_missing += childStats.total_missing;
+                agg.past_target_minutes += childStats.past_target_minutes;
                 agg.today_normal += childStats.today_normal;
                 agg.today_overtime += childStats.today_overtime;
                 agg.today_break += childStats.today_break;
@@ -394,6 +421,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             isExpanded={showChildren}
                             onToggle={() => toggleDept(node.id)}
                             nodeStats={nodeStats}
+                            elapsedWeeks={elapsedWeeks}
                         />
                         {showChildren && renderHierarchyRows(node.children, depth + 1)}
                     </React.Fragment>

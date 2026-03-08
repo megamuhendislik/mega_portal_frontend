@@ -244,13 +244,16 @@ export const HierarchyGroupRow = ({
     isExpanded = false,
     onToggle,
     nodeStats,
+    elapsedWeeks = 1,
 }) => {
     const memberCount = node.children ? node.children.length : 0;
     const cnt = nodeStats.count || 1;
-    const dailyAvg = {
-        worked: Math.round(nodeStats.sum_daily_avg_worked / cnt),
-        missing: Math.round(nodeStats.sum_daily_avg_missing / cnt),
-        overtime: Math.round(nodeStats.sum_daily_avg_overtime / cnt),
+    const weeks = elapsedWeeks || 1;
+    const weeklyAvg = {
+        worked: Math.round(nodeStats.total_worked / cnt / weeks),
+        target: Math.round(nodeStats.past_target_minutes / cnt / weeks),
+        missing: Math.round(nodeStats.total_missing / cnt / weeks),
+        overtime: Math.round(nodeStats.total_overtime / cnt / weeks),
     };
 
     return (
@@ -280,16 +283,23 @@ export const HierarchyGroupRow = ({
             </td>
             <td colSpan={3} className="py-2.5 px-3 text-center" />
             <td className="py-2.5 px-3 text-center">
-                {dailyAvg.worked > 0 && <span className="text-[11px] text-slate-400 tabular-nums">ort. {formatMinutes(dailyAvg.worked)}/gün</span>}
+                {weeklyAvg.worked > 0 && (
+                    <span className="text-[11px] tabular-nums">
+                        <span className="text-slate-500 font-semibold">{formatMinutes(weeklyAvg.worked)}</span>
+                        <span className="text-slate-300 mx-0.5">/</span>
+                        <span className="text-slate-400">{formatMinutes(weeklyAvg.target)}</span>
+                        <span className="text-[9px] text-slate-300 ml-0.5">/hft</span>
+                    </span>
+                )}
             </td>
             <td className="py-2.5 px-3 text-center">
-                {dailyAvg.overtime > 0 && <span className="text-[11px] text-amber-500 font-semibold tabular-nums">ort. {formatMinutes(dailyAvg.overtime)}/gün</span>}
+                {weeklyAvg.overtime > 0 && <span className="text-[11px] text-amber-500 font-semibold tabular-nums">ort. {formatMinutes(weeklyAvg.overtime)}/hft</span>}
             </td>
             <td className="py-2.5 px-3 text-center">
-                {dailyAvg.missing > 0 ? (
-                    <span className="text-[11px] text-red-400 font-semibold">ort. {formatMinutes(dailyAvg.missing)}/gün eksik</span>
-                ) : dailyAvg.overtime > 0 ? (
-                    <span className="text-[11px] text-emerald-400 font-semibold">ort. {formatMinutes(dailyAvg.overtime)}/gün fazla</span>
+                {weeklyAvg.missing > 0 ? (
+                    <span className="text-[11px] text-red-400 font-semibold">ort. {formatMinutes(weeklyAvg.missing)}/hft eksik</span>
+                ) : weeklyAvg.overtime > 0 ? (
+                    <span className="text-[11px] text-emerald-400 font-semibold">ort. {formatMinutes(weeklyAvg.overtime)}/hft fazla</span>
                 ) : null}
             </td>
             <td className="py-2.5 px-3" />
