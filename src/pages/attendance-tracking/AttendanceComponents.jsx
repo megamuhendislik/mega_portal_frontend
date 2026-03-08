@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon,
-    CalendarPlus, CalendarCheck, AlertTriangle
+    CalendarCheck, AlertTriangle
 } from 'lucide-react';
 import moment from 'moment';
 import api from '../../services/api';
@@ -30,7 +30,6 @@ export const EmployeeAttendanceRow = ({
     onToggle = null,
     hierarchySort = false,
     onEmployeeClick,
-    onAssignOvertime,
 }) => {
 
     return (
@@ -217,16 +216,6 @@ export const EmployeeAttendanceRow = ({
             {/* İşlemler */}
             <td className="py-3.5 px-4">
                 <div className="flex items-center justify-end gap-2">
-                    {onAssignOvertime && (
-                        <button
-                            onClick={() => onAssignOvertime({ id: s.employee_id, name: s.employee_name || name, department: s.department || '' })}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 transition-all whitespace-nowrap"
-                            title="Ek Mesai İsteği Gönder"
-                        >
-                            <CalendarPlus size={12} />
-                            Ek Mesai İsteği
-                        </button>
-                    )}
                 </div>
             </td>
         </tr>

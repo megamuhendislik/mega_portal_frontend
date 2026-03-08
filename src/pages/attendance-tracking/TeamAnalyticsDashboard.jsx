@@ -418,7 +418,8 @@ const KpiCard = ({ label, value, subValue, icon: Icon, color, trend }) => {
 /* ═══════════════════════════════════════════════════
    MAIN DASHBOARD COMPONENT
    ═══════════════════════════════════════════════════ */
-const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
+const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relationshipType }) => {
+    const isSecondaryMode = relationshipType === 'SECONDARY';
     const [dailyTrend, setDailyTrend] = useState([]);
     const [trendLoading, setTrendLoading] = useState(false);
     const [sortColumn, setSortColumn] = useState(null);
@@ -936,22 +937,35 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                 </div>
             )}
 
-            {/* ═══════ SECTION 1: KPI Cards (8 cards) ═══════ */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-3">
-                <KpiCard
-                    label="Ekip Verimi"
-                    value={`%${analytics.efficiency}`}
-                    subValue={`${analytics.elapsedWorkDays}/${analytics.totalWorkDaysInMonth || 22} iş günü`}
-                    icon={Target}
-                    color={analytics.efficiency >= 95 ? 'emerald' : analytics.efficiency >= 80 ? 'amber' : 'red'}
-                />
-                <KpiCard
-                    label="Ort. Çalışma"
-                    value={formatMinutes(analytics.avgWorked)}
-                    subValue={`${analytics.count} kişi toplam`}
-                    icon={Clock}
-                    color="indigo"
-                />
+            {/* ═══════ SECTION 1: KPI Cards ═══════ */}
+            <div className={`grid gap-3 ${isSecondaryMode ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8'}`}>
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Ekip Verimi"
+                        value={`%${analytics.efficiency}`}
+                        subValue={`${analytics.elapsedWorkDays}/${analytics.totalWorkDaysInMonth || 22} iş günü`}
+                        icon={Target}
+                        color={analytics.efficiency >= 95 ? 'emerald' : analytics.efficiency >= 80 ? 'amber' : 'red'}
+                    />
+                )}
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Ort. Çalışma"
+                        value={formatMinutes(analytics.avgWorked)}
+                        subValue={`${analytics.count} kişi toplam`}
+                        icon={Clock}
+                        color="indigo"
+                    />
+                )}
+                {isSecondaryMode && (
+                    <KpiCard
+                        label="Kişi Sayısı"
+                        value={analytics.count}
+                        subValue="İkincil ekip üyesi"
+                        icon={Users}
+                        color="amber"
+                    />
+                )}
                 <KpiCard
                     label="Ort. Fazla Mesai"
                     value={formatMinutes(analytics.avgOT)}
@@ -959,45 +973,55 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                     icon={Zap}
                     color="amber"
                 />
-                <KpiCard
-                    label="Ort. Kayıp"
-                    value={formatMinutes(analytics.avgMissing)}
-                    subValue={`Toplam: ${formatMinutes(analytics.totalMissing)}`}
-                    icon={AlertTriangle}
-                    color={analytics.avgMissing > 60 ? 'red' : 'slate'}
-                />
-                <KpiCard
-                    label="Gnl. Ort. Normal"
-                    value={formatMinutes(analytics.dailyAvgNormalMin)}
-                    subValue={`FM/Normal: %${analytics.otNormalPercent}`}
-                    icon={Clock}
-                    color="blue"
-                />
-                <KpiCard
-                    label="Tahmini Ay Sonu"
-                    value={formatMinutes(Math.abs(analytics.projectedBalance))}
-                    subValue={analytics.projectedBalance >= 0 ? 'Pozitif projeksiyon' : 'Negatif projeksiyon'}
-                    icon={Calendar}
-                    color={analytics.projectedBalance >= 0 ? 'emerald' : 'red'}
-                />
-                <KpiCard
-                    label="Katılım Oranı"
-                    value={`%${analytics.avgAttendanceRate}`}
-                    subValue={`${analytics.totalAttendanceDays} devam / ${analytics.totalAbsentDays} devamsız`}
-                    icon={CheckCircle}
-                    color={analytics.avgAttendanceRate >= 95 ? 'emerald' : analytics.avgAttendanceRate >= 85 ? 'amber' : 'red'}
-                />
-                <KpiCard
-                    label="Bakiye Durumu"
-                    value={`${analytics.positiveBalance}P / ${analytics.negativeBalance}N`}
-                    subValue={`Ort: ${analytics.avgDeviation >= 0 ? '+' : ''}${formatMinutes(Math.abs(analytics.avgDeviation))}`}
-                    icon={TrendingUp}
-                    color={analytics.positiveBalance >= analytics.negativeBalance ? 'emerald' : 'red'}
-                />
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Ort. Kayıp"
+                        value={formatMinutes(analytics.avgMissing)}
+                        subValue={`Toplam: ${formatMinutes(analytics.totalMissing)}`}
+                        icon={AlertTriangle}
+                        color={analytics.avgMissing > 60 ? 'red' : 'slate'}
+                    />
+                )}
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Gnl. Ort. Normal"
+                        value={formatMinutes(analytics.dailyAvgNormalMin)}
+                        subValue={`FM/Normal: %${analytics.otNormalPercent}`}
+                        icon={Clock}
+                        color="blue"
+                    />
+                )}
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Tahmini Ay Sonu"
+                        value={formatMinutes(Math.abs(analytics.projectedBalance))}
+                        subValue={analytics.projectedBalance >= 0 ? 'Pozitif projeksiyon' : 'Negatif projeksiyon'}
+                        icon={Calendar}
+                        color={analytics.projectedBalance >= 0 ? 'emerald' : 'red'}
+                    />
+                )}
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Katılım Oranı"
+                        value={`%${analytics.avgAttendanceRate}`}
+                        subValue={`${analytics.totalAttendanceDays} devam / ${analytics.totalAbsentDays} devamsız`}
+                        icon={CheckCircle}
+                        color={analytics.avgAttendanceRate >= 95 ? 'emerald' : analytics.avgAttendanceRate >= 85 ? 'amber' : 'red'}
+                    />
+                )}
+                {!isSecondaryMode && (
+                    <KpiCard
+                        label="Bakiye Durumu"
+                        value={`${analytics.positiveBalance}P / ${analytics.negativeBalance}N`}
+                        subValue={`Ort: ${analytics.avgDeviation >= 0 ? '+' : ''}${formatMinutes(Math.abs(analytics.avgDeviation))}`}
+                        icon={TrendingUp}
+                        color={analytics.positiveBalance >= analytics.negativeBalance ? 'emerald' : 'red'}
+                    />
+                )}
             </div>
 
             {/* ═══════ SECTION 2: Department Benchmarking Table (only "Tum Ekibim" + multiple depts) ═══════ */}
-            {showDeptComparison && (
+            {!isSecondaryMode && showDeptComparison && (
                 <AnalyticsCard
                     title="Departman Kıyaslama Tablosu"
                     subtitle="Departmanlar arası performans karşılaştırması"
@@ -1120,7 +1144,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 3: Department Radar Chart (only "Tum Ekibim" + multiple depts) ═══════ */}
-            {showDeptComparison && analytics.radarData.length > 0 && (
+            {!isSecondaryMode && showDeptComparison && analytics.radarData.length > 0 && (
                 <AnalyticsCard
                     title="Departman Kıyaslama Radarı"
                     subtitle="5 eksende departman performans karşılaştırması"
@@ -1202,7 +1226,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     tickFormatter={(v) => `${Math.round(v / 60)}s`}
                                 />
                                 {/* Daily target reference line */}
-                                {analytics.avgRequired > 0 && analytics.elapsedWorkDays > 0 && (
+                                {!isSecondaryMode && analytics.avgRequired > 0 && analytics.elapsedWorkDays > 0 && (
                                     <ReferenceLine
                                         y={Math.round(analytics.avgRequired / analytics.elapsedWorkDays)}
                                         stroke="#10b981"
@@ -1223,16 +1247,18 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                     iconType="circle"
                                     iconSize={8}
                                 />
-                                <Area
-                                    type="monotone"
-                                    dataKey="avg_worked"
-                                    name="Ort. Çalışma"
-                                    stroke="#6366f1"
-                                    strokeWidth={2}
-                                    fill="url(#gradWorkedV2)"
-                                    dot={{ r: 3, fill: '#6366f1', strokeWidth: 0 }}
-                                    activeDot={{ r: 5 }}
-                                />
+                                {!isSecondaryMode && (
+                                    <Area
+                                        type="monotone"
+                                        dataKey="avg_worked"
+                                        name="Ort. Çalışma"
+                                        stroke="#6366f1"
+                                        strokeWidth={2}
+                                        fill="url(#gradWorkedV2)"
+                                        dot={{ r: 3, fill: '#6366f1', strokeWidth: 0 }}
+                                        activeDot={{ r: 5 }}
+                                    />
+                                )}
                                 <Area
                                     type="monotone"
                                     dataKey="avg_overtime"
@@ -1247,7 +1273,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         </ResponsiveContainer>
                     </div>
                     {/* Absent count mini row */}
-                    {dailyTrend.some(d => d.absent > 0) && (
+                    {!isSecondaryMode && dailyTrend.some(d => d.absent > 0) && (
                         <div className="flex items-center gap-2 mt-2 px-1">
                             <span className="text-[10px] font-semibold text-slate-400">Devamsızlık:</span>
                             <div className="flex gap-1 flex-wrap">
@@ -1263,7 +1289,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 5: Weekly Heatmap ═══════ */}
-            {heatmapData.length > 0 && (
+            {!isSecondaryMode && heatmapData.length > 0 && (
                 <AnalyticsCard
                     title="Haftalık Çalışma Deseni"
                     subtitle="Hafta içi gün bazlı ortalama çalışma yoğunluğu"
@@ -1320,7 +1346,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 6: Per-Person Performance Bar ═══════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {!isSecondaryMode && <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <AnalyticsCard
                     title="Kişi Bazlı Performans"
                     subtitle={`Aylık çalışma süreleri (${analytics.performanceData.length} kişi)`}
@@ -1434,7 +1460,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         </div>
                     </AnalyticsCard>
                 </div>
-            </div>
+            </div>}
 
             {/* ═══════ SECTION 8: OT vs Missing + OT Source Pie ═══════ */}
             {(analytics.comparisonData.length > 0 || analytics.otSourceDistribution.length > 0) && (
@@ -1619,8 +1645,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
 
             {/* ═══════ SECTION 9: Performance Ranking Table ═══════ */}
             <AnalyticsCard
-                title="Performans Siralamasi"
-                subtitle={`Eksik süreye göre sıralama — en az eksik en üstte (${analytics.ranked.length} kişi)`}
+                title={isSecondaryMode ? "Ek Mesai Sıralaması" : "Performans Siralamasi"}
+                subtitle={isSecondaryMode
+                    ? `Ek mesai süresine göre sıralama (${analytics.ranked.length} kişi)`
+                    : `Eksik süreye göre sıralama — en az eksik en üstte (${analytics.ranked.length} kişi)`}
                 icon={Award}
             >
                 <div className="overflow-x-auto">
@@ -1630,19 +1658,19 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">#</th>
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Çalışan</th>
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Departman</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Çalışma</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Hedef</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Verim %</th>
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Çalışma</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Hedef</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Verim %</th>}
                                 <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">F. Mesai</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-indigo-400 uppercase tracking-wider">Planlı</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">Algılanan</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-violet-400 uppercase tracking-wider">Manuel</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Kayıp</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Gnl. Eksik</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Net Bakiye</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Tahmini</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">İzin</th>
-                                <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katılım%</th>
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Kayıp</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Gnl. Eksik</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Net Bakiye</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">Tahmini</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-slate-500 uppercase tracking-wider">İzin</th>}
+                                {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katılım%</th>}
                                 <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">H.Sonu FM</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-cyan-400 uppercase tracking-wider">Yemek/FM</th>
                             </tr>
@@ -1669,43 +1697,55 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                                             )}
                                         </td>
                                         <td className="px-3 py-2 text-slate-500">{person.department || '-'}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-indigo-600 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.total_worked || 0)}</td>
-                                        <td className="px-3 py-2 text-right text-slate-500 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.monthly_required || 0)}</td>
-                                        <td className="px-3 py-2 text-right">
-                                            {isSecondary ? <span className="text-slate-300">&mdash;</span> : (
-                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${effBadge.cls}`}>
-                                                    %{person.efficiency}
-                                                </span>
-                                            )}
-                                        </td>
+                                        {!isSecondaryMode && <td className="px-3 py-2 text-right font-semibold text-indigo-600 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.total_worked || 0)}</td>}
+                                        {!isSecondaryMode && <td className="px-3 py-2 text-right text-slate-500 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.monthly_required || 0)}</td>}
+                                        {!isSecondaryMode && (
+                                            <td className="px-3 py-2 text-right">
+                                                {isSecondary ? <span className="text-slate-300">&mdash;</span> : (
+                                                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${effBadge.cls}`}>
+                                                        %{person.efficiency}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        )}
                                         <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">{(() => { const _pOT = ((person.ot_intended_minutes || 0) + (person.ot_potential_minutes || 0) + (person.ot_manual_minutes || 0)) || (person.total_overtime || 0); return _pOT > 0 ? formatMinutes(_pOT) : <span className="text-slate-300">&mdash;</span>; })()}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-indigo-500 tabular-nums">{(person.ot_intended_minutes || 0) > 0 ? formatMinutes(person.ot_intended_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-amber-500 tabular-nums">{(person.ot_potential_minutes || 0) > 0 ? formatMinutes(person.ot_potential_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-violet-500 tabular-nums">{(person.ot_manual_minutes || 0) > 0 ? formatMinutes(person.ot_manual_minutes) : <span className="text-slate-300">&mdash;</span>}</td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : (person.total_missing || 0) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                                            {isSecondary ? <span>&mdash;</span> : (person.total_missing || 0) > 0 ? formatMinutes(person.total_missing) : <span className="text-emerald-500">0</span>}
-                                        </td>
-                                        <td className="px-3 py-2 text-right font-semibold text-slate-600 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.dailyMissing)}</td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : (person.monthly_deviation || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {isSecondary ? <span>&mdash;</span> : <>{(person.monthly_deviation || 0) >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.monthly_deviation || 0))}</>}
-                                        </td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : person.projected >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {isSecondary ? <span>&mdash;</span> : <>{person.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.projected))}</>}
-                                        </td>
-                                        <td className="px-3 py-2 text-right font-semibold text-violet-600 tabular-nums">
-                                            {isSecondary ? <span className="text-slate-300">&mdash;</span> : person.annual_leave_balance != null ? `${person.annual_leave_balance}g` : '-'}
-                                        </td>
-                                        <td className="px-3 py-2 text-right">
-                                            {isSecondary ? <span className="text-slate-300">&mdash;</span> : (
-                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                                    (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
-                                                    (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>
-                                                    %{Math.round(person.attendance_rate || 100)}
-                                                </span>
-                                            )}
-                                        </td>
+                                        {!isSecondaryMode && (
+                                            <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : (person.total_missing || 0) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                {isSecondary ? <span>&mdash;</span> : (person.total_missing || 0) > 0 ? formatMinutes(person.total_missing) : <span className="text-emerald-500">0</span>}
+                                            </td>
+                                        )}
+                                        {!isSecondaryMode && <td className="px-3 py-2 text-right font-semibold text-slate-600 tabular-nums">{isSecondary ? <span className="text-slate-300">&mdash;</span> : formatMinutes(person.dailyMissing)}</td>}
+                                        {!isSecondaryMode && (
+                                            <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : (person.monthly_deviation || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {isSecondary ? <span>&mdash;</span> : <>{(person.monthly_deviation || 0) >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.monthly_deviation || 0))}</>}
+                                            </td>
+                                        )}
+                                        {!isSecondaryMode && (
+                                            <td className={`px-3 py-2 text-right font-bold tabular-nums ${isSecondary ? 'text-slate-300' : person.projected >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {isSecondary ? <span>&mdash;</span> : <>{person.projected >= 0 ? '+' : ''}{formatMinutes(Math.abs(person.projected))}</>}
+                                            </td>
+                                        )}
+                                        {!isSecondaryMode && (
+                                            <td className="px-3 py-2 text-right font-semibold text-violet-600 tabular-nums">
+                                                {isSecondary ? <span className="text-slate-300">&mdash;</span> : person.annual_leave_balance != null ? `${person.annual_leave_balance}g` : '-'}
+                                            </td>
+                                        )}
+                                        {!isSecondaryMode && (
+                                            <td className="px-3 py-2 text-right">
+                                                {isSecondary ? <span className="text-slate-300">&mdash;</span> : (
+                                                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                        (person.attendance_rate || 100) >= 95 ? 'bg-emerald-100 text-emerald-700' :
+                                                        (person.attendance_rate || 100) >= 85 ? 'bg-amber-100 text-amber-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                        %{Math.round(person.attendance_rate || 100)}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        )}
                                         <td className="px-3 py-2 text-right font-semibold text-amber-600 tabular-nums">
                                             {(person.ot_weekend_minutes || 0) > 0 ? formatMinutes(person.ot_weekend_minutes) : <span className="text-slate-300">&mdash;</span>}
                                         </td>
@@ -1721,7 +1761,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             </AnalyticsCard>
 
             {/* ═══════ SECTION 10: Risk Panel ═══════ */}
-            {(analytics.highOTRisk.length > 0 || analytics.highMissingRisk.length > 0 || analytics.criticalBalanceRisk.length > 0) && (
+            {!isSecondaryMode && (analytics.highOTRisk.length > 0 || analytics.highMissingRisk.length > 0 || analytics.criticalBalanceRisk.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* High OT Risk */}
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
@@ -1828,7 +1868,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 11: Leave Balance ═══════ */}
-            {analytics.leaveData.length > 0 && (
+            {!isSecondaryMode && analytics.leaveData.length > 0 && (
                 <AnalyticsCard
                     title="İzin Bakiyesi"
                     subtitle="Yıllık izin hakları ve kullanım durumu"
@@ -1877,7 +1917,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 11.5: Leave Usage Rates ═══════ */}
-            {analytics.leaveByDept.length > 0 && (
+            {!isSecondaryMode && analytics.leaveByDept.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <AnalyticsCard
                         title="Departman Bazlı İzin Kullanım Oranı"
@@ -1945,7 +1985,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 12: Spotlight Cards ═══════ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {!isSecondaryMode && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Least Missing */}
                 {analytics.leastMissing && (
                     <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white">
@@ -2035,10 +2075,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         </div>
                     </div>
                 )}
-            </div>
+            </div>}
 
             {/* ═══════ SECTION 13: Department Mini Cards (only "Tum Ekibim" + multiple depts) ═══════ */}
-            {showDeptComparison && (
+            {!isSecondaryMode && showDeptComparison && (
                 <AnalyticsCard
                     title="Departman Özeti"
                     subtitle="Her departmanin kompakt ozet karti (tikla: o departmana gec)"
@@ -2097,7 +2137,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
             )}
 
             {/* ═══════ SECTION 14: Individual Performance Cards ═══════ */}
-            <AnalyticsCard
+            {!isSecondaryMode && <AnalyticsCard
                 title="Bireysel Performans Kartlari"
                 subtitle={`Eksik süreye göre sıralama (${analytics.ranked.length} kişi)`}
                 icon={UserCheck}
@@ -2246,47 +2286,53 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId }) => {
                         );
                     })}
                 </div>
-            </AnalyticsCard>
+            </AnalyticsCard>}
 
             {/* ═══════ SECTION 15: Summary Footer Band ═══════ */}
             <div className="bg-slate-800 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                     <Info size={14} className="text-slate-400" />
-                    <span className="text-xs font-bold text-slate-300">Özet</span>
+                    <span className="text-xs font-bold text-slate-300">{isSecondaryMode ? 'İkincil Ekip Özet' : 'Özet'}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-6">
                     <div className="text-center">
                         <p className="text-[10px] text-slate-400 font-semibold">Çalışan</p>
                         <p className="text-sm font-bold text-white tabular-nums">{analytics.count}</p>
                     </div>
-                    <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Toplam Çalışma</p>
-                        <p className="text-sm font-bold text-indigo-400 tabular-nums">{formatMinutes(analytics.totalWorked)}</p>
-                    </div>
+                    {!isSecondaryMode && (
+                        <div className="text-center">
+                            <p className="text-[10px] text-slate-400 font-semibold">Toplam Çalışma</p>
+                            <p className="text-sm font-bold text-indigo-400 tabular-nums">{formatMinutes(analytics.totalWorked)}</p>
+                        </div>
+                    )}
                     <div className="text-center">
                         <p className="text-[10px] text-slate-400 font-semibold">Toplam FM</p>
                         <p className="text-sm font-bold text-amber-400 tabular-nums">{formatMinutes(analytics.totalOT)}</p>
                     </div>
-                    <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Toplam Eksik</p>
-                        <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.totalMissing)}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Eksik/Kişi</p>
-                        <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.avgMissing)}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Verim</p>
-                        <p className={`text-sm font-bold tabular-nums ${analytics.efficiency >= 95 ? 'text-emerald-400' : analytics.efficiency >= 80 ? 'text-amber-400' : 'text-red-400'}`}>
-                            %{analytics.efficiency}
-                        </p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-[10px] text-slate-400 font-semibold">Ort. Net Bakiye</p>
-                        <p className={`text-sm font-bold tabular-nums ${analytics.avgDeviation >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {analytics.avgDeviation >= 0 ? '+' : ''}{formatMinutes(Math.abs(analytics.avgDeviation))}
-                        </p>
-                    </div>
+                    {!isSecondaryMode && (
+                        <>
+                            <div className="text-center">
+                                <p className="text-[10px] text-slate-400 font-semibold">Toplam Eksik</p>
+                                <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.totalMissing)}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[10px] text-slate-400 font-semibold">Ort. Eksik/Kişi</p>
+                                <p className="text-sm font-bold text-red-400 tabular-nums">{formatMinutes(analytics.avgMissing)}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[10px] text-slate-400 font-semibold">Ort. Verim</p>
+                                <p className={`text-sm font-bold tabular-nums ${analytics.efficiency >= 95 ? 'text-emerald-400' : analytics.efficiency >= 80 ? 'text-amber-400' : 'text-red-400'}`}>
+                                    %{analytics.efficiency}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[10px] text-slate-400 font-semibold">Ort. Net Bakiye</p>
+                                <p className={`text-sm font-bold tabular-nums ${analytics.avgDeviation >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {analytics.avgDeviation >= 0 ? '+' : ''}{formatMinutes(Math.abs(analytics.avgDeviation))}
+                                </p>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 

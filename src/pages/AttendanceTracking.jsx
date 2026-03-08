@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Clock, AlertCircle, Users,
     Search, RefreshCw,
-    BarChart3, List
+    BarChart3, List, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -16,15 +16,13 @@ import {
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
 import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
-import OvertimeAssignDrawer from '../components/overtime/OvertimeAssignDrawer';
-import UnifiedOvertimePanel from '../components/overtime/UnifiedOvertimePanel';
+import OvertimeManagementTab from './attendance-tracking/OvertimeManagementTab';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
     const navigate = useNavigate();
     const [hierarchyData, setHierarchyData] = useState([]); // Tree structure
     const [secondaryTeam, setSecondaryTeam] = useState([]);
-    const [showSecondaryTeam, setShowSecondaryTeam] = useState(false);
     const [substituteTeams, setSubstituteTeams] = useState(null);
     const [showSubstituteTeam, setShowSubstituteTeam] = useState(false);
 
@@ -61,9 +59,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [sortMode, setSortMode] = useState('NAME');
     const [hierarchySort, setHierarchySort] = useState(true);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [otDrawerTarget, setOtDrawerTarget] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics' | 'overtime'
+    const [teamTab, setTeamTab] = useState('primary'); // 'primary' | 'secondary'
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -75,8 +73,14 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         efficiency: 0
     });
 
+    const secondaryStats = useMemo(() => {
+        const secIds = new Set(secondaryTeam.map(e => e.id));
+        return stats.filter(s => secIds.has(s.employee_id));
+    }, [stats, secondaryTeam]);
+
     const [initialLoad, setInitialLoad] = useState(true);
     const [fetchError, setFetchError] = useState(null);
+    const [fiscalPeriod, setFiscalPeriod] = useState({ start: null, end: null });
 
     useEffect(() => {
         fetchDepartments();
@@ -107,9 +111,18 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 api.get('/dashboard/substitute_team/', { timeout: 30000 })
             ]);
 
-            // Process stats
-            const statsData = statsRes.status === 'fulfilled' ? statsRes.value.data : [];
-            const data = Array.isArray(statsData) ? statsData : [];
+            // Process stats — response is { results: [...], fiscal_period_start, fiscal_period_end }
+            const statsRaw = statsRes.status === 'fulfilled' ? statsRes.value.data : [];
+            let data;
+            if (statsRaw && !Array.isArray(statsRaw) && Array.isArray(statsRaw.results)) {
+                data = statsRaw.results;
+                setFiscalPeriod({
+                    start: statsRaw.fiscal_period_start || null,
+                    end: statsRaw.fiscal_period_end || null,
+                });
+            } else {
+                data = Array.isArray(statsRaw) ? statsRaw : [];
+            }
             setStats(data);
 
             const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
@@ -279,10 +292,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     };
 
     // Elapsed weeks (Monday-to-Monday) in the current fiscal period
-    const getElapsedWeeks = () => {
-        // Fiscal period: 26th of (month-1) to 25th of month
-        const fiscalStart = moment([year, month - 2, 26]); // moment 0-based month
-        const fiscalEnd = moment([year, month - 1, 25]);
+    const elapsedWeeks = useMemo(() => {
+        let fiscalStart, fiscalEnd;
+        if (fiscalPeriod.start && fiscalPeriod.end) {
+            fiscalStart = moment(fiscalPeriod.start);
+            fiscalEnd = moment(fiscalPeriod.end);
+        } else {
+            // Fallback until backend responds
+            fiscalStart = moment([year, month - 2, 26]);
+            fiscalEnd = moment([year, month - 1, 25]);
+        }
         const today = moment();
         const effectiveEnd = moment.min(today, fiscalEnd);
 
@@ -294,13 +313,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
         // Days from first Monday to effective end
         const daysFromFirstMonday = effectiveEnd.diff(firstMonday, 'days');
-        if (daysFromFirstMonday < 0) return 1; // Haven't reached first Monday yet
+        if (daysFromFirstMonday < 0) return 1;
 
-        // Complete weeks + current partial week
         return Math.floor(daysFromFirstMonday / 7) + 1;
-    };
-
-    const elapsedWeeks = getElapsedWeeks();
+    }, [fiscalPeriod, year, month]);
 
     // Recursive function to aggregate stats for a node and its children (subordinates)
     const calculateNodeStats = (node) => {
@@ -467,7 +483,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         onToggle={hasChildren ? () => toggleDept(node.id) : null}
                         hierarchySort={hierarchySort}
                         onEmployeeClick={handleEmployeeClick}
-                        onAssignOvertime={emp => setOtDrawerTarget(emp)}
                     />
                     {hasChildren && showChildren && renderHierarchyRows(node.children, depth + 1)}
                 </React.Fragment>
@@ -656,14 +671,52 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
+            {/* Ana Tab'lar */}
+            {secondaryTeam.length > 0 && (
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 w-fit">
+                    <button
+                        onClick={() => setTeamTab('primary')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                            teamTab === 'primary'
+                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <Users size={16} />
+                        Ana Ekibim
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold tabular-nums">
+                            {stats.length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setTeamTab('secondary')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                            teamTab === 'secondary'
+                                ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <Users size={16} />
+                        İkincil Ekip
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 font-bold tabular-nums">
+                            {secondaryTeam.length}
+                        </span>
+                    </button>
+                </div>
+            )}
+
             {/* View Toggle: Liste / Analiz / Ek Mesai */}
             {stats.length > 0 && (
-                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 w-fit">
+                <div className={`flex items-center gap-1 bg-white p-1 rounded-xl border w-fit ${
+                    teamTab === 'secondary' ? 'border-amber-200/80' : 'border-slate-200/80'
+                }`}>
                     <button
                         onClick={() => setViewMode('list')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                             viewMode === 'list'
-                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                ? teamTab === 'secondary'
+                                    ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
+                                    : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                         }`}
                     >
@@ -674,7 +727,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         onClick={() => setViewMode('analytics')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                             viewMode === 'analytics'
-                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                ? teamTab === 'secondary'
+                                    ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
+                                    : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                         }`}
                     >
@@ -685,7 +740,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         onClick={() => setViewMode('overtime')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                             viewMode === 'overtime'
-                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                ? teamTab === 'secondary'
+                                    ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
+                                    : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                         }`}
                     >
@@ -696,17 +753,37 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             )}
 
             {/* Analytics View */}
-            {viewMode === 'analytics' && stats.length > 0 && (
+            {viewMode === 'analytics' && stats.length > 0 && teamTab === 'primary' && (
                 <TeamAnalyticsDashboard stats={stats} year={year} month={month} departmentId={selectedDept} />
             )}
+            {viewMode === 'analytics' && secondaryStats.length > 0 && teamTab === 'secondary' && (
+                <TeamAnalyticsDashboard stats={secondaryStats} year={year} month={month} departmentId={selectedDept} relationshipType="SECONDARY" />
+            )}
 
-            {/* Overtime Calendar View */}
-            {viewMode === 'overtime' && (
-                <UnifiedOvertimePanel />
+            {/* Overtime Management View */}
+            {viewMode === 'overtime' && teamTab === 'primary' && (
+                <OvertimeManagementTab
+                    employees={stats.map(s => ({
+                        id: s.employee_id,
+                        name: s.employee_name,
+                        department: s.department,
+                    }))}
+                    onRefresh={handleRefresh}
+                />
+            )}
+            {viewMode === 'overtime' && teamTab === 'secondary' && (
+                <OvertimeManagementTab
+                    employees={secondaryTeam.map(e => ({
+                        id: e.id,
+                        name: `${e.first_name} ${e.last_name}`,
+                        department: e.department || '',
+                    }))}
+                    onRefresh={handleRefresh}
+                />
             )}
 
             {/* Main Table */}
-            {viewMode === 'list' && <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            {viewMode === 'list' && teamTab === 'primary' && <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                 {/* Toolbar */}
                 <div className="flex flex-wrap items-center gap-3 md:gap-4 px-4 md:px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -790,7 +867,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                             depth={0}
                                             hierarchySort={hierarchySort}
                                             onEmployeeClick={handleEmployeeClick}
-                                            onAssignOvertime={emp => setOtDrawerTarget(emp)}
                                         />
                                     ))
                                 )
@@ -800,22 +876,20 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </div>
             </div>}
 
-            {/* SECONDARY TEAM */}
-            {secondaryTeam.length > 0 && (
-                <div className="mt-4 border-t border-amber-200/50 pt-4">
-                    <button
-                        onClick={() => setShowSecondaryTeam(!showSecondaryTeam)}
-                        className="flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800 mb-3 transition-colors"
-                    >
-                        {showSecondaryTeam ? '\u25BC' : '\u25B6'}
-                        {'\u0130'}kincil Ekip (Sadece Ek Mesai) ({secondaryTeam.length} ki{'\u015F'}i)
-                    </button>
-                    {showSecondaryTeam && (
-                        <div className="space-y-1">
-                            <div className="px-3 py-1.5 text-[11px] text-amber-600 bg-amber-50 rounded-lg border border-amber-100 mb-2">
-                                {'\u0130'}kincil ekip {'\u00FC'}yeleri i{'\u00E7'}in sadece ek mesai bilgileri g{'\u00F6'}r{'\u00FC'}nt{'\u00FC'}lenir.
-                            </div>
-                            {secondaryTeam.map(emp => {
+            {/* SECONDARY TEAM LIST */}
+            {viewMode === 'list' && teamTab === 'secondary' && (
+                <div className="bg-white rounded-2xl shadow-sm border border-amber-200/80 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-amber-100 bg-amber-50/40 flex items-center gap-2">
+                        <AlertTriangle size={14} className="text-amber-500" />
+                        <span className="text-xs font-bold text-amber-600">
+                            İkincil ekip üyeleri için sadece ek mesai bilgileri görüntülenir.
+                        </span>
+                    </div>
+                    <div className="divide-y divide-amber-50">
+                        {secondaryTeam.length === 0 ? (
+                            <div className="p-12 text-center text-slate-400">İkincil ekip üyesi bulunamadı.</div>
+                        ) : (
+                            secondaryTeam.map(emp => {
                                 const empStats = stats.find(s => s.employee_id === emp.id);
                                 const otTotal = empStats ? (empStats.total_overtime || 0) : 0;
                                 const otIntended = empStats?.ot_intended_minutes || 0;
@@ -824,45 +898,44 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 return (
                                     <div
                                         key={emp.id}
-                                        className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-amber-50/50 border border-amber-100 hover:bg-amber-100/50 transition-colors"
+                                        className="flex items-center justify-between px-4 py-3 hover:bg-amber-50/50 transition-colors"
                                     >
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
-                                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">{'\u0130'}kincil</span>
-                                            {emp.department && <span className="text-[10px] text-slate-400">{emp.department}</span>}
+                                        <div className="flex items-center gap-2.5 flex-wrap">
+                                            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-xs font-black text-amber-700">
+                                                    {emp.first_name?.charAt(0)?.toUpperCase() || '?'}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-medium text-slate-700">{emp.first_name} {emp.last_name}</span>
+                                                {emp.department && <span className="text-[11px] text-slate-400 ml-2">{emp.department}</span>}
+                                            </div>
                                             {otTotal > 0 && (
-                                                <span className="text-[10px] font-bold text-amber-600 tabular-nums">
+                                                <span className="text-[10px] font-bold text-amber-600 tabular-nums bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
                                                     FM: {formatMinutes(otTotal)}
                                                 </span>
                                             )}
                                             {otIntended > 0 && (
-                                                <span className="text-[9px] px-1 py-0.5 rounded bg-indigo-100 text-indigo-600 font-bold">
-                                                    Planl{'\u0131'} {formatMinutes(otIntended)}
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold border border-indigo-200">
+                                                    Planlı {formatMinutes(otIntended)}
                                                 </span>
                                             )}
                                             {otPotential > 0 && (
-                                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-600 font-bold">
-                                                    Alg{'\u0131'}lanan {formatMinutes(otPotential)}
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 font-bold border border-amber-200">
+                                                    Algılanan {formatMinutes(otPotential)}
                                                 </span>
                                             )}
                                             {otManual > 0 && (
-                                                <span className="text-[9px] px-1 py-0.5 rounded bg-violet-100 text-violet-600 font-bold">
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600 font-bold border border-violet-200">
                                                     Manuel {formatMinutes(otManual)}
                                                 </span>
                                             )}
                                         </div>
-                                        <button
-                                            onClick={() => setOtDrawerTarget({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, department: emp.department || '' })}
-                                            className="text-xs px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors flex-shrink-0"
-                                            title="Ek mesai ata"
-                                        >
-                                            OT Ata
-                                        </button>
                                     </div>
                                 );
-                            })}
-                        </div>
-                    )}
+                            })
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -891,13 +964,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                     <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">Vekalet</span>
                                                     {emp.department && <span className="text-xs text-slate-500">{emp.department}</span>}
                                                 </div>
-                                                <button
-                                                    onClick={() => setOtDrawerTarget({ ...emp, _substituteFor: team.principal_id })}
-                                                    className="text-xs px-2 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                                                    title="Ek mesai ata"
-                                                >
-                                                    OT Ata
-                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -912,14 +978,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             <EmployeeDetailModal
                 employee={selectedEmployee}
                 onClose={() => setSelectedEmployee(null)}
-            />
-
-            {/* OVERTIME ASSIGN DRAWER */}
-            <OvertimeAssignDrawer
-                open={!!otDrawerTarget}
-                onClose={() => setOtDrawerTarget(null)}
-                employee={otDrawerTarget}
-                onSuccess={() => { setOtDrawerTarget(null); handleRefresh(); }}
             />
         </div >
     );
