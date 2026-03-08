@@ -3,182 +3,212 @@ import api from '../../../services/api';
 import {
     MagnifyingGlassIcon,
     TrashIcon,
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    FunnelIcon,
-    TableCellsIcon,
     ExclamationTriangleIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+    TagIcon,
+    CalendarDaysIcon,
+    ShieldExclamationIcon,
 } from '@heroicons/react/24/outline';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const MODEL_OPTIONS = [
-    { value: 'attendance', label: 'Mesai Kayitlari' },
-    { value: 'overtime_request', label: 'Fazla Mesai Talepleri' },
-    { value: 'leave_request', label: 'Izin Talepleri' },
-    { value: 'meal_request', label: 'Yemek Talepleri' },
-    { value: 'cardless_entry', label: 'Kartsiz Giris' },
-    { value: 'employee', label: 'Calisanlar' },
-    { value: 'department', label: 'Departmanlar' },
-    { value: 'job_position', label: 'Pozisyonlar' },
-    { value: 'fiscal_calendar', label: 'Calisma Takvimleri' },
-    { value: 'work_schedule', label: 'Vardiya Sablonlari' },
-    { value: 'monthly_summary', label: 'Aylik Ozetler' },
-    { value: 'work_target', label: 'Hedefler' },
-    { value: 'gate_event', label: 'Gate Loglari' },
-];
-
-const STATUS_COLORS = {
-    APPROVED: 'bg-green-100 text-green-800 border-green-200',
-    AUTO_APPROVED: 'bg-green-100 text-green-800 border-green-200',
-    PENDING: 'bg-amber-100 text-amber-800 border-amber-200',
-    PENDING_MANAGER_APPROVAL: 'bg-amber-100 text-amber-800 border-amber-200',
-    POTENTIAL: 'bg-gray-100 text-gray-700 border-gray-200',
-    REJECTED: 'bg-red-100 text-red-800 border-red-200',
-    CANCELLED: 'bg-red-100 text-red-700 border-red-200',
-    OPEN: 'bg-blue-100 text-blue-800 border-blue-200',
-    CALCULATED: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    ABSENT: 'bg-red-100 text-red-800 border-red-200',
-    ON_LEAVE: 'bg-purple-100 text-purple-800 border-purple-200',
-    ACTIVE: 'bg-green-100 text-green-800 border-green-200',
-    INACTIVE: 'bg-gray-100 text-gray-600 border-gray-200',
+const MODEL_COLORS = {
+    attendance: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    overtime_request: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    leave_request: 'bg-blue-100 text-blue-800 border-blue-200',
+    meal_request: 'bg-amber-100 text-amber-800 border-amber-200',
+    cardless_entry: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    employee: 'bg-slate-100 text-slate-800 border-slate-200',
+    department: 'bg-violet-100 text-violet-800 border-violet-200',
+    job_position: 'bg-pink-100 text-pink-800 border-pink-200',
+    work_schedule: 'bg-teal-100 text-teal-800 border-teal-200',
+    monthly_summary: 'bg-gray-100 text-gray-800 border-gray-200',
+    work_target: 'bg-gray-100 text-gray-700 border-gray-200',
+    fiscal_calendar: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+    gate_event: 'bg-orange-100 text-orange-800 border-orange-200',
+    user: 'bg-red-100 text-red-800 border-red-200',
 };
 
-const PAGE_SIZE = 50;
+const MODEL_DOT_COLORS = {
+    attendance: 'bg-indigo-500',
+    overtime_request: 'bg-emerald-500',
+    leave_request: 'bg-blue-500',
+    meal_request: 'bg-amber-500',
+    cardless_entry: 'bg-cyan-500',
+    employee: 'bg-slate-500',
+    department: 'bg-violet-500',
+    job_position: 'bg-pink-500',
+    work_schedule: 'bg-teal-500',
+    monthly_summary: 'bg-gray-500',
+    work_target: 'bg-gray-400',
+    fiscal_calendar: 'bg-fuchsia-500',
+    gate_event: 'bg-orange-500',
+    user: 'bg-red-500',
+};
+
+const CATEGORY_CONFIG = {
+    prefix_match: {
+        label: 'Prefix',
+        icon: TagIcon,
+        badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
+        summaryBg: 'bg-purple-50 border-purple-200',
+        summaryText: 'text-purple-700',
+        summaryValue: 'text-purple-900',
+    },
+    future_dated: {
+        label: 'Gelecek Tarih',
+        icon: CalendarDaysIcon,
+        badgeClass: 'bg-orange-100 text-orange-800 border-orange-200',
+        summaryBg: 'bg-orange-50 border-orange-200',
+        summaryText: 'text-orange-700',
+        summaryValue: 'text-orange-900',
+    },
+    suspicious_content: {
+        label: 'Supheli Icerik',
+        icon: ShieldExclamationIcon,
+        badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        summaryBg: 'bg-yellow-50 border-yellow-200',
+        summaryText: 'text-yellow-700',
+        summaryValue: 'text-yellow-900',
+    },
+};
 
 // ─── Spinner ────────────────────────────────────────────────────────────────
 
-const Spinner = () => (
-    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+const Spinner = ({ className = 'h-5 w-5 text-white' }) => (
+    <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
 );
 
-// ─── Status Badge ───────────────────────────────────────────────────────────
+// ─── Model Badge ────────────────────────────────────────────────────────────
 
-const StatusBadge = ({ status }) => {
-    if (!status) return <span className="text-gray-400 text-xs">-</span>;
-    const colors = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700 border-gray-200';
+const ModelBadge = ({ model, label }) => {
+    const colors = MODEL_COLORS[model] || 'bg-gray-100 text-gray-700 border-gray-200';
+    const dotColor = MODEL_DOT_COLORS[model] || 'bg-gray-400';
     return (
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${colors}`}>
-            {status}
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${colors}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+            {label || model}
         </span>
     );
 };
 
+// ─── Category Badge ─────────────────────────────────────────────────────────
+
+const CategoryBadge = ({ category }) => {
+    const config = CATEGORY_CONFIG[category];
+    if (!config) return <span className="text-gray-400 text-xs">{category}</span>;
+    const Icon = config.icon;
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.badgeClass}`}>
+            <Icon className="w-3 h-3" />
+            {config.label}
+        </span>
+    );
+};
+
+// ─── Summary Card ───────────────────────────────────────────────────────────
+
+const SummaryCard = ({ value, label, bgClass, textClass, valueClass }) => (
+    <div className={`rounded-xl border p-4 flex flex-col items-center justify-center min-w-[120px] ${bgClass}`}>
+        <span className={`text-2xl font-bold ${valueClass}`}>{value}</span>
+        <span className={`text-xs font-medium mt-1 ${textClass}`}>{label}</span>
+    </div>
+);
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function DataBrowserTab() {
-    // ── Filter state
-    const [modelType, setModelType] = useState('attendance');
-    const [employeeId, setEmployeeId] = useState('');
-    const [dateStart, setDateStart] = useState('');
-    const [dateEnd, setDateEnd] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    const [testOnly, setTestOnly] = useState(false);
-    const [page, setPage] = useState(1);
-
-    // ── Result state
-    const [results, setResults] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [testCount, setTestCount] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [availableStatuses, setAvailableStatuses] = useState([]);
-
-    // ── UI state
     const [loading, setLoading] = useState(false);
-    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [data, setData] = useState(null);
+    const [selectedIds, setSelectedIds] = useState(new Map());
     const [deleting, setDeleting] = useState(false);
-    const [message, setMessage] = useState(null); // {type: 'success'|'error', text: '...'}
-    const [hasSearched, setHasSearched] = useState(false);
+    const [message, setMessage] = useState(null);
+    const [filterModel, setFilterModel] = useState('all');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [expandedRows, setExpandedRows] = useState(new Set());
 
-    // ── Fetch data ──────────────────────────────────────────────────────────
+    // ── Scan ────────────────────────────────────────────────────────────────
 
-    const fetchData = useCallback(async (targetPage = 1) => {
+    const handleScan = useCallback(async () => {
         setLoading(true);
         setMessage(null);
+        setSelectedIds(new Map());
+        setExpandedRows(new Set());
         try {
-            const params = {
-                model: modelType,
-                page: targetPage,
-                page_size: PAGE_SIZE,
-            };
-            if (employeeId.trim()) params.employee_id = employeeId.trim();
-            if (dateStart) params.date_start = dateStart;
-            if (dateEnd) params.date_end = dateEnd;
-            if (statusFilter) params.status = statusFilter;
-            if (testOnly) params.test_only = 'true';
-
-            const response = await api.get('/system/health-check/browse-data/', { params });
-            const data = response.data;
-
-            setResults(data.results || []);
-            setTotal(data.total || 0);
-            setTestCount(data.test_count || 0);
-            setTotalPages(data.total_pages || 0);
-            setAvailableStatuses(data.available_statuses || []);
-            setPage(data.page || targetPage);
-            setHasSearched(true);
+            const response = await api.get('/system/health-check/scan-test-data-detailed/');
+            setData(response.data);
+            if (response.data.summary?.total === 0) {
+                setMessage({ type: 'success', text: 'Sistemde test verisi bulunamadi. Her sey temiz!' });
+            }
         } catch (err) {
             const detail = err.response?.data?.error || err.response?.data?.detail || err.message;
-            setMessage({ type: 'error', text: `Veri yuklenirken hata: ${detail}` });
-            setResults([]);
-            setTotal(0);
-            setTestCount(0);
-            setTotalPages(0);
+            setMessage({ type: 'error', text: `Tarama hatasi: ${detail}` });
+            setData(null);
         } finally {
             setLoading(false);
         }
-    }, [modelType, employeeId, dateStart, dateEnd, statusFilter, testOnly]);
+    }, []);
 
-    // ── Handle search ───────────────────────────────────────────────────────
+    // ── Filtered records ────────────────────────────────────────────────────
 
-    const handleSearch = () => {
-        setSelectedIds(new Set());
-        fetchData(1);
-    };
+    const filteredRecords = data?.records?.filter((r) => {
+        if (filterModel !== 'all' && r.model !== filterModel) return false;
+        if (filterCategory !== 'all' && r.category !== filterCategory) return false;
+        return true;
+    }) || [];
 
-    // ── Handle page change ──────────────────────────────────────────────────
+    // ── Unique model/category options from data ─────────────────────────────
 
-    const handlePageChange = (newPage) => {
-        if (newPage < 1 || newPage > totalPages) return;
-        setSelectedIds(new Set());
-        fetchData(newPage);
-    };
+    const modelOptions = data?.records
+        ? [...new Map(data.records.map((r) => [r.model, r.model_label])).entries()]
+            .sort((a, b) => a[1].localeCompare(b[1], 'tr'))
+        : [];
 
-    // ── Handle model type change ────────────────────────────────────────────
-
-    const handleModelChange = (e) => {
-        setModelType(e.target.value);
-        setPage(1);
-        setStatusFilter('');
-        setSelectedIds(new Set());
-        setResults([]);
-        setTotal(0);
-        setTestCount(0);
-        setTotalPages(0);
-        setAvailableStatuses([]);
-        setHasSearched(false);
-    };
+    const categoryOptions = data?.records
+        ? [...new Set(data.records.map((r) => r.category))].sort()
+        : [];
 
     // ── Selection handlers ──────────────────────────────────────────────────
 
     const toggleSelectAll = () => {
-        if (selectedIds.size === results.length && results.length > 0) {
-            setSelectedIds(new Set());
+        if (selectedIds.size === filteredRecords.length && filteredRecords.length > 0) {
+            setSelectedIds(new Map());
         } else {
-            setSelectedIds(new Set(results.map((r) => r.id)));
+            const next = new Map();
+            filteredRecords.forEach((r) => {
+                next.set(`${r.model}:${r.id}`, { model: r.model, id: r.id });
+            });
+            setSelectedIds(next);
         }
     };
 
-    const toggleSelectRow = (id) => {
+    const toggleSelectRow = (record) => {
+        const key = `${record.model}:${record.id}`;
         setSelectedIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
+            const next = new Map(prev);
+            if (next.has(key)) {
+                next.delete(key);
             } else {
-                next.add(id);
+                next.set(key, { model: record.model, id: record.id });
+            }
+            return next;
+        });
+    };
+
+    // ── Row expand toggle ───────────────────────────────────────────────────
+
+    const toggleExpand = (record) => {
+        const key = `${record.model}:${record.id}`;
+        setExpandedRows((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
             }
             return next;
         });
@@ -190,26 +220,41 @@ export default function DataBrowserTab() {
         if (selectedIds.size === 0) return;
 
         const confirmed = window.confirm(
-            `${selectedIds.size} kayit kalici olarak silinecek. Bu islem geri alinamaz! Devam etmek istiyor musunuz?`
+            `${selectedIds.size} kayit kalici olarak silinecek. Bu islem geri alinamaz!\n\nDevam etmek istiyor musunuz?`
         );
         if (!confirmed) return;
 
         setDeleting(true);
         setMessage(null);
+
         try {
-            const response = await api.post('/system/health-check/delete-records/', {
-                model: modelType,
-                ids: Array.from(selectedIds),
+            // Group by model
+            const grouped = {};
+            selectedIds.forEach(({ model, id }) => {
+                if (!grouped[model]) grouped[model] = [];
+                grouped[model].push(id);
             });
-            const data = response.data;
-            const warnings = data.warnings?.length > 0 ? ` Uyarilar: ${data.warnings.join(', ')}` : '';
+
+            let totalDeleted = 0;
+            const allWarnings = [];
+
+            for (const [model, ids] of Object.entries(grouped)) {
+                const response = await api.post('/system/health-check/delete-records/', { model, ids });
+                totalDeleted += response.data?.deleted || ids.length;
+                if (response.data?.warnings?.length) {
+                    allWarnings.push(...response.data.warnings);
+                }
+            }
+
+            const warningsText = allWarnings.length > 0 ? ` Uyarilar: ${allWarnings.join(', ')}` : '';
             setMessage({
                 type: 'success',
-                text: `${data.deleted || selectedIds.size} kayit basariyla silindi.${warnings}`,
+                text: `${totalDeleted} kayit basariyla silindi.${warningsText}`,
             });
-            setSelectedIds(new Set());
-            // Re-fetch current page
-            fetchData(page);
+            setSelectedIds(new Map());
+
+            // Re-scan to refresh
+            await handleScan();
         } catch (err) {
             const detail = err.response?.data?.error || err.response?.data?.detail || err.message;
             setMessage({ type: 'error', text: `Silme hatasi: ${detail}` });
@@ -218,10 +263,13 @@ export default function DataBrowserTab() {
         }
     };
 
-    // ── Render ──────────────────────────────────────────────────────────────
+    // ── Derived ─────────────────────────────────────────────────────────────
 
-    const allSelected = results.length > 0 && selectedIds.size === results.length;
-    const someSelected = selectedIds.size > 0 && selectedIds.size < results.length;
+    const allSelected = filteredRecords.length > 0 && selectedIds.size === filteredRecords.length;
+    const someSelected = selectedIds.size > 0 && selectedIds.size < filteredRecords.length;
+    const summary = data?.summary;
+
+    // ── Render ──────────────────────────────────────────────────────────────
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -249,319 +297,349 @@ export default function DataBrowserTab() {
                     </p>
                     <button
                         onClick={() => setMessage(null)}
-                        className="ml-auto text-gray-400 hover:text-gray-600"
+                        className="ml-auto text-gray-400 hover:text-gray-600 transition-colors"
                     >
                         &times;
                     </button>
                 </div>
             )}
 
-            {/* ── Filter Bar ────────────────────────────────────────────── */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-4">
-                    <FunnelIcon className="w-5 h-5 text-indigo-600" />
-                    <h3 className="text-lg font-semibold text-gray-800">Veri Tarayici</h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    {/* Model Type */}
+            {/* ── Header + Scan Button ───────────────────────────────────── */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-start justify-between gap-4">
                     <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Veri Tipi</label>
-                        <select
-                            value={modelType}
-                            onChange={handleModelChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                        >
-                            {MODEL_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                                <MagnifyingGlassIcon className="w-5 h-5 text-indigo-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900">Test Verisi Tarayici</h3>
+                        </div>
+                        <p className="text-sm text-gray-500 ml-[52px]">
+                            Sistemdeki tum test ve supheli verileri otomatik tarar. Prefix eslesmesi, gelecek tarihli kayitlar ve supheli icerikler tespit edilir.
+                        </p>
                     </div>
-
-                    {/* Employee ID */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Calisan (ID)</label>
-                        <input
-                            type="text"
-                            value={employeeId}
-                            onChange={(e) => setEmployeeId(e.target.value)}
-                            placeholder="Calisan ID"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                    </div>
-
-                    {/* Date Start */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Baslangic Tarihi</label>
-                        <input
-                            type="date"
-                            value={dateStart}
-                            onChange={(e) => setDateStart(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                    </div>
-
-                    {/* Date End */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Bitis Tarihi</label>
-                        <input
-                            type="date"
-                            value={dateEnd}
-                            onChange={(e) => setDateEnd(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                    </div>
-
-                    {/* Status Filter */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Durum</label>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            disabled={availableStatuses.length === 0 && !hasSearched}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white disabled:bg-gray-50 disabled:text-gray-400"
-                        >
-                            <option value="">Tumunu Goster</option>
-                            {availableStatuses.map((s) => (
-                                <option key={s} value={s}>{s}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Test Only + Search Button */}
-                    <div className="flex flex-col justify-end gap-2">
-                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={testOnly}
-                                onChange={(e) => setTestOnly(e.target.checked)}
-                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                            />
-                            Test Verisi
-                        </label>
-                        <button
-                            onClick={handleSearch}
-                            disabled={loading}
-                            className={`
-                                flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white text-sm
-                                transition-all duration-200
-                                ${loading
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-sm hover:shadow'
-                                }
-                            `}
-                        >
-                            {loading ? <Spinner /> : <MagnifyingGlassIcon className="w-4 h-4" />}
-                            Tara
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleScan}
+                        disabled={loading}
+                        className={`
+                            flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white text-sm
+                            transition-all duration-200 flex-shrink-0
+                            ${loading
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-sm hover:shadow-md'
+                            }
+                        `}
+                    >
+                        {loading ? <Spinner /> : <MagnifyingGlassIcon className="w-4 h-4" />}
+                        {loading ? 'Taraniyor...' : 'Sistemi Tara'}
+                    </button>
                 </div>
             </div>
 
-            {/* ── Summary Bar ───────────────────────────────────────────── */}
-            {hasSearched && (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                        <TableCellsIcon className="w-5 h-5 text-gray-500" />
-                        <span className="text-gray-600">Toplam:</span>
-                        <span className="font-bold text-gray-900">{total.toLocaleString('tr-TR')}</span>
-                        <span className="text-gray-400">kayit</span>
-                    </div>
-
-                    {testCount > 0 && (
-                        <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-xs font-bold">
-                                Test: {testCount.toLocaleString('tr-TR')}
-                            </span>
-                        </div>
-                    )}
-
-                    <div className="ml-auto flex items-center gap-2 text-gray-500">
-                        <span>
-                            Sayfa <span className="font-semibold text-gray-700">{page}</span> / {totalPages}
-                        </span>
-                    </div>
-
-                    {selectedIds.size > 0 && (
-                        <button
-                            onClick={handleBulkDelete}
-                            disabled={deleting}
-                            className={`
-                                flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white text-sm
-                                transition-all duration-200
-                                ${deleting
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-red-600 hover:bg-red-700 active:bg-red-800 shadow-sm hover:shadow'
-                                }
-                            `}
-                        >
-                            {deleting ? <Spinner /> : <TrashIcon className="w-4 h-4" />}
-                            Secili {selectedIds.size} kaydi sil
-                        </button>
-                    )}
+            {/* ── Loading State ───────────────────────────────────────────── */}
+            {loading && !data && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-16 flex flex-col items-center justify-center">
+                    <Spinner className="h-8 w-8 text-indigo-500" />
+                    <p className="text-sm text-gray-500 mt-4">Sistem taraniyor, lutfen bekleyin...</p>
                 </div>
             )}
 
-            {/* ── Results Table ──────────────────────────────────────────── */}
-            {hasSearched && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    {loading ? (
-                        <div className="flex items-center justify-center gap-3 py-20 text-gray-500">
-                            <svg className="animate-spin h-6 w-6 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            <span className="text-sm">Yukleniyor...</span>
-                        </div>
-                    ) : results.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                            <TableCellsIcon className="w-12 h-12 mb-3" />
-                            <p className="text-sm font-medium">Kayit bulunamadi</p>
-                            <p className="text-xs mt-1">Filtrelerinizi degistirip tekrar deneyin.</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead>
-                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                        <th className="px-4 py-3 w-10">
-                                            <input
-                                                type="checkbox"
-                                                checked={allSelected}
-                                                ref={(el) => {
-                                                    if (el) el.indeterminate = someSelected;
-                                                }}
-                                                onChange={toggleSelectAll}
-                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                                            />
-                                        </th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tip</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Calisan</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tarih</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Detay</th>
-                                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Durum</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {results.map((row, idx) => {
-                                        const isTest = row.extra?.is_test;
-                                        const isSelected = selectedIds.has(row.id);
-                                        return (
-                                            <tr
-                                                key={row.id}
-                                                className={`
-                                                    transition-colors duration-100
-                                                    ${isTest ? 'bg-amber-50/60' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-                                                    ${isSelected ? 'ring-1 ring-inset ring-indigo-300 bg-indigo-50/40' : ''}
-                                                    hover:bg-indigo-50/30
-                                                `}
-                                            >
-                                                <td className="px-4 py-3">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => toggleSelectRow(row.id)}
-                                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-gray-400 font-mono">
-                                                    {row.id}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-gray-700 font-medium">
-                                                    {row.type || '-'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="text-sm text-gray-900 font-medium">
-                                                        {row.employee_name || '-'}
-                                                    </div>
-                                                    {row.employee_code && (
-                                                        <div className="text-xs text-gray-400">
-                                                            #{row.employee_code}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
-                                                    {row.date || '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title={row.detail}>
-                                                    {row.detail || '-'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <StatusBadge status={row.status} />
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+            {/* ── No data yet (initial state) ────────────────────────────── */}
+            {!data && !loading && (
+                <div className="bg-white p-16 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-400">
+                    <MagnifyingGlassIcon className="w-16 h-16 mb-4 text-gray-300" />
+                    <p className="text-lg font-medium text-gray-500">Tarama Baslatilmadi</p>
+                    <p className="text-sm mt-1">
+                        Test verilerini bulmak icin <span className="font-semibold text-indigo-600">&quot;Sistemi Tara&quot;</span> butonuna basin.
+                    </p>
+                </div>
+            )}
 
-                    {/* ── Pagination ─────────────────────────────────────────── */}
-                    {totalPages > 1 && !loading && results.length > 0 && (
-                        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/50">
-                            <button
-                                onClick={() => handlePageChange(page - 1)}
-                                disabled={page <= 1}
-                                className={`
-                                    flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                                    ${page <= 1
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800'
-                                    }
-                                `}
-                            >
-                                <ChevronLeftIcon className="w-4 h-4" />
-                                Onceki
-                            </button>
-
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <span>Sayfa</span>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={totalPages}
-                                    value={page}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value, 10);
-                                        if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                                            handlePageChange(val);
-                                        }
-                                    }}
-                                    className="w-16 px-2 py-1 text-center border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            {/* ── Results (after scan) ────────────────────────────────────── */}
+            {data && (
+                <>
+                    {/* ── Summary Cards ───────────────────────────────────── */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Ozet</h4>
+                        <div className="flex flex-wrap gap-4">
+                            <SummaryCard
+                                value={summary?.total || 0}
+                                label="Toplam Kayit"
+                                bgClass="bg-gray-50 border-gray-200"
+                                textClass="text-gray-600"
+                                valueClass="text-gray-900"
+                            />
+                            {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
+                                <SummaryCard
+                                    key={key}
+                                    value={summary?.by_category?.[key] || 0}
+                                    label={config.label}
+                                    bgClass={config.summaryBg}
+                                    textClass={config.summaryText}
+                                    valueClass={config.summaryValue}
                                 />
-                                <span>/ {totalPages}</span>
+                            ))}
+                        </div>
+
+                        {/* Model breakdown */}
+                        {summary?.by_model && Object.keys(summary.by_model).length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Model Dagilimi:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.entries(summary.by_model)
+                                        .sort((a, b) => b[1] - a[1])
+                                        .map(([model, count]) => (
+                                            <span
+                                                key={model}
+                                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${MODEL_COLORS[model] || 'bg-gray-100 text-gray-700 border-gray-200'}`}
+                                            >
+                                                <span className={`w-1.5 h-1.5 rounded-full ${MODEL_DOT_COLORS[model] || 'bg-gray-400'}`} />
+                                                {model}: {count}
+                                            </span>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {summary?.truncated && (
+                            <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                <p className="text-xs text-amber-700 font-medium">
+                                    Sonuclar kisaltildi. Gosterilenden daha fazla kayit bulunabilir.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Filters + Actions ───────────────────────────────── */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                        <div className="flex flex-wrap items-center gap-4">
+                            {/* Model filter */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs font-medium text-gray-600">Model:</label>
+                                <select
+                                    value={filterModel}
+                                    onChange={(e) => {
+                                        setFilterModel(e.target.value);
+                                        setSelectedIds(new Map());
+                                    }}
+                                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                                >
+                                    <option value="all">Tumu</option>
+                                    {modelOptions.map(([value, label]) => (
+                                        <option key={value} value={value}>{label}</option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <button
-                                onClick={() => handlePageChange(page + 1)}
-                                disabled={page >= totalPages}
-                                className={`
-                                    flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                                    ${page >= totalPages
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800'
-                                    }
-                                `}
-                            >
-                                Sonraki
-                                <ChevronRightIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+                            {/* Category filter */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs font-medium text-gray-600">Kategori:</label>
+                                <select
+                                    value={filterCategory}
+                                    onChange={(e) => {
+                                        setFilterCategory(e.target.value);
+                                        setSelectedIds(new Map());
+                                    }}
+                                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                                >
+                                    <option value="all">Tum Kategoriler</option>
+                                    {categoryOptions.map((cat) => (
+                                        <option key={cat} value={cat}>
+                                            {CATEGORY_CONFIG[cat]?.label || cat}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-            {/* ── Initial state (before first search) ────────────────────── */}
-            {!hasSearched && !loading && (
-                <div className="bg-white p-12 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-400">
-                    <MagnifyingGlassIcon className="w-16 h-16 mb-4 text-gray-300" />
-                    <p className="text-lg font-medium text-gray-500">Veri Tarayici</p>
-                    <p className="text-sm mt-1">Filtreleri ayarlayin ve <span className="font-semibold text-indigo-600">"Tara"</span> butonuna basin.</p>
-                </div>
+                            {/* Select all checkbox */}
+                            {filteredRecords.length > 0 && (
+                                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none ml-auto">
+                                    <input
+                                        type="checkbox"
+                                        checked={allSelected}
+                                        ref={(el) => {
+                                            if (el) el.indeterminate = someSelected;
+                                        }}
+                                        onChange={toggleSelectAll}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                    />
+                                    Tumunu Sec
+                                </label>
+                            )}
+                        </div>
+
+                        {/* Delete button */}
+                        {selectedIds.size > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={deleting}
+                                    className={`
+                                        flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white text-sm
+                                        transition-all duration-200
+                                        ${deleting
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : 'bg-red-600 hover:bg-red-700 active:bg-red-800 shadow-sm hover:shadow'
+                                        }
+                                    `}
+                                >
+                                    {deleting ? <Spinner /> : <TrashIcon className="w-4 h-4" />}
+                                    Secili {selectedIds.size} kaydi sil
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Records Table ───────────────────────────────────── */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        {filteredRecords.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                                <MagnifyingGlassIcon className="w-12 h-12 mb-3" />
+                                <p className="text-sm font-medium">
+                                    {data.summary?.total === 0
+                                        ? 'Test verisi bulunamadi'
+                                        : 'Secili filtrelere uygun kayit yok'}
+                                </p>
+                                <p className="text-xs mt-1 text-gray-400">
+                                    {data.summary?.total === 0
+                                        ? 'Sistem temiz gorunuyor.'
+                                        : 'Filtreleri degistirip tekrar deneyin.'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-200">
+                                            <th className="px-4 py-3 w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={allSelected}
+                                                    ref={(el) => {
+                                                        if (el) el.indeterminate = someSelected;
+                                                    }}
+                                                    onChange={toggleSelectAll}
+                                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                                />
+                                            </th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Model</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Calisan</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tarih</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sebep</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Detay</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Durum</th>
+                                            <th className="px-4 py-3 w-10" />
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredRecords.map((record, idx) => {
+                                            const rowKey = `${record.model}:${record.id}`;
+                                            const isSelected = selectedIds.has(rowKey);
+                                            const isExpanded = expandedRows.has(rowKey);
+
+                                            return (
+                                                <React.Fragment key={rowKey}>
+                                                    <tr
+                                                        className={`
+                                                            transition-colors duration-100 cursor-pointer
+                                                            ${isSelected ? 'bg-indigo-50/50 ring-1 ring-inset ring-indigo-200' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}
+                                                            hover:bg-indigo-50/30
+                                                        `}
+                                                        onClick={() => toggleExpand(record)}
+                                                    >
+                                                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => toggleSelectRow(record)}
+                                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <ModelBadge model={record.model} label={record.model_label} />
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="text-sm text-gray-900 font-medium">
+                                                                {record.employee_name || '-'}
+                                                            </div>
+                                                            {record.employee_code && (
+                                                                <div className="text-xs text-gray-400 font-mono">
+                                                                    #{record.employee_code}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                                                            {record.date || '-'}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <CategoryBadge category={record.category} />
+                                                            <div className="text-[10px] text-gray-400 mt-0.5 max-w-[200px] truncate" title={record.reason}>
+                                                                {record.reason}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-xs text-gray-600 max-w-[200px] truncate" title={record.detail}>
+                                                            {record.detail || '-'}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {record.status ? (
+                                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-gray-100 text-gray-700 border-gray-200">
+                                                                    {record.status}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-400 text-xs">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-400">
+                                                            {isExpanded
+                                                                ? <ChevronDownIcon className="w-4 h-4" />
+                                                                : <ChevronRightIcon className="w-4 h-4" />
+                                                            }
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* ── Expanded Raw Data ──────────── */}
+                                                    {isExpanded && record.raw && (
+                                                        <tr className="bg-gray-50/80">
+                                                            <td colSpan={8} className="px-4 py-3">
+                                                                <div className="bg-gray-100 rounded-lg p-4 font-mono text-xs text-gray-700 overflow-x-auto max-h-64 overflow-y-auto">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold font-sans">
+                                                                            Ham Veri (ID: {record.id})
+                                                                        </span>
+                                                                    </div>
+                                                                    <pre className="whitespace-pre-wrap break-words">
+                                                                        {JSON.stringify(record.raw, null, 2)}
+                                                                    </pre>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* ── Record count footer ────────────────────────── */}
+                        {filteredRecords.length > 0 && (
+                            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
+                                <span>
+                                    {filteredRecords.length} kayit gosteriliyor
+                                    {(filterModel !== 'all' || filterCategory !== 'all') && (
+                                        <span className="text-gray-400"> (toplam {data.summary?.total || 0})</span>
+                                    )}
+                                </span>
+                                {selectedIds.size > 0 && (
+                                    <span className="font-medium text-indigo-600">
+                                        {selectedIds.size} kayit secili
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </>
             )}
         </div>
     );
