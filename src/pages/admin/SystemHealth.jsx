@@ -107,7 +107,7 @@ export default function SystemHealth() {
                         { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
                         { id: 'spec_tests', name: 'Spec Testleri', icon: PlayCircleIcon },
                         { id: 'overtime_audit', name: 'Mesai Denetimi', icon: ClockIcon },
-                        { id: 'ot_analysis', name: 'OT Calisan Analizi', icon: UsersIcon },
+                        { id: 'ot_analysis', name: 'OT Çalışan Analizi', icon: UsersIcon },
                         { id: 'record_check', name: 'Kayıt Kontrol', icon: ClipboardDocumentCheckIcon },
                         { id: 'request_analysis', name: 'Talep Analizi', icon: ClipboardDocumentCheckIcon },
                         { id: 'break_fix', name: 'Mola Düzeltme', icon: PauseCircleIcon },

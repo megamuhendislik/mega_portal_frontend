@@ -12,11 +12,11 @@ import dayjs from 'dayjs';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ISSUE_CATEGORY_LABELS = {
-    approval_mismatch: 'Onay Uyumsuzlugu',
-    duration_mismatch: 'Sure Uyumsuzlugu',
-    overlapping_ot: 'Cakisan Mesai',
+    approval_mismatch: 'Onay Uyuşmazlığı',
+    duration_mismatch: 'Süre Uyuşmazlığı',
+    overlapping_ot: 'Çakışan Mesai',
     orphan_potential: 'Sahipsiz Potansiyel',
-    source_mismatch: 'Kaynak Uyumsuzlugu',
+    source_mismatch: 'Kaynak Uyuşmazlığı',
 };
 
 const SEVERITY_COLORS = {
@@ -26,7 +26,7 @@ const SEVERITY_COLORS = {
 };
 
 const SeverityBadge = ({ severity }) => {
-    const labels = { HIGH: 'Yuksek', MEDIUM: 'Orta', LOW: 'Dusuk' };
+    const labels = { HIGH: 'Yüksek', MEDIUM: 'Orta', LOW: 'Düşük' };
     const s = SEVERITY_COLORS[severity] || SEVERITY_COLORS.LOW;
     return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${s.badge}`}>{labels[severity] || severity}</span>;
 };
@@ -52,7 +52,7 @@ const SourcePill = ({ source }) => {
         MANUAL: 'bg-purple-50 text-purple-700 border-purple-200',
         POTENTIAL: 'bg-slate-50 text-slate-600 border-slate-200',
     };
-    const labels = { INTENDED: 'Planli', MANUAL: 'Manuel', POTENTIAL: 'Algilanan' };
+    const labels = { INTENDED: 'Planlı', MANUAL: 'Manuel', POTENTIAL: 'Algılanan' };
     return (
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${map[source] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
             {labels[source] || source}
@@ -102,7 +102,7 @@ export default function OTEmployeeAnalysisTab() {
             const res = await api.get('/system/health-check/ot-employee-analysis/', { params });
             setData(res.data);
         } catch (err) {
-            message.error(err.response?.data?.error || 'Analiz verileri alinamadi');
+            message.error(err.response?.data?.error || 'Analiz verileri alınamadı');
         } finally {
             setLoading(false);
         }
@@ -143,7 +143,7 @@ export default function OTEmployeeAnalysisTab() {
             render: v => <span className="font-mono text-xs">{v}</span>,
         },
         {
-            title: 'Saat Araligi',
+            title: 'Saat Aralığı',
             key: 'time_range',
             width: 120,
             render: (_, r) => (
@@ -153,7 +153,7 @@ export default function OTEmployeeAnalysisTab() {
             ),
         },
         {
-            title: 'Sure',
+            title: 'Süre',
             dataIndex: 'hours',
             key: 'hours',
             width: 70,
@@ -175,8 +175,8 @@ export default function OTEmployeeAnalysisTab() {
         },
         {
             title: 'Onaylayan',
-            dataIndex: 'approved_by',
-            key: 'approved_by',
+            dataIndex: 'approval_manager',
+            key: 'approval_manager',
             width: 120,
             render: v => v || '\u2014',
         },
@@ -191,7 +191,7 @@ export default function OTEmployeeAnalysisTab() {
             render: (_, __, idx) => <span className="text-xs text-gray-400">{idx + 1}</span>,
         },
         {
-            title: 'Calisan',
+            title: 'Çalışan',
             key: 'employee',
             width: 180,
             render: (_, r) => (
@@ -272,7 +272,7 @@ export default function OTEmployeeAnalysisTab() {
             {/* Issues */}
             {record.issues && record.issues.length > 0 && (
                 <div className="space-y-2 mb-4">
-                    <h4 className="font-semibold text-sm text-red-700">Tutarsizliklar ({record.issues.length})</h4>
+                    <h4 className="font-semibold text-sm text-red-700">Tutarsızlıklar ({record.issues.length})</h4>
                     {record.issues.map((issue, i) => {
                         const sev = SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.LOW;
                         return (
@@ -299,7 +299,7 @@ export default function OTEmployeeAnalysisTab() {
                     />
                 </div>
             ) : (
-                <p className="text-xs text-gray-400">Bu calisan icin OT talebi bulunamadi.</p>
+                <p className="text-xs text-gray-400">Bu çalışan için OT talebi bulunamadı.</p>
             )}
         </div>
     );
@@ -317,7 +317,7 @@ export default function OTEmployeeAnalysisTab() {
                     <div>
                         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                             <ExclamationTriangleIcon className="w-5 h-5 text-indigo-600" />
-                            OT Calisan Analizi
+                            OT Çalışan Analizi
                         </h2>
                         {period && (
                             <p className="text-xs text-gray-500 mt-1">
@@ -334,7 +334,7 @@ export default function OTEmployeeAnalysisTab() {
                             icon={<ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
                             className="flex items-center gap-1"
                         >
-                            {loading ? 'Taraniyor...' : 'Yenile'}
+                            {loading ? 'Taranıyor...' : 'Yenile'}
                         </Button>
                     </div>
                 </div>
@@ -355,7 +355,7 @@ export default function OTEmployeeAnalysisTab() {
                     </div>
                     <div className="rounded-xl border p-4 bg-emerald-50 border-emerald-200">
                         <div className="text-2xl font-bold text-emerald-700">{summary.totals?.approved?.count || 0}</div>
-                        <div className="text-xs font-medium text-emerald-600">Onayli</div>
+                        <div className="text-xs font-medium text-emerald-600">Onaylı</div>
                         <div className="text-[10px] text-emerald-500 mt-0.5">{(summary.totals?.approved?.hours || 0).toFixed(1)} saat</div>
                     </div>
                     <div className="rounded-xl border p-4 bg-red-50 border-red-200">
@@ -365,16 +365,16 @@ export default function OTEmployeeAnalysisTab() {
                     </div>
                     <div className="rounded-xl border p-4 bg-gray-50 border-gray-200">
                         <div className="text-2xl font-bold text-gray-700">{summary.totals?.cancelled?.count || 0}</div>
-                        <div className="text-xs font-medium text-gray-600">Iptal</div>
+                        <div className="text-xs font-medium text-gray-600">İptal</div>
                         <div className="text-[10px] text-gray-500 mt-0.5">{(summary.totals?.cancelled?.hours || 0).toFixed(1)} saat</div>
                     </div>
                     <div className={`rounded-xl border p-4 ${hasIssues ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                         <div className={`text-2xl font-bold ${hasIssues ? 'text-red-700' : 'text-green-700'}`}>
                             {summary.employees_with_issues || 0}
                         </div>
-                        <div className={`text-xs font-medium ${hasIssues ? 'text-red-600' : 'text-green-600'}`}>Tutarsizlik</div>
+                        <div className={`text-xs font-medium ${hasIssues ? 'text-red-600' : 'text-green-600'}`}>Tutarsızlık</div>
                         <div className={`text-[10px] mt-0.5 ${hasIssues ? 'text-red-500' : 'text-green-500'}`}>
-                            / {summary.total_employees_scanned || 0} calisan
+                            / {summary.total_employees_scanned || 0} çalışan
                         </div>
                     </div>
                 </div>
@@ -403,7 +403,7 @@ export default function OTEmployeeAnalysisTab() {
                             value={dateRange}
                             onChange={setDateRange}
                             format="DD.MM.YYYY"
-                            placeholder={['Baslangic', 'Bitis']}
+                            placeholder={['Başlangıç', 'Bitiş']}
                             size="small"
                             allowClear
                             className="min-w-[220px]"
@@ -424,7 +424,7 @@ export default function OTEmployeeAnalysisTab() {
                         <Input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Calisan ara..."
+                            placeholder="Çalışan ara..."
                             prefix={<MagnifyingGlassIcon className="w-3.5 h-3.5 text-gray-400" />}
                             size="small"
                             className="max-w-[180px]"
@@ -436,7 +436,7 @@ export default function OTEmployeeAnalysisTab() {
                                 onChange={setIssuesOnly}
                                 size="small"
                             />
-                            <span className="text-xs font-medium text-gray-600">Sadece Hatalilar</span>
+                            <span className="text-xs font-medium text-gray-600">Sadece Hatalılar</span>
                         </div>
                         <div className="ml-auto">
                             <Button
@@ -445,7 +445,7 @@ export default function OTEmployeeAnalysisTab() {
                                 icon={<ArrowDownTrayIcon className="w-3.5 h-3.5" />}
                                 className="flex items-center gap-1"
                             >
-                                JSON Indir
+                                JSON İndir
                             </Button>
                         </div>
                     </div>
@@ -466,7 +466,7 @@ export default function OTEmployeeAnalysisTab() {
                             pageSize: 20,
                             showSizeChanger: true,
                             pageSizeOptions: ['10', '20', '50', '100'],
-                            showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} calisan`,
+                            showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} çalışan`,
                             size: 'small',
                         }}
                         size="small"
@@ -480,8 +480,8 @@ export default function OTEmployeeAnalysisTab() {
             {!data && !loading && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                     <ExclamationTriangleIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <h3 className="text-sm font-bold text-gray-600">Analiz Yukleniyor</h3>
-                    <p className="text-xs text-gray-400 mt-1">"Yenile" butonuyla analizi tekrar baslatabilirsiniz.</p>
+                    <h3 className="text-sm font-bold text-gray-600">Analiz Yükleniyor</h3>
+                    <p className="text-xs text-gray-400 mt-1">"Yenile" butonuyla analizi tekrar başlatabilirsiniz.</p>
                 </div>
             )}
         </div>
