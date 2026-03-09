@@ -733,20 +733,20 @@ const EmployeeDetail = () => {
                                     <div>
                                         <h4 className="font-semibold text-slate-700 mb-3">Ekstra Yetkiler</h4>
                                         <div className="h-80 overflow-y-auto border rounded-lg p-4 bg-slate-50 space-y-4 custom-scrollbar">
-                                            {['MENU', 'REQUEST', 'FEATURE', 'SYSTEM'].map(cat => {
+                                            {['PAGE', 'APPROVAL', 'ACTION', 'SYSTEM'].map(cat => {
                                                 const catPerms = allPermissions.filter(p => p.category === cat);
                                                 if (catPerms.length === 0) return null;
 
                                                 let catLabel = 'Diğer';
                                                 let catColor = 'text-slate-500';
-                                                if (cat === 'MENU') { catLabel = 'Menü & Sayfa'; catColor = 'text-emerald-600'; }
-                                                if (cat === 'REQUEST') { catLabel = 'Talep & Mesai'; catColor = 'text-blue-600'; }
-                                                if (cat === 'FEATURE') { catLabel = 'Özellikler'; catColor = 'text-purple-600'; }
+                                                if (cat === 'PAGE') { catLabel = 'Menü & Sayfa'; catColor = 'text-emerald-600'; }
+                                                if (cat === 'APPROVAL') { catLabel = 'Onay & İşlemler'; catColor = 'text-blue-600'; }
+                                                if (cat === 'ACTION') { catLabel = 'Özellikler'; catColor = 'text-purple-600'; }
                                                 if (cat === 'SYSTEM') { catLabel = 'Sistem & Admin'; catColor = 'text-amber-600'; }
 
                                                 return (
                                                     <div key={cat}>
-                                                        <h5 className={`text-xs font-bold uppercase tracking-wider mb-2 ${catColor}border-b border-slate-200 pb-1`}>
+                                                        <h5 className={`text-xs font-bold uppercase tracking-wider mb-2 ${catColor} border-b border-slate-200 pb-1`}>
                                                             {catLabel}
                                                         </h5>
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
