@@ -2,7 +2,7 @@ import {
     Clock, CalendarDays, Timer, Utensils, Calendar,
     Contact, CheckSquare, BarChart3, CalendarRange, Shield,
     Users, Network, Server, Database, Package,
-    MessageSquare, UserCheck
+    MessageSquare, UserCheck, HeartPulse
 } from 'lucide-react';
 
 const helpContent = [
@@ -48,6 +48,32 @@ const helpContent = [
             { q: 'Mola sürem neden azalıyor?', a: 'Gün içinde her çıkış-giriş arası "potansiyel mola" olarak sayılır. Toplam potansiyel mola süreniz (çıkış-giriş arasındaki tüm boşluklar) üst menüdeki mola göstergesinde takip edilir. Günlük mola hakkı (genellikle 30 dk) otomatik olarak çalışma sürenizden düşülür.' },
             { q: 'Birden fazla giriş/çıkış kaydım var, bu normal mi?', a: 'Evet. Gün içinde her kart okutma bir giriş veya çıkış olarak kaydedilir (tek-çift sıralama). Sistem tüm kayıtları birleştirerek toplam çalışma sürenizi hesaplar. Aradaki boşluklar mola olarak değerlendirilir.' },
             { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya bitişiniz 18:00 ise ve geç kalma toleransı 30 dk ise: 18:30\'a kadar çıkış yaparsanız fazla mesai oluşmaz. 18:30\'dan sonra çıkarsanız (örneğin 19:00), 18:00-19:00 arası = 60 dk fazla mesai hesaplanır. Bu süre minimum eşiği (varsayılan 30 dk) geçtiği için sistem otomatik "Potansiyel Ek Mesai" kaydı oluşturur. Eşiğin altındaki süreler kaydedilmez.' }
+        ]
+    },
+    {
+        id: 'profil',
+        title: 'Profilim',
+        icon: Users,
+        description: 'Kişisel bilgiler, iletişim, bildirim tercihleri ve şifre yönetimi',
+        permission: null,
+        link: '/profile',
+        images: [
+            { src: '/help-images/profil.png', caption: 'Profilim — 4 sekmeli profil sayfası (Profilim/İletişim/Bildirimler/Güvenlik), departman bilgisi ve şifre değiştirme formu' }
+        ],
+        steps: [
+            { title: 'Kişisel Bilgiler', description: '"Profilim" sekmesinde ad-soyad, e-posta, departman ve pozisyon bilgilerinizi görüntüleyebilirsiniz. Bazı alanlar yalnızca yönetici tarafından değiştirilebilir.' },
+            { title: 'İletişim Bilgileri', description: '"İletişim" sekmesinde telefon numarası, adres ve acil durum iletişim bilgilerinizi güncelleyebilirsiniz. Bu bilgiler Şirket Rehberi\'nde görünür.' },
+            { title: 'Bildirim Tercihleri', description: '"Bildirimler" sekmesinde hangi olaylar için bildirim almak istediğinizi (izin onayı, mesai ataması, talep durumu vb.) ayarlayabilirsiniz.' },
+            { title: 'Şifre Değiştirme', description: '"Güvenlik" sekmesinden mevcut şifrenizi girip yeni şifre belirleyebilirsiniz. Sistem yöneticisi şifrenizi sıfırladıysa ilk girişte şifre değiştirmeniz zorunlu olabilir.' }
+        ],
+        tips: [
+            { type: 'info', text: 'Profil sayfanızdaki departman ve pozisyon bilgileri yönetici tarafından atanır. Bu alanları kendiniz değiştiremezsiniz.' },
+            { type: 'warning', text: 'Şifreniz en az 6 karakter olmalıdır. Güçlü bir şifre için büyük/küçük harf, rakam ve özel karakter kombinasyonu kullanın.' },
+            { type: 'success', text: 'Sol paneldeki avatar ve isim bilginiz tüm sayfaların üst çubuğunda da görünür. Profil fotoğrafı henüz desteklenmemektedir.' }
+        ],
+        faq: [
+            { q: 'Departman veya pozisyon bilgimi nasıl değiştiririm?', a: 'Departman ve pozisyon bilgileri yönetici tarafından Çalışan Yönetimi sayfasından güncellenir. Kendiniz değiştiremezsiniz. İK birimine başvurun.' },
+            { q: 'Şifremi unuttum ne yapmalıyım?', a: 'Sistem yöneticinize başvurun. Admin panelinden (Sistem Sağlığı > Şifre Sıfırlama) şifreniz sıfırlanabilir. İlk girişte yeni şifre belirlemeniz istenecektir.' }
         ]
     },
     {
@@ -173,43 +199,28 @@ const helpContent = [
         id: 'takvim',
         title: 'Takvim',
         icon: Calendar,
-        description: 'Kişisel ajanda, etkinlik kategorileri, yıllık/aylık/haftalık görünüm ve şirket takvimi düzenleme',
+        description: 'Ajanda odaklı kişisel takvim, etkinlik filtreleri, ekip Gantt çubuğu ve ek mesai atamaları',
         permission: null,
         link: '/calendar',
         images: [
-            { src: '/help-images/takvim.png', caption: 'Takvim — yıllık görünüm, etkinlik kategorileri (genel/toplantı/not/hatırlatma/acil-tatil/izin-seyahat/paylaşılan) ve şirket takvimi düzenleme' }
+            { src: '/help-images/takvim.png', caption: 'Takvim — ajanda odaklı görünüm, etkinlik filtreleri (mesai/izin/sağlık raporu/kartsız giriş/ekip), renk kodları ve yan panel' }
         ],
         steps: [
-            {
-                title: 'Yıllık Görünüm (Varsayılan)',
-                description: 'Takvim sayfası açıldığında yıllık görünüm gelir. 12 ayı tek ekranda görebilirsiniz. Herhangi bir güne tıklayarak o günün ajanda moduna geçebilirsiniz.'
-            },
-            {
-                title: 'Ajanda Modu (Ay/Hafta/Gün)',
-                description: 'Bir güne tıkladığınızda ajanda moduna geçilir. Ay, hafta ve gün görünümleri arasında geçiş yapabilirsiniz. Bu modda etkinlik oluşturabilir, düzenleyebilir ve silebilirsiniz.'
-            },
-            {
-                title: 'Etkinlik Oluşturma',
-                description: 'Takvimde boş bir alana tıklayarak yeni etkinlik oluşturun. Başlık, tarih/saat, kategori (Genel, Toplantı, Not, Hatırlatma, Acil/Tatil, İzin/Seyahat) ve açıklama girin. Etkinlikleri diğer çalışanlarla veya departmanlarla paylaşabilirsiniz.'
-            },
-            {
-                title: 'Etkinlik Kategorileri ve Renk Kodları',
-                description: 'Her kategori farklı renkte gösterilir: Genel (mavi), Toplantı (mor), Not (yeşil), Hatırlatma (turuncu), Acil/Tatil (kırmızı), İzin/Seyahat (sarı). Sizinle paylaşılan etkinlikler italik etiketle ayırt edilir.'
-            },
-            {
-                title: 'Şirket Takvimi Düzenleme (Yönetici)',
-                description: '"Şirket Takvimi Düzenle" düğmesine tıklayarak mali takvim yönetim moduna geçebilirsiniz. Bu modda resmi tatiller, şirket geneli etkinlikler ve mali dönem ayarlarını düzenleyebilirsiniz. Kişisel takvime dönmek için "Kişisel Takvime Dön" düğmesini kullanın.'
-            }
+            { title: 'Takvim Görünümleri', description: 'Takvim sayfası 4 görünüm modu sunar: Ay, Hafta, Gün ve Ajanda. Varsayılan olarak aylık görünüm açılır. Üst sağ köşedeki düğmelerle modlar arasında geçiş yapabilirsiniz. Bugün düğmesi ile anında bugüne dönebilirsiniz.' },
+            { title: 'Etkinlik Filtreleri', description: 'Takvimin üst kısmındaki toggle butonlarıyla hangi etkinlik türlerini görmek istediğinizi seçin: Mesai Görevleri (mor), Mesai Talepleri (amber/yeşil), İzinler (mavi), Sağlık Raporu (pembe), Kartsız Giriş ve Ekip Görünümü. Her filtre ayrı ayrı açılıp kapatılabilir.' },
+            { title: 'Etkinlik Oluşturma', description: '"+ Etkinlik Ekle" düğmesine tıklayarak yeni kişisel etkinlik oluşturun. Başlık, tarih/saat, etkinlik türü (Kişisel/Toplantı/Hatırlatma), konum ve görünürlük (Özel/Departman/Herkese Açık) ayarlarını yapın.' },
+            { title: 'Renk Kodları', description: 'Takvimde etkinlikler renklerle ayrılır: Kişisel (mavi), Herkese Açık (yeşil), Departman (yeşil), Hatırlatıcı (turuncu), Tatil (kırmızı), İzin (mavi), Sağlık Raporu (pembe). Resmi tatiller otomatik olarak kırmızı çarpı işareti ile gösterilir.' },
+            { title: 'Ekip Görünümü ve Gantt Çubuğu', description: '"Ekip Görünümü" filtresini açtığınızda ekibinizdeki çalışanların izin, ek mesai, devamsızlık ve sağlık raporu durumlarını Gantt çubuğu formatında görebilirsiniz. Bu, ekip planlaması yaparken kimin hangi tarihte müsait olduğunu hızlıca görmenizi sağlar.', permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE'] }
         ],
         tips: [
-            { type: 'info', text: 'Etkinlik Paylaşımı: Oluşturduğunuz etkinlikleri belirli kişilerle veya departmanlarla paylaşabilirsiniz. Paylaşılan etkinlikler karşı tarafın takviminde "Paylaşılan" etiketiyle görünür.' },
-            { type: 'info', text: 'Takvim verileri her 60 saniyede bir otomatik güncellenir (ajanda modunda). Yıllık görünümde otomatik güncelleme yoktur — sayfa yenileyerek güncel verileri alabilirsiniz.' },
-            { type: 'success', text: 'Yıllık görünümden herhangi bir güne tıklayarak hızlıca o günün ajanda görünümüne geçebilirsiniz. Sol üstteki "Yıllık Görünüm" düğmesiyle tekrar yıllık moda dönebilirsiniz.' }
+            { type: 'info', text: 'Etkinlik Görünürlüğü: "Özel" etkinlikler sadece size görünür. "Departman" etkinlikleri departmanınızdaki herkese, "Herkese Açık" etkinlikler tüm şirkete görünür.' },
+            { type: 'info', text: 'Resmi tatiller ve yarım gün tatiller takvimde otomatik gösterilir. Yarım gün tatiller diagonal çizgili desenle ayırt edilir.' },
+            { type: 'success', text: 'Herhangi bir güne tıklayarak o günün detaylarını yan panelde görebilirsiniz. Yan panelden o gün için ek mesai ataması da yapabilirsiniz (yönetici yetkisi gerekir).' }
         ],
         faq: [
-            { q: 'Takvimde başkasının etkinliğini görebilir miyim?', a: 'Sadece sizinle paylaşılmış etkinlikleri görebilirsiniz. Paylaşılan etkinlikler takvimde italik "Paylaşılan" etiketiyle görünür. Paylaşılmamış kişisel etkinliklere erişilemez.' },
-            { q: 'Şirket Takvimi Düzenle düğmesini göremiyorum', a: 'Bu düğme yönetici yetkisi gerektirebilir. Normal çalışanlar kişisel ajanda ve yıllık görünümü kullanabilir.' },
-            { q: 'Resmi tatiller takvimde otomatik görünür mü?', a: 'Evet. Sistem yöneticisi tarafından tanımlanan resmi tatiller ve şirket geneli etkinlikler tüm çalışanların takviminde otomatik olarak gösterilir.' }
+            { q: 'Takvimde başkasının etkinliğini görebilir miyim?', a: '"Departman" veya "Herkese Açık" görünürlükteki etkinlikleri görebilirsiniz. "Özel" etkinliklere erişilemez. Ekip Görünümü filtresini açarak ekibinizdeki izin ve mesai durumlarını Gantt çubuğu ile takip edebilirsiniz.' },
+            { q: 'Resmi tatiller takvimde otomatik görünür mü?', a: 'Evet. Sistem yöneticisi tarafından tanımlanan resmi tatiller tüm çalışanların takviminde kırmızı çarpı işareti ile otomatik gösterilir. Yarım gün tatiller diagonal çizgili desenle ayırt edilir.' },
+            { q: 'Ek mesai atamasını takvimden yapabilir miyim?', a: 'Evet. Herhangi bir güne tıklayarak açılan yan panelden, yönetici yetkisiyle ekibinizdeki çalışanlara ek mesai ataması yapabilirsiniz. Personel seçimi, saat ve görev açıklaması girerek toplu atama oluşturabilirsiniz.' }
         ]
     },
     {
@@ -478,7 +489,11 @@ const helpContent = [
             },
             {
                 title: 'Uyumluluk Testleri (Spec Tests)',
-                description: '9 aşamada 443 otomasyon testi çalıştırılır: RBAC (72), Talepler (68), Mesai (95), Ek Mesai (79), İzin (37), Rapor (29), Sistem (15), Potansiyel Mola (16), Yedekleme (32). Test verisi oluşturma/temizleme ve tek tek aşama çalıştırma desteklenir.'
+                description: '52 aşamalı uyumluluk testi (Stage 1-52): Her aşama farklı bir sistem modülünü test eder — RBAC, talepler, mesai, izin, vekalet, potansiyel mola, yedekleme, veri bütünlüğü, haftalık OT limiti, potansiyel OT düzeltmeleri, retroaktif bölme, takvim yeniden tasarım, sağlık raporları, yönetici yeniden tasarım ve daha fazlası. Test verisi oluşturma/temizleme ve tek tek aşama çalıştırma desteklenir.'
+            },
+            {
+                title: 'Veri Temizliği ve Yönetimi',
+                description: 'Genel Bakış sekmesinden hata taraması (regression scan), sistemi yeniden hesaplama (detaylı log), mola yeniden oluşturma ve standart mesai temizleme işlemlerini çalıştırabilirsiniz. Sağ panelde veritabanı, Redis/Celery ve Gate API bağlantı durumları gösterilir.'
             },
             {
                 title: 'Şifre Sıfırlama',
@@ -488,7 +503,7 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Sistem yönetimi araçları kritik işlemler içerir. Şifre sıfırlama ve veri silme gibi işlemler geri alınamaz. SYSTEM_FULL_ACCESS yetkisi gerektirir.', permission: 'SYSTEM_FULL_ACCESS' },
-            { type: 'info', text: 'Uyumluluk testleri 9 aşamada çalışır. Her aşama farklı bir sistem modülünü test eder. "Test Verisi Tara" ile mevcut test verilerini bulabilir, "Test Verisi Temizle" ile temizleyebilirsiniz.' },
+            { type: 'info', text: 'Uyumluluk testleri 52 aşamada çalışır. Her aşama farklı bir sistem modülünü test eder. "Test Verisi Tara" ile mevcut test verilerini bulabilir, "Test Verisi Temizle" ile temizleyebilirsiniz.' },
             { type: 'success', text: 'Genel Bakış sekmesinde tüm testlerin geçme oranı yüzdelik olarak gösterilir. %100 oranı sistemin tam uyumlu olduğunu gösterir.' }
         ],
         faq: [
@@ -658,6 +673,56 @@ const helpContent = [
             { q: 'Yedekleme dosyasını nasıl geri yüklerim?', a: '"Yedekleme" sekmesinde "İçe Aktar" bölümünden JSON dosyanızı yükleyin. Önce Deneme Modu ile test edin (veritabanı değişmez), sonuçlar olumlu ise gerçek içe aktarmayı başlatın.' },
             { q: 'Dışa aktarmada hangi veriler dahil edilir?', a: 'Çalışan bilgileri, puantaj kayıtları (Attendance), talep geçmişleri (OvertimeRequest, LeaveRequest, MealRequest), rol/yetki atamaları ve mali takvim verileri dahildir. Dışa aktarma formatı (JSON/CSV) seçilebilir.' },
             { q: 'İçe aktarma sırasında çakışma olursa ne olur?', a: 'UPSERT modu kullanılır: mevcut kaydın birincil anahtarı eşleşirse güncellenir, eşleşmezse yeni kayıt oluşturulur. Doğrulama hatası olan satırlar atlanır ve raporda gösterilir.' }
+        ]
+    },
+    {
+        id: 'saglik-raporlari',
+        title: 'Sağlık Raporları',
+        icon: HeartPulse,
+        description: 'Sağlık raporu ve hastane ziyareti kayıtları, dosya yükleme, onay süreci ve puantaj entegrasyonu',
+        permission: 'PAGE_HEALTH_REPORTS',
+        link: '/health-reports',
+        images: [
+            { src: '/help-images/saglik-raporlari.png', caption: 'Sağlık Raporları — 2 sekmeli panel (Sağlık Raporları/Hastane Ziyaretleri), durum kartları, arama ve filtreler' }
+        ],
+        steps: [
+            { title: 'Rapor Türleri', description: 'İki tür sağlık kaydı desteklenir: (1) Sağlık Raporu — doktor raporu ile belgelenen tam gün/çok günlü hastalık izni. (2) Hastane Ziyareti — belirli saatler arasında hastane ziyareti. Her iki tür için başlangıç/bitiş tarihleri ve opsiyonel dosya yüklemesi mevcuttur.' },
+            { title: 'Yeni Sağlık Raporu Ekleme', description: 'Talepler sayfasından "Yeni Talep" düğmesine tıklayıp "Sağlık Raporu" veya "Hastane Ziyareti" türünü seçin. Tarih aralığı, açıklama ve varsa rapor dosyasını (PDF/resim) yükleyin. Talep yönetici onayına gider.' },
+            { title: 'Onay Süreci ve Puantaj Etkisi', description: 'Onaylanan sağlık raporları ilgili günlerin puantaj kaydını otomatik olarak "HEALTH_REPORT" veya "HOSPITAL_VISIT" durumuna geçirir. Bu günler çalışma hedefinden düşülür ve aylık çalışma özetinde ayrıca raporlanır.' },
+            { title: 'Yönetim Sayfası (Admin)', description: 'Sağlık Raporları sayfasında tüm çalışanların raporlarını görüntüleyip, filtreleyin (çalışan adı, durum, tarih aralığı). Onay bekleyen raporları buradan onaylayabilir veya reddedebilirsiniz.' }
+        ],
+        tips: [
+            { type: 'info', text: 'Sağlık raporları aylık çalışma hedefinden düşülür. Örneğin 3 günlük sağlık raporu onaylanırsa, o ayın hedef saati (3 x günlük saat) kadar azaltılır. Bu sayede bakiye hesabı doğru kalır.' },
+            { type: 'warning', text: 'Dosya yüklemesi isteğe bağlıdır ancak onay sürecini hızlandırır. Desteklenen formatlar: PDF, JPG, PNG. Dosyalar Cloudinary üzerinde güvenli olarak saklanır.' },
+            { type: 'success', text: 'Hastane ziyaretleri kısmi gün olarak işlenir — sadece belirtilen saatler çalışma süresinden düşülür. Tam gün sağlık raporu ise günün tamamını kapsar.' }
+        ],
+        faq: [
+            { q: 'Sağlık raporu ile hastane ziyareti arasındaki fark nedir?', a: 'Sağlık raporu tam gün/çok günlü hastalık iznidir (doktor raporu gerekir). Hastane ziyareti belirli saatler arasındaki hastane ziyaretidir (kısmi gün). Her iki tür de puantaja yansır ancak farklı kaynak (source) koduyla takip edilir.' },
+            { q: 'Sağlık raporları sayfasını göremiyorum', a: 'Bu sayfa PAGE_HEALTH_REPORTS yetkisi gerektirir. Genellikle ROLE_ADMIN ve ROLE_ACCOUNTING rollerine tanımlanmıştır. Sistem yöneticinize başvurun.' }
+        ]
+    },
+    {
+        id: 'debug',
+        title: 'Puantaj Hata Ayıklayıcı',
+        icon: Server,
+        description: 'Puantaj hesaplama doğrulama, veritabanı-canlı karşılaştırma ve NaN tespiti',
+        permission: 'PAGE_DEBUG',
+        link: '/debug/attendance',
+        images: [
+            { src: '/help-images/admin-debug.png', caption: 'Puantaj Hata Ayıklayıcı — çalışan ve dönem seçici, kayıt analiz düğmesi ve karşılaştırma tablosu' }
+        ],
+        steps: [
+            { title: 'Çalışan ve Dönem Seçimi', description: 'Dropdown\'dan analiz etmek istediğiniz çalışanı seçin. Ay ve yıl alanlarını belirleyerek ilgili mali dönemi seçin. "Kayıtları Analiz Et" düğmesine tıklayarak debug işlemini başlatın.' },
+            { title: 'Veritabanı vs Canlı Hesaplama Karşılaştırması', description: 'Sistem, veritabanında kayıtlı puantaj değerleri ile canlı hesaplama motorunun (recalculate_daily_attendance) ürettiği değerleri yan yana karşılaştırır. Tutarsızlıklar kırmızı ile vurgulanır.' },
+            { title: 'NaN ve Hatalı Değer Tespiti', description: 'Hesaplama sonucunda NaN (Not a Number) veya beklenmeyen değerler oluşmuşsa bunlar açıkça işaretlenir. Bu genellikle eksik vardiya tanımı veya bozuk veri kaynaklıdır.' }
+        ],
+        tips: [
+            { type: 'info', text: 'Debug sayfası yalnızca okuma işlemi yapar — veritabanını değiştirmez. Tespit edilen sorunları düzeltmek için Servis Yönetimi sayfasından yeniden hesaplama tetikleyin veya Veri Yönetimi\'nden manuel düzeltme yapın.' },
+            { type: 'warning', text: 'Bu sayfa PAGE_DEBUG yetkisi gerektirir. Genellikle sadece sistem yöneticilerine açıktır.' }
+        ],
+        faq: [
+            { q: 'Karşılaştırmada tutarsızlık çıktı, ne yapmalıyım?', a: 'Tutarsızlık genellikle eski kayıtların yeniden hesaplanmamasından kaynaklanır. Servis Yönetimi sayfasından ilgili tarih için "Günlük Hesaplama Tetikle" işlemi yapın. Hesaplama sonrası tutarsızlık düzelmelidir.' },
+            { q: 'NaN değeri neden oluşur?', a: 'NaN genellikle çalışana atanmış çalışma programı (FiscalCalendar/ScheduleTemplate) eksik olduğunda veya vardiya saatleri tanımsız olduğunda oluşur. Çalışanın profil sayfasından takvim atamasını kontrol edin.' }
         ]
     },
     {
