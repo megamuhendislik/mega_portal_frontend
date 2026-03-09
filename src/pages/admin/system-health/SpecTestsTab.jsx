@@ -29,6 +29,7 @@ import {
     RocketLaunchIcon,
     CreditCardIcon,
     GiftIcon,
+    HeartIcon,
 } from '@heroicons/react/24/outline';
 
 const STAGES = [
@@ -84,6 +85,7 @@ const STAGES = [
     { id: 50, name: 'Bildirim Sistemi & Şifre Değiştirme', icon: BellIcon, color: 'amber', description: '13 test — create_notification tercih kontrolü (Employee→User resolve, preference_key zorunlu/açık/kapalı/eksik), şifre değiştirme kısıtlama kaldırma (must_change_password=False/True, yanlış şifre, kısa şifre), HealthReport bildirim düzeltmeleri (approve type=SUCCESS, reject type=ERROR, recipient=User)' },
     { id: 51, name: 'İkincil Yönetici Yetki Kısıtlaması', icon: ShieldCheckIcon, color: 'rose', description: '24 test — SECONDARY yönetici sadece OT yetkisi (is_secondary_manager_of_employee guard), izin/kartsız giriş onay-red engeli, OT check-in guard (override/cancel), my-managers endpoint, claim_potential target_approver, SECONDARY OT→PRIMARY bildirim, SECONDARY değişim/deaktif/silme devir (sadece OT), fallback PRIMARY\'ye devir, CardlessEntry reject SECONDARY guard' },
     { id: 52, name: 'İkincil Yönetici Sadeleştirme', icon: WrenchScrewdriverIcon, color: 'slate', description: '5 test — SECONDARY yönetici dept/pos null enforce (kayıt+okuma), PRIMARY dept/pos korunma, DepartmentAssignment sync yok, mevcut kayıt API güncelleme temizliği' },
+    { id: 53, name: 'Hastane Ziyareti Yeniden Tasarım', icon: HeartIcon, color: 'rose', description: '11 test — HOSPITAL_VISIT tam gün kaldırıldı (start_time/end_time zorunlu), ayrı attendance kaydı oluşturma kaldırıldı, recalculate_daily_attendance hastane ziyareti saatlerini eksikten düşer (hospital_visit_seconds), onay/red/iptal deficit akışı, MonthlyWorkSummary hospital_visit_hours' },
 ];
 
 export default function SpecTestsTab() {
