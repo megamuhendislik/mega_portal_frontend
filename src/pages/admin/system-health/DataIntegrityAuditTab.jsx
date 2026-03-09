@@ -20,7 +20,7 @@ import api from '../../../services/api';
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS = {
-    ot_overlap: 'OT Çakışması',
+    ot_overlap: 'Fazla Mesai Çakışması',
     attendance_recalc: 'Mesai Yeniden Hesaplama',
     orphan_requests: 'Sahipsiz Talepler',
     duration_mismatch: 'Süre Uyumsuzluğu',

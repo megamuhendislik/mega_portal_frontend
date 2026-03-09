@@ -987,8 +987,8 @@ export default function PdksCompareTab() {
                             <div className="mt-1 space-y-1">
                                 <p>Seçili tarih aralığındaki TÜM attendance kayıtları silinecek.</p>
                                 <p>CSV verileri ile sıfırdan yeni kayıtlar oluşturulacak.</p>
-                                <p>Potansiyel (POTENTIAL) OT talepleri silinecek.</p>
-                                <p>Onaylı OT, izin, kartsız giriş ve dış görev kayıtları korunacak.</p>
+                                <p>Potansiyel (POTENTIAL) Fazla Mesai talepleri silinecek.</p>
+                                <p>Onaylı Fazla Mesai, izin, kartsız giriş ve dış görev kayıtları korunacak.</p>
                             </div>
                         }
                     />
@@ -1089,9 +1089,9 @@ export default function PdksCompareTab() {
         lines.push(`Toplam Çalışan-Gün     : ${s.total_employee_days || 0}`);
         lines.push(`Silinecek Attendance   : ${s.total_attendance_to_delete || 0}`);
         lines.push(`Oluşturulacak Session  : ${s.total_csv_sessions_to_create || 0}`);
-        lines.push(`Silinecek Potansiyel OT: ${s.total_potential_ot_to_delete || 0}`);
-        if (s.total_broken_ot) lines.push(`Bozuk OT (İptal)      : ${s.total_broken_ot}`);
-        if (s.total_revised_ot) lines.push(`OT Revize (Düzeltme)   : ${s.total_revised_ot}`);
+        lines.push(`Silinecek Potansiyel FM: ${s.total_potential_ot_to_delete || 0}`);
+        if (s.total_broken_ot) lines.push(`Bozuk F. Mesai (İptal) : ${s.total_broken_ot}`);
+        if (s.total_revised_ot) lines.push(`F. Mesai Revize (Düzeltme): ${s.total_revised_ot}`);
         if (s.days_with_leave) lines.push(`İzinli Günler          : ${s.days_with_leave}`);
         if (s.date_range?.length === 2) lines.push(`Tarih Aralığı          : ${formatDate(s.date_range[0])} — ${formatDate(s.date_range[1])}`);
         lines.push('');
@@ -1697,7 +1697,7 @@ export default function PdksCompareTab() {
                 render: (_, record) => getCategoryTag(record.problem_category),
             },
             {
-                title: 'OT',
+                title: 'F. Mesai',
                 dataIndex: 'overtime_request_count',
                 key: 'ot',
                 width: 70,
@@ -1974,9 +1974,9 @@ export default function PdksCompareTab() {
                 if (record.approved_cardless_entries?.length > 0) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
                 if (record.external_duties?.length > 0) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
                 if (record.preserved_ot_requests?.length > 0) tags.push(<Tag key="ot" color="purple">FM Korunan</Tag>);
-                if (record.broken_ot_requests?.length > 0) tags.push(<Tag key="broken" color="red">Bozuk OT ({record.broken_ot_requests.length})</Tag>);
+                if (record.broken_ot_requests?.length > 0) tags.push(<Tag key="broken" color="red">Bozuk F. Mesai ({record.broken_ot_requests.length})</Tag>);
                 const revisedChanged = record.revised_ot_requests?.filter(r => r.changed) || [];
-                if (revisedChanged.length > 0) tags.push(<Tag key="revised" color="orange">OT Revize ({revisedChanged.length})</Tag>);
+                if (revisedChanged.length > 0) tags.push(<Tag key="revised" color="orange">F. Mesai Revize ({revisedChanged.length})</Tag>);
                 return tags.length > 0 ? <Space size={2} wrap>{tags}</Space> : <span className="text-gray-300">-</span>;
             },
         },
@@ -1990,7 +1990,7 @@ export default function PdksCompareTab() {
                 if (!v) return <span className="text-gray-300">-</span>;
                 return (
                     <div>
-                        {record.has_anomaly && <Tag color="red" className="text-[10px] mb-1">Anomali: OT&gt;24sa</Tag>}
+                        {record.has_anomaly && <Tag color="red" className="text-[10px] mb-1">Anomali: F.Mesai&gt;24sa</Tag>}
                         {record.changes_detail?.length > 0 && (
                             <div className="mb-1">
                                 {record.changes_detail.map((d, i) => (
@@ -2066,9 +2066,9 @@ export default function PdksCompareTab() {
                 const tags = [];
                 if (record.hasAnomaly) tags.push(<Tag key="anomaly" color="red">Anomali</Tag>);
                 if (record.hasChanges) tags.push(<Tag key="changes" color="orange">Değişim Var</Tag>);
-                if (record.hasBrokenOt) tags.push(<Tag key="broken" color="red">Bozuk OT</Tag>);
-                if (record.hasRevisedOt) tags.push(<Tag key="revised" color="orange">OT Revize</Tag>);
-                if (record.hasOtPreserved) tags.push(<Tag key="ot" color="purple">OT Korunan</Tag>);
+                if (record.hasBrokenOt) tags.push(<Tag key="broken" color="red">Bozuk F. Mesai</Tag>);
+                if (record.hasRevisedOt) tags.push(<Tag key="revised" color="orange">F. Mesai Revize</Tag>);
+                if (record.hasOtPreserved) tags.push(<Tag key="ot" color="purple">F. Mesai Korunan</Tag>);
                 if (record.hasLeave) tags.push(<Tag key="leave" color="blue">İzinli</Tag>);
                 if (record.hasCardless) tags.push(<Tag key="cardless" color="cyan">Kartsız</Tag>);
                 if (record.hasExternalDuty) tags.push(<Tag key="ext" color="geekblue">Dış Görev</Tag>);
@@ -2759,7 +2759,7 @@ export default function PdksCompareTab() {
                                 />
                                 {(resetPreview.summary?.total_broken_ot || 0) > 0 && (
                                     <SummaryCard
-                                        title="Bozuk OT (İptal)"
+                                        title="Bozuk Fazla Mesai (İptal)"
                                         value={resetPreview.summary.total_broken_ot}
                                         color="bg-red-50 border-red-200"
                                         icon={<CloseCircleOutlined className="text-red-500" />}
@@ -2767,7 +2767,7 @@ export default function PdksCompareTab() {
                                 )}
                                 {(resetPreview.summary?.total_revised_ot || 0) > 0 && (
                                     <SummaryCard
-                                        title="OT Revize (Düzeltme)"
+                                        title="F. Mesai Revize (Düzeltme)"
                                         value={resetPreview.summary.total_revised_ot}
                                         color="bg-orange-50 border-orange-200"
                                         icon={<EditOutlined className="text-orange-500" />}
@@ -2912,7 +2912,7 @@ export default function PdksCompareTab() {
                                                                                     {(record.after.break_seconds || record.after.break_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{formatSeconds(record.after.break_seconds ?? record.after.break_minutes * 60)}</span></div>}
                                                                                     {(record.after.missing_seconds || record.after.missing_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{formatSeconds(record.after.missing_seconds ?? record.after.missing_minutes * 60)}</span></div>}
                                                                                     {record.after.potential_ot_count > 0 && (
-                                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel OT:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
+                                                                                        <div className="flex justify-between text-orange-600"><span>Potansiyel Fazla Mesai:</span><span className="font-mono font-semibold">{record.after.potential_ot_count}</span></div>
                                                                                     )}
                                                                                     {record.after.sessions?.length > 0 && (
                                                                                         <div className="mt-2 border-t border-green-200 pt-1">
@@ -2927,7 +2927,7 @@ export default function PdksCompareTab() {
                                                                                     )}
                                                                                     {record.after.potential_ot_details?.length > 0 && (
                                                                                         <div className="mt-2 border-t border-green-200 pt-1">
-                                                                                            <span className="text-orange-600 block mb-1">OT Detayları:</span>
+                                                                                            <span className="text-orange-600 block mb-1">Fazla Mesai Detayları:</span>
                                                                                             {record.after.potential_ot_details.map((ot, i) => (
                                                                                                 <div key={i} className="font-mono text-orange-700">
                                                                                                     {ot.start_time} — {ot.end_time} ({formatSeconds(ot.duration_seconds)})
@@ -2979,7 +2979,7 @@ export default function PdksCompareTab() {
                                                                     )}
                                                                     {record.broken_ot_requests?.length > 0 && (
                                                                         <div>
-                                                                            <h4 className="text-xs font-semibold text-red-700 mb-1">Bozuk OT Talepleri (otomatik iptal edilecek):</h4>
+                                                                            <h4 className="text-xs font-semibold text-red-700 mb-1">Bozuk Fazla Mesai Talepleri (otomatik iptal edilecek):</h4>
                                                                             <div className="space-y-1">
                                                                                 {record.broken_ot_requests.map((ot) => (
                                                                                     <div key={ot.id} className="flex items-center gap-2 text-xs">
@@ -2993,7 +2993,7 @@ export default function PdksCompareTab() {
                                                                     )}
                                                                     {record.revised_ot_requests?.some(r => r.changed) && (
                                                                         <div>
-                                                                            <h4 className="text-xs font-semibold text-orange-700 mb-1">OT Talepleri Revize (süre düzeltme):</h4>
+                                                                            <h4 className="text-xs font-semibold text-orange-700 mb-1">Fazla Mesai Talepleri Revize (süre düzeltme):</h4>
                                                                             <div className="space-y-1">
                                                                                 {record.revised_ot_requests.filter(r => r.changed).map((ot) => (
                                                                                     <div key={ot.id} className="flex items-center gap-2 text-xs">
@@ -3014,7 +3014,7 @@ export default function PdksCompareTab() {
                                                                     )}
                                                                     {record.preserved_ot_requests?.length > 0 && (
                                                                         <div>
-                                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan OT Talepleri:</h4>
+                                                                            <h4 className="text-xs font-semibold text-purple-700 mb-1">Korunan Fazla Mesai Talepleri:</h4>
                                                                             <div className="space-y-1">
                                                                                 {record.preserved_ot_requests.map((ot) => (
                                                                                     <div key={ot.id} className="flex items-center gap-2 text-xs">

@@ -298,7 +298,7 @@ const TeamTimeline = ({ startDate, endDate }) => {
                                             d.isToday ? 'bg-indigo-50' : ''
                                         }`}
                                         style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
-                                        title={summary ? `İzinli: ${summary.on_leave || 0}, OT: ${summary.on_ot || 0}, SR: ${summary.on_health_report || 0}, Devamsız: ${summary.absent || 0}` : ''}
+                                        title={summary ? `İzinli: ${summary.on_leave || 0}, Fazla Mesai: ${summary.on_ot || 0}, Sağlık Raporu: ${summary.on_health_report || 0}, Devamsız: ${summary.absent || 0}` : ''}
                                     >
                                         {summary?.on_leave > 0 && <span className="text-cyan-600">{summary.on_leave}İ</span>}
                                         {summary?.on_ot > 0 && <span className="text-emerald-600">{summary.on_ot}M</span>}
@@ -341,7 +341,7 @@ const TeamTimeline = ({ startDate, endDate }) => {
                 ))}
                 <div className="flex items-center gap-1.5">
                     <span className="w-3 h-2 rounded-sm bg-amber-400"></span>
-                    <span className="text-slate-500 font-medium">OT Bekleyen</span>
+                    <span className="text-slate-500 font-medium">Bekleyen Fazla Mesai</span>
                 </div>
                 <div className="flex items-center gap-1.5 ml-auto">
                     <span className="w-4 h-4 rounded bg-red-50 border border-red-200"></span>

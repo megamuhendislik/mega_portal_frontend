@@ -824,7 +824,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                     {/* Secondary Mini KPIs */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <MiniKPICard
-                            label="Toplam OT Atama"
+                            label="Toplam Fazla Mesai Ataması"
                             value={secondaryOtData.totalAssignments}
                             icon={Calendar}
                             color="text-violet-500"

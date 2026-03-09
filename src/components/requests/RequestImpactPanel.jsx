@@ -256,14 +256,14 @@ const OvertimePanel = ({ req, mode }) => {
             {mode === 'incoming' && (
                 <Section title="Onaylanınca Ne Olur?" icon={<TrendingUp size={14} className="text-emerald-600" />} color="emerald">
                     <ImpactItem text={`+${addHours} saat fazla mesai eklenir`} positive />
-                    <ImpactItem text={`Aylık OT: ${currentOtHours}sa → ${newOtHours}sa`} />
-                    <ImpactItem text={`Onaylı OT sayısı: ${currentApprovedCount} → ${currentApprovedCount + 1}`} />
+                    <ImpactItem text={`Aylık Fazla Mesai: ${currentOtHours}sa → ${newOtHours}sa`} />
+                    <ImpactItem text={`Onaylı Fazla Mesai sayısı: ${currentApprovedCount} → ${currentApprovedCount + 1}`} />
 
                     <div className="pt-2">
                         <ProgressBar
                             value={parseFloat(currentOtHours) + parseFloat(addHours)}
                             max={weeklyOtLimit}
-                            label="Aylık OT Toplamı"
+                            label="Aylık Fazla Mesai Toplamı"
                             color={parseFloat(currentOtHours) + parseFloat(addHours) > weeklyOtLimit ? 'red' : 'amber'}
                         />
                     </div>

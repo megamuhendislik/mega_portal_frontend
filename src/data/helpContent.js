@@ -488,8 +488,8 @@ const helpContent = [
                 description: 'Tüm çalışanların puantaj hesaplamalarını doğrulayın. Mola hesaplama tutarsızlıkları, eksik giriş/çıkış kayıtları, tolerans uygulamaları ve fazla mesai algılama sonuçları denetlenebilir.'
             },
             {
-                title: 'Uyumluluk Testleri (Spec Tests)',
-                description: '52 aşamalı uyumluluk testi (Stage 1-52): Her aşama farklı bir sistem modülünü test eder — RBAC, talepler, mesai, izin, vekalet, potansiyel mola, yedekleme, veri bütünlüğü, haftalık OT limiti, potansiyel OT düzeltmeleri, retroaktif bölme, takvim yeniden tasarım, sağlık raporları, yönetici yeniden tasarım ve daha fazlası. Test verisi oluşturma/temizleme ve tek tek aşama çalıştırma desteklenir.'
+                title: 'Uyumluluk Testleri',
+                description: '52 aşamalı uyumluluk testi (Aşama 1-52): Her aşama farklı bir sistem modülünü test eder — RBAC, talepler, mesai, izin, vekalet, potansiyel mola, yedekleme, veri bütünlüğü, haftalık fazla mesai limiti, potansiyel fazla mesai düzeltmeleri, retroaktif bölme, takvim yeniden tasarım, sağlık raporları, yönetici yeniden tasarım ve daha fazlası. Test verisi oluşturma/temizleme ve tek tek aşama çalıştırma desteklenir.'
             },
             {
                 title: 'Veri Temizliği ve Yönetimi',
