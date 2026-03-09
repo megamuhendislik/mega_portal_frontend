@@ -382,7 +382,7 @@ const HealthReports = () => {
                                                 <div className="text-slate-700">
                                                     {formatDate(report.start_date)} — {formatDate(report.end_date)}
                                                 </div>
-                                                {report.report_type === 'HOSPITAL_VISIT' && !report.is_full_day && report.start_time && (
+                                                {report.report_type === 'HOSPITAL_VISIT' && report.start_time && (
                                                     <div className="text-xs text-rose-500 mt-0.5">
                                                         {report.start_time?.substring(0, 5)} — {report.end_time?.substring(0, 5)}
                                                     </div>
@@ -588,7 +588,7 @@ const HealthReports = () => {
                                         <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={12} /> Bitiş</div>
                                         <div className="font-medium text-slate-800">{formatDate(detailModal.end_date)}</div>
                                     </div>
-                                    {detailModal.report_type === 'HOSPITAL_VISIT' && !detailModal.is_full_day && detailModal.start_time && (
+                                    {detailModal.report_type === 'HOSPITAL_VISIT' && detailModal.start_time && (
                                         <>
                                             <div className="bg-slate-50 p-3 rounded-lg">
                                                 <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Clock size={12} /> Başlangıç Saati</div>

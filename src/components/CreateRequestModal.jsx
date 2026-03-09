@@ -134,7 +134,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [healthReportFiles, setHealthReportFiles] = useState([]);
 
     const [hospitalVisitForm, setHospitalVisitForm] = useState({
-        date: '', is_full_day: true, start_time: '', end_time: '', description: ''
+        date: '', is_full_day: false, start_time: '', end_time: '', description: ''
     });
     const [hospitalVisitFiles, setHospitalVisitFiles] = useState([]);
 
@@ -586,11 +586,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 formData.append('report_type', 'HOSPITAL_VISIT');
                 formData.append('start_date', hospitalVisitForm.date);
                 formData.append('end_date', hospitalVisitForm.date);
-                formData.append('is_full_day', hospitalVisitForm.is_full_day);
-                if (!hospitalVisitForm.is_full_day) {
-                    formData.append('start_time', hospitalVisitForm.start_time);
-                    formData.append('end_time', hospitalVisitForm.end_time);
-                }
+                formData.append('is_full_day', false);
+                formData.append('start_time', hospitalVisitForm.start_time);
+                formData.append('end_time', hospitalVisitForm.end_time);
                 formData.append('description', hospitalVisitForm.description);
                 hospitalVisitFiles.forEach(f => formData.append('files', f));
                 response = await api.post('/health-reports/', formData, {
@@ -1138,39 +1136,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                             className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Süre</label>
-                                        <div className="flex gap-3">
-                                            <button type="button"
-                                                onClick={() => setHospitalVisitForm(p => ({...p, is_full_day: true}))}
-                                                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${hospitalVisitForm.is_full_day ? 'bg-rose-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                                Tam Gün
-                                            </button>
-                                            <button type="button"
-                                                onClick={() => setHospitalVisitForm(p => ({...p, is_full_day: false}))}
-                                                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${!hospitalVisitForm.is_full_day ? 'bg-rose-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                                Saat Aralığı
-                                            </button>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Saati *</label>
+                                            <input type="time" required value={hospitalVisitForm.start_time}
+                                                onChange={e => setHospitalVisitForm(p => ({...p, start_time: e.target.value}))}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş Saati *</label>
+                                            <input type="time" required value={hospitalVisitForm.end_time}
+                                                onChange={e => setHospitalVisitForm(p => ({...p, end_time: e.target.value}))}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 text-sm"
+                                            />
                                         </div>
                                     </div>
-                                    {!hospitalVisitForm.is_full_day && (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Saati *</label>
-                                                <input type="time" required value={hospitalVisitForm.start_time}
-                                                    onChange={e => setHospitalVisitForm(p => ({...p, start_time: e.target.value}))}
-                                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş Saati *</label>
-                                                <input type="time" required value={hospitalVisitForm.end_time}
-                                                    onChange={e => setHospitalVisitForm(p => ({...p, end_time: e.target.value}))}
-                                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 text-sm"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
                                         <textarea value={hospitalVisitForm.description}
@@ -1219,7 +1200,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <button
                             form="requestForm"
                             type="submit"
-                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || (!hospitalVisitForm.is_full_day && (!hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)))) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT')}
+                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT')}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
