@@ -493,21 +493,24 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                         systemStartFiscalMonth: res.data.system_start_fiscal_month || 1,
                         currentFiscalMonth: res.data.current_fiscal_month || new Date().getMonth() + 1,
                     };
-                    setYearlyData(months.map(m => ({
-                        name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }),
-                        month: m.month,
-                        normal: m.normal_hours,
-                        overtime: m.overtime_hours,
-                        ot_approved: m.ot_approved_hours || 0,
-                        ot_pending: m.ot_pending_hours || 0,
-                        ot_potential: m.ot_potential_hours || 0,
-                        missing: m.missing_hours,
-                        cumulative_net_hours: m.cumulative_net_hours,
-                        _isPast: m.month < meta.currentFiscalMonth && m.month >= meta.systemStartFiscalMonth,
-                        _isCurrent: m.month === meta.currentFiscalMonth,
-                        _isFuture: m.month > meta.currentFiscalMonth,
-                        _isBeforeStart: m.month < meta.systemStartFiscalMonth,
-                    })));
+                    setYearlyData(months.map(m => {
+                        const isBeforeStart = m.month < meta.systemStartFiscalMonth;
+                        return {
+                            name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }),
+                            month: m.month,
+                            normal: isBeforeStart ? 0 : m.normal_hours,
+                            overtime: isBeforeStart ? 0 : m.overtime_hours,
+                            ot_approved: isBeforeStart ? 0 : (m.ot_approved_hours || 0),
+                            ot_pending: isBeforeStart ? 0 : (m.ot_pending_hours || 0),
+                            ot_potential: isBeforeStart ? 0 : (m.ot_potential_hours || 0),
+                            missing: isBeforeStart ? 0 : m.missing_hours,
+                            cumulative_net_hours: isBeforeStart ? 0 : m.cumulative_net_hours,
+                            _isPast: m.month < meta.currentFiscalMonth && m.month >= meta.systemStartFiscalMonth,
+                            _isCurrent: m.month === meta.currentFiscalMonth,
+                            _isFuture: m.month > meta.currentFiscalMonth,
+                            _isBeforeStart: isBeforeStart,
+                        };
+                    }));
                 } else if (scope === 'MONTHLY') {
                     setMonthlyBarData(res.data.map(w => ({
                         name: w.label,

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale, ChevronUp, ChevronDown } from 'lucide-react';
 
 const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
@@ -135,20 +135,35 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     systemStartFiscalMonth: periodSummary.cumulative.system_start_fiscal_month || 1,
 
                     // PASSING THE DATA form WITH CUMULATIVE CALCULATION
-                    breakdown: (periodSummary.cumulative.breakdown || []).reduce((acc, month, idx) => {
-                        const prevBalance = idx === 0
-                            ? (periodSummary.cumulative.previous_year_balance_seconds || 0)
-                            : acc[idx - 1].cumulativeBalanceRaw;
+                    // Cari ay: past_target_balance kullan (gerçekleşmemiş kısımlar eksi sayılmaz)
+                    // Gelecek aylar: bakiye 0 (henüz gerçekleşmedi)
+                    breakdown: (() => {
+                        const cfm = periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || (new Date().getMonth() + 1);
+                        return (periodSummary.cumulative.breakdown || []).reduce((acc, month, idx) => {
+                            const prevBalance = idx === 0
+                                ? (periodSummary.cumulative.previous_year_balance_seconds || 0)
+                                : acc[idx - 1].cumulativeBalanceRaw;
 
-                        const currentCumulative = prevBalance + ((month.balance || 0) - (month.compensated || 0));
+                            // Gelecek ay: 0, Cari ay: past_target_balance (sadece gerçekleşen), Geçmiş ay: tam bakiye
+                            let monthBalance;
+                            if (month.month > cfm) {
+                                monthBalance = 0;
+                            } else if (month.month === cfm) {
+                                monthBalance = month.past_target_balance ?? month.balance ?? 0;
+                            } else {
+                                monthBalance = month.balance || 0;
+                            }
 
-                        acc.push({
-                            ...month,
-                            cumulativeBalanceRaw: currentCumulative,
-                            cumulativeBalance: (currentCumulative / 3600).toFixed(1) // Store for UI
-                        });
-                        return acc;
-                    }, []) || [],
+                            const currentCumulative = prevBalance + (monthBalance - (month.compensated || 0));
+
+                            acc.push({
+                                ...month,
+                                cumulativeBalanceRaw: currentCumulative,
+                                cumulativeBalance: (currentCumulative / 3600).toFixed(1)
+                            });
+                            return acc;
+                        }, []);
+                    })() || [],
 
 
                     // Visualization Helper — use annual target for progress
@@ -168,6 +183,26 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
         }
         return null;
     }, [logs, periodSummary]);
+
+    // Aylık detaylı kırılım: 3 ay göster, ok ile scroll
+    const [monthScrollIndex, setMonthScrollIndex] = useState(0);
+
+    const filteredBreakdown = useMemo(() => {
+        if (!stats?.cumulative?.breakdown) return [];
+        const systemStart = stats.cumulative.systemStartFiscalMonth || 1;
+        return stats.cumulative.breakdown.filter(m => m.month >= systemStart);
+    }, [stats]);
+
+    useEffect(() => {
+        if (filteredBreakdown.length > 0) {
+            const currentFM = stats?.cumulative?.currentFiscalMonth || stats?.fiscalMonth;
+            const currentIdx = filteredBreakdown.findIndex(m => m.month === currentFM);
+            if (currentIdx >= 0) {
+                // Cari ayı ortada göster (3'lü pencerede)
+                setMonthScrollIndex(Math.max(0, Math.min(currentIdx - 1, filteredBreakdown.length - 3)));
+            }
+        }
+    }, [filteredBreakdown.length]);
 
     if (!stats) return <div className="p-4 text-center text-slate-400">Veri hesaplanıyor...</div>;
 
@@ -415,7 +450,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                             const target = m.target;
                                             const completed = m.completed;
-                                            const balance = m.balance;
+                                            // Cari ay: past_target_balance kullan (gerçekleşmemiş kısımlar eksi sayılmaz)
+                                            const balance = isCurrentMonth ? (m.past_target_balance ?? m.balance) : m.balance;
 
                                             // OT Breakdown (from OvertimeRequest aggregation)
                                             const otApprovedSec = m.ot_approved || 0;
@@ -601,15 +637,27 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                     })()}
                                 </div>
 
-                                {/* B. Table (Detail) */}
+                                {/* B. Table (Detail) — 3 ay göster, ok ile scroll */}
                                 <div>
                                     <h4 className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-4 flex items-center gap-2">
                                         <div className="w-4 h-[1px] bg-slate-200"></div>
                                         AYLIK DETAYLI KIRILIM
                                         <div className="flex-1 h-[1px] bg-slate-200"></div>
+                                        <span className="text-[9px] font-medium text-slate-300 normal-case tracking-normal">
+                                            {monthScrollIndex + 1}-{Math.min(monthScrollIndex + 3, filteredBreakdown.length)} / {filteredBreakdown.length}
+                                        </span>
                                     </h4>
 
                                     <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                                        {/* Yukarı ok */}
+                                        {monthScrollIndex > 0 && (
+                                            <button
+                                                onClick={() => setMonthScrollIndex(prev => Math.max(0, prev - 1))}
+                                                className="w-full flex items-center justify-center py-1.5 bg-slate-50 hover:bg-slate-100 border-b border-slate-200 transition-colors group"
+                                            >
+                                                <ChevronUp size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                                            </button>
+                                        )}
                                         <table className="w-full text-left text-sm">
                                             <thead>
                                                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
@@ -622,11 +670,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {stats.cumulative.breakdown
-                                                    .filter(m => {
-                                                        const systemStart = stats.cumulative.systemStartFiscalMonth || 1;
-                                                        return m.month >= systemStart;
-                                                    })
+                                                {filteredBreakdown
+                                                    .slice(monthScrollIndex, monthScrollIndex + 3)
                                                     .map((m, idx) => {
                                                         const monthNames = ["Ocak", "\u015eubat", "Mart", "Nisan", "May\u0131s", "Haziran", "Temmuz", "A\u011fustos", "Eyl\u00fcl", "Ekim", "Kas\u0131m", "Aral\u0131k"];
                                                         const currentFiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
@@ -641,7 +686,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const isCumulativePositive = m.cumulativeBalance >= 0;
 
                                                         return (
-                                                            <tr key={idx} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'}`}>
+                                                            <tr key={m.month} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'}`}>
                                                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
                                                                     {isPast ? (
                                                                         <span className="text-emerald-500 text-sm">&#10003;</span>
@@ -686,6 +731,15 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     })}
                                             </tbody>
                                         </table>
+                                        {/* Aşağı ok */}
+                                        {monthScrollIndex < filteredBreakdown.length - 3 && (
+                                            <button
+                                                onClick={() => setMonthScrollIndex(prev => Math.min(filteredBreakdown.length - 3, prev + 1))}
+                                                className="w-full flex items-center justify-center py-1.5 bg-slate-50 hover:bg-slate-100 border-t border-slate-200 transition-colors group"
+                                            >
+                                                <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
