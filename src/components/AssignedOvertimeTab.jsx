@@ -621,11 +621,44 @@ const AssignedOvertimeTab = () => {
     const [editModal, setEditModal] = useState({ open: false, assignment: null });
     const [actionLoading, setActionLoading] = useState(false);
     const [showManualForm, setShowManualForm] = useState(false);
+    const [manualAssignment, setManualAssignment] = useState(null);
+    const [manualMatchMode, setManualMatchMode] = useState('independent');
 
     // ── Manual entry ──
     const [manualForm, setManualForm] = useState({ date: '', start_time: '', end_time: '', reason: '' });
     const [manualError, setManualError] = useState('');
     const [manualSubmitting, setManualSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (!manualForm.date) {
+            setManualAssignment(null);
+            setManualMatchMode('independent');
+            return;
+        }
+        const checkAssignment = async () => {
+            try {
+                const match = claimableData.intended?.find(
+                    a => a.date === manualForm.date && !a.claim_status
+                );
+                if (match) {
+                    setManualAssignment(match);
+                } else {
+                    try {
+                        const resp = await api.get('/overtime-assignments/', {
+                            params: { employee: 'me', date: manualForm.date, status: 'ASSIGNED' }
+                        });
+                        const results = resp.data?.results || resp.data || [];
+                        setManualAssignment(Array.isArray(results) ? results[0] || null : null);
+                    } catch {
+                        setManualAssignment(null);
+                    }
+                }
+            } catch {
+                setManualAssignment(null);
+            }
+        };
+        checkAssignment();
+    }, [manualForm.date, claimableData.intended]);
 
     // ── Filters ──
     const [requestFilter, setRequestFilter] = useState({ status: 'ALL', source: 'ALL', date_from: '', date_to: '' });
@@ -703,11 +736,19 @@ const AssignedOvertimeTab = () => {
         if (!manualForm.reason.trim()) { setManualError('Açıklama giriniz.'); return; }
         setManualSubmitting(true);
         try {
-            await api.post('/overtime-requests/manual-entry/', {
-                date: manualForm.date, start_time: manualForm.start_time,
-                end_time: manualForm.end_time, reason: manualForm.reason.trim(),
-            });
+            const payload = {
+                date: manualForm.date,
+                start_time: manualForm.start_time,
+                end_time: manualForm.end_time,
+                reason: manualForm.reason.trim(),
+            };
+            if (manualMatchMode === 'match' && manualAssignment) {
+                payload.assignment_id = manualAssignment.id;
+            }
+            await api.post('/overtime-requests/manual-entry/', payload);
             setManualForm({ date: '', start_time: '', end_time: '', reason: '' });
+            setManualAssignment(null);
+            setManualMatchMode('independent');
             setShowManualForm(false);
             fetchData();
         } catch (err) {
@@ -958,6 +999,30 @@ const AssignedOvertimeTab = () => {
                             <div className="border-t border-slate-100 p-4 sm:p-5">
                                 <form onSubmit={handleManualSubmit} className="space-y-3">
                                     {manualError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-sm font-medium">{manualError}</div>}
+                                    {manualAssignment && (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                                            <p className="text-sm text-blue-800 font-medium">
+                                                Bu tarih için ek mesai ataması bulundu: <strong>{manualAssignment.task_description || 'Görev açıklaması yok'}</strong>
+                                                {manualAssignment.max_duration_hours && ` (Maks. ${manualAssignment.max_duration_hours} saat)`}
+                                            </p>
+                                            <div className="flex gap-3">
+                                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="matchMode" value="match"
+                                                        checked={manualMatchMode === 'match'}
+                                                        onChange={() => setManualMatchMode('match')}
+                                                        className="accent-blue-600" />
+                                                    <span className="text-xs font-bold text-blue-700">Atama ile eşleştir</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="matchMode" value="independent"
+                                                        checked={manualMatchMode === 'independent'}
+                                                        onChange={() => setManualMatchMode('independent')}
+                                                        className="accent-slate-600" />
+                                                    <span className="text-xs font-bold text-slate-600">Bağımsız talep</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div>
                                             <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
