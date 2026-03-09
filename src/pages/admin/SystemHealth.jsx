@@ -512,9 +512,9 @@ function DataAuditTab() {
                                     {emp.hired_date || 'EKSİK'}
                                 </td>
                                 <td className="px-4 py-3 text-xs">
-                                    <div className={!emp.email ? 'text-red-600 font-bold' : ''}>{emp.email || 'NO EMAIL'}</div>
+                                    <div className={!emp.email ? 'text-red-600 font-bold' : ''}>{emp.email || 'E-POSTA YOK'}</div>
                                     <div className={!emp.has_user ? 'text-amber-600' : 'text-green-600'}>
-                                        {emp.has_user ? `User: ${emp.username}` : 'No User Account'}
+                                        {emp.has_user ? `Kullanıcı: ${emp.username}` : 'Kullanıcı Hesabı Yok'}
                                     </div>
                                 </td>
                                 <td className="px-4 py-3">
@@ -698,7 +698,7 @@ function StressTestTab() {
                 <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[400px] md:h-[700px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
                         <span className="text-xs font-mono text-gray-400">
-                            root@mega-engine:~# {activeTest ? `./run_${activeTest === 'Puantaj Stres Testi' ? 'stress' : 'readiness'}_test.sh` : 'awaiting...'}
+                            root@mega-engine:~# {activeTest ? `./run_${activeTest === 'Puantaj Stres Testi' ? 'stress' : 'readiness'}_test.sh` : 'bekleniyor...'}
                         </span>
                         <div className="flex gap-1.5">
                             <div className={`w-3 h-3 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' : 'bg-red-500/80'}`}></div>

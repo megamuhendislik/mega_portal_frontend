@@ -26,19 +26,19 @@ const DebugConsole = ({ treeData }) => {
     }, [activeTab]);
 
     const tabs = [
-        { id: 'hierarchy', label: 'Hierarchy (Tree)' },
-        { id: 'departments', label: 'Departments DB' },
-        { id: 'employees', label: 'Employees' },
-        { id: 'roles', label: 'Roles & Perms' },
-        { id: 'positions', label: 'Positions' },
+        { id: 'hierarchy', label: 'Hiyerarşi (Ağaç)' },
+        { id: 'departments', label: 'Departmanlar DB' },
+        { id: 'employees', label: 'Çalışanlar' },
+        { id: 'roles', label: 'Roller & Yetkiler' },
+        { id: 'positions', label: 'Pozisyonlar' },
     ];
 
     return (
         <div className="shrink-0 max-h-96 overflow-hidden flex flex-col bg-slate-900 text-slate-300 font-mono text-xs rounded-xl border border-slate-700 shadow-lg m-2">
 
-            {/* Toolbar */}
+            {/* Araç Çubuğu */}
             <div className="flex items-center gap-2 p-2 bg-slate-800 border-b border-slate-700 sticky top-0 overflow-x-auto">
-                <span className="font-bold text-amber-400 px-2">DEBUG MODE</span>
+                <span className="font-bold text-amber-400 px-2">HATA AYIKLAMA</span>
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
@@ -50,24 +50,24 @@ const DebugConsole = ({ treeData }) => {
                 ))}
             </div>
 
-            {/* Content */}
+            {/* İçerik */}
             <div className="overflow-auto p-4 flex-1">
                 {activeTab === 'hierarchy' && (
                     <pre>{JSON.stringify(treeData, null, 2)}</pre>
                 )}
 
-                {loading && <div className="text-center p-4 text-blue-400">Loading System State...</div>}
+                {loading && <div className="text-center p-4 text-blue-400">Sistem Durumu Yükleniyor...</div>}
 
                 {!loading && fullState && activeTab === 'departments' && (
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="text-slate-500 border-b border-slate-700">
                                 <th className="p-1">ID</th>
-                                <th className="p-1">Code</th>
-                                <th className="p-1">Name</th>
-                                <th className="p-1">Parent</th>
-                                <th className="p-1">Manager</th>
-                                <th className="p-1">Visible?</th>
+                                <th className="p-1">Kod</th>
+                                <th className="p-1">Ad</th>
+                                <th className="p-1">Üst Birim</th>
+                                <th className="p-1">Yönetici</th>
+                                <th className="p-1">Görünür?</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -78,7 +78,7 @@ const DebugConsole = ({ treeData }) => {
                                     <td className="p-1">{d.name}</td>
                                     <td className="p-1 text-amber-300">{d.parent || '-'}</td>
                                     <td className="p-1">{d.manager || '-'}</td>
-                                    <td className="p-1">{d.is_chart_visible ? 'YES' : <span className="text-red-400">HIDDEN</span>}</td>
+                                    <td className="p-1">{d.is_chart_visible ? 'EVET' : <span className="text-red-400">GİZLİ</span>}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -89,10 +89,10 @@ const DebugConsole = ({ treeData }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="text-slate-500 border-b border-slate-700">
-                                <th className="p-1">Name</th>
-                                <th className="p-1">Position</th>
-                                <th className="p-1">Dept (Main)</th>
-                                <th className="p-1">Manager</th>
+                                <th className="p-1">Ad Soyad</th>
+                                <th className="p-1">Pozisyon</th>
+                                <th className="p-1">Departman (Ana)</th>
+                                <th className="p-1">Yönetici</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -129,9 +129,9 @@ const DebugConsole = ({ treeData }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="text-slate-500 border-b border-slate-700">
-                                <th className="p-1">Position Name</th>
-                                <th className="p-1">Level</th>
-                                <th className="p-1">Default Roles</th>
+                                <th className="p-1">Pozisyon Adı</th>
+                                <th className="p-1">Seviye</th>
+                                <th className="p-1">Varsayılan Roller</th>
                             </tr>
                         </thead>
                         <tbody>

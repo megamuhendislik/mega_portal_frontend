@@ -352,8 +352,8 @@ export default function TeamOvertimeAnalytics() {
                                         { key: 'requests', label: 'Talep' },
                                         { key: 'approved', label: 'Onay' },
                                         { key: 'rejected', label: 'Red' },
-                                        { key: 'claimed', label: 'Claim' },
-                                        { key: 'expired', label: 'Expired' },
+                                        { key: 'claimed', label: 'Talep Edilen' },
+                                        { key: 'expired', label: 'Süresi Dolmuş' },
                                         { key: 'hours', label: 'Saat' },
                                     ].map(col => (
                                         <th
