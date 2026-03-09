@@ -4,7 +4,8 @@ import {
     TrendingUp, Calendar, ChevronUp, ChevronDown, Loader2, FileText,
     ChefHat, CreditCard, Briefcase, Activity, PieChart as PieChartIcon,
     ArrowUpRight, ArrowDownRight, ChevronRight, Hash, Zap, Coffee,
-    Building2, UserCheck, GitBranch, Eye, EyeOff, RefreshCw
+    Building2, UserCheck, GitBranch, Eye, EyeOff, RefreshCw,
+    User, Inbox
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -172,17 +173,55 @@ function ProgressBar({ value, max, color = 'bg-blue-500', height = 'h-2' }) {
 
 export default function RequestAnalytics() {
     const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [range, setRange] = useState(6);
+
+    // Tab state
+    const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('personal');
+    const [personalData, setPersonalData] = useState(null);
+    const [incomingData, setIncomingData] = useState(null);
+    const [personalLoading, setPersonalLoading] = useState(false);
+    const [incomingLoading, setIncomingLoading] = useState(false);
+    const [personalError, setPersonalError] = useState('');
+    const [incomingError, setIncomingError] = useState('');
 
     // Table sort states
     const [empSort, setEmpSort] = useState({ col: 'total', dir: 'desc' });
     const [deptSort, setDeptSort] = useState({ col: 'total', dir: 'desc' });
     const [corrSort, setCorrSort] = useState({ col: 'overtime_hours', dir: 'desc' });
     const [indirectSort, setIndirectSort] = useState({ col: 'requests_received', dir: 'desc' });
+    const [topRequesterSort, setTopRequesterSort] = useState({ col: 'count', dir: 'desc' });
 
-    const fetchData = useCallback(async () => {
+    const fetchPersonalData = useCallback(async () => {
+        setPersonalLoading(true);
+        setPersonalError('');
+        try {
+            const res = await api.get('/request-analytics/', { params: { range } });
+            setPersonalData(res.data);
+        } catch (err) {
+            console.error('PersonalAnalytics fetch error:', err);
+            setPersonalError('Kişisel talep verileri yüklenemedi.');
+        } finally {
+            setPersonalLoading(false);
+        }
+    }, [range]);
+
+    const fetchIncomingData = useCallback(async () => {
+        setIncomingLoading(true);
+        setIncomingError('');
+        try {
+            const res = await api.get('/request-analytics/incoming/', { params: { range } });
+            setIncomingData(res.data);
+        } catch (err) {
+            console.error('IncomingAnalytics fetch error:', err);
+            setIncomingError('Gelen talep verileri yüklenemedi.');
+        } finally {
+            setIncomingLoading(false);
+        }
+    }, [range]);
+
+    const fetchTeamData = useCallback(async () => {
         try {
             setError('');
             setLoading(true);
@@ -198,8 +237,16 @@ export default function RequestAnalytics() {
     }, [range]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (activeAnalyticsTab === 'personal') fetchPersonalData();
+        else if (activeAnalyticsTab === 'incoming') fetchIncomingData();
+        else fetchTeamData();
+    }, [activeAnalyticsTab, range, fetchPersonalData, fetchIncomingData, fetchTeamData]);
+
+    const handleRefresh = useCallback(() => {
+        if (activeAnalyticsTab === 'personal') fetchPersonalData();
+        else if (activeAnalyticsTab === 'incoming') fetchIncomingData();
+        else fetchTeamData();
+    }, [activeAnalyticsTab, fetchPersonalData, fetchIncomingData, fetchTeamData]);
 
     // ─── Sort Helpers ─────────────────────────────────────────────
 
@@ -305,6 +352,62 @@ export default function RequestAnalytics() {
     const sortedDepts = useMemo(() => sortArray(data?.department_breakdown, deptSort), [data, deptSort]);
     const sortedCorr = useMemo(() => sortArray(data?.overtime_meal_correlation, corrSort), [data, corrSort]);
     const sortedIndirect = useMemo(() => sortArray(data?.indirect_analysis?.subordinate_managers, indirectSort), [data, indirectSort]);
+    const sortedTopRequesters = useMemo(() => sortArray(incomingData?.top_requesters, topRequesterSort), [incomingData, topRequesterSort]);
+
+    // ─── Personal tab memoized data ────────────────────────────────
+    const personalMonthlyTrend = useMemo(() => {
+        if (!personalData?.monthly_trend) return [];
+        return personalData.monthly_trend.map(m => ({
+            name: m.label,
+            'İzin': m.leave || 0,
+            'Ek Mesai': m.overtime || 0,
+            'Yemek': m.meal || 0,
+            'Kartsız': m.cardless || 0,
+            'Toplam': m.total || 0,
+            'Mesai Saat': m.overtime_hours || 0,
+            'İzin Gün': m.leave_days || 0,
+        }));
+    }, [personalData]);
+
+    const personalTypeDistribution = useMemo(() => {
+        if (!personalData?.type_distribution) return [];
+        return personalData.type_distribution.filter(d => d.count > 0).map(d => ({
+            name: d.type,
+            value: d.count,
+            color: d.color || '#94A3B8',
+        }));
+    }, [personalData]);
+
+    const personalStatusDistribution = useMemo(() => {
+        if (!personalData?.status_distribution) return [];
+        return personalData.status_distribution.filter(d => d.count > 0).map(d => ({
+            name: d.status,
+            value: d.count,
+            color: d.color || '#94A3B8',
+        }));
+    }, [personalData]);
+
+    const personalLeaveTypeData = useMemo(() => {
+        if (!personalData?.leave_type_breakdown) return [];
+        return personalData.leave_type_breakdown.map(lt => ({
+            name: lt.name,
+            Talep: lt.count || 0,
+            'Gün': lt.days || 0,
+        }));
+    }, [personalData]);
+
+    // ─── Incoming tab memoized data ────────────────────────────────
+    const incomingMonthlyTrend = useMemo(() => {
+        if (!incomingData?.monthly_trend) return [];
+        return incomingData.monthly_trend.map(m => ({
+            name: m.label,
+            'İzin': m.leave || 0,
+            'Ek Mesai': m.overtime || 0,
+            'Kartsız': m.cardless || 0,
+            'Toplam': m.total || 0,
+            'Onaylanan': m.approved || 0,
+        }));
+    }, [incomingData]);
 
     const assignmentData = useMemo(() => {
         if (!data?.assignment_stats) return [];
@@ -318,69 +421,60 @@ export default function RequestAnalytics() {
         })).filter(d => d.value > 0);
     }, [data]);
 
-    // ─── Render: Loading ──────────────────────────────────────────
-
-    if (loading) {
-        return (
-            <div className="max-w-[1700px] mx-auto px-4 md:px-8 pt-6 pb-10 space-y-6">
-                <div className="animate-pulse space-y-6">
-                    <div className="flex justify-between items-center">
-                        <div className="h-10 w-56 bg-slate-200/80 rounded-xl" />
-                        <div className="h-10 w-48 bg-slate-200/80 rounded-xl" />
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-28 bg-slate-200/80 rounded-2xl" />)}
-                    </div>
-                    <div className="h-80 bg-slate-200/80 rounded-2xl" />
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="h-72 bg-slate-200/80 rounded-2xl" />
-                        <div className="h-72 bg-slate-200/80 rounded-2xl" />
-                    </div>
-                </div>
+    // ─── Render: Loading Skeleton ──────────────────────────────────
+    const renderLoadingSkeleton = () => (
+        <div className="animate-pulse space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-slate-200/80 rounded-2xl" />)}
             </div>
-        );
-    }
-
-    // ─── Render: Error ────────────────────────────────────────────
-
-    if (error && !data) {
-        return (
-            <div className="max-w-[1700px] mx-auto px-4 md:px-8 pt-6 pb-10">
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
-                        <AlertCircle size={32} className="text-red-400" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-700">Veri Yüklenemedi</h3>
-                    <p className="text-sm text-slate-500 mt-1 mb-4">{error}</p>
-                    <button
-                        onClick={fetchData}
-                        className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all flex items-center gap-2"
-                    >
-                        <RefreshCw size={14} />
-                        Tekrar Dene
-                    </button>
-                </div>
+            <div className="h-80 bg-slate-200/80 rounded-2xl" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="h-72 bg-slate-200/80 rounded-2xl" />
+                <div className="h-72 bg-slate-200/80 rounded-2xl" />
             </div>
-        );
-    }
+        </div>
+    );
 
-    // ─── Render: No Data ──────────────────────────────────────────
-
-    if (!data || !data.overview) {
-        return (
-            <div className="max-w-[1700px] mx-auto px-4 md:px-8 pt-6 pb-10">
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-                        <BarChart3 size={32} className="text-slate-300" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-700">Veri Bulunamadı</h3>
-                    <p className="text-sm text-slate-500 mt-1">Seçilen dönem için talep verisi bulunmamaktadır.</p>
-                </div>
+    // ─── Render: Error Block ────────────────────────────────────────
+    const renderError = (errorMsg, retryFn) => (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
+                <AlertCircle size={32} className="text-red-400" />
             </div>
-        );
-    }
+            <h3 className="text-lg font-bold text-slate-700">Veri Yüklenemedi</h3>
+            <p className="text-sm text-slate-500 mt-1 mb-4">{errorMsg}</p>
+            <button
+                onClick={retryFn}
+                className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all flex items-center gap-2"
+            >
+                <RefreshCw size={14} />
+                Tekrar Dene
+            </button>
+        </div>
+    );
 
-    const { overview, period, requester } = data;
+    // ─── STATUS BADGE helper for personal tab ─────────────────────
+    const getStatusBadge = (status) => {
+        const map = {
+            APPROVED: { label: 'Onaylandı', cls: 'bg-emerald-50 text-emerald-700' },
+            REJECTED: { label: 'Reddedildi', cls: 'bg-red-50 text-red-600' },
+            PENDING: { label: 'Bekliyor', cls: 'bg-amber-50 text-amber-700' },
+            CANCELLED: { label: 'İptal', cls: 'bg-slate-100 text-slate-500' },
+            PENDING_MANAGER_APPROVAL: { label: 'Bekliyor', cls: 'bg-amber-50 text-amber-700' },
+        };
+        const s = map[status] || { label: status, cls: 'bg-slate-100 text-slate-500' };
+        return <span className={clsx('text-[10px] font-bold px-2 py-0.5 rounded-full', s.cls)}>{s.label}</span>;
+    };
+
+    const getTypeIcon = (type) => {
+        const map = { LEAVE: Calendar, OVERTIME: Zap, MEAL: ChefHat, CARDLESS: CreditCard };
+        const Icon = map[type] || FileText;
+        return <Icon size={14} />;
+    };
+
+    const overview = data?.overview;
+    const period = data?.period;
+    const requester = data?.requester;
 
     // ─── Render: Main Content ─────────────────────────────────────
 
@@ -393,7 +487,14 @@ export default function RequestAnalytics() {
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-800">
                         Talep Analizleri
                     </h1>
-                    {period && (
+                    {activeAnalyticsTab === 'personal' && personalData?.employee && (
+                        <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+                            <User size={14} className="text-slate-400" />
+                            {personalData.employee.name}
+                            {personalData.employee.department && ` - ${personalData.employee.department}`}
+                        </p>
+                    )}
+                    {activeAnalyticsTab === 'team' && period && (
                         <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
                             <Calendar size={14} className="text-slate-400" />
                             {new Date(period.start).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -404,13 +505,6 @@ export default function RequestAnalytics() {
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
-                    {requester?.managed_count > 0 && (
-                        <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl">
-                            <Users size={14} className="text-indigo-600" />
-                            <span className="text-xs font-bold text-indigo-700">{requester.managed_count} Kisi</span>
-                        </div>
-                    )}
-
                     <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200">
                         {[3, 6, 12].map(r => (
                             <button
@@ -429,14 +523,581 @@ export default function RequestAnalytics() {
                     </div>
 
                     <button
-                        onClick={fetchData}
+                        onClick={handleRefresh}
                         className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
                         title="Yenile"
                     >
-                        <RefreshCw size={16} className="text-slate-500" />
+                        <RefreshCw size={16} className={clsx('text-slate-500', (personalLoading || incomingLoading || loading) && 'animate-spin')} />
                     </button>
                 </div>
             </div>
+
+            {/* ── Tab Bar ─────────────────────────────────────────── */}
+            <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+                <button
+                    onClick={() => setActiveAnalyticsTab('personal')}
+                    className={clsx(
+                        'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1.5',
+                        activeAnalyticsTab === 'personal'
+                            ? 'bg-white text-indigo-700 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                    )}
+                >
+                    <User size={14} /> Kendi Taleplerim
+                </button>
+                <button
+                    onClick={() => setActiveAnalyticsTab('incoming')}
+                    className={clsx(
+                        'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1.5',
+                        activeAnalyticsTab === 'incoming'
+                            ? 'bg-white text-indigo-700 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                    )}
+                >
+                    <Inbox size={14} /> Gelen Talepler
+                </button>
+                <button
+                    onClick={() => setActiveAnalyticsTab('team')}
+                    className={clsx(
+                        'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1.5',
+                        activeAnalyticsTab === 'team'
+                            ? 'bg-white text-indigo-700 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                    )}
+                >
+                    <Users size={14} /> Ekip Analizi
+                </button>
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════
+                TAB: Kendi Taleplerim (Personal)
+               ═══════════════════════════════════════════════════════════ */}
+            {activeAnalyticsTab === 'personal' && (
+                <>
+                    {personalLoading && renderLoadingSkeleton()}
+                    {!personalLoading && personalError && renderError(personalError, fetchPersonalData)}
+                    {!personalLoading && !personalError && !personalData && (
+                        <EmptyState message="Kişisel talep verisi bulunamadı." />
+                    )}
+                    {!personalLoading && !personalError && personalData && (
+                        <div className="space-y-6">
+                            {/* P1. KPI Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <KPICard
+                                    title="Toplam Talep"
+                                    value={personalData.total_requests?.toLocaleString('tr-TR') || 0}
+                                    icon={FileText}
+                                    gradient="bg-gradient-to-br from-slate-800 to-slate-900"
+                                />
+                                <KPICard
+                                    title="Onay Oranı"
+                                    value={personalData.approval_rate != null ? personalData.approval_rate.toFixed(1) : '0'}
+                                    suffix="%"
+                                    icon={CheckCircle2}
+                                    gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
+                                />
+                                <KPICard
+                                    title="Toplam Ek Mesai"
+                                    value={personalData.total_overtime_hours != null ? personalData.total_overtime_hours.toFixed(1) : '0'}
+                                    suffix="saat"
+                                    icon={Zap}
+                                    gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+                                />
+                                <KPICard
+                                    title="Toplam İzin"
+                                    value={personalData.total_leave_days?.toLocaleString('tr-TR') || 0}
+                                    suffix="gün"
+                                    icon={Calendar}
+                                    gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+                                />
+                            </div>
+
+                            {/* P2. Type Detail Mini-Cards */}
+                            {personalData.summary && (
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                    {Object.entries(personalData.summary).map(([typeKey, typeData]) => {
+                                        const Icon = TYPE_ICONS[typeKey] || FileText;
+                                        const total = typeData.total || 0;
+                                        const approved = typeData.approved || 0;
+                                        const rejected = typeData.rejected || 0;
+                                        const pending = typeData.pending || 0;
+                                        const rate = total > 0 ? ((approved / total) * 100).toFixed(0) : 0;
+                                        return (
+                                            <div key={typeKey} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (COLORS[typeKey] || '#94A3B8') + '15', color: COLORS[typeKey] || '#94A3B8' }}>
+                                                            <Icon size={16} />
+                                                        </div>
+                                                        <span className="text-sm font-bold text-slate-700">{TYPE_LABELS[typeKey] || typeKey}</span>
+                                                    </div>
+                                                    <span className="text-xl font-black text-slate-800">{total}</span>
+                                                </div>
+                                                <div className="flex gap-2 text-[10px] font-bold">
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{approved} Onay</span>
+                                                    <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600">{rejected} Red</span>
+                                                    {pending > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{pending} Bekl.</span>}
+                                                </div>
+                                                <div className="mt-2">
+                                                    <ProgressBar value={approved} max={total} color="bg-emerald-500" height="h-1.5" />
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 mt-1">Onay oranı: %{rate}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* P3. Monthly Trend */}
+                            <SectionCard
+                                title="Aylık Trend"
+                                subtitle="Son döneme ait aylık talep dağılımınız"
+                                icon={TrendingUp}
+                                iconGradient="bg-gradient-to-br from-blue-500 to-indigo-600"
+                            >
+                                {personalMonthlyTrend.length > 0 ? (
+                                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                        <div className="xl:col-span-2">
+                                            <ResponsiveContainer width="100%" height={320}>
+                                                <BarChart data={personalMonthlyTrend} barCategoryGap="20%">
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} />
+                                                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                    <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600 }} iconType="circle" iconSize={8} />
+                                                    <Bar dataKey="İzin" stackId="a" fill={COLORS.leave} radius={[0, 0, 0, 0]} />
+                                                    <Bar dataKey="Ek Mesai" stackId="a" fill={COLORS.overtime} />
+                                                    <Bar dataKey="Yemek" stackId="a" fill={COLORS.meal} />
+                                                    <Bar dataKey="Kartsız" stackId="a" fill={COLORS.cardless} radius={[4, 4, 0, 0]} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Mesai Saat & İzin Gün Trendi</p>
+                                            <ResponsiveContainer width="100%" height={280}>
+                                                <ComposedChart data={personalMonthlyTrend}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                    <Legend wrapperStyle={{ fontSize: 10, fontWeight: 600 }} iconType="circle" iconSize={7} />
+                                                    <Area yAxisId="left" type="monotone" dataKey="Mesai Saat" fill={COLORS.overtime + '30'} stroke={COLORS.overtime} strokeWidth={2} name="Mesai (saat)" />
+                                                    <Line yAxisId="right" type="monotone" dataKey="İzin Gün" stroke={COLORS.leave} strokeWidth={2} dot={{ r: 3 }} name="İzin (gün)" />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <EmptyState message="Aylık trend verisi bulunamadı." />
+                                )}
+                            </SectionCard>
+
+                            {/* P4. Distribution (Type + Status) */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <SectionCard
+                                    title="Talep Türü Dağılımı"
+                                    subtitle="Türe göre talep oranlarınız"
+                                    icon={PieChartIcon}
+                                    iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
+                                >
+                                    {personalTypeDistribution.length > 0 ? (
+                                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                                            <ResponsiveContainer width="100%" height={240}>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={personalTypeDistribution}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={55}
+                                                        outerRadius={90}
+                                                        paddingAngle={4}
+                                                        dataKey="value"
+                                                        animationBegin={0}
+                                                        animationDuration={800}
+                                                    >
+                                                        {personalTypeDistribution.map((entry, idx) => (
+                                                            <Cell key={idx} fill={entry.color} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div className="flex flex-col gap-2 min-w-[140px]">
+                                                {personalTypeDistribution.map((d, i) => (
+                                                    <div key={i} className="flex items-center gap-2.5">
+                                                        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                                                        <span className="text-xs text-slate-600 font-medium">{d.name}</span>
+                                                        <span className="text-xs font-bold text-slate-800 ml-auto">{d.value}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <EmptyState message="Talep türü verisi bulunamadı." />
+                                    )}
+                                </SectionCard>
+
+                                <SectionCard
+                                    title="Onay Durum Dağılımı"
+                                    subtitle="Durum bazında talepleriniz"
+                                    icon={CheckCircle2}
+                                    iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+                                >
+                                    {personalStatusDistribution.length > 0 ? (
+                                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                                            <ResponsiveContainer width="100%" height={240}>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={personalStatusDistribution}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={55}
+                                                        outerRadius={90}
+                                                        paddingAngle={4}
+                                                        dataKey="value"
+                                                        animationBegin={0}
+                                                        animationDuration={800}
+                                                    >
+                                                        {personalStatusDistribution.map((entry, idx) => (
+                                                            <Cell key={idx} fill={entry.color} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div className="flex flex-col gap-2 min-w-[140px]">
+                                                {personalStatusDistribution.map((d, i) => (
+                                                    <div key={i} className="flex items-center gap-2.5">
+                                                        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                                                        <span className="text-xs text-slate-600 font-medium">{d.name}</span>
+                                                        <span className="text-xs font-bold text-slate-800 ml-auto">{d.value}</span>
+                                                    </div>
+                                                ))}
+                                                <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs text-slate-500 font-medium">Onay Oranı</span>
+                                                        <span className="text-sm font-black text-emerald-600">%{personalData.approval_rate?.toFixed(1) || '0'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <EmptyState message="Durum verisi bulunamadı." />
+                                    )}
+                                </SectionCard>
+                            </div>
+
+                            {/* P5. Leave Type Breakdown */}
+                            {personalLeaveTypeData.length > 0 && (
+                                <SectionCard
+                                    title="İzin Türü Kırılımı"
+                                    subtitle="İzin türlerine göre kullanım detayınız"
+                                    icon={Calendar}
+                                    iconGradient="bg-gradient-to-br from-blue-500 to-cyan-600"
+                                >
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div>
+                                            <ResponsiveContainer width="100%" height={Math.max(personalLeaveTypeData.length * 50, 180)}>
+                                                <BarChart data={personalLeaveTypeData} layout="vertical" barCategoryGap="20%">
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                                                    <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                    <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                    <Legend wrapperStyle={{ fontSize: 10, fontWeight: 600 }} iconType="circle" iconSize={7} />
+                                                    <Bar dataKey="Talep" fill={COLORS.leave} name="Talep" radius={[0, 4, 4, 0]} />
+                                                    <Bar dataKey="Gün" fill={COLORS.approved} name="Gün" radius={[0, 4, 4, 0]} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Detaylar</p>
+                                            {personalData.leave_type_breakdown.map((lt, i) => (
+                                                <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between hover:border-blue-200 transition-colors">
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-700">{lt.name}</p>
+                                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                                            {lt.count} talep &middot; {lt.days} gün
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-right">
+                                                            <span className="text-lg font-black text-slate-800">{lt.days || 0}</span>
+                                                            <span className="text-[10px] text-slate-400 font-bold ml-1">gün</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </SectionCard>
+                            )}
+
+                            {/* P6. Recent Requests */}
+                            {personalData.recent_requests && personalData.recent_requests.length > 0 && (
+                                <SectionCard
+                                    title="Son Talepler"
+                                    subtitle="Son 10 talebiniz"
+                                    icon={Clock}
+                                    iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
+                                    badge={`${personalData.recent_requests.length}`}
+                                >
+                                    <div className="overflow-x-auto -mx-2">
+                                        <table className="w-full min-w-[600px]">
+                                            <thead>
+                                                <tr className="border-b border-slate-100">
+                                                    <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tür</th>
+                                                    <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tarih</th>
+                                                    <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Özet</th>
+                                                    <th className="px-3 py-3 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider">Durum</th>
+                                                    <th className="px-3 py-3 text-right text-[11px] font-bold text-slate-500 uppercase tracking-wider">Oluşturulma</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {personalData.recent_requests.map((req, i) => (
+                                                    <tr key={req.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-3 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                                                    style={{
+                                                                        backgroundColor: (COLORS[req.type?.toLowerCase()] || '#94A3B8') + '15',
+                                                                        color: COLORS[req.type?.toLowerCase()] || '#94A3B8'
+                                                                    }}>
+                                                                    {getTypeIcon(req.type)}
+                                                                </div>
+                                                                <span className="text-xs font-bold text-slate-700">{req.type_label}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-3 text-xs text-slate-600 font-medium">
+                                                            {req.date ? new Date(req.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                                        </td>
+                                                        <td className="px-3 py-3 text-xs text-slate-600">{req.summary || '-'}</td>
+                                                        <td className="px-3 py-3 text-center">{getStatusBadge(req.status)}</td>
+                                                        <td className="px-3 py-3 text-right text-[10px] text-slate-400">
+                                                            {req.created_at ? new Date(req.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </SectionCard>
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════
+                TAB: Gelen Talepler (Incoming)
+               ═══════════════════════════════════════════════════════════ */}
+            {activeAnalyticsTab === 'incoming' && (
+                <>
+                    {incomingLoading && renderLoadingSkeleton()}
+                    {!incomingLoading && incomingError && renderError(incomingError, fetchIncomingData)}
+                    {!incomingLoading && !incomingError && !incomingData && (
+                        <EmptyState message="Bu sekmeyi görüntülemek için yönetici yetkisi gereklidir." />
+                    )}
+                    {!incomingLoading && !incomingError && incomingData && (
+                        <div className="space-y-6">
+                            {/* I1. KPI Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <KPICard
+                                    title="Toplam Gelen Talep"
+                                    value={incomingData.total_received?.toLocaleString('tr-TR') || 0}
+                                    icon={Inbox}
+                                    gradient="bg-gradient-to-br from-slate-800 to-slate-900"
+                                />
+                                <KPICard
+                                    title="Onay Oranı"
+                                    value={incomingData.approval_rate != null ? incomingData.approval_rate.toFixed(1) : '0'}
+                                    suffix="%"
+                                    icon={CheckCircle2}
+                                    gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
+                                />
+                                <KPICard
+                                    title="Ort. Karar Süresi"
+                                    value={incomingData.avg_decision_hours != null ? incomingData.avg_decision_hours.toFixed(1) : '-'}
+                                    suffix="saat"
+                                    icon={Timer}
+                                    gradient="bg-gradient-to-br from-violet-500 to-purple-600"
+                                />
+                                <KPICard
+                                    title="Bekleyen Talep"
+                                    value={incomingData.pending_count?.toLocaleString('tr-TR') || 0}
+                                    icon={AlertCircle}
+                                    gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+                                />
+                            </div>
+
+                            {/* I2. Type Breakdown Mini-Cards */}
+                            {incomingData.by_type && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {Object.entries(incomingData.by_type).map(([typeKey, typeData]) => {
+                                        const Icon = TYPE_ICONS[typeKey] || FileText;
+                                        const total = typeData.total || 0;
+                                        const approved = typeData.approved || 0;
+                                        const rejected = typeData.rejected || 0;
+                                        const pending = typeData.pending || 0;
+                                        const rate = total > 0 ? ((approved / total) * 100).toFixed(0) : 0;
+                                        return (
+                                            <div key={typeKey} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (COLORS[typeKey] || '#94A3B8') + '15', color: COLORS[typeKey] || '#94A3B8' }}>
+                                                            <Icon size={16} />
+                                                        </div>
+                                                        <span className="text-sm font-bold text-slate-700">{TYPE_LABELS[typeKey] || typeKey}</span>
+                                                    </div>
+                                                    <span className="text-xl font-black text-slate-800">{total}</span>
+                                                </div>
+                                                <div className="flex gap-2 text-[10px] font-bold">
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{approved} Onay</span>
+                                                    <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600">{rejected} Red</span>
+                                                    {pending > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{pending} Bekl.</span>}
+                                                </div>
+                                                <div className="mt-2">
+                                                    <ProgressBar value={approved} max={total} color="bg-emerald-500" height="h-1.5" />
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 mt-1">Onay oranı: %{rate}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* I3. Monthly Trend */}
+                            <SectionCard
+                                title="Aylık Gelen Talep Trendi"
+                                subtitle="Son döneme ait gelen taleplerin aylık dağılımı"
+                                icon={TrendingUp}
+                                iconGradient="bg-gradient-to-br from-indigo-500 to-blue-600"
+                            >
+                                {incomingMonthlyTrend.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={320}>
+                                        <BarChart data={incomingMonthlyTrend} barCategoryGap="20%">
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} />
+                                            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600 }} iconType="circle" iconSize={8} />
+                                            <Bar dataKey="İzin" stackId="a" fill={COLORS.leave} />
+                                            <Bar dataKey="Ek Mesai" stackId="a" fill={COLORS.overtime} />
+                                            <Bar dataKey="Kartsız" stackId="a" fill={COLORS.cardless} radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <EmptyState message="Aylık trend verisi bulunamadı." />
+                                )}
+                            </SectionCard>
+
+                            {/* I4. Top Requesters */}
+                            {incomingData.top_requesters && incomingData.top_requesters.length > 0 && (
+                                <SectionCard
+                                    title="En Çok Talep Edenler"
+                                    subtitle="Ekibinizde en fazla talep oluşturan çalışanlar"
+                                    icon={UserCheck}
+                                    iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
+                                    badge={`${incomingData.top_requesters.length} kişi`}
+                                >
+                                    <div className="overflow-x-auto -mx-2">
+                                        <table className="w-full min-w-[500px]">
+                                            <thead>
+                                                <tr className="border-b border-slate-100">
+                                                    <th className="px-3 py-3 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12">#</th>
+                                                    <SortableHeader label="Ad Soyad" col="name" currentCol={topRequesterSort.col} currentDir={topRequesterSort.dir} onSort={makeSortHandler(topRequesterSort, setTopRequesterSort)} />
+                                                    <SortableHeader label="Departman" col="department" currentCol={topRequesterSort.col} currentDir={topRequesterSort.dir} onSort={makeSortHandler(topRequesterSort, setTopRequesterSort)} />
+                                                    <SortableHeader label="Talep Sayısı" col="count" currentCol={topRequesterSort.col} currentDir={topRequesterSort.dir} onSort={makeSortHandler(topRequesterSort, setTopRequesterSort)} className="text-center" />
+                                                    <th className="px-3 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {sortedTopRequesters.map((emp, i) => {
+                                                    const maxCount = Math.max(...(incomingData.top_requesters || []).map(e => e.count || 0), 1);
+                                                    return (
+                                                        <tr key={emp.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                                            <td className="px-3 py-3 text-center">
+                                                                <span className={clsx(
+                                                                    'w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-black',
+                                                                    i === 0 ? 'bg-amber-100 text-amber-700' :
+                                                                    i === 1 ? 'bg-slate-200 text-slate-600' :
+                                                                    i === 2 ? 'bg-orange-100 text-orange-700' :
+                                                                    'bg-slate-50 text-slate-400'
+                                                                )}>
+                                                                    {i + 1}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-3 py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                                                                        {(emp.name || '?')[0]}
+                                                                    </div>
+                                                                    <span className="text-sm font-bold text-slate-700">{emp.name}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-3 py-3 text-xs text-slate-500 font-medium">{emp.department || '-'}</td>
+                                                            <td className="px-3 py-3 text-center">
+                                                                <span className="text-sm font-black text-slate-800">{emp.count || 0}</span>
+                                                            </td>
+                                                            <td className="px-3 py-3">
+                                                                <ProgressBar value={emp.count || 0} max={maxCount} color="bg-rose-500" height="h-1.5" />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </SectionCard>
+                            )}
+
+                            {/* Incoming Summary Stats */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                        <CheckCircle2 size={22} className="text-emerald-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Onaylanan</p>
+                                        <p className="text-2xl font-black text-emerald-600">{incomingData.approved_count || 0}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+                                        <XCircle size={22} className="text-red-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reddedilen</p>
+                                        <p className="text-2xl font-black text-red-500">{incomingData.rejected_count || 0}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                                        <Clock size={22} className="text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bekleyen</p>
+                                        <p className="text-2xl font-black text-amber-600">{incomingData.pending_count || 0}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════
+                TAB: Ekip Analizi (Team — existing comprehensive content)
+               ═══════════════════════════════════════════════════════════ */}
+            {activeAnalyticsTab === 'team' && (
+                <>
+                    {loading && renderLoadingSkeleton()}
+                    {!loading && error && !data && renderError(error, fetchTeamData)}
+                    {!loading && !error && (!data || !data.overview) && (
+                        <EmptyState message="Bu sekmeyi görüntülemek için yönetici yetkisi gereklidir." />
+                    )}
+                    {!loading && data && data.overview && (
+                        <div className="space-y-6">
 
             {/* ── 2. KPI Cards ──────────────────────────────────── */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -1279,11 +1940,16 @@ export default function RequestAnalytics() {
                 )}
             </SectionCard>
 
+                        </div>
+                    )}
+                </>
+            )}
+
             {/* ── Footer ────────────────────────────────────────── */}
             <div className="text-center py-4">
                 <p className="text-[10px] text-slate-400 font-medium">
                     Son güncelleme: {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
-                    {period && ` | ${period.months} aylık dönem`}
+                    {activeAnalyticsTab === 'team' && period && ` | ${period.months} aylık dönem`}
                 </p>
             </div>
         </div>
