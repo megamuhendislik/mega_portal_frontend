@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
-    Search, Users, Shield, Inbox
+    Search, Users, Shield, Inbox, UserCheck, UserCog
 } from 'lucide-react';
 import api from '../../services/api';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
@@ -19,6 +19,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
 
     // Sub-tab: 'direct_incoming' | 'team_requests'
     const [activeSubTab, setActiveSubTab] = useState('direct_incoming');
+
+    // Manager type filter for direct incoming: 'all' | 'primary' | 'secondary'
+    const [directManagerFilter, setDirectManagerFilter] = useState('all');
 
     // Filters
     const [typeFilter, setTypeFilter] = useState(filterType === 'overtime' ? 'OVERTIME' : 'ALL');
@@ -62,15 +65,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
             ]);
 
             if (meRes.status === 'fulfilled') {
-                const meId = meRes.value.data.id;
-                setCurrentUserEmployeeId(meId);
-                console.log('[IncomingRequestsTab] currentUserEmployeeId =', meId);
+                setCurrentUserEmployeeId(meRes.value.data.id);
             }
             if (subsRes.status === 'fulfilled') {
                 const allSubs = subsRes.value.data || [];
                 setSubordinates(allSubs);
-                console.log('[IncomingRequestsTab] subordinates count =', allSubs.length);
-                // Compute secondary-only IDs
                 const priSubIds = new Set(allSubs.map(s => s.id));
                 if (secSubRes.status === 'fulfilled') {
                     const secSubs = secSubRes.value.data || [];
@@ -80,28 +79,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 }
             }
             if (teamRes.status === 'fulfilled') {
-                const teamData = teamRes.value.data || [];
-                setIncomingRequests(teamData);
-                console.log('[IncomingRequestsTab] incomingRequests count =', teamData.length);
-                // Debug: request_scope dağılımı
-                const scopes = {};
-                teamData.forEach(r => {
-                    const s = r.request_scope || 'UNDEFINED';
-                    scopes[s] = (scopes[s] || 0) + 1;
-                });
-                console.log('[IncomingRequestsTab] request_scope dağılımı:', scopes);
-                // Debug: ilk 3 request detayı
-                teamData.slice(0, 3).forEach((r, i) => {
-                    console.log(`[IncomingRequestsTab] request[${i}]:`, {
-                        id: r.id,
-                        type: r.type,
-                        request_scope: r.request_scope,
-                        approver_target: r.approver_target,
-                        level: r.level,
-                        employee_name: r.employee_name,
-                        status: r.status,
-                    });
-                });
+                setIncomingRequests(teamRes.value.data || []);
             }
             if (histRes.status === 'fulfilled') {
                 const hData = histRes.value.data;
@@ -148,6 +126,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
+            } else if (req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') {
+                await api.post(`/health-reports/${req.id}/approve/`);
             }
             fetchAllData();
         } catch (e) {
@@ -164,6 +144,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'reject', reason });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/reject/`, { reason });
+            } else if (req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') {
+                await api.post(`/health-reports/${req.id}/reject/`, { reason });
             }
             fetchAllData();
         } catch (e) {
@@ -232,6 +214,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
         approved_by_name: r.approved_by_name || r.approved_by_detail?.full_name || '',
         approver_target: r.approver_target || null,
         request_scope: r.request_scope || null,
+        manager_type: r.manager_type || null,
         leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
         start_date: r.start_date || r.date || r.created_at,
         type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN'),
@@ -255,7 +238,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
             items.push(normalizeRequest(r, r.level === 'direct' ? 'DIRECT' : 'INDIRECT'));
         });
 
-        // Substitute requests (vekalet — her zaman doğrudan gelen'de)
+        // Substitute requests (vekalet — her zaman doğrudan gelen'de, manager_type='primary')
         if (substituteData) {
             const authorities = substituteData.authorities || [];
             (substituteData.leave_requests || []).forEach(r => {
@@ -264,7 +247,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 seen.add(key);
                 const principal = authorities.find(a => a.principal === r.principal_id);
                 items.push(normalizeRequest(
-                    { ...r, type: 'LEAVE' },
+                    { ...r, type: 'LEAVE', manager_type: 'PRIMARY' },
                     'SUBSTITUTE', true, principal?.principal_name || ''
                 ));
             });
@@ -274,7 +257,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 seen.add(key);
                 const principal = authorities.find(a => a.principal === r.principal_id);
                 items.push(normalizeRequest(
-                    { ...r, type: 'OVERTIME' },
+                    { ...r, type: 'OVERTIME', manager_type: 'PRIMARY' },
                     'SUBSTITUTE', true, principal?.principal_name || ''
                 ));
             });
@@ -284,19 +267,26 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 seen.add(key);
                 const principal = authorities.find(a => a.principal === r.principal_id);
                 items.push(normalizeRequest(
-                    { ...r, type: 'CARDLESS_ENTRY' },
+                    { ...r, type: 'CARDLESS_ENTRY', manager_type: 'PRIMARY' },
                     'SUBSTITUTE', true, principal?.principal_name || ''
                 ));
             });
         }
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
-        console.log('[IncomingRequestsTab] directIncomingItems count =', items.length, items.map(r => ({ id: r.id, type: r.type, scope: r.request_scope, emp: r.employee_name })));
         return items;
     }, [incomingRequests, substituteData]);
 
+    // PRIMARY / SECONDARY counts for direct incoming badge
+    const primaryCount = useMemo(() =>
+        directIncomingItems.filter(r => (r.manager_type || 'PRIMARY') === 'PRIMARY').length
+    , [directIncomingItems]);
+
+    const secondaryCount = useMemo(() =>
+        directIncomingItems.filter(r => r.manager_type === 'SECONDARY').length
+    , [directIncomingItems]);
+
     // --- SUB-TAB 2: Ekip Talepleri (alt yöneticilere gelen talepler, tüm durumlar) ---
-    // Sadece alt yöneticilere yönlendirilmiş talepleri göster — doğrudan bana gelenler hariç
     const teamItems = useMemo(() => {
         const items = [];
         const seen = new Set();
@@ -313,10 +303,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
 
         // History (leave requests — don't duplicate) — sadece dolaylı çalışanların geçmişi
         (teamHistoryRequests || []).forEach(r => {
-            // Doğrudan bana rapor eden çalışanların geçmişini hariç tut
             const empId = r.employee?.id || r.employee;
             if (directSubordinateIds.has(empId)) return;
-            // target_approver FK ile de kontrol et (integer veya object olabilir)
             const histTargetId = typeof r.target_approver === 'object'
                 ? r.target_approver?.id
                 : r.target_approver;
@@ -332,16 +320,21 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
         });
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
-        console.log('[IncomingRequestsTab] teamItems count =', items.length, 'fromIncoming:', items.filter(r => r.request_scope).length, 'fromHistory:', items.filter(r => !r.request_scope).length);
         return items;
     }, [incomingRequests, teamHistoryRequests, directSubordinateIds, currentUserEmployeeId]);
 
     // Current items based on sub-tab
     const currentItems = activeSubTab === 'direct_incoming' ? directIncomingItems : teamItems;
 
-    // Apply filters
+    // Apply filters (including manager_type filter for direct)
     const filtered = useMemo(() => {
         return currentItems.filter(r => {
+            // Manager type filter for direct incoming
+            if (activeSubTab === 'direct_incoming' && directManagerFilter !== 'all') {
+                const mType = (r.manager_type || 'PRIMARY').toUpperCase();
+                if (directManagerFilter === 'primary' && mType !== 'PRIMARY') return false;
+                if (directManagerFilter === 'secondary' && mType !== 'SECONDARY') return false;
+            }
             // SECONDARY-only employee safety filter: only show OT requests
             const empId = r.employee_id || r.employee?.id || r.employee;
             if (empId && secondaryOnlyIds.has(empId)) {
@@ -361,7 +354,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
             }
             return true;
         });
-    }, [currentItems, typeFilter, statusFilter, searchText, activeSubTab, secondaryOnlyIds]);
+    }, [currentItems, typeFilter, statusFilter, searchText, activeSubTab, secondaryOnlyIds, directManagerFilter]);
 
     // Badge counts
     const directPendingCount = useMemo(() =>
@@ -415,6 +408,19 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
         }
     }, [activeSubTab, groupedByEmployee]);
 
+    // Type filter options
+    const typeFilterOptions = filterType
+        ? []
+        : [
+            { key: 'ALL', label: 'Tümü' },
+            { key: 'LEAVE', label: 'İzin' },
+            { key: 'OVERTIME', label: 'Mesai' },
+            { key: 'MEAL', label: 'Yemek' },
+            { key: 'CARDLESS_ENTRY', label: 'Kartsız' },
+            { key: 'HEALTH_REPORT', label: 'Sağlık R.' },
+            { key: 'HOSPITAL_VISIT', label: 'Hastane' },
+        ];
+
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
     const authorities = substituteData?.authorities || [];
@@ -443,7 +449,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 {/* Sub-tab pills */}
                 <div className="flex flex-wrap gap-2">
                     <button
-                        onClick={() => { setActiveSubTab('direct_incoming'); setStatusFilter('ALL'); }}
+                        onClick={() => { setActiveSubTab('direct_incoming'); setStatusFilter('ALL'); setDirectManagerFilter('all'); }}
                         className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
                             activeSubTab === 'direct_incoming'
                                 ? 'bg-slate-900 text-white shadow-lg'
@@ -451,7 +457,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                         }`}
                     >
                         <Inbox size={14} />
-                        Doğrudan Gelen
+                        Doğrudan Talepler
                         {directPendingCount > 0 && (
                             <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                                 activeSubTab === 'direct_incoming' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
@@ -476,6 +482,35 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                     </button>
                 </div>
 
+                {/* PRIMARY / SECONDARY sub-filter for direct incoming */}
+                {activeSubTab === 'direct_incoming' && secondaryCount > 0 && (
+                    <div className="flex gap-1.5 border-t border-slate-100 pt-3">
+                        {[
+                            { key: 'all', label: 'Tümü', count: directPendingCount },
+                            { key: 'primary', label: 'Birincil Yönetici', icon: <UserCheck size={12} />, count: primaryCount },
+                            { key: 'secondary', label: 'İkincil Yönetici', icon: <UserCog size={12} />, count: secondaryCount },
+                        ].map(opt => (
+                            <button
+                                key={opt.key}
+                                onClick={() => setDirectManagerFilter(opt.key)}
+                                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                                    directManagerFilter === opt.key
+                                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                                }`}
+                            >
+                                {opt.icon}
+                                {opt.label}
+                                {opt.count > 0 && (
+                                    <span className={`px-1 py-0.5 rounded text-[9px] ${
+                                        directManagerFilter === opt.key ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
+                                    }`}>{opt.count}</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Type + Status + Search */}
                 <div className="flex flex-col xl:flex-row gap-3 justify-between items-start xl:items-center">
                     <div className="relative">
@@ -490,15 +525,15 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {/* Type filter — hidden when filterType prop locks it */}
-                        {!filterType && (
-                            <div className="flex bg-slate-100 p-1 rounded-lg">
-                                {['ALL', 'LEAVE', 'OVERTIME', 'MEAL', 'CARDLESS_ENTRY'].map(t => (
-                                    <button key={t} onClick={() => setTypeFilter(t)}
+                        {typeFilterOptions.length > 0 && (
+                            <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg gap-0.5">
+                                {typeFilterOptions.map(t => (
+                                    <button key={t.key} onClick={() => setTypeFilter(t.key)}
                                         className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                            typeFilter === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            typeFilter === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                                         }`}
                                     >
-                                        {t === 'ALL' ? 'Tümü' : t === 'LEAVE' ? 'İzin' : t === 'OVERTIME' ? 'Mesai' : t === 'MEAL' ? 'Yemek' : 'Kartsız'}
+                                        {t.label}
                                     </button>
                                 ))}
                             </div>

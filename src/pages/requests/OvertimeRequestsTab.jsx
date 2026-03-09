@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Clock, CalendarPlus, ArrowDownLeft } from 'lucide-react';
+import { Clock, CalendarPlus, ArrowDownLeft, BarChart3 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import OvertimeCalendarView from '../../components/overtime/OvertimeCalendarView';
 import OvertimeManagementTab from '../attendance-tracking/OvertimeManagementTab';
 import IncomingRequestsTab from './IncomingRequestsTab';
+import TeamOvertimeAnalytics from '../../components/TeamOvertimeAnalytics';
 
 const SubTabButton = ({ active, onClick, children, icon, badge }) => (
   <button
@@ -51,7 +52,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
     return <OvertimeCalendarView mode="personal" />;
   }
 
-  // Yönetici — 3 alt sekme
+  // Yönetici — 4 alt sekme
   const employees = subordinates.map(s => ({
     id: s.id,
     name: s.first_name && s.last_name
@@ -85,6 +86,13 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
         >
           Gelen Talepler
         </SubTabButton>
+        <SubTabButton
+          active={activeSubTab === 'analytics'}
+          onClick={() => setActiveSubTab('analytics')}
+          icon={<BarChart3 size={16} />}
+        >
+          Analiz
+        </SubTabButton>
       </div>
 
       {/* İçerik */}
@@ -104,6 +112,10 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
           filterType="overtime"
           refreshTrigger={refreshTrigger}
         />
+      )}
+
+      {activeSubTab === 'analytics' && (
+        <TeamOvertimeAnalytics />
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Layers, ArrowDownLeft, CalendarCheck, BarChart3
 } from 'lucide-react';
@@ -33,9 +34,20 @@ const TabButton = ({ active, onClick, children, badge, icon }) => (
 );
 
 // =========== MAIN PAGE ===========
+const TAB_ALIASES = {
+    'incoming': 'incoming_requests',
+    'incoming_requests': 'incoming_requests',
+    'overtime': 'overtime_requests',
+    'overtime_requests': 'overtime_requests',
+    'analytics': 'analytics',
+    'my_requests': 'my_requests',
+};
+
 const Requests = () => {
     const { hasPermission } = useAuth();
-    const [activeTab, setActiveTab] = useState('my_requests');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Manager detection
@@ -54,6 +66,12 @@ const Requests = () => {
         };
         fetchSubordinates();
     }, []);
+
+    // Sync tab changes to URL
+    const handleTabChange = useCallback((tab) => {
+        setActiveTab(tab);
+        setSearchParams(tab === 'my_requests' ? {} : { tab: tab.replace('_requests', '') }, { replace: true });
+    }, [setSearchParams]);
 
     // Cross-tab refresh: when any tab modifies data, bump trigger for all
     const handleDataChange = useCallback(() => {
@@ -87,7 +105,7 @@ const Requests = () => {
             <div className="border-b border-slate-200 flex gap-1 overflow-x-auto no-scrollbar">
                 <TabButton
                     active={activeTab === 'my_requests'}
-                    onClick={() => setActiveTab('my_requests')}
+                    onClick={() => handleTabChange('my_requests')}
                     icon={<Layers size={18} />}
                 >
                     Kendi Taleplerim
@@ -96,7 +114,7 @@ const Requests = () => {
                 {isManager && (
                     <TabButton
                         active={activeTab === 'incoming_requests'}
-                        onClick={() => setActiveTab('incoming_requests')}
+                        onClick={() => handleTabChange('incoming_requests')}
                         icon={<ArrowDownLeft size={18} />}
                         badge={incomingPendingCount}
                     >
@@ -106,7 +124,7 @@ const Requests = () => {
 
                 <TabButton
                     active={activeTab === 'overtime_requests'}
-                    onClick={() => setActiveTab('overtime_requests')}
+                    onClick={() => handleTabChange('overtime_requests')}
                     icon={<CalendarCheck size={18} />}
                 >
                     Ek Mesai
@@ -114,7 +132,7 @@ const Requests = () => {
 
                 <TabButton
                     active={activeTab === 'analytics'}
-                    onClick={() => setActiveTab('analytics')}
+                    onClick={() => handleTabChange('analytics')}
                     icon={<BarChart3 size={18} />}
                 >
                     Analiz

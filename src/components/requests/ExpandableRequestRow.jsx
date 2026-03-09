@@ -2,7 +2,7 @@ import React from 'react';
 import {
     ChevronDown, ChevronRight, Clock, FileText, Utensils,
     CreditCard, CheckCircle2, XCircle, AlertCircle, User, ArrowRight,
-    Check, X, Eye, Edit2, Trash2
+    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
 
@@ -37,6 +37,8 @@ const getTypeIcon = (type) => {
         case 'OVERTIME': return <Clock size={16} className="text-amber-600" />;
         case 'MEAL': return <Utensils size={16} className="text-emerald-600" />;
         case 'CARDLESS_ENTRY': return <CreditCard size={16} className="text-purple-600" />;
+        case 'HEALTH_REPORT': return <HeartPulse size={16} className="text-red-600" />;
+        case 'HOSPITAL_VISIT': return <Stethoscope size={16} className="text-rose-600" />;
         default: return <FileText size={16} className="text-slate-500" />;
     }
 };
@@ -46,6 +48,8 @@ const getTypeLabel = (req) => {
     if (req.type === 'OVERTIME') return 'Fazla Mesai';
     if (req.type === 'MEAL') return 'Yemek';
     if (req.type === 'CARDLESS_ENTRY') return 'Kartsız Giriş';
+    if (req.type === 'HEALTH_REPORT') return 'Sağlık Raporu';
+    if (req.type === 'HOSPITAL_VISIT') return 'Hastane Ziyareti';
     return 'Talep';
 };
 
@@ -54,6 +58,8 @@ const typeBgLookup = {
     OVERTIME: 'bg-amber-50',
     MEAL: 'bg-emerald-50',
     CARDLESS_ENTRY: 'bg-purple-50',
+    HEALTH_REPORT: 'bg-red-50',
+    HOSPITAL_VISIT: 'bg-rose-50',
 };
 
 // ─── Status badge config (static Tailwind classes) ────────────────────────
@@ -307,7 +313,11 @@ const ExpandableRequestRow = ({
 
                 {/* Islemler */}
                 <td className="px-3 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <div className={`flex items-center justify-end gap-1.5 transition-opacity ${
+                        mode === 'incoming' && isPending
+                            ? 'opacity-100'
+                            : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                    }`}>
                         {/* View Details */}
                         {onViewDetails && (
                             <button
