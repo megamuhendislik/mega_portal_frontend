@@ -40,6 +40,7 @@ import OrgAuditTab from './system-health/OrgAuditTab';
 import BreakFixTab from './system-health/BreakFixTab';
 import RequestAnalysisTab from './system-health/RequestAnalysisTab';
 import OvertimeAuditTab from './system-health/OvertimeAuditTab';
+import OTEmployeeAnalysisTab from './system-health/OTEmployeeAnalysisTab';
 import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
 import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksCompareTab from './system-health/PdksCompareTab';
@@ -106,6 +107,7 @@ export default function SystemHealth() {
                         { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
                         { id: 'spec_tests', name: 'Spec Testleri', icon: PlayCircleIcon },
                         { id: 'overtime_audit', name: 'Mesai Denetimi', icon: ClockIcon },
+                        { id: 'ot_analysis', name: 'OT Calisan Analizi', icon: UsersIcon },
                         { id: 'record_check', name: 'Kayıt Kontrol', icon: ClipboardDocumentCheckIcon },
                         { id: 'request_analysis', name: 'Talep Analizi', icon: ClipboardDocumentCheckIcon },
                         { id: 'break_fix', name: 'Mola Düzeltme', icon: PauseCircleIcon },
@@ -155,6 +157,7 @@ export default function SystemHealth() {
                 {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
                 {activeTab === 'spec_tests' && <SpecTestsTab />}
                 {activeTab === 'overtime_audit' && <OvertimeAuditTab />}
+                {activeTab === 'ot_analysis' && <OTEmployeeAnalysisTab />}
                 {activeTab === 'record_check' && <UnifiedRecordCheckTab />}
                 {activeTab === 'request_analysis' && <RequestAnalysisTab />}
                 {activeTab === 'break_fix' && <BreakFixTab />}
