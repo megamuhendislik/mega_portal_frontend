@@ -86,6 +86,7 @@ const STAGES = [
     { id: 51, name: 'İkincil Yönetici Yetki Kısıtlaması', icon: ShieldCheckIcon, color: 'rose', description: '24 test — SECONDARY yönetici sadece OT yetkisi (is_secondary_manager_of_employee guard), izin/kartsız giriş onay-red engeli, OT check-in guard (override/cancel), my-managers endpoint, claim_potential target_approver, SECONDARY OT→PRIMARY bildirim, SECONDARY değişim/deaktif/silme devir (sadece OT), fallback PRIMARY\'ye devir, CardlessEntry reject SECONDARY guard' },
     { id: 52, name: 'İkincil Yönetici Sadeleştirme', icon: WrenchScrewdriverIcon, color: 'slate', description: '5 test — SECONDARY yönetici dept/pos null enforce (kayıt+okuma), PRIMARY dept/pos korunma, DepartmentAssignment sync yok, mevcut kayıt API güncelleme temizliği' },
     { id: 53, name: 'Hastane Ziyareti Yeniden Tasarım', icon: HeartIcon, color: 'rose', description: '11 test — HOSPITAL_VISIT tam gün kaldırıldı (start_time/end_time zorunlu), ayrı attendance kaydı oluşturma kaldırıldı, recalculate_daily_attendance hastane ziyareti saatlerini eksikten düşer (hospital_visit_seconds), onay/red/iptal deficit akışı, MonthlyWorkSummary hospital_visit_hours' },
+    { id: 54, name: 'Mazeret İzni Bakiye Koruma', icon: ExclamationCircleIcon, color: 'orange', description: '4 test — Onay anında bakiye kontrolü (yetersiz→ValueError), PENDING talep saatlerini kota hesabına dahil etme, çoklu PENDING ikinci onay reddi, yeterli bakiyede normal onay' },
 ];
 
 export default function SpecTestsTab() {
