@@ -15,6 +15,11 @@ import {
 } from 'recharts';
 import api from '../services/api';
 import clsx from 'clsx';
+import {
+    KPIGrid, ComparisonBanner, TypeBreakdownCards,
+    HealthReportSection, ApprovalBottleneck,
+    ExportButton, SectionCard, CustomTooltip
+} from '../components/analytics';
 
 // ─── Color Palette ──────────────────────────────────────────────
 const COLORS = {
@@ -48,89 +53,7 @@ const STATUS_LABELS = {
     pending: 'Bekleyen',
 };
 
-// ─── Reusable Sub-Components ────────────────────────────────────
-
-function CustomTooltip({ active, payload, label }) {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-xl px-4 py-3 text-sm">
-            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
-            {payload.map((p, i) => (
-                <p key={i} className="text-xs flex items-center gap-2 py-0.5">
-                    <span className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: p.color || p.fill }} />
-                    <span className="text-slate-500">{p.name}:</span>
-                    <span className="font-bold text-slate-800">{typeof p.value === 'number' ? p.value.toLocaleString('tr-TR') : p.value}</span>
-                </p>
-            ))}
-        </div>
-    );
-}
-
-function KPICard({ title, value, suffix, subtitle, icon: Icon, gradient, iconBg, textColor = 'text-white' }) {
-    return (
-        <div className={clsx(
-            'relative overflow-hidden rounded-2xl p-5 shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02]',
-            gradient
-        )}>
-            <div className="relative z-10">
-                <p className={clsx('text-[11px] font-bold uppercase tracking-wider mb-1', textColor === 'text-white' ? 'opacity-70' : 'text-slate-400')}>
-                    {title}
-                </p>
-                <h3 className={clsx('text-2xl sm:text-3xl font-black tracking-tight', textColor)}>
-                    {value}
-                    {suffix && <span className={clsx('text-sm ml-1 font-bold', textColor === 'text-white' ? 'opacity-80' : 'text-slate-400')}>{suffix}</span>}
-                </h3>
-                {subtitle && (
-                    <p className={clsx('text-[11px] mt-1 font-medium', textColor === 'text-white' ? 'opacity-60' : 'text-slate-400')}>
-                        {subtitle}
-                    </p>
-                )}
-            </div>
-            {Icon && (
-                <div className="absolute -right-3 -bottom-3 opacity-10">
-                    <Icon size={64} />
-                </div>
-            )}
-        </div>
-    );
-}
-
-function SectionCard({ title, subtitle, icon: Icon, iconGradient, children, collapsible = false, defaultOpen = true, badge }) {
-    const [open, setOpen] = useState(defaultOpen);
-
-    return (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
-            <div
-                className={clsx(
-                    'flex items-center justify-between p-5 border-b border-slate-50',
-                    collapsible && 'cursor-pointer select-none hover:bg-slate-50/50 transition-colors'
-                )}
-                onClick={collapsible ? () => setOpen(o => !o) : undefined}
-            >
-                <div className="flex items-center gap-3">
-                    {Icon && (
-                        <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center text-white', iconGradient || 'bg-gradient-to-br from-blue-500 to-blue-600')}>
-                            <Icon size={18} />
-                        </div>
-                    )}
-                    <div>
-                        <h3 className="font-bold text-slate-800 text-base">{title}</h3>
-                        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
-                    </div>
-                    {badge && (
-                        <span className="ml-2 px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">{badge}</span>
-                    )}
-                </div>
-                {collapsible && (
-                    <ChevronDown size={18} className={clsx('text-slate-400 transition-transform duration-300', open && 'rotate-180')} />
-                )}
-            </div>
-            {(!collapsible || open) && (
-                <div className="p-5 animate-fade-in">{children}</div>
-            )}
-        </div>
-    );
-}
+// ─── Page-specific sub-components ─────────────────────────────────
 
 function SortableHeader({ label, col, currentCol, currentDir, onSort, className }) {
     return (
@@ -156,15 +79,6 @@ function EmptyState({ message }) {
                 <FileText size={28} className="text-slate-300" />
             </div>
             <p className="text-sm text-slate-500 font-medium">{message}</p>
-        </div>
-    );
-}
-
-function ProgressBar({ value, max, color = 'bg-blue-500', height = 'h-2' }) {
-    const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
-    return (
-        <div className={clsx('w-full bg-slate-100 rounded-full overflow-hidden', height)}>
-            <div className={clsx('rounded-full transition-all duration-500', color, height)} style={{ width: `${pct}%` }} />
         </div>
     );
 }
@@ -582,78 +496,63 @@ export default function RequestAnalytics() {
                     {!personalLoading && !personalError && personalData && (
                         <div className="space-y-6">
                             {/* P1. KPI Cards */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <KPICard
-                                    title="Toplam Talep"
-                                    value={personalData.total_requests?.toLocaleString('tr-TR') || 0}
-                                    icon={FileText}
-                                    gradient="bg-gradient-to-br from-slate-800 to-slate-900"
-                                />
-                                <KPICard
-                                    title="Onay Oranı"
-                                    value={personalData.approval_rate != null ? personalData.approval_rate.toFixed(1) : '0'}
-                                    suffix="%"
-                                    icon={CheckCircle2}
-                                    gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
-                                />
-                                <KPICard
-                                    title="Toplam Ek Mesai"
-                                    value={personalData.total_overtime_hours != null ? personalData.total_overtime_hours.toFixed(1) : '0'}
-                                    suffix="saat"
-                                    icon={Zap}
-                                    gradient="bg-gradient-to-br from-amber-500 to-orange-500"
-                                />
-                                <KPICard
-                                    title="Toplam İzin"
-                                    value={personalData.total_leave_days?.toLocaleString('tr-TR') || 0}
-                                    suffix="gün"
-                                    icon={Calendar}
-                                    gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-                                />
-                            </div>
+                            <KPIGrid
+                                columns={4}
+                                items={[
+                                    {
+                                        title: 'Toplam Talep',
+                                        value: personalData.total_requests || 0,
+                                        icon: FileText,
+                                        gradient: 'from-slate-800 to-slate-900',
+                                        delta: personalData.comparison?.delta_total,
+                                        deltaSuffix: '',
+                                    },
+                                    {
+                                        title: 'Onay Oranı',
+                                        value: personalData.approval_rate != null ? personalData.approval_rate.toFixed(1) : '0',
+                                        suffix: '%',
+                                        icon: CheckCircle2,
+                                        gradient: 'from-emerald-500 to-emerald-600',
+                                        delta: personalData.comparison?.delta_approval_rate,
+                                        deltaSuffix: '%',
+                                    },
+                                    {
+                                        title: 'Toplam Ek Mesai',
+                                        value: personalData.total_overtime_hours != null ? personalData.total_overtime_hours.toFixed(1) : '0',
+                                        suffix: 'saat',
+                                        icon: Zap,
+                                        gradient: 'from-amber-500 to-orange-500',
+                                        delta: personalData.comparison?.delta_overtime_hours,
+                                        deltaSuffix: 's',
+                                    },
+                                    {
+                                        title: 'Toplam İzin',
+                                        value: personalData.total_leave_days || 0,
+                                        suffix: 'gün',
+                                        icon: Calendar,
+                                        gradient: 'from-blue-500 to-blue-600',
+                                        delta: personalData.comparison?.delta_leave_days,
+                                        deltaSuffix: 'g',
+                                    },
+                                ]}
+                            />
+
+                            {/* Comparison Banner */}
+                            <ComparisonBanner comparison={personalData?.comparison} />
 
                             {/* P2. Type Detail Mini-Cards */}
-                            {personalData.summary && (
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                    {Object.entries(personalData.summary).map(([typeKey, typeData]) => {
-                                        const Icon = TYPE_ICONS[typeKey] || FileText;
-                                        const total = typeData.total || 0;
-                                        const approved = typeData.approved || 0;
-                                        const rejected = typeData.rejected || 0;
-                                        const pending = typeData.pending || 0;
-                                        const rate = total > 0 ? ((approved / total) * 100).toFixed(0) : 0;
-                                        return (
-                                            <div key={typeKey} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (COLORS[typeKey] || '#94A3B8') + '15', color: COLORS[typeKey] || '#94A3B8' }}>
-                                                            <Icon size={16} />
-                                                        </div>
-                                                        <span className="text-sm font-bold text-slate-700">{TYPE_LABELS[typeKey] || typeKey}</span>
-                                                    </div>
-                                                    <span className="text-xl font-black text-slate-800">{total}</span>
-                                                </div>
-                                                <div className="flex gap-2 text-[10px] font-bold">
-                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{approved} Onay</span>
-                                                    <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600">{rejected} Red</span>
-                                                    {pending > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{pending} Bekl.</span>}
-                                                </div>
-                                                <div className="mt-2">
-                                                    <ProgressBar value={approved} max={total} color="bg-emerald-500" height="h-1.5" />
-                                                </div>
-                                                <p className="text-[10px] text-slate-400 mt-1">Onay oranı: %{rate}</p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            <TypeBreakdownCards
+                                summary={personalData.summary}
+                                healthReport={personalData?.health_report}
+                            />
 
                             {/* P3. Monthly Trend */}
                             <SectionCard
                                 title="Aylık Trend"
                                 subtitle="Son döneme ait aylık talep dağılımınız"
                                 icon={TrendingUp}
-                                iconGradient="bg-gradient-to-br from-blue-500 to-indigo-600"
+                                iconGradient="from-blue-500 to-indigo-600"
+                                collapsible={false}
                             >
                                 {personalMonthlyTrend.length > 0 ? (
                                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -699,7 +598,8 @@ export default function RequestAnalytics() {
                                     title="Talep Türü Dağılımı"
                                     subtitle="Türe göre talep oranlarınız"
                                     icon={PieChartIcon}
-                                    iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
+                                    iconGradient="from-violet-500 to-purple-600"
+                                    collapsible={false}
                                 >
                                     {personalTypeDistribution.length > 0 ? (
                                         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -742,7 +642,8 @@ export default function RequestAnalytics() {
                                     title="Onay Durum Dağılımı"
                                     subtitle="Durum bazında talepleriniz"
                                     icon={CheckCircle2}
-                                    iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+                                    iconGradient="from-emerald-500 to-teal-600"
+                                    collapsible={false}
                                 >
                                     {personalStatusDistribution.length > 0 ? (
                                         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -794,7 +695,8 @@ export default function RequestAnalytics() {
                                     title="İzin Türü Kırılımı"
                                     subtitle="İzin türlerine göre kullanım detayınız"
                                     icon={Calendar}
-                                    iconGradient="bg-gradient-to-br from-blue-500 to-cyan-600"
+                                    iconGradient="from-blue-500 to-cyan-600"
+                                    collapsible={false}
                                 >
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                         <div>
@@ -833,14 +735,25 @@ export default function RequestAnalytics() {
                                 </SectionCard>
                             )}
 
-                            {/* P6. Recent Requests */}
+                            {/* P6. Health Report Section */}
+                            <HealthReportSection stats={personalData?.health_report_stats || {
+                                total: personalData?.health_report?.total || 0,
+                                by_type: personalData?.health_report ? [
+                                    { name: 'HEALTH_REPORT', type: 'HEALTH_REPORT', count: personalData.health_report.health_report_count || 0 },
+                                    { name: 'HOSPITAL_VISIT', type: 'HOSPITAL_VISIT', count: personalData.health_report.hospital_visit_count || 0 },
+                                ] : [],
+                                total_days: personalData?.health_report?.total_days || 0,
+                            }} />
+
+                            {/* P7. Recent Requests */}
                             {personalData.recent_requests && personalData.recent_requests.length > 0 && (
                                 <SectionCard
                                     title="Son Talepler"
                                     subtitle="Son 10 talebiniz"
                                     icon={Clock}
-                                    iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
+                                    iconGradient="from-violet-500 to-purple-600"
                                     badge={`${personalData.recent_requests.length}`}
+                                    collapsible={false}
                                 >
                                     <div className="overflow-x-auto -mx-2">
                                         <table className="w-full min-w-[600px]">
@@ -883,6 +796,11 @@ export default function RequestAnalytics() {
                                     </div>
                                 </SectionCard>
                             )}
+
+                            {/* Export Button */}
+                            <div className="flex justify-end">
+                                <ExportButton type="personal" range={range} />
+                            </div>
                         </div>
                     )}
                 </>
@@ -901,77 +819,57 @@ export default function RequestAnalytics() {
                     {!incomingLoading && !incomingError && incomingData && (
                         <div className="space-y-6">
                             {/* I1. KPI Cards */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <KPICard
-                                    title="Toplam Gelen Talep"
-                                    value={incomingData.total_received?.toLocaleString('tr-TR') || 0}
-                                    icon={Inbox}
-                                    gradient="bg-gradient-to-br from-slate-800 to-slate-900"
-                                />
-                                <KPICard
-                                    title="Onay Oranı"
-                                    value={incomingData.approval_rate != null ? incomingData.approval_rate.toFixed(1) : '0'}
-                                    suffix="%"
-                                    icon={CheckCircle2}
-                                    gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
-                                />
-                                <KPICard
-                                    title="Ort. Karar Süresi"
-                                    value={incomingData.avg_decision_hours != null ? incomingData.avg_decision_hours.toFixed(1) : '-'}
-                                    suffix="saat"
-                                    icon={Timer}
-                                    gradient="bg-gradient-to-br from-violet-500 to-purple-600"
-                                />
-                                <KPICard
-                                    title="Bekleyen Talep"
-                                    value={incomingData.pending_count?.toLocaleString('tr-TR') || 0}
-                                    icon={AlertCircle}
-                                    gradient="bg-gradient-to-br from-amber-500 to-orange-500"
-                                />
-                            </div>
+                            <KPIGrid
+                                columns={4}
+                                items={[
+                                    {
+                                        title: 'Toplam Gelen Talep',
+                                        value: incomingData.total_received || 0,
+                                        icon: Inbox,
+                                        gradient: 'from-slate-800 to-slate-900',
+                                        delta: incomingData.comparison?.delta_total,
+                                        deltaSuffix: '',
+                                    },
+                                    {
+                                        title: 'Onay Oranı',
+                                        value: incomingData.approval_rate != null ? incomingData.approval_rate.toFixed(1) : '0',
+                                        suffix: '%',
+                                        icon: CheckCircle2,
+                                        gradient: 'from-emerald-500 to-emerald-600',
+                                        delta: incomingData.comparison?.delta_approval_rate,
+                                        deltaSuffix: '%',
+                                    },
+                                    {
+                                        title: 'Ort. Karar Süresi',
+                                        value: incomingData.avg_decision_hours != null ? incomingData.avg_decision_hours.toFixed(1) : '-',
+                                        suffix: 'saat',
+                                        icon: Timer,
+                                        gradient: 'from-violet-500 to-purple-600',
+                                    },
+                                    {
+                                        title: 'Bekleyen Talep',
+                                        value: incomingData.pending_count || 0,
+                                        icon: AlertCircle,
+                                        gradient: 'from-amber-500 to-orange-500',
+                                    },
+                                ]}
+                            />
+
+                            {/* Comparison Banner */}
+                            <ComparisonBanner comparison={incomingData?.comparison} />
 
                             {/* I2. Type Breakdown Mini-Cards */}
-                            {incomingData.by_type && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    {Object.entries(incomingData.by_type).map(([typeKey, typeData]) => {
-                                        const Icon = TYPE_ICONS[typeKey] || FileText;
-                                        const total = typeData.total || 0;
-                                        const approved = typeData.approved || 0;
-                                        const rejected = typeData.rejected || 0;
-                                        const pending = typeData.pending || 0;
-                                        const rate = total > 0 ? ((approved / total) * 100).toFixed(0) : 0;
-                                        return (
-                                            <div key={typeKey} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (COLORS[typeKey] || '#94A3B8') + '15', color: COLORS[typeKey] || '#94A3B8' }}>
-                                                            <Icon size={16} />
-                                                        </div>
-                                                        <span className="text-sm font-bold text-slate-700">{TYPE_LABELS[typeKey] || typeKey}</span>
-                                                    </div>
-                                                    <span className="text-xl font-black text-slate-800">{total}</span>
-                                                </div>
-                                                <div className="flex gap-2 text-[10px] font-bold">
-                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{approved} Onay</span>
-                                                    <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600">{rejected} Red</span>
-                                                    {pending > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{pending} Bekl.</span>}
-                                                </div>
-                                                <div className="mt-2">
-                                                    <ProgressBar value={approved} max={total} color="bg-emerald-500" height="h-1.5" />
-                                                </div>
-                                                <p className="text-[10px] text-slate-400 mt-1">Onay oranı: %{rate}</p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            <TypeBreakdownCards summary={incomingData.by_type ? Object.fromEntries(
+                                Object.entries(incomingData.by_type).map(([k, v]) => [k, v])
+                            ) : null} />
 
                             {/* I3. Monthly Trend */}
                             <SectionCard
                                 title="Aylık Gelen Talep Trendi"
                                 subtitle="Son döneme ait gelen taleplerin aylık dağılımı"
                                 icon={TrendingUp}
-                                iconGradient="bg-gradient-to-br from-indigo-500 to-blue-600"
+                                iconGradient="from-indigo-500 to-blue-600"
+                                collapsible={false}
                             >
                                 {incomingMonthlyTrend.length > 0 ? (
                                     <ResponsiveContainer width="100%" height={320}>
@@ -997,8 +895,9 @@ export default function RequestAnalytics() {
                                     title="En Çok Talep Edenler"
                                     subtitle="Ekibinizde en fazla talep oluşturan çalışanlar"
                                     icon={UserCheck}
-                                    iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
+                                    iconGradient="from-rose-500 to-pink-600"
                                     badge={`${incomingData.top_requesters.length} kişi`}
+                                    collapsible={false}
                                 >
                                     <div className="overflow-x-auto -mx-2">
                                         <table className="w-full min-w-[500px]">
@@ -1014,6 +913,7 @@ export default function RequestAnalytics() {
                                             <tbody className="divide-y divide-slate-50">
                                                 {sortedTopRequesters.map((emp, i) => {
                                                     const maxCount = Math.max(...(incomingData.top_requesters || []).map(e => e.count || 0), 1);
+                                                    const pct = maxCount > 0 ? Math.min(((emp.count || 0) / maxCount) * 100, 100) : 0;
                                                     return (
                                                         <tr key={emp.id || i} className="hover:bg-slate-50/50 transition-colors">
                                                             <td className="px-3 py-3 text-center">
@@ -1040,7 +940,9 @@ export default function RequestAnalytics() {
                                                                 <span className="text-sm font-black text-slate-800">{emp.count || 0}</span>
                                                             </td>
                                                             <td className="px-3 py-3">
-                                                                <ProgressBar value={emp.count || 0} max={maxCount} color="bg-rose-500" height="h-1.5" />
+                                                                <div className="w-full bg-slate-100 rounded-full overflow-hidden h-1.5">
+                                                                    <div className="rounded-full transition-all duration-500 bg-rose-500 h-1.5" style={{ width: `${pct}%` }} />
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     );
@@ -1050,6 +952,9 @@ export default function RequestAnalytics() {
                                     </div>
                                 </SectionCard>
                             )}
+
+                            {/* Approval Bottleneck */}
+                            <ApprovalBottleneck data={[]} />
 
                             {/* Incoming Summary Stats */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1081,6 +986,11 @@ export default function RequestAnalytics() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Export Button */}
+                            <div className="flex justify-end">
+                                <ExportButton type="incoming" range={range} />
+                            </div>
                         </div>
                     )}
                 </>
@@ -1100,89 +1010,76 @@ export default function RequestAnalytics() {
                         <div className="space-y-6">
 
             {/* ── 2. KPI Cards ──────────────────────────────────── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <KPICard
-                    title="Toplam Talep"
-                    value={overview.total_requests?.toLocaleString('tr-TR') || 0}
-                    icon={FileText}
-                    gradient="bg-gradient-to-br from-slate-800 to-slate-900"
-                />
-                <KPICard
-                    title="Onay Oranı"
-                    value={overview.approval_rate != null ? overview.approval_rate.toFixed(1) : '0'}
-                    suffix="%"
-                    icon={CheckCircle2}
-                    gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
-                />
-                <KPICard
-                    title="Toplam Ek Mesai"
-                    value={overview.total_overtime_hours != null ? overview.total_overtime_hours.toFixed(1) : '0'}
-                    suffix="saat"
-                    icon={Zap}
-                    gradient="bg-gradient-to-br from-amber-500 to-orange-500"
-                />
-                <KPICard
-                    title="Toplam İzin"
-                    value={overview.total_leave_days?.toLocaleString('tr-TR') || 0}
-                    suffix="gün"
-                    icon={Calendar}
-                    gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-                />
-                <KPICard
-                    title="Ort. Yanıt Süresi"
-                    value={overview.avg_response_hours != null ? overview.avg_response_hours.toFixed(1) : '-'}
-                    suffix="saat"
-                    icon={Clock}
-                    gradient="bg-gradient-to-br from-violet-500 to-purple-600"
-                />
-                <KPICard
-                    title="Yonetilen Kisi"
-                    value={overview.managed_employee_count || requester?.managed_count || 0}
-                    icon={Users}
-                    gradient="bg-gradient-to-br from-indigo-500 to-indigo-600"
-                />
-            </div>
+            <KPIGrid
+                columns={6}
+                items={[
+                    {
+                        title: 'Toplam Talep',
+                        value: overview.total_requests || 0,
+                        icon: FileText,
+                        gradient: 'from-slate-800 to-slate-900',
+                        delta: data.comparison?.delta_total,
+                        deltaSuffix: '',
+                    },
+                    {
+                        title: 'Onay Oranı',
+                        value: overview.approval_rate != null ? overview.approval_rate.toFixed(1) : '0',
+                        suffix: '%',
+                        icon: CheckCircle2,
+                        gradient: 'from-emerald-500 to-emerald-600',
+                        delta: data.comparison?.delta_approval_rate,
+                        deltaSuffix: '%',
+                    },
+                    {
+                        title: 'Toplam Ek Mesai',
+                        value: overview.total_overtime_hours != null ? overview.total_overtime_hours.toFixed(1) : '0',
+                        suffix: 'saat',
+                        icon: Zap,
+                        gradient: 'from-amber-500 to-orange-500',
+                        delta: data.comparison?.delta_overtime_hours,
+                        deltaSuffix: 's',
+                    },
+                    {
+                        title: 'Toplam İzin',
+                        value: overview.total_leave_days || 0,
+                        suffix: 'gün',
+                        icon: Calendar,
+                        gradient: 'from-blue-500 to-blue-600',
+                        delta: data.comparison?.delta_leave_days,
+                        deltaSuffix: 'g',
+                    },
+                    {
+                        title: 'Ort. Yanıt Süresi',
+                        value: overview.avg_response_hours != null ? overview.avg_response_hours.toFixed(1) : '-',
+                        suffix: 'saat',
+                        icon: Clock,
+                        gradient: 'from-violet-500 to-purple-600',
+                    },
+                    {
+                        title: 'Yonetilen Kisi',
+                        value: overview.managed_employee_count || requester?.managed_count || 0,
+                        icon: Users,
+                        gradient: 'from-indigo-500 to-indigo-600',
+                    },
+                ]}
+            />
+
+            {/* Comparison Banner */}
+            <ComparisonBanner comparison={data?.comparison} />
 
             {/* ── Type Detail Mini-Cards ────────────────────────── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {Object.entries(overview.by_type || {}).map(([typeKey, typeData]) => {
-                    const Icon = TYPE_ICONS[typeKey] || FileText;
-                    const total = typeData.total || 0;
-                    const approved = typeData.approved || 0;
-                    const rejected = typeData.rejected || 0;
-                    const pending = typeData.pending || 0;
-                    const rate = total > 0 ? ((approved / total) * 100).toFixed(0) : 0;
-                    return (
-                        <div key={typeKey} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS[typeKey] + '15', color: COLORS[typeKey] }}>
-                                        <Icon size={16} />
-                                    </div>
-                                    <span className="text-sm font-bold text-slate-700">{TYPE_LABELS[typeKey]}</span>
-                                </div>
-                                <span className="text-xl font-black text-slate-800">{total}</span>
-                            </div>
-                            <div className="flex gap-2 text-[10px] font-bold">
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{approved} Onay</span>
-                                <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600">{rejected} Red</span>
-                                {pending > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{pending} Bekl.</span>}
-                            </div>
-                            <div className="mt-2">
-                                <ProgressBar value={approved} max={total} color="bg-emerald-500" height="h-1.5" />
-                            </div>
-                            <p className="text-[10px] text-slate-400 mt-1">Onay orani: %{rate}</p>
-                        </div>
-                    );
-                })}
-            </div>
+            <TypeBreakdownCards
+                summary={overview.by_type}
+                healthReport={data?.health_report}
+            />
 
             {/* ── 3. Monthly Trend ──────────────────────────────── */}
             <SectionCard
                 title="Aylik Trend"
                 subtitle="Son döneme ait aylık talep dağılımı"
                 icon={TrendingUp}
-                iconGradient="bg-gradient-to-br from-blue-500 to-indigo-600"
+                iconGradient="from-blue-500 to-indigo-600"
+                collapsible={false}
             >
                 {monthlyTrendData.length > 0 ? (
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -1236,7 +1133,8 @@ export default function RequestAnalytics() {
                     title="Talep Türü Dağılımı"
                     subtitle="Ture gore talep oranlari"
                     icon={PieChartIcon}
-                    iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
+                    iconGradient="from-violet-500 to-purple-600"
+                    collapsible={false}
                 >
                     {typeDistributionData.length > 0 ? (
                         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -1280,7 +1178,8 @@ export default function RequestAnalytics() {
                     title="Onay Durum Dağılımı"
                     subtitle="Durum bazında talep dağılımı"
                     icon={CheckCircle2}
-                    iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+                    iconGradient="from-emerald-500 to-teal-600"
+                    collapsible={false}
                 >
                     {statusDistributionData.length > 0 ? (
                         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -1331,7 +1230,7 @@ export default function RequestAnalytics() {
                 title="Ekip Analizi"
                 subtitle="Departman, rol ve kişi bazlı talep kırılımı"
                 icon={Users}
-                iconGradient="bg-gradient-to-br from-indigo-500 to-blue-600"
+                iconGradient="from-indigo-500 to-blue-600"
                 collapsible
                 defaultOpen={true}
                 badge={`${(data.employee_breakdown || []).length} kisi`}
@@ -1479,6 +1378,7 @@ export default function RequestAnalytics() {
                                     <tbody className="divide-y divide-slate-50">
                                         {sortedEmployees.map((emp, i) => {
                                             const maxTotal = Math.max(...data.employee_breakdown.map(e => e.total || 0), 1);
+                                            const pct = maxTotal > 0 ? Math.min(((emp.total || 0) / maxTotal) * 100, 100) : 0;
                                             return (
                                                 <tr key={emp.id || i} className="hover:bg-slate-50/50 transition-colors group">
                                                     <td className="px-3 py-3">
@@ -1503,7 +1403,9 @@ export default function RequestAnalytics() {
                                                                 )}
                                                             </span>
                                                             <div className="w-12">
-                                                                <ProgressBar value={emp.total || 0} max={maxTotal} color="bg-indigo-500" height="h-1" />
+                                                                <div className="w-full bg-slate-100 rounded-full overflow-hidden h-1">
+                                                                    <div className="rounded-full transition-all duration-500 bg-indigo-500 h-1" style={{ width: `${pct}%` }} />
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -1530,7 +1432,7 @@ export default function RequestAnalytics() {
                 title="Ek Mesai Analizi"
                 subtitle="Kaynak dağılımı, atama istatistikleri ve haftalık yoğunluk"
                 icon={Zap}
-                iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
+                iconGradient="from-amber-500 to-orange-600"
                 collapsible
                 defaultOpen={true}
             >
@@ -1670,7 +1572,7 @@ export default function RequestAnalytics() {
                 title="İzin Analizi"
                 subtitle="İzin türü dağılımı ve kullanım istatistikleri"
                 icon={Calendar}
-                iconGradient="bg-gradient-to-br from-blue-500 to-cyan-600"
+                iconGradient="from-blue-500 to-cyan-600"
                 collapsible
                 defaultOpen={true}
             >
@@ -1724,13 +1626,31 @@ export default function RequestAnalytics() {
                 )}
             </SectionCard>
 
+            {/* ── Health Report Section ────────────────────────── */}
+            <HealthReportSection stats={data?.health_report_stats} />
+
+            {/* ── Approval Bottleneck ─────────────────────────── */}
+            {data?.approval_bottleneck && data.approval_bottleneck.length > 0 && (
+                <SectionCard
+                    title="Onay Darboğazı"
+                    subtitle="Yöneticilerin ortalama karar süreleri"
+                    icon={Timer}
+                    iconGradient="from-red-500 to-rose-600"
+                    collapsible
+                    defaultOpen={false}
+                    badge={`${data.approval_bottleneck.length} yönetici`}
+                >
+                    <ApprovalBottleneck data={data.approval_bottleneck} />
+                </SectionCard>
+            )}
+
             {/* ── 8. Overtime & Meal Correlation ─────────────────── */}
             {data.overtime_meal_correlation && data.overtime_meal_correlation.length > 0 && (
                 <SectionCard
                     title="Ek Mesai & Yemek Korelasyonu"
                     subtitle="Fazla mesai ve yemek talebi arasındaki ilişki"
                     icon={Activity}
-                    iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+                    iconGradient="from-emerald-500 to-teal-600"
                     collapsible
                     defaultOpen={false}
                     badge={`${data.overtime_meal_correlation.length} kişi`}
@@ -1793,7 +1713,7 @@ export default function RequestAnalytics() {
                     title="Dolaylı Talepler"
                     subtitle={`Alt yöneticiler üzerinden gelen talepler (toplam: ${data.indirect_analysis.total_indirect_requests || 0})`}
                     icon={GitBranch}
-                    iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
+                    iconGradient="from-rose-500 to-pink-600"
                     collapsible
                     defaultOpen={false}
                     badge={`${data.indirect_analysis.subordinate_managers.length} yönetici`}
@@ -1852,7 +1772,8 @@ export default function RequestAnalytics() {
                 title="Haftalık Pattern"
                 subtitle="Haftanın günlerine göre talep yoğunluğu"
                 icon={BarChart3}
-                iconGradient="bg-gradient-to-br from-teal-500 to-cyan-600"
+                iconGradient="from-teal-500 to-cyan-600"
+                collapsible={false}
             >
                 {weeklyPatternData.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1939,6 +1860,11 @@ export default function RequestAnalytics() {
                     <EmptyState message="Haftalık pattern verisi bulunamadı." />
                 )}
             </SectionCard>
+
+            {/* Export Button */}
+            <div className="flex justify-end">
+                <ExportButton type="team" range={range} />
+            </div>
 
                         </div>
                     )}
