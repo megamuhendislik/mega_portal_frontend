@@ -1,340 +1,804 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-    PieChart, BarChart3, Users, ArrowDownLeft,
-    Clock, Calendar, CheckCircle2, XCircle, AlertCircle,
-    TrendingUp, Layers, FileText, Utensils, CreditCard, Briefcase
+    PieChart as PieChartIcon, ArrowDownLeft, Users, RefreshCw, User,
+    TrendingUp, BarChart3, CheckCircle2, XCircle, AlertCircle,
+    Clock, Calendar, Timer, Layers, HeartPulse, Zap
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import IncomingAnalytics from './IncomingAnalytics';
+import {
+    KPIGrid, ComparisonBanner, TypeBreakdownCards, StatusDonut,
+    TrendChart, HealthReportSection, ApprovalBottleneck,
+    WeeklyHeatmap, EmployeeBreakdownTable, DepartmentBreakdown,
+    TopRequesters, OTSourcePie, LeaveTypeBreakdown, RecentActivity,
+    ExportButton, SectionCard
+} from '../../components/analytics';
 import TeamOvertimeAnalytics from '../../components/TeamOvertimeAnalytics';
+import clsx from 'clsx';
 
-// ===== PersonalAnalytics (moved from Requests.jsx) =====
-const PersonalAnalytics = ({ subordinates, loading: parentLoading }) => {
-    const [selectedEmployee, setSelectedEmployee] = useState('');
+// ============================================================
+// Shared helpers
+// ============================================================
+
+/** Transform backend nested comparison to ComparisonBanner flat format */
+function toFlatComparison(comparison) {
+    if (!comparison) return null;
+
+    // Backend sends nested format: { total: {current, previous, delta_pct}, leave: {...}, ... }
+    // ComparisonBanner expects flat: { delta_total, delta_approval_rate, delta_overtime_hours, delta_leave_days }
+    const flat = {};
+    if (comparison.total) flat.delta_total = comparison.total.delta_pct;
+    if (comparison.leave) flat.delta_leave_days = comparison.leave.delta_pct;
+    if (comparison.overtime) flat.delta_overtime_hours = comparison.overtime.delta_pct;
+
+    // Also handle flat format if backend already sends it
+    if ('delta_total' in comparison) return comparison;
+
+    return Object.keys(flat).length > 0 ? flat : null;
+}
+
+/** Extract a KPI delta from nested comparison entry */
+function makeDelta(comparison, key) {
+    if (!comparison?.[key]) return undefined;
+    const entry = comparison[key];
+    if (typeof entry === 'object' && 'delta_pct' in entry) {
+        return entry.delta_pct;
+    }
+    return undefined;
+}
+
+/** Build trend data for TrendChart from monthly_trend array */
+function buildTrendData(monthlyTrend) {
+    if (!monthlyTrend) return [];
+    return monthlyTrend.map(m => ({
+        name: m.label,
+        leave: m.leave || 0,
+        overtime: m.overtime || 0,
+        meal: m.meal || 0,
+        cardless: m.cardless || 0,
+        health_report: m.health_report || m.health_count || 0,
+        overtime_hours: m.overtime_hours || 0,
+        leave_days: m.leave_days || 0,
+        total: m.total || 0,
+        approved: m.approved || 0,
+    }));
+}
+
+/** Standard trend bars config (5 types) */
+const TREND_BARS = [
+    { key: 'leave', label: 'Izin', color: '#3B82F6' },
+    { key: 'overtime', label: 'Ek Mesai', color: '#F59E0B' },
+    { key: 'meal', label: 'Yemek', color: '#10B981' },
+    { key: 'cardless', label: 'Kartsiz Giris', color: '#8B5CF6' },
+    { key: 'health_report', label: 'Saglik Raporu', color: '#EC4899' },
+];
+
+/** Composed lines for secondary chart */
+const COMPOSED_LINES = [
+    { key: 'overtime_hours', label: 'Mesai (saat)', color: '#F59E0B', type: 'area', yAxisId: 'left' },
+    { key: 'leave_days', label: 'Izin (gun)', color: '#3B82F6', type: 'line', yAxisId: 'right' },
+];
+
+/** Range option buttons */
+const RANGE_OPTIONS = [
+    { value: 3, label: '3 Ay' },
+    { value: 6, label: '6 Ay' },
+    { value: 12, label: '12 Ay' },
+];
+
+// ============================================================
+// Loading skeleton
+// ============================================================
+const LoadingSkeleton = () => (
+    <div className="space-y-6 animate-pulse">
+        <div className="h-16 bg-slate-100 rounded-2xl" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-28 bg-slate-100 rounded-2xl" />)}
+        </div>
+        <div className="h-64 bg-slate-100 rounded-2xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-56 bg-slate-100 rounded-2xl" />
+            <div className="h-56 bg-slate-100 rounded-2xl" />
+        </div>
+    </div>
+);
+
+// ============================================================
+// Error state
+// ============================================================
+const ErrorState = ({ icon: Icon = PieChartIcon, message, onRetry }) => (
+    <div className="text-center py-16 text-slate-400">
+        <Icon size={48} className="mx-auto mb-4 opacity-20" />
+        <p className="text-lg font-medium mb-3">{message}</p>
+        {onRetry && (
+            <button
+                onClick={onRetry}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
+            >
+                <RefreshCw size={14} />
+                Tekrar Dene
+            </button>
+        )}
+    </div>
+);
+
+// ============================================================
+// Empty state
+// ============================================================
+const EmptyState = ({ icon: Icon = PieChartIcon }) => (
+    <div className="text-center py-16 text-slate-400">
+        <Icon size={48} className="mx-auto mb-4 opacity-20" />
+        <p className="text-lg font-medium">Veri bulunamadi</p>
+    </div>
+);
+
+// ============================================================
+// PersonalAnalytics
+// ============================================================
+const PersonalAnalytics = ({ range }) => {
     const [data, setData] = useState(null);
-    const [fetching, setFetching] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            setFetching(true);
-            try {
-                const params = selectedEmployee ? { employee_id: selectedEmployee } : {};
-                const res = await api.get('/request-analytics/', { params });
-                setData(res.data);
-            } catch (err) {
-                console.error("Analytics error:", err);
-                setData(null);
-            } finally {
-                setFetching(false);
-            }
-        };
-        fetchAnalytics();
-    }, [selectedEmployee]);
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(false);
+        try {
+            const res = await api.get('/request-analytics/', { params: { range } });
+            setData(res.data);
+        } catch (err) {
+            console.error('Personal analytics error:', err);
+            setError(true);
+            setData(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [range]);
 
-    if (parentLoading || fetching) return (
-        <div className="space-y-6 animate-pulse">
-            <div className="h-16 bg-slate-100 rounded-2xl" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1,2,3,4].map(i => <div key={i} className="h-28 bg-slate-100 rounded-2xl" />)}
-            </div>
-        </div>
-    );
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    if (!data) return (
-        <div className="text-center py-16 text-slate-400">
-            <PieChart size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-lg font-medium">Analiz verisi oluşturulamadı.</p>
-        </div>
-    );
+    if (loading) return <LoadingSkeleton />;
+    if (error) return <ErrorState message="Analiz verisi olusturulamadi." onRetry={fetchData} />;
+    if (!data) return <EmptyState />;
 
-    const statusLabels = { APPROVED: 'Onaylandı', REJECTED: 'Reddedildi', PENDING: 'Bekliyor', ORDERED: 'Sipariş Edildi', CANCELLED: 'İptal' };
-    const maxTrendTotal = Math.max(...data.monthly_trend.map(x => x.total), 1);
-    const maxTrendOtHours = Math.max(...data.monthly_trend.map(x => x.overtime_hours || 0), 1);
+    return <PersonalAnalyticsContent data={data} range={range} />;
+};
+
+const PersonalAnalyticsContent = ({ data, range }) => {
+    const trendData = useMemo(() => buildTrendData(data?.monthly_trend), [data]);
+
+    const typeDistData = useMemo(() => {
+        if (!data?.type_distribution) return [];
+        return data.type_distribution.filter(d => d.count > 0).map(d => ({
+            name: d.type, value: d.count, color: d.color || '#94A3B8',
+        }));
+    }, [data]);
+
+    const statusDistData = useMemo(() => {
+        if (!data?.status_distribution) return [];
+        return data.status_distribution.filter(d => d.count > 0).map(d => ({
+            name: d.status, value: d.count, color: d.color || '#94A3B8',
+        }));
+    }, [data]);
+
+    const leaveTypeData = useMemo(() => {
+        if (!data?.leave_type_breakdown) return [];
+        return data.leave_type_breakdown.map(l => ({
+            name: l.name,
+            Talep: l.count || 0,
+            Onay: l.count || 0,  // approved only from backend
+            Gun: l.days || 0,
+        }));
+    }, [data]);
+
+    const flatComparison = useMemo(() => toFlatComparison(data?.comparison), [data]);
+
+    const pendingCount = data.status_distribution?.find(s =>
+        s.status === 'Bekleyen' || s.status === 'PENDING'
+    )?.count || 0;
+
+    const kpiItems = [
+        {
+            title: 'Toplam Talep',
+            value: data.total_requests || 0,
+            gradient: 'from-slate-700 to-slate-900',
+            icon: Layers,
+            delta: makeDelta(data.comparison, 'total'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Onay Orani',
+            value: data.approval_rate || 0,
+            suffix: '%',
+            gradient: 'from-emerald-500 to-emerald-600',
+            icon: CheckCircle2,
+        },
+        {
+            title: 'Ek Mesai',
+            value: data.total_overtime_hours || 0,
+            suffix: 'saat',
+            gradient: 'from-amber-500 to-orange-500',
+            icon: Clock,
+            delta: makeDelta(data.comparison, 'overtime'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Izin Gunleri',
+            value: data.total_leave_days || 0,
+            suffix: 'gun',
+            gradient: 'from-blue-500 to-blue-600',
+            icon: Calendar,
+            delta: makeDelta(data.comparison, 'leave'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Bekleyen',
+            value: pendingCount,
+            gradient: 'from-amber-400 to-amber-500',
+            icon: AlertCircle,
+        },
+    ];
 
     return (
         <div className="space-y-6 animate-in fade-in">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
-                        <BarChart3 size={22} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg text-slate-800">{data.employee?.name || 'Talep Analizi'}</h3>
-                        <p className="text-xs text-slate-500">{data.employee?.department || ''}</p>
-                    </div>
-                </div>
-                <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 text-sm font-bold text-slate-700 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 outline-none min-w-[180px]">
-                    <option value="">Kendim</option>
-                    {subordinates.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
-                </select>
-            </div>
+            <KPIGrid items={kpiItems} columns={5} />
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                    <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Toplam Talep</p>
-                    <h3 className="text-2xl font-black">{data.total_requests}</h3>
-                    <div className="absolute -right-3 -bottom-3 opacity-10"><Layers size={56} /></div>
-                </div>
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                    <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Onay Oranı</p>
-                    <h3 className="text-2xl font-black">{data.approval_rate || 0}%</h3>
-                    <div className="absolute -right-3 -bottom-3 opacity-10"><CheckCircle2 size={56} /></div>
-                </div>
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                    <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Fazla Mesai</p>
-                    <h3 className="text-2xl font-black">{data.total_overtime_hours || 0}<span className="text-sm ml-1 font-bold opacity-80">saat</span></h3>
-                    <div className="absolute -right-3 -bottom-3 opacity-10"><Clock size={56} /></div>
-                </div>
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                    <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">İzin Günleri</p>
-                    <h3 className="text-2xl font-black">{data.total_leave_days || 0}<span className="text-sm ml-1 font-bold opacity-80">gün</span></h3>
-                    <div className="absolute -right-3 -bottom-3 opacity-10"><Calendar size={56} /></div>
-                </div>
-                <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                    <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Bekleyen</p>
-                    <h3 className="text-2xl font-black">{data.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0}</h3>
-                    <div className="absolute -right-3 -bottom-3 opacity-10"><AlertCircle size={56} /></div>
-                </div>
-            </div>
+            <ComparisonBanner comparison={flatComparison} />
 
-            {/* Type breakdown cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { key: 'leave', label: 'İzin', icon: <FileText size={18} />, bg: 'bg-blue-50', text: 'text-blue-600' },
-                    { key: 'overtime', label: 'Fazla Mesai', icon: <Clock size={18} />, bg: 'bg-amber-50', text: 'text-amber-600' },
-                    { key: 'meal', label: 'Yemek', icon: <Utensils size={18} />, bg: 'bg-emerald-50', text: 'text-emerald-600' },
-                    { key: 'cardless', label: 'Kartsız Giriş', icon: <CreditCard size={18} />, bg: 'bg-purple-50', text: 'text-purple-600' },
-                ].map(({ key, label, icon, bg, text }) => {
-                    const s = data.summary?.[key] || {};
-                    const total = s.total || 0;
-                    const approved = s.approved || 0;
-                    const rejected = s.rejected || 0;
-                    const pending = s.pending || 0;
-                    return (
-                        <div key={key} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${bg} ${text}`}>{icon}</div>
-                                <span className="text-sm font-bold text-slate-700">{label}</span>
-                                <span className="ml-auto text-xl font-black text-slate-800">{total}</span>
-                            </div>
-                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                                {approved > 0 && <div className="h-full bg-emerald-400 rounded-l-full" style={{ width: `${(approved / total) * 100}%` }} />}
-                                {pending > 0 && <div className="h-full bg-amber-400" style={{ width: `${(pending / total) * 100}%` }} />}
-                                {rejected > 0 && <div className="h-full bg-red-400 rounded-r-full" style={{ width: `${(rejected / total) * 100}%` }} />}
-                            </div>
-                            <div className="flex justify-between mt-2 text-[11px] font-medium">
-                                <span className="text-emerald-600">{approved} onay</span>
-                                <span className="text-amber-600">{pending} bekleyen</span>
-                                <span className="text-red-500">{rejected} red</span>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+            <TypeBreakdownCards summary={data.summary} healthReport={data.health_report} />
 
-            {/* Monthly trends + charts */}
+            <SectionCard
+                title="Aylik Trend"
+                subtitle="Talep turleri bazinda aylik dagilim"
+                icon={TrendingUp}
+                iconGradient="from-emerald-500 to-emerald-600"
+                collapsible={true}
+                defaultOpen={true}
+            >
+                <TrendChart
+                    data={trendData}
+                    bars={TREND_BARS}
+                    showComposed={true}
+                    composedLines={COMPOSED_LINES}
+                />
+            </SectionCard>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Monthly Trend */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                        <TrendingUp size={18} className="text-emerald-500" /> Aylık Talep Trendi
-                    </h4>
-                    <p className="text-xs text-slate-400 mb-5">Son 6 ayın talep dağılımı</p>
-                    <div className="flex flex-wrap gap-4 mb-4 text-[11px] font-medium">
-                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-blue-400 rounded" /> İzin</span>
-                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-amber-400 rounded" /> Mesai</span>
-                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-emerald-400 rounded" /> Yemek</span>
-                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-purple-400 rounded" /> Kartsız</span>
-                    </div>
-                    <div className="flex items-end gap-3 h-48">
-                        {data.monthly_trend.map((m, i) => {
-                            const total = m.total || 0;
-                            const barH = total > 0 ? (total / maxTrendTotal) * 100 : 2;
-                            return (
-                                <div key={i} className="flex-1 flex flex-col justify-end items-center gap-1 group relative">
-                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">{total} talep</div>
-                                    <div className="w-full rounded-t-lg overflow-hidden flex flex-col-reverse" style={{ height: `${barH}%`, minHeight: '4px' }}>
-                                        {(m.leave || 0) > 0 && <div className="w-full bg-blue-400" style={{ height: `${(m.leave / total) * 100}%` }} />}
-                                        {(m.overtime || 0) > 0 && <div className="w-full bg-amber-400" style={{ height: `${(m.overtime / total) * 100}%` }} />}
-                                        {(m.meal || 0) > 0 && <div className="w-full bg-emerald-400" style={{ height: `${(m.meal / total) * 100}%` }} />}
-                                        {(m.cardless || 0) > 0 && <div className="w-full bg-purple-400" style={{ height: `${(m.cardless / total) * 100}%` }} />}
-                                    </div>
-                                    <span className="text-[10px] font-bold text-slate-400 truncate w-full text-center">{m.label?.split(' ')[0]}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                <SectionCard
+                    title="Tur Dagilimi"
+                    icon={PieChartIcon}
+                    iconGradient="from-indigo-500 to-indigo-600"
+                    collapsible={false}
+                >
+                    <StatusDonut
+                        data={typeDistData}
+                        title="Talep Turleri"
+                        centerLabel={data.total_requests}
+                        centerSubLabel="Toplam"
+                    />
+                </SectionCard>
 
-                {/* Durum Dağılımı */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                        <Briefcase size={18} className="text-purple-500" /> Durum Dağılımı
-                    </h4>
-                    <div className="flex items-center gap-6 mt-4">
-                        <div className="relative w-28 h-28 shrink-0">
-                            <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                                {(() => {
-                                    const total = data.total_requests || 1;
-                                    const approved = data.status_distribution?.find(s => s.status === 'Onaylanan')?.count || 0;
-                                    const rejected = data.status_distribution?.find(s => s.status === 'Reddedilen')?.count || 0;
-                                    const pending = data.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0;
-                                    const aPct = (approved / total) * 100;
-                                    const rPct = (rejected / total) * 100;
-                                    const pPct = (pending / total) * 100;
-                                    return (
-                                        <>
-                                            <circle cx="18" cy="18" r="15.915" fill="none" stroke="#e2e8f0" strokeWidth="3" />
-                                            <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" strokeWidth="3" strokeDasharray={`${aPct} ${100-aPct}`} strokeDashoffset="0" />
-                                            <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" strokeWidth="3" strokeDasharray={`${pPct} ${100-pPct}`} strokeDashoffset={`${-aPct}`} />
-                                            <circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" strokeWidth="3" strokeDasharray={`${rPct} ${100-rPct}`} strokeDashoffset={`${-(aPct+pPct)}`} />
-                                        </>
-                                    );
-                                })()}
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-xl font-black text-slate-800">{data.total_requests}</span>
-                                <span className="text-[10px] text-slate-400">Toplam</span>
-                            </div>
-                        </div>
-                        <div className="space-y-2 flex-1">
-                            {(data.status_distribution || []).map((s, i) => (
-                                <div key={i} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                                        <span className="text-sm font-medium text-slate-600">{s.status}</span>
-                                    </div>
-                                    <span className="text-sm font-bold text-slate-800">{s.count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+                <SectionCard
+                    title="Durum Dagilimi"
+                    icon={BarChart3}
+                    iconGradient="from-purple-500 to-purple-600"
+                    collapsible={false}
+                >
+                    <StatusDonut
+                        data={statusDistData}
+                        title="Talep Durumlari"
+                        centerLabel={data.total_requests}
+                        centerSubLabel="Toplam"
+                    />
+                </SectionCard>
             </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Clock size={18} className="text-purple-500" /> Son Aktiviteler
-                </h4>
-                {(data.recent_requests || []).length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-sm">Henüz talep yok</div>
-                ) : (
-                    <div className="divide-y divide-slate-50">
-                        {data.recent_requests.map((req, i) => (
-                            <div key={i} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 rounded-xl px-2">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm
-                                    ${req.type === 'LEAVE' ? 'bg-blue-500' : req.type === 'OVERTIME' ? 'bg-amber-500' : req.type === 'CARDLESS_ENTRY' ? 'bg-purple-500' : 'bg-emerald-500'}`}>
-                                    {req.type === 'LEAVE' ? <FileText size={16} /> : req.type === 'OVERTIME' ? <Clock size={16} /> : req.type === 'CARDLESS_ENTRY' ? <CreditCard size={16} /> : <Utensils size={16} />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-sm text-slate-700 truncate">{req.type_label}</p>
-                                    <p className="text-xs text-slate-400 truncate">{req.summary}</p>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1
-                                        ${['APPROVED','ORDERED'].includes(req.status) ? 'bg-emerald-100 text-emerald-700' : ['REJECTED','CANCELLED'].includes(req.status) ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                                        {statusLabels[req.status] || req.status}
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 mt-1">{new Date(req.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+            {leaveTypeData.length > 0 && (
+                <SectionCard
+                    title="Izin Turu Dagilimi"
+                    icon={Calendar}
+                    iconGradient="from-blue-500 to-blue-600"
+                    collapsible={true}
+                    defaultOpen={false}
+                >
+                    <LeaveTypeBreakdown data={leaveTypeData} />
+                </SectionCard>
+            )}
+
+            {data.health_report && data.health_report.total > 0 && (
+                <SectionCard
+                    title="Saglik Raporu"
+                    icon={HeartPulse}
+                    iconGradient="from-pink-500 to-pink-600"
+                    collapsible={true}
+                    defaultOpen={true}
+                >
+                    <HealthReportSection stats={data.health_report} />
+                </SectionCard>
+            )}
+
+            <SectionCard
+                title="Son Aktiviteler"
+                icon={Clock}
+                iconGradient="from-violet-500 to-violet-600"
+                collapsible={true}
+                defaultOpen={true}
+            >
+                <RecentActivity data={data.recent_requests} />
+            </SectionCard>
+
+            <div className="flex justify-end">
+                <ExportButton type="personal" range={range} />
             </div>
         </div>
     );
 };
 
-// ===== TeamAnalytics (wraps TeamOvertimeAnalytics + team-overview data) =====
-const TeamAnalytics = () => {
+// ============================================================
+// IncomingAnalytics
+// ============================================================
+const IncomingAnalytics = ({ range }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const res = await api.get('/request-analytics/team-overview/');
-                setData(res.data);
-            } catch (err) {
-                console.error('Team overview error:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(false);
+        try {
+            const res = await api.get('/request-analytics/incoming/', { params: { range } });
+            setData(res.data);
+        } catch (err) {
+            console.error('Incoming analytics error:', err);
+            setError(true);
+            setData(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [range]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    if (loading) return <LoadingSkeleton />;
+    if (error) return <ErrorState icon={ArrowDownLeft} message="Gelen talep verisi olusturulamadi." onRetry={fetchData} />;
+    if (!data) return <EmptyState icon={ArrowDownLeft} />;
+
+    return <IncomingAnalyticsContent data={data} range={range} />;
+};
+
+const IncomingAnalyticsContent = ({ data, range }) => {
+    const trendData = useMemo(() => buildTrendData(data?.monthly_trend), [data]);
+
+    const flatComparison = useMemo(() => toFlatComparison(data?.comparison), [data]);
+
+    const approvalDonutData = useMemo(() => {
+        const items = [];
+        if (data.approved_count > 0) items.push({ name: 'Onaylanan', value: data.approved_count, color: '#10B981' });
+        if (data.rejected_count > 0) items.push({ name: 'Reddedilen', value: data.rejected_count, color: '#EF4444' });
+        if (data.pending_count > 0) items.push({ name: 'Bekleyen', value: data.pending_count, color: '#F59E0B' });
+        return items;
+    }, [data]);
+
+    const kpiItems = [
+        {
+            title: 'Toplam Gelen',
+            value: data.total_received || 0,
+            gradient: 'from-slate-700 to-slate-900',
+            icon: ArrowDownLeft,
+            delta: makeDelta(data.comparison, 'total'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Onaylanan',
+            value: data.approved_count || 0,
+            gradient: 'from-emerald-500 to-emerald-600',
+            icon: CheckCircle2,
+        },
+        {
+            title: 'Reddedilen',
+            value: data.rejected_count || 0,
+            gradient: 'from-red-500 to-red-600',
+            icon: XCircle,
+        },
+        {
+            title: 'Bekleyen',
+            value: data.pending_count || 0,
+            gradient: 'from-amber-500 to-amber-600',
+            icon: AlertCircle,
+        },
+        {
+            title: 'Ort. Karar Suresi',
+            value: data.avg_decision_hours ?? '\u2014',
+            suffix: 'saat',
+            gradient: 'from-blue-500 to-blue-600',
+            icon: Timer,
+        },
+    ];
+
+    // Inline type distribution bars (not a separate component)
+    const byType = data.by_type || {};
+    const typeBarItems = [
+        { key: 'leave', label: 'Izin', color: 'bg-blue-400' },
+        { key: 'overtime', label: 'Ek Mesai', color: 'bg-amber-400' },
+        { key: 'cardless', label: 'Kartsiz Giris', color: 'bg-purple-400' },
+        { key: 'health_report', label: 'Saglik Raporu', color: 'bg-pink-400' },
+    ];
+    const maxTypeTotal = Math.max(
+        ...typeBarItems.map(t => byType[t.key]?.total || 0), 1
+    );
 
     return (
         <div className="space-y-6 animate-in fade-in">
-            {/* Team Request Overview KPIs */}
-            {data && (
-                <>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                            <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Ekip Talepleri</p>
-                            <h3 className="text-2xl font-black">{data.total_requests}</h3>
-                        </div>
-                        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                            <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Onay Oranı</p>
-                            <h3 className="text-2xl font-black">{data.approval_rate}%</h3>
-                        </div>
-                        <div className="bg-gradient-to-br from-amber-500 to-orange-500 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                            <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Mesai Saatleri</p>
-                            <h3 className="text-2xl font-black">{data.overtime_hours}<span className="text-sm ml-1 opacity-80">s</span></h3>
-                        </div>
-                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                            <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">İzin Günleri</p>
-                            <h3 className="text-2xl font-black">{data.leave_days}<span className="text-sm ml-1 opacity-80">g</span></h3>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                            <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Ekip Üyeleri</p>
-                            <h3 className="text-2xl font-black">{data.managed_count}</h3>
-                        </div>
-                    </div>
+            <KPIGrid items={kpiItems} columns={5} />
 
-                    {/* Per-employee breakdown table */}
-                    {(data.by_employee || []).length > 0 && (
-                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                            <h4 className="font-bold text-slate-800 mb-4">Çalışan Bazlı Talep Dağılımı</h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-xs font-bold text-slate-400 uppercase border-b border-slate-100">
-                                            <th className="py-3 px-2">Çalışan</th>
-                                            <th className="py-3 px-2 text-center">İzin</th>
-                                            <th className="py-3 px-2 text-center">Mesai</th>
-                                            <th className="py-3 px-2 text-center">Yemek</th>
-                                            <th className="py-3 px-2 text-center">Kartsız</th>
-                                            <th className="py-3 px-2 text-center">Toplam</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {data.by_employee.filter(e => e.total > 0).map((emp, i) => (
-                                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50">
-                                                <td className="py-3 px-2">
-                                                    <div className="font-bold text-slate-700">{emp.name}</div>
-                                                    <div className="text-[11px] text-slate-400">{emp.department} · {emp.position}</div>
-                                                </td>
-                                                <td className="py-3 px-2 text-center font-bold text-blue-600">{emp.leave || 0}</td>
-                                                <td className="py-3 px-2 text-center font-bold text-amber-600">{emp.overtime || 0}</td>
-                                                <td className="py-3 px-2 text-center font-bold text-emerald-600">{emp.meal || 0}</td>
-                                                <td className="py-3 px-2 text-center font-bold text-purple-600">{emp.cardless || 0}</td>
-                                                <td className="py-3 px-2 text-center font-black text-slate-800">{emp.total}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </>
+            <ComparisonBanner comparison={flatComparison} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SectionCard
+                    title="Onay Orani"
+                    icon={CheckCircle2}
+                    iconGradient="from-emerald-500 to-emerald-600"
+                    collapsible={false}
+                >
+                    <StatusDonut
+                        data={approvalDonutData}
+                        centerLabel={`${data.approval_rate || 0}%`}
+                        centerSubLabel="Onay"
+                    />
+                </SectionCard>
+
+                <SectionCard
+                    title="Tur Dagilimi"
+                    icon={BarChart3}
+                    iconGradient="from-indigo-500 to-indigo-600"
+                    collapsible={false}
+                >
+                    <div className="space-y-3">
+                        {typeBarItems.map(({ key, label, color }) => {
+                            const t = byType[key] || {};
+                            const total = t.total || 0;
+                            return (
+                                <div key={key} className="flex items-center gap-3">
+                                    <span className="w-24 text-sm font-medium text-slate-600 shrink-0">{label}</span>
+                                    <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden">
+                                        <div
+                                            className={clsx('h-full rounded-lg flex items-center justify-end pr-2', color)}
+                                            style={{ width: `${Math.max((total / maxTypeTotal) * 100, 5)}%` }}
+                                        >
+                                            <span className="text-[10px] font-bold text-white">{total}</span>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs text-slate-400 w-16 text-right shrink-0">
+                                        {t.approved || 0} onay
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </SectionCard>
+            </div>
+
+            <SectionCard
+                title="Aylik Gelen Talep Trendi"
+                subtitle="Son donemde size gelen talep sayilari"
+                icon={TrendingUp}
+                iconGradient="from-emerald-500 to-emerald-600"
+                collapsible={true}
+                defaultOpen={true}
+            >
+                <TrendChart
+                    data={trendData}
+                    bars={[
+                        { key: 'leave', label: 'Izin', color: '#3B82F6' },
+                        { key: 'overtime', label: 'Ek Mesai', color: '#F59E0B' },
+                        { key: 'cardless', label: 'Kartsiz Giris', color: '#8B5CF6' },
+                        { key: 'health_report', label: 'Saglik Raporu', color: '#EC4899' },
+                    ]}
+                />
+            </SectionCard>
+
+            {data.top_requesters && data.top_requesters.length > 0 && (
+                <SectionCard
+                    title="En Cok Talep Eden Calisanlar"
+                    icon={Users}
+                    iconGradient="from-purple-500 to-purple-600"
+                    collapsible={true}
+                    defaultOpen={true}
+                >
+                    <TopRequesters data={data.top_requesters} />
+                </SectionCard>
             )}
+
+            {data.approval_bottleneck && data.approval_bottleneck.length > 0 && (
+                <SectionCard
+                    title="Onay Darbogazlari"
+                    icon={AlertCircle}
+                    iconGradient="from-red-500 to-red-600"
+                    collapsible={true}
+                    defaultOpen={true}
+                >
+                    <ApprovalBottleneck data={data.approval_bottleneck} />
+                </SectionCard>
+            )}
+
+            <div className="flex justify-end">
+                <ExportButton type="incoming" range={range} />
+            </div>
+        </div>
+    );
+};
+
+// ============================================================
+// TeamAnalytics
+// ============================================================
+const TeamAnalytics = ({ range }) => {
+    const [teamData, setTeamData] = useState(null);
+    const [compData, setCompData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(false);
+        try {
+            const [teamRes, compRes] = await Promise.allSettled([
+                api.get('/request-analytics/team-overview/', { params: { range } }),
+                api.get('/request-analytics/comprehensive/', { params: { range } }),
+            ]);
+            if (teamRes.status === 'fulfilled') setTeamData(teamRes.value.data);
+            if (compRes.status === 'fulfilled') setCompData(compRes.value.data);
+            if (teamRes.status === 'rejected' && compRes.status === 'rejected') {
+                setError(true);
+            }
+        } catch (err) {
+            console.error('Team analytics error:', err);
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
+    }, [range]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    if (loading) return <LoadingSkeleton />;
+    if (error || (!teamData && !compData)) {
+        return <ErrorState icon={Users} message="Ekip analiz verisi olusturulamadi." onRetry={fetchData} />;
+    }
+
+    return <TeamAnalyticsContent teamData={teamData} compData={compData} range={range} />;
+};
+
+const TeamAnalyticsContent = ({ teamData, compData, range }) => {
+    const data = teamData || {};
+    const comp = compData || {};
+
+    const trendData = useMemo(() => {
+        // Prefer comprehensive trend data if available, fallback to team
+        const source = comp?.monthly_trend || data?.monthly_trend;
+        return buildTrendData(source);
+    }, [comp, data]);
+
+    const flatComparison = useMemo(() => toFlatComparison(comp?.comparison), [comp]);
+
+    // Build summary from team by_type data for TypeBreakdownCards
+    const summary = useMemo(() => {
+        const bt = data.by_type || comp?.overview?.by_type || {};
+        return {
+            leave: bt.leave || { total: 0, approved: 0, rejected: 0, pending: 0 },
+            overtime: bt.overtime || { total: 0, approved: 0, rejected: 0, pending: 0 },
+            meal: bt.meal || { total: 0, approved: 0, rejected: 0, pending: 0 },
+            cardless: bt.cardless || { total: 0, approved: 0, rejected: 0, pending: 0 },
+        };
+    }, [data, comp]);
+
+    const healthReport = useMemo(() => {
+        const hrType = data.by_type?.health_report || comp?.overview?.by_type?.health_report || {};
+        return {
+            total: hrType.total || data.health_report_count || 0,
+            approved: hrType.approved || 0,
+            pending: hrType.pending || 0,
+        };
+    }, [data, comp]);
+
+    // OT source data for OTSourcePie
+    const otSourceData = useMemo(() => {
+        if (!comp?.overtime_sources) return [];
+        const src = comp.overtime_sources;
+        return [
+            { key: 'intended', name: 'Planli', value: src.intended || 0 },
+            { key: 'potential', name: 'Planlanmamis', value: src.potential || 0 },
+            { key: 'manual', name: 'Manuel', value: src.manual || 0 },
+        ].filter(d => d.value > 0);
+    }, [comp]);
+
+    // Leave type data for LeaveTypeBreakdown
+    const leaveTypeData = useMemo(() => {
+        if (!comp?.leave_types) return [];
+        return comp.leave_types.map(l => ({
+            name: l.name,
+            Talep: l.count || 0,
+            Onay: l.approved || 0,
+            Gun: l.total_days || 0,
+        }));
+    }, [comp]);
+
+    // Department breakdown data
+    const deptBreakdown = useMemo(() => {
+        if (!comp?.department_breakdown) return [];
+        return comp.department_breakdown.map(d => ({
+            department: d.name || d.department || '',
+            leave: d.leave || 0,
+            overtime: d.overtime || 0,
+            meal: d.meal || 0,
+            cardless: d.cardless || 0,
+            health_report: d.health_report || 0,
+            total: d.total || 0,
+            employee_count: d.employee_count || 0,
+        }));
+    }, [comp]);
+
+    const kpiItems = [
+        {
+            title: 'Ekip Talepleri',
+            value: data.total_requests || comp?.overview?.total_requests || 0,
+            gradient: 'from-slate-700 to-slate-900',
+            icon: Layers,
+            delta: makeDelta(comp?.comparison, 'total'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Onay Orani',
+            value: data.approval_rate || comp?.overview?.approval_rate || 0,
+            suffix: '%',
+            gradient: 'from-emerald-500 to-emerald-600',
+            icon: CheckCircle2,
+        },
+        {
+            title: 'Mesai Saatleri',
+            value: data.overtime_hours || comp?.overview?.total_overtime_hours || 0,
+            suffix: 'saat',
+            gradient: 'from-amber-500 to-orange-500',
+            icon: Zap,
+            delta: makeDelta(comp?.comparison, 'overtime'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Izin Gunleri',
+            value: data.leave_days || comp?.overview?.total_leave_days || 0,
+            suffix: 'gun',
+            gradient: 'from-blue-500 to-blue-600',
+            icon: Calendar,
+            delta: makeDelta(comp?.comparison, 'leave'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Saglik Raporu',
+            value: data.health_report_count || 0,
+            gradient: 'from-pink-500 to-pink-600',
+            icon: HeartPulse,
+            delta: makeDelta(comp?.comparison, 'health_report'),
+            deltaSuffix: '%',
+        },
+        {
+            title: 'Ekip Uyeleri',
+            value: data.managed_count || comp?.overview?.managed_employee_count || 0,
+            gradient: 'from-violet-500 to-violet-600',
+            icon: Users,
+        },
+    ];
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            <KPIGrid items={kpiItems} columns={6} />
+
+            <ComparisonBanner comparison={flatComparison} />
+
+            <TypeBreakdownCards summary={summary} healthReport={healthReport} />
+
+            <SectionCard
+                title="Aylik Trend"
+                subtitle="Ekip talep turleri bazinda aylik dagilim"
+                icon={TrendingUp}
+                iconGradient="from-emerald-500 to-emerald-600"
+                collapsible={true}
+                defaultOpen={true}
+            >
+                <TrendChart
+                    data={trendData}
+                    bars={TREND_BARS}
+                    showComposed={true}
+                    composedLines={COMPOSED_LINES}
+                />
+            </SectionCard>
+
+            <SectionCard
+                title="Calisan Bazli Talep Dagilimi"
+                icon={User}
+                iconGradient="from-blue-500 to-blue-600"
+                collapsible={true}
+                defaultOpen={true}
+            >
+                <EmployeeBreakdownTable
+                    data={data.by_employee || comp?.employee_breakdown}
+                    showHealthReport={true}
+                />
+            </SectionCard>
+
+            {deptBreakdown.length > 0 && (
+                <SectionCard
+                    title="Departman Dagilimi"
+                    icon={Users}
+                    iconGradient="from-cyan-500 to-cyan-600"
+                    collapsible={true}
+                    defaultOpen={false}
+                >
+                    <DepartmentBreakdown data={deptBreakdown} />
+                </SectionCard>
+            )}
+
+            {comp?.health_report_stats && comp.health_report_stats.total > 0 && (
+                <SectionCard
+                    title="Saglik Raporu"
+                    icon={HeartPulse}
+                    iconGradient="from-pink-500 to-pink-600"
+                    collapsible={true}
+                    defaultOpen={true}
+                >
+                    <HealthReportSection stats={comp.health_report_stats} />
+                </SectionCard>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {otSourceData.length > 0 && (
+                    <SectionCard
+                        title="Ek Mesai Kaynak Dagilimi"
+                        icon={Zap}
+                        iconGradient="from-amber-500 to-amber-600"
+                        collapsible={false}
+                    >
+                        <OTSourcePie data={otSourceData} />
+                    </SectionCard>
+                )}
+
+                {comp?.weekly_pattern && comp.weekly_pattern.length > 0 && (
+                    <SectionCard
+                        title="Haftalik Talep Dagitimi"
+                        icon={Calendar}
+                        iconGradient="from-violet-500 to-violet-600"
+                        collapsible={false}
+                    >
+                        <WeeklyHeatmap data={comp.weekly_pattern} />
+                    </SectionCard>
+                )}
+            </div>
+
+            {leaveTypeData.length > 0 && (
+                <SectionCard
+                    title="Izin Turu Dagilimi"
+                    icon={Calendar}
+                    iconGradient="from-blue-500 to-blue-600"
+                    collapsible={true}
+                    defaultOpen={false}
+                >
+                    <LeaveTypeBreakdown data={leaveTypeData} />
+                </SectionCard>
+            )}
+
+            {comp?.approval_bottleneck && comp.approval_bottleneck.length > 0 && (
+                <SectionCard
+                    title="Onay Darbogazlari"
+                    icon={AlertCircle}
+                    iconGradient="from-red-500 to-red-600"
+                    collapsible={true}
+                    defaultOpen={false}
+                >
+                    <ApprovalBottleneck data={comp.approval_bottleneck} />
+                </SectionCard>
+            )}
+
+            <div className="flex justify-end">
+                <ExportButton type="team" range={range} />
+            </div>
 
             {/* Existing TeamOvertimeAnalytics component */}
             <TeamOvertimeAnalytics />
@@ -342,12 +806,16 @@ const TeamAnalytics = () => {
     );
 };
 
-// ===== Main AnalyticsTab (self-contained) =====
+// ============================================================
+// Main AnalyticsTab
+// ============================================================
 const AnalyticsTab = ({ refreshTrigger }) => {
     const { hasPermission } = useAuth();
     const [activeSubTab, setActiveSubTab] = useState('personal');
+    const [range, setRange] = useState(6);
     const [subordinates, setSubordinates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -370,43 +838,76 @@ const AnalyticsTab = ({ refreshTrigger }) => {
 
     const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || subordinates.length > 0;
 
+    const handleRefresh = useCallback(() => {
+        setRefreshKey(prev => prev + 1);
+    }, []);
+
+    const subTabs = [
+        { key: 'personal', label: 'Kendi Taleplerim', icon: PieChartIcon },
+        ...(isManager ? [
+            { key: 'incoming', label: 'Gelen Talepler', icon: ArrowDownLeft },
+            { key: 'team', label: 'Ekip Analizi', icon: Users },
+        ] : []),
+    ];
+
     return (
         <div className="space-y-0 animate-in fade-in">
-            {/* Sub-tab bar */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+            {/* Header with range selector and refresh */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                {/* Range selector */}
+                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                    {RANGE_OPTIONS.map(opt => (
+                        <button
+                            key={opt.value}
+                            onClick={() => setRange(opt.value)}
+                            className={clsx(
+                                'px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
+                                range === opt.value
+                                    ? 'bg-white text-slate-800 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Refresh button */}
                 <button
-                    onClick={() => setActiveSubTab('personal')}
-                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                        activeSubTab === 'personal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    }`}
+                    onClick={handleRefresh}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                    title="Yenile"
                 >
-                    <PieChart size={16} /> Kendi Taleplerim
+                    <RefreshCw size={14} />
+                    <span className="hidden sm:inline">Yenile</span>
                 </button>
-                {isManager && (
-                    <>
-                        <button
-                            onClick={() => setActiveSubTab('incoming')}
-                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                                activeSubTab === 'incoming' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            <ArrowDownLeft size={16} /> Gelen Talepler
-                        </button>
-                        <button
-                            onClick={() => setActiveSubTab('team')}
-                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                                activeSubTab === 'team' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            <Users size={16} /> Ekip Analizi
-                        </button>
-                    </>
-                )}
             </div>
 
-            {activeSubTab === 'personal' && <PersonalAnalytics subordinates={subordinates} loading={loading} />}
-            {activeSubTab === 'incoming' && isManager && <IncomingAnalytics />}
-            {activeSubTab === 'team' && isManager && <TeamAnalytics />}
+            {/* Sub-tab bar */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                {subTabs.map(tab => {
+                    const Icon = tab.icon;
+                    return (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveSubTab(tab.key)}
+                            className={clsx(
+                                'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2',
+                                activeSubTab === tab.key
+                                    ? 'bg-white text-slate-800 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                            )}
+                        >
+                            <Icon size={16} />
+                            {tab.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {activeSubTab === 'personal' && <PersonalAnalytics key={`personal-${range}-${refreshKey}`} range={range} />}
+            {activeSubTab === 'incoming' && isManager && <IncomingAnalytics key={`incoming-${range}-${refreshKey}`} range={range} />}
+            {activeSubTab === 'team' && isManager && <TeamAnalytics key={`team-${range}-${refreshKey}`} range={range} />}
         </div>
     );
 };
