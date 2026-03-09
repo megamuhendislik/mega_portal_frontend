@@ -7,7 +7,7 @@ import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow
 import EmployeeRequestGroup from '../../components/requests/EmployeeRequestGroup';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
-const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
+const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -21,7 +21,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
     const [activeSubTab, setActiveSubTab] = useState('direct_incoming');
 
     // Filters
-    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [typeFilter, setTypeFilter] = useState(filterType === 'overtime' ? 'OVERTIME' : 'ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [searchText, setSearchText] = useState('');
 
@@ -489,18 +489,20 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger }) => {
                         />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {/* Type filter */}
-                        <div className="flex bg-slate-100 p-1 rounded-lg">
-                            {['ALL', 'LEAVE', 'OVERTIME', 'MEAL', 'CARDLESS_ENTRY'].map(t => (
-                                <button key={t} onClick={() => setTypeFilter(t)}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                        typeFilter === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                    }`}
-                                >
-                                    {t === 'ALL' ? 'Tümü' : t === 'LEAVE' ? 'İzin' : t === 'OVERTIME' ? 'Mesai' : t === 'MEAL' ? 'Yemek' : 'Kartsız'}
-                                </button>
-                            ))}
-                        </div>
+                        {/* Type filter — hidden when filterType prop locks it */}
+                        {!filterType && (
+                            <div className="flex bg-slate-100 p-1 rounded-lg">
+                                {['ALL', 'LEAVE', 'OVERTIME', 'MEAL', 'CARDLESS_ENTRY'].map(t => (
+                                    <button key={t} onClick={() => setTypeFilter(t)}
+                                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                                            typeFilter === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                        }`}
+                                    >
+                                        {t === 'ALL' ? 'Tümü' : t === 'LEAVE' ? 'İzin' : t === 'OVERTIME' ? 'Mesai' : t === 'MEAL' ? 'Yemek' : 'Kartsız'}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {/* Status filter — only for Ekip Talepleri tab */}
                         {activeSubTab === 'team_requests' && (
                             <div className="flex bg-slate-100 p-1 rounded-lg">
