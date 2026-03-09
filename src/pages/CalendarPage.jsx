@@ -1,55 +1,401 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import moment from 'moment';
 import 'moment/locale/tr';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
-import CalendarSidePanel from '../components/CalendarSidePanel';
-import TeamGanttBar from '../components/TeamGanttBar';
 import useInterval from '../hooks/useInterval';
-import { Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight, Briefcase, Calendar as CalendarIcon, CalendarCheck, ClipboardList, Heart, CreditCard, MapPin, UsersRound, Building2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
+    Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight,
+    Calendar as CalendarIcon, CalendarCheck, ClipboardList, Heart,
+    CreditCard, MapPin, Building2, Trash2, Edit3, Clock, Star,
+    UsersRound, X as XIcon
+} from 'lucide-react';
 
 moment.locale('tr');
-const localizer = momentLocalizer(moment);
 
-const messages = {
-    allDay: 'Tüm Gün',
-    previous: 'Geri',
-    next: 'İleri',
-    today: 'Bugün',
-    month: 'Ay',
-    week: 'Hafta',
-    day: 'Gün',
-    agenda: 'Ajanda',
-    date: 'Tarih',
-    time: 'Zaman',
-    event: 'Etkinlik',
-    noEventsInRange: 'Bu aralıkta etkinlik yok.'
+// ─── Color config for event types ───
+const EVENT_COLORS = {
+    PERSONAL:    { dot: 'bg-blue-500',   bg: 'bg-blue-50',   border: 'border-blue-200', text: 'text-blue-700',   label: 'Kişisel' },
+    HOLIDAY:     { dot: 'bg-red-500',    bg: 'bg-red-50',    border: 'border-red-200',  text: 'text-red-700',    label: 'Tatil' },
+    OVERTIME_ASSIGNMENT: { dot: 'bg-violet-500', bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', label: 'Mesai Görevi' },
+    OVERTIME_REQUEST:    { dot: 'bg-amber-500',  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  label: 'Mesai Talebi' },
+    LEAVE_REQUEST:       { dot: 'bg-cyan-500',   bg: 'bg-cyan-50',   border: 'border-cyan-200',   text: 'text-cyan-700',   label: 'İzin' },
+    EXTERNAL_DUTY:       { dot: 'bg-purple-500', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', label: 'Dış Görev' },
+    HEALTH_REPORT:       { dot: 'bg-pink-500',   bg: 'bg-pink-50',   border: 'border-pink-200',   text: 'text-pink-700',   label: 'Sağlık' },
+    CARDLESS_ENTRY:      { dot: 'bg-orange-500', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', label: 'Kartsız' },
 };
 
+const EVENT_ICONS = {
+    PERSONAL: Lock,
+    HOLIDAY: Globe,
+    OVERTIME_ASSIGNMENT: CalendarCheck,
+    OVERTIME_REQUEST: ClipboardList,
+    LEAVE_REQUEST: CalendarIcon,
+    EXTERNAL_DUTY: MapPin,
+    HEALTH_REPORT: Heart,
+    CARDLESS_ENTRY: CreditCard,
+};
+
+const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+// ─── Month Grid Component ───
+const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDate, onSelectDate }) => {
+    const startOfMonth = moment(currentMonth).startOf('month');
+    const endOfMonth = moment(currentMonth).endOf('month');
+
+    // Build 6-week grid starting from Monday
+    const startDay = startOfMonth.clone().startOf('isoWeek');
+    const endDay = endOfMonth.clone().endOf('isoWeek');
+    const weeks = [];
+    let day = startDay.clone();
+    while (day.isSameOrBefore(endDay, 'day')) {
+        const week = [];
+        for (let i = 0; i < 7; i++) {
+            week.push(day.clone());
+            day.add(1, 'day');
+        }
+        weeks.push(week);
+    }
+
+    // Group events by date string
+    const eventsByDate = useMemo(() => {
+        const map = {};
+        events.forEach(evt => {
+            const start = moment(evt.start);
+            const end = moment(evt.end);
+            let d = start.clone().startOf('day');
+            const lastDay = end.clone().startOf('day');
+            while (d.isSameOrBefore(lastDay, 'day')) {
+                const key = d.format('YYYY-MM-DD');
+                if (!map[key]) map[key] = [];
+                map[key].push(evt);
+                d.add(1, 'day');
+            }
+        });
+        return map;
+    }, [events]);
+
+    const today = moment().format('YYYY-MM-DD');
+    const selectedStr = selectedDate ? moment(selectedDate).format('YYYY-MM-DD') : null;
+
+    return (
+        <div>
+            {/* Day headers */}
+            <div className="grid grid-cols-7 mb-1">
+                {DAY_NAMES.map(name => (
+                    <div key={name} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-1">
+                        {name}
+                    </div>
+                ))}
+            </div>
+
+            {/* Weeks */}
+            <div className="grid gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
+                {weeks.map((week, wi) => (
+                    <div key={wi} className="grid grid-cols-7 gap-px">
+                        {week.map(d => {
+                            const dateStr = d.format('YYYY-MM-DD');
+                            const isCurrentMonth = d.isSame(currentMonth, 'month');
+                            const isToday = dateStr === today;
+                            const isSelected = dateStr === selectedStr;
+                            const isWeekend = d.isoWeekday() >= 6;
+                            const isHoliday = holidays.has(dateStr);
+                            const isHalfDay = halfDayHolidays.has(dateStr);
+                            const isPast = d.isBefore(moment(), 'day');
+                            const dayEvents = eventsByDate[dateStr] || [];
+
+                            // Unique event type dots (max 4)
+                            const dotTypes = [...new Set(dayEvents.map(e => e.type))].slice(0, 4);
+                            const extraCount = [...new Set(dayEvents.map(e => e.type))].length - 4;
+
+                            let cellClass = 'bg-white';
+                            if (!isCurrentMonth) cellClass = 'bg-slate-50';
+                            if (isWeekend && isCurrentMonth) cellClass = 'bg-amber-50/60';
+                            if (isHoliday) cellClass = 'bg-red-50/70';
+                            if (isHalfDay) cellClass = 'half-day-cell';
+                            if (isPast && isCurrentMonth) cellClass += ' opacity-60';
+                            if (isSelected) cellClass = 'bg-violet-500';
+                            if (isToday && !isSelected) cellClass += ' ring-2 ring-inset ring-violet-400';
+
+                            return (
+                                <button
+                                    key={dateStr}
+                                    onClick={() => onSelectDate(d.toDate())}
+                                    className={`
+                                        relative flex flex-col items-center justify-start p-1.5 min-h-[60px] md:min-h-[72px]
+                                        transition-all hover:bg-violet-50 cursor-pointer
+                                        ${cellClass}
+                                    `}
+                                    title={isHoliday ? dayEvents.find(e => e.type === 'HOLIDAY')?.title : undefined}
+                                >
+                                    <span className={`
+                                        text-xs font-bold leading-none
+                                        ${isSelected ? 'text-white' : isHoliday ? 'text-red-600' : isWeekend ? 'text-amber-700' : !isCurrentMonth ? 'text-slate-300' : 'text-slate-700'}
+                                    `}>
+                                        {d.date()}
+                                    </span>
+
+                                    {/* Event dots */}
+                                    {dotTypes.length > 0 && (
+                                        <div className="flex items-center gap-0.5 mt-1 flex-wrap justify-center">
+                                            {dotTypes.map(type => {
+                                                const color = EVENT_COLORS[type]?.dot || 'bg-slate-400';
+                                                return <span key={type} className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white/80' : color}`} />;
+                                            })}
+                                            {extraCount > 0 && (
+                                                <span className={`text-[7px] font-bold ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>+{extraCount}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ─── Day Detail Panel ───
+const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isManager }) => {
+    if (!date) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 py-12">
+                <CalendarIcon size={40} className="text-slate-300" />
+                <p className="text-sm font-medium">Bir gün seçin</p>
+            </div>
+        );
+    }
+
+    const dateStr = moment(date).format('YYYY-MM-DD');
+    const dayName = moment(date).format('dddd');
+    const formattedDate = moment(date).format('D MMMM YYYY');
+
+    // Filter events for this date
+    const dayEvents = events.filter(evt => {
+        const start = moment(evt.start).startOf('day');
+        const end = moment(evt.end).startOf('day');
+        const d = moment(date).startOf('day');
+        return d.isSameOrAfter(start) && d.isSameOrBefore(end);
+    });
+
+    // Group by type
+    const grouped = {};
+    dayEvents.forEach(evt => {
+        const type = evt.type || 'PERSONAL';
+        if (!grouped[type]) grouped[type] = [];
+        grouped[type].push(evt);
+    });
+
+    // Team members with events on this date
+    const teamForDay = (teamEvents || []).filter(te =>
+        te.events?.some(ev => {
+            const evDate = moment(ev.date || ev.start).format('YYYY-MM-DD');
+            return evDate === dateStr;
+        })
+    );
+
+    return (
+        <div className="flex flex-col h-full">
+            {/* Date header */}
+            <div className="pb-3 mb-3 border-b border-slate-200">
+                <h3 className="text-lg font-bold text-slate-800">{formattedDate}</h3>
+                <p className="text-xs font-medium text-slate-400 capitalize">{dayName}</p>
+            </div>
+
+            {/* Events list */}
+            <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+                {dayEvents.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                        <Clock size={28} className="mx-auto mb-2 text-slate-300" />
+                        <p className="text-sm font-medium">Bu gün için etkinlik yok</p>
+                    </div>
+                ) : (
+                    Object.entries(grouped).map(([type, evts]) => (
+                        <div key={type}>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                {EVENT_COLORS[type]?.label || type}
+                            </p>
+                            <div className="space-y-1.5">
+                                {evts.map(evt => {
+                                    const colors = EVENT_COLORS[evt.type] || EVENT_COLORS.PERSONAL;
+                                    const IconComp = EVENT_ICONS[evt.type] || CalendarIcon;
+                                    const canModify = evt.type === 'PERSONAL' && evt.is_owner;
+                                    const timeStr = evt.allDay
+                                        ? 'Tüm Gün'
+                                        : `${moment(evt.start).format('HH:mm')} - ${moment(evt.end).format('HH:mm')}`;
+
+                                    return (
+                                        <div key={evt.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${colors.border} ${colors.bg} group`}>
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${colors.bg} ${colors.text}`}>
+                                                <IconComp size={14} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-xs font-bold ${colors.text} truncate`}>{evt.title}</p>
+                                                <p className="text-[10px] text-slate-500 font-medium">{timeStr}</p>
+                                                {evt.location && (
+                                                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{evt.location}</p>
+                                                )}
+                                                {evt.employee_name && !evt.is_owner && (
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">{evt.employee_name}</p>
+                                                )}
+                                            </div>
+                                            {canModify && (
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onEdit(evt); }}
+                                                        className="p-1 rounded-md hover:bg-blue-100 text-blue-500 transition-colors"
+                                                        title="Düzenle"
+                                                    >
+                                                        <Edit3 size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onDelete(evt); }}
+                                                        className="p-1 rounded-md hover:bg-red-100 text-red-500 transition-colors"
+                                                        title="Sil"
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))
+                )}
+
+                {/* Team status for this day */}
+                {isManager && teamForDay.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                            Ekip Durumu
+                        </p>
+                        <div className="space-y-1">
+                            {teamForDay.map(member => {
+                                const memberEvents = member.events?.filter(ev => moment(ev.date || ev.start).format('YYYY-MM-DD') === dateStr) || [];
+                                return (
+                                    <div key={member.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50">
+                                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0">
+                                            {member.name?.charAt(0) || '?'}
+                                        </div>
+                                        <span className="text-xs font-medium text-slate-700 flex-1 truncate">{member.name}</span>
+                                        <div className="flex gap-1">
+                                            {memberEvents.map((ev, i) => {
+                                                const c = EVENT_COLORS[ev.type] || EVENT_COLORS.PERSONAL;
+                                                return <span key={i} className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${c.bg} ${c.text}`}>{c.label}</span>;
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Add button */}
+            <div className="pt-3 mt-3 border-t border-slate-200 shrink-0">
+                <button
+                    onClick={onAdd}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-500/20 hover:bg-violet-700 transition-all active:scale-[0.98]"
+                >
+                    <Plus size={16} />
+                    Yeni Etkinlik
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ─── Team Table ───
+const TeamTable = ({ teamData, selectedDate }) => {
+    if (!teamData || teamData.length === 0) {
+        return (
+            <div className="text-center py-6 text-slate-400">
+                <Users size={28} className="mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-medium">Ekip verisi bulunamadı</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-slate-200">
+                        <th className="text-left py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Personel</th>
+                        <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">İzin</th>
+                        <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ek Mesai</th>
+                        <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sağlık</th>
+                        <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kartsız</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {teamData.map(member => {
+                        const memberEvents = member.events || [];
+                        const hasLeave = memberEvents.some(e => e.type === 'LEAVE_REQUEST');
+                        const hasOT = memberEvents.some(e => e.type === 'OVERTIME_ASSIGNMENT' || e.type === 'OVERTIME_REQUEST');
+                        const hasHealth = memberEvents.some(e => e.type === 'HEALTH_REPORT');
+                        const hasCardless = memberEvents.some(e => e.type === 'CARDLESS_ENTRY');
+
+                        return (
+                            <tr key={member.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="py-2.5 px-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                                            {member.name?.charAt(0) || '?'}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold text-slate-700 truncate">{member.name}</p>
+                                            {member.department && (
+                                                <p className="text-[10px] text-slate-400 truncate">{member.department}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="text-center py-2.5 px-3">
+                                    {hasLeave ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-700">İzinli</span> : <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="text-center py-2.5 px-3">
+                                    {hasOT ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700">Var</span> : <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="text-center py-2.5 px-3">
+                                    {hasHealth ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700">Rapor</span> : <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="text-center py-2.5 px-3">
+                                    {hasCardless ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700">Var</span> : <span className="text-slate-300">—</span>}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+// ─── Main CalendarPage ───
 const CalendarPage = () => {
     const { user } = useAuth();
+
+    // Calendar state
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [events, setEvents] = useState([]);
     const [holidays, setHolidays] = useState(new Set());
     const [halfDayHolidays, setHalfDayHolidays] = useState(new Set());
     const [loading, setLoading] = useState(false);
 
-    // View State
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [calendarView, setCalendarView] = useState('month');
-
-    // Side Panel State
-    const [sidePanelOpen, setSidePanelOpen] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(null);
-
-    // Modal State
+    // Modal state
     const [showModal, setShowModal] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState(null);
     const [selectedEventData, setSelectedEventData] = useState(null);
 
-    // Filter Toggles
+    // Filter toggles
     const [showOTAssignments, setShowOTAssignments] = useState(false);
     const [showOTRequests, setShowOTRequests] = useState(false);
     const [showLeaves, setShowLeaves] = useState(true);
@@ -57,50 +403,25 @@ const CalendarPage = () => {
     const [showCardless, setShowCardless] = useState(false);
     const [showTeamView, setShowTeamView] = useState(false);
 
-    // Managed employees (for OT assignment)
+    // Manager/team state
     const [managedEmployees, setManagedEmployees] = useState([]);
+    const [teamData, setTeamData] = useState([]);
     const isManager = managedEmployees.length > 0;
 
+    // Fetch managed employees
     useEffect(() => {
-        const fetchManaged = async () => {
-            try {
-                const res = await api.get('/employees/subordinates/');
-                setManagedEmployees(res.data || []);
-            } catch { /* not a manager */ }
-        };
-        fetchManaged();
+        api.get('/employees/subordinates/').then(res => {
+            setManagedEmployees(Array.isArray(res.data) ? res.data : res.data?.results || []);
+        }).catch(() => {});
     }, []);
 
-    useEffect(() => {
-        fetchCalendarData();
-    }, [currentDate, calendarView, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless]);
-
-    useInterval(() => {
-        if (!loading && !showModal && !sidePanelOpen) {
-            fetchCalendarData();
-        }
-    }, 60000);
-
-    const fetchCalendarData = async () => {
+    // Fetch calendar events
+    const fetchCalendarData = useCallback(async () => {
         setLoading(true);
         try {
             const mDate = moment(currentDate);
-            let start, end;
-
-            if (calendarView === 'month') {
-                start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
-                end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
-            } else if (calendarView === 'week') {
-                start = mDate.clone().startOf('week').format('YYYY-MM-DD');
-                end = mDate.clone().endOf('week').format('YYYY-MM-DD');
-            } else if (calendarView === 'day') {
-                start = mDate.clone().subtract(1, 'day').format('YYYY-MM-DD');
-                end = mDate.clone().add(1, 'day').format('YYYY-MM-DD');
-            } else {
-                // agenda view
-                start = mDate.clone().startOf('month').format('YYYY-MM-DD');
-                end = mDate.clone().endOf('month').format('YYYY-MM-DD');
-            }
+            const start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
+            const end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
 
             let url = `/calendar-events/?start=${start}&end=${end}`;
             if (showOTAssignments) url += '&include_ot_assignments=true';
@@ -111,7 +432,7 @@ const CalendarPage = () => {
 
             const response = await api.get(url);
             const rawEvents = response.data || [];
-            const parsedEvents = [];
+            const parsed = [];
             const newHolidays = new Set();
             const newHalfDays = new Set();
 
@@ -122,561 +443,244 @@ const CalendarPage = () => {
                 if (evt.type === 'HOLIDAY') {
                     const dateStr = moment(eventStart).format('YYYY-MM-DD');
                     newHolidays.add(dateStr);
-                    if (evt.is_half_day) {
-                        newHalfDays.add(dateStr);
-                    }
+                    if (evt.is_half_day) newHalfDays.add(dateStr);
                 }
 
-                parsedEvents.push({
-                    ...evt,
-                    start: eventStart,
-                    end: eventEnd,
-                    is_shared: evt.shared_with?.length > 0 || evt.shared_departments?.length > 0
-                });
+                parsed.push({ ...evt, start: eventStart, end: eventEnd });
             });
 
-            setEvents(parsedEvents);
+            setEvents(parsed);
             setHolidays(newHolidays);
             setHalfDayHolidays(newHalfDays);
         } catch (error) {
-            console.error("Calendar fetch error:", error);
+            console.error('Calendar fetch error:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentDate, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless]);
 
-    // --- Event Styling ---
-    const eventPropGetter = (event) => {
-        let backgroundColor = event.color || '#3b82f6';
-        let borderColor = 'transparent';
+    useEffect(() => { fetchCalendarData(); }, [fetchCalendarData]);
 
-        if (event.type === 'PERSONAL') {
-            // Visibility-based coloring
-            if (event.visibility === 'PUBLIC') {
-                backgroundColor = '#10b981';
-                borderColor = '#047857';
-            } else if (event.visibility === 'DEPARTMENT') {
-                backgroundColor = '#14b8a6';
-                borderColor = '#0d9488';
-            } else if (!event.is_owner) {
-                backgroundColor = '#10b981';
-                borderColor = '#047857';
-            }
-            // Meeting type override
-            if (event.event_type === 'MEETING') {
-                backgroundColor = event.visibility === 'PUBLIC' ? '#10b981' : '#14b8a6';
-            } else if (event.event_type === 'REMINDER') {
-                backgroundColor = '#eab308';
-                borderColor = '#ca8a04';
-            }
-        }
+    // Polling
+    useInterval(() => {
+        if (!loading && !showModal) fetchCalendarData();
+    }, 60000);
 
-        if (event.status === 'HOLIDAY') {
-            backgroundColor = '#ef4444';
-        }
-        if (event.type === 'OVERTIME_ASSIGNMENT') {
-            backgroundColor = '#8b5cf6';
-            borderColor = '#7c3aed';
-        }
-        if (event.type === 'OVERTIME_REQUEST') {
-            backgroundColor = event.status === 'APPROVED' ? '#22c55e' : '#f59e0b';
-            borderColor = event.status === 'APPROVED' ? '#16a34a' : '#d97706';
-        }
-        if (event.type === 'LEAVE_REQUEST') {
-            backgroundColor = '#06b6d4';
-            borderColor = '#0891b2';
-        }
-        if (event.type === 'EXTERNAL_DUTY') {
-            backgroundColor = '#a855f7';
-            borderColor = '#9333ea';
-        }
-        if (event.type === 'HEALTH_REPORT') {
-            backgroundColor = '#ec4899';
-            borderColor = '#db2777';
-        }
-        if (event.type === 'CARDLESS_ENTRY') {
-            backgroundColor = '#f97316';
-            borderColor = '#ea580c';
-        }
+    // Fetch team timeline (managers only)
+    useEffect(() => {
+        if (!showTeamView || !isManager) { setTeamData([]); return; }
+        const start = moment(currentDate).startOf('month').format('YYYY-MM-DD');
+        const end = moment(currentDate).endOf('month').format('YYYY-MM-DD');
+        api.get(`/calendar-events/team-timeline/?start=${start}&end=${end}&include_leaves=true&include_overtime=true&include_health_reports=true&include_cardless=true`)
+            .then(res => setTeamData(res.data?.employees || []))
+            .catch(() => setTeamData([]));
+    }, [showTeamView, isManager, currentDate]);
 
-        return {
-            style: {
-                backgroundColor,
-                borderLeft: `4px solid ${borderColor !== 'transparent' ? borderColor : 'rgba(0,0,0,0.1)'}`,
-                borderRadius: '6px',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                color: '#fff',
-                padding: '2px 4px'
-            }
-        };
-    };
+    // Navigation
+    const goToPrevMonth = () => setCurrentDate(moment(currentDate).subtract(1, 'month').toDate());
+    const goToNextMonth = () => setCurrentDate(moment(currentDate).add(1, 'month').toDate());
+    const goToToday = () => { setCurrentDate(new Date()); setSelectedDate(new Date()); };
+    const monthTitle = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(currentDate);
 
-    const dayPropGetter = (date) => {
-        const dateStr = moment(date).format('YYYY-MM-DD');
-        const dayOfWeek = date.getDay();
-        const isHoliday = holidays.has(dateStr);
-        const isHalfDay = halfDayHolidays.has(dateStr);
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isToday = moment(date).isSame(moment(), 'day');
-        const isBeforeToday = moment(date).isBefore(moment(), 'day');
-
-        if (isToday) {
-            return {
-                className: 'bg-indigo-50/90 border-2 border-indigo-200',
-                style: { backgroundColor: '#e0e7ff', color: '#1e1b4b' }
-            };
-        }
-
-        let className = '';
-        let style = {};
-
-        if (isHalfDay) {
-            className = 'half-day-holiday';
-            style = {};
-        } else if (isHoliday) {
-            className = 'bg-red-50/70';
-            style = { backgroundColor: 'rgba(254, 226, 226, 0.4)' };
-            if (isBeforeToday) className += ' grayscale-[0.4]';
-        } else if (isWeekend) {
-            className = 'bg-slate-100/80';
-            style = { backgroundColor: '#f1f5f9' };
-        }
-
-        if (isBeforeToday) {
-            className += ' crossed-day opacity-80';
-            style = { ...style, color: '#94a3b8' };
-        }
-
-        return { className, style };
-    };
-
-    // --- Handlers ---
-    const handleSelectSlot = ({ start }) => {
-        setSelectedDate(start);
-        setSidePanelOpen(true);
-    };
-
-    const handleSelectEvent = (event) => {
-        if (event.type === 'PERSONAL' && event.is_owner) {
-            setSelectedEventData({
-                id: event.db_id,
-                title: event.title,
-                start_time: event.start,
-                end_time: event.end,
-                is_all_day: event.allDay,
-                color: event.color,
-                description: event.description,
-                shared_with: event.shared_with,
-                shared_departments: event.shared_departments,
-                reminders: event.reminders,
-                is_owner: event.is_owner,
-                visibility: event.visibility,
-                event_type: event.event_type,
-                location: event.location,
-            });
-            setShowModal(true);
-        } else {
-            // For non-personal events, open side panel on that date
-            setSelectedDate(event.start);
-            setSidePanelOpen(true);
-        }
-    };
-
-    const handleSidePanelAdd = () => {
-        setSelectedSlot(selectedDate || new Date());
-        setSelectedEventData(null);
-        setSidePanelOpen(false);
+    // Event handlers
+    const handleEdit = (evt) => {
+        setSelectedEventData({
+            id: evt.db_id,
+            title: evt.title,
+            start_time: evt.start,
+            end_time: evt.end,
+            is_all_day: evt.allDay,
+            color: evt.color,
+            description: evt.description,
+            shared_with: evt.shared_with,
+            shared_departments: evt.shared_departments,
+            reminders: evt.reminders,
+            is_owner: evt.is_owner,
+            visibility: evt.visibility,
+            event_type: evt.event_type,
+            location: evt.location,
+        });
         setShowModal(true);
     };
 
-    const handleSidePanelEdit = (evt) => {
-        setSidePanelOpen(false);
-        handleSelectEvent(evt);
+    const handleDelete = async (evt) => {
+        if (!evt.db_id) return;
+        if (!window.confirm(`"${evt.title}" etkinliğini silmek istediğinize emin misiniz?`)) return;
+        try {
+            await api.delete(`/personal-events/${evt.db_id}/`);
+            toast.success('Etkinlik silindi.');
+            fetchCalendarData();
+        } catch {
+            toast.error('Silme sırasında hata oluştu.');
+        }
+    };
+
+    const handleAdd = () => {
+        setSelectedEventData(null);
+        setShowModal(true);
     };
 
     const handleModalSuccess = () => {
         setShowModal(false);
+        setSelectedEventData(null);
         fetchCalendarData();
     };
 
-    // --- Localization ---
-    const formats = useMemo(() => {
-        const trIntlDay = new Intl.DateTimeFormat('tr-TR', { weekday: 'long' });
-        const trIntlMonthYear = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' });
-        const trIntlDayMonth = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' });
+    // Filter toggle config
+    const filters = [
+        { key: 'showOTAssignments', value: showOTAssignments, set: setShowOTAssignments, icon: CalendarCheck, label: 'Mesai Görevleri', active: 'bg-violet-50 text-violet-700 border-violet-200' },
+        { key: 'showOTRequests', value: showOTRequests, set: setShowOTRequests, icon: ClipboardList, label: 'Mesai Talepleri', active: 'bg-amber-50 text-amber-700 border-amber-200' },
+        { key: 'showLeaves', value: showLeaves, set: setShowLeaves, icon: CalendarIcon, label: 'İzinler', active: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+        { key: 'showHealthReports', value: showHealthReports, set: setShowHealthReports, icon: Heart, label: 'Sağlık', active: 'bg-pink-50 text-pink-700 border-pink-200' },
+        { key: 'showCardless', value: showCardless, set: setShowCardless, icon: CreditCard, label: 'Kartsız', active: 'bg-orange-50 text-orange-700 border-orange-200' },
+    ];
 
-        return {
-            dateFormat: 'DD',
-            dayFormat: (date) => {
-                const day = date.getDate().toString().padStart(2, '0');
-                const name = trIntlDay.format(date);
-                return `${day} ${name}`;
-            },
-            weekdayFormat: (date) => trIntlDay.format(date),
-            monthHeaderFormat: (date) => trIntlMonthYear.format(date),
-            dayRangeHeaderFormat: ({ start, end }) =>
-                `${trIntlDayMonth.format(start)} - ${trIntlDayMonth.format(end)}`,
-            agendaDateFormat: (date) => `${trIntlDayMonth.format(date)} ${trIntlDay.format(date)}`,
-            agendaTimeFormat: 'HH:mm',
-        };
-    }, []);
+    // Legend items (only show active filters)
+    const legendItems = [
+        { dot: 'bg-blue-500', label: 'Kişisel', always: true },
+        { dot: 'bg-red-500', label: 'Tatil', always: true },
+        ...(showOTAssignments ? [{ dot: 'bg-violet-500', label: 'Mesai Görevi' }] : []),
+        ...(showOTRequests ? [{ dot: 'bg-amber-500', label: 'Mesai Talebi' }] : []),
+        ...(showLeaves ? [{ dot: 'bg-cyan-500', label: 'İzin' }] : []),
+        ...(showHealthReports ? [{ dot: 'bg-pink-500', label: 'Sağlık' }] : []),
+        ...(showCardless ? [{ dot: 'bg-orange-500', label: 'Kartsız' }] : []),
+    ];
 
-    // --- Toolbar ---
-    const CustomToolbar = (toolbar) => {
-        const goToBack = () => { toolbar.onNavigate('PREV'); };
-        const goToNext = () => { toolbar.onNavigate('NEXT'); };
-        const goToToday = () => { toolbar.onNavigate('TODAY'); };
-
-        const title = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(toolbar.date);
-
-        return (
-            <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                {/* Row 1: Navigation + View Switcher */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <button onClick={goToToday} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-                            Bugün
-                        </button>
-                        <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                            <button onClick={goToBack} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                                <ChevronLeft size={20} />
-                            </button>
-                            <button onClick={goToNext} className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                                <ChevronRight size={20} />
-                            </button>
-                        </div>
-                        <span className="capitalize font-bold text-xl text-slate-800 ml-2">
-                            {title}
-                        </span>
+    return (
+        <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8">
+            {/* ─── Header ─── */}
+            <div className="mb-5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Takvim</h1>
+                        <p className="text-slate-500 text-sm font-medium mt-0.5">Planlarınızı ve etkinliklerinizi yönetin</p>
                     </div>
 
+                    {/* Month Navigation */}
                     <div className="flex items-center gap-2">
-                        {['month', 'week', 'day', 'agenda'].map(view => (
-                            <button
-                                key={view}
-                                onClick={() => toolbar.onView(view)}
-                                className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-all ${calendarView === view ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
-                            >
-                                {view === 'month' ? 'Ay' : view === 'week' ? 'Hafta' : view === 'day' ? 'Gün' : 'Ajanda'}
+                        <button onClick={goToToday} className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                            Bugün
+                        </button>
+                        <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                            <button onClick={goToPrevMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                                <ChevronLeft size={18} />
                             </button>
-                        ))}
+                            <span className="px-3 text-sm font-bold text-slate-800 capitalize min-w-[140px] text-center">{monthTitle}</span>
+                            <button onClick={goToNextMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                {/* Row 2: Filters + Actions */}
+                {/* Filter toggles */}
                 <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                        onClick={() => setShowOTAssignments(!showOTAssignments)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showOTAssignments ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
-                        <CalendarCheck size={14} />
-                        Mesai Görevleri
-                    </button>
-
-                    <button
-                        onClick={() => setShowOTRequests(!showOTRequests)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showOTRequests ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
-                        <ClipboardList size={14} />
-                        Mesai Talepleri
-                    </button>
-
-                    <div className="w-px h-6 bg-slate-200"></div>
-
-                    <button
-                        onClick={() => setShowLeaves(!showLeaves)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showLeaves ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
-                        <CalendarIcon size={14} />
-                        İzinler
-                    </button>
-
-                    <button
-                        onClick={() => setShowHealthReports(!showHealthReports)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showHealthReports ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
-                        <Heart size={14} />
-                        Sağlık Raporu
-                    </button>
-
-                    <button
-                        onClick={() => setShowCardless(!showCardless)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showCardless ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
-                        <CreditCard size={14} />
-                        Kartsız Giriş
-                    </button>
+                    {filters.map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => f.set(!f.value)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${f.value ? f.active : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        >
+                            <f.icon size={13} />
+                            <span className="hidden sm:inline">{f.label}</span>
+                        </button>
+                    ))}
 
                     {isManager && (
                         <>
-                            <div className="w-px h-6 bg-slate-200"></div>
+                            <div className="w-px h-5 bg-slate-200" />
                             <button
                                 onClick={() => setShowTeamView(!showTeamView)}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showTeamView ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                             >
-                                <UsersRound size={14} />
-                                Ekip Görünümü
+                                <UsersRound size={13} />
+                                <span className="hidden sm:inline">Ekip</span>
                             </button>
                         </>
                     )}
 
-                    <div className="ml-auto">
-                        <button
-                            onClick={() => { setSelectedSlot(new Date()); setSelectedEventData(null); setShowModal(true); }}
-                            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all active:scale-95"
-                        >
-                            <Plus size={18} />
-                            <span className="hidden sm:inline">Etkinlik Ekle</span>
-                        </button>
+                    <button
+                        onClick={handleAdd}
+                        className="ml-auto flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-violet-500/20 hover:bg-violet-700 transition-all active:scale-[0.98]"
+                    >
+                        <Plus size={15} />
+                        <span className="hidden sm:inline">Etkinlik Ekle</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* ─── 2-Column Body ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5">
+                {/* Left: Month Grid */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-sm">
+                    <MonthGrid
+                        currentMonth={currentDate}
+                        events={events}
+                        holidays={holidays}
+                        halfDayHolidays={halfDayHolidays}
+                        selectedDate={selectedDate}
+                        onSelectDate={setSelectedDate}
+                    />
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-slate-100">
+                        {legendItems.map(item => (
+                            <div key={item.label} className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${item.dot}`} />
+                                <span className="text-[10px] font-bold text-slate-500">{item.label}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            </div>
-        );
-    };
 
-    // --- Custom Event Renderer ---
-    const CustomEvent = ({ event }) => {
-        const getIcon = () => {
-            if (event.type === 'PERSONAL') {
-                if (event.event_type === 'MEETING') return <Users size={12} className="shrink-0 opacity-80" />;
-                if (event.event_type === 'REMINDER') return <Bell size={12} className="shrink-0 opacity-80" />;
-                if (event.visibility === 'PUBLIC') return <Globe size={12} className="shrink-0 opacity-80" />;
-                if (event.visibility === 'DEPARTMENT') return <Building2 size={12} className="shrink-0 opacity-80" />;
-                return <Lock size={12} className="shrink-0 opacity-70" />;
-            }
-            if (event.type === 'OVERTIME_ASSIGNMENT') return <CalendarCheck size={12} className="shrink-0 opacity-90" />;
-            if (event.type === 'OVERTIME_REQUEST') return <ClipboardList size={12} className="shrink-0 opacity-90" />;
-            if (event.type === 'LEAVE_REQUEST') return <CalendarIcon size={12} className="shrink-0 opacity-90" />;
-            if (event.type === 'EXTERNAL_DUTY') return <MapPin size={12} className="shrink-0 opacity-90" />;
-            if (event.type === 'HEALTH_REPORT') return <Heart size={12} className="shrink-0 opacity-90" />;
-            if (event.type === 'CARDLESS_ENTRY') return <CreditCard size={12} className="shrink-0 opacity-90" />;
-            return null;
-        };
-
-        return (
-            <div className="flex items-center gap-1.5 overflow-hidden">
-                {getIcon()}
-                <span className="truncate">{event.title}</span>
-            </div>
-        );
-    };
-
-    // --- Legend ---
-    const Legend = () => (
-        <div className="flex flex-wrap gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm text-xs">
-            <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                <span className="text-slate-600 font-bold">Kişisel</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span className="text-slate-600 font-bold">Herkese Açık</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
-                <span className="text-slate-600 font-bold">Departman</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                <span className="text-slate-600 font-bold">Hatırlatıcı</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                <span className="text-slate-600 font-bold">Tatil</span>
-            </div>
-            <div className="w-px h-4 bg-slate-200"></div>
-            {showOTAssignments && (
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
-                    <span className="text-slate-600 font-medium">Mesai Görevi</span>
-                </div>
-            )}
-            {showOTRequests && (
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                    <span className="text-slate-600 font-medium">Mesai Talebi</span>
-                </div>
-            )}
-            {showLeaves && (
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
-                    <span className="text-slate-600 font-medium">İzin</span>
-                </div>
-            )}
-            {showHealthReports && (
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-pink-500"></span>
-                    <span className="text-slate-600 font-medium">Sağlık Raporu</span>
-                </div>
-            )}
-            {showCardless && (
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
-                    <span className="text-slate-600 font-medium">Kartsız Giriş</span>
-                </div>
-            )}
-        </div>
-    );
-
-    // --- Date Header with Cross ---
-    const CustomDateHeader = ({ label, date }) => {
-        const isBeforeToday = moment(date).isBefore(moment(), 'day');
-        return (
-            <div className="relative">
-                <span>{label}</span>
-                {isBeforeToday && (
-                    <div className="absolute top-[30px] left-1/2 -translate-x-1/2 z-[50] pointer-events-none opacity-90 drop-shadow-md">
-                        <img
-                            src="/cross.svg"
-                            alt="Cross"
-                            className="w-16 h-16 object-contain"
-                            style={{
-                                filter: 'invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5))'
-                            }}
-                        />
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    // --- Render ---
-    return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-            <style>{`
-                .crossed-day {
-                    position: relative;
-                }
-                .crossed-day::after {
-                    content: '';
-                    position: absolute;
-                    inset: 0;
-                    background-image: url('/cross.svg');
-                    background-size: 30%;
-                    background-position: center;
-                    background-repeat: no-repeat;
-                    opacity: 0.9;
-                    pointer-events: none;
-                    z-index: 20;
-                    filter: invert(16%) sepia(88%) saturate(6054%) hue-rotate(358deg) brightness(96%) contrast(114%) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
-                }
-
-                .half-day-holiday {
-                    background: repeating-linear-gradient(
-                        -45deg,
-                        rgba(249, 115, 22, 0.12),
-                        rgba(249, 115, 22, 0.12) 4px,
-                        rgba(254, 226, 226, 0.3) 4px,
-                        rgba(254, 226, 226, 0.3) 8px
-                    ) !important;
-                }
-
-                .rbc-calendar, .rbc-month-view, .rbc-month-row, .rbc-row, .rbc-row-content, .rbc-date-cell {
-                    overflow: visible !important;
-                }
-                .rbc-row-content > .rbc-row:first-child {
-                    z-index: 9999 !important;
-                    position: relative !important;
-                    pointer-events: none !important;
-                }
-                .rbc-row-content > .rbc-row:first-child .rbc-date-cell button,
-                .rbc-row-content > .rbc-row:first-child .rbc-date-cell a {
-                    pointer-events: auto !important;
-                    position: relative;
-                    z-index: 10000;
-                }
-                .rbc-row-content > .rbc-row:not(:first-child) {
-                    z-index: 5 !important;
-                    position: relative !important;
-                }
-                .rbc-event {
-                    z-index: auto !important;
-                }
-            `}</style>
-
-            {/* Header */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                        <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                            Ajandam
-                        </span>
-                    </h1>
-                    <p className="text-slate-500 font-medium mt-1">
-                        Planlarınızı, toplantılarınızı ve etkinliklerinizi yönetin.
-                    </p>
-                </div>
-                <Legend />
-            </div>
-
-            {/* Calendar + Side Panel Layout */}
-            <div className="relative">
-                <div className={`transition-all duration-300 ${sidePanelOpen ? 'mr-[420px]' : ''}`}>
-                    <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-4 md:p-6 h-[500px] md:h-[800px]">
-                        <Calendar
-                            localizer={localizer}
-                            culture="tr"
-                            formats={formats}
-                            events={events}
-                            startAccessor="start"
-                            endAccessor="end"
-                            style={{ height: '100%' }}
-                            messages={messages}
-                            date={currentDate}
-                            onNavigate={date => setCurrentDate(date)}
-                            view={calendarView}
-                            onView={v => setCalendarView(v)}
-                            selectable
-                            onSelectSlot={handleSelectSlot}
-                            onSelectEvent={handleSelectEvent}
-                            eventPropGetter={eventPropGetter}
-                            dayPropGetter={dayPropGetter}
-                            components={{
-                                toolbar: CustomToolbar,
-                                event: CustomEvent,
-                                month: {
-                                    header: CustomDateHeader
-                                }
-                            }}
-                            popup
-                        />
-                    </div>
-
-                    {/* Team Gantt Bar (below calendar) */}
-                    {showTeamView && isManager && (
-                        <TeamGanttBar
-                            startDate={moment(currentDate).startOf('month').toDate()}
-                            endDate={moment(currentDate).endOf('month').toDate()}
-                            currentDate={currentDate}
-                        />
-                    )}
-                </div>
-
-                {/* Side Panel */}
-                {sidePanelOpen && (
-                    <CalendarSidePanel
+                {/* Right: Day Detail Panel */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-sm min-h-[400px] lg:min-h-0">
+                    <DayDetailPanel
                         date={selectedDate}
                         events={events}
-                        onClose={() => setSidePanelOpen(false)}
-                        onAddEvent={handleSidePanelAdd}
-                        onEditEvent={handleSidePanelEdit}
-                        isManager={isManager}
-                        managedEmployees={managedEmployees}
-                        onOTAssignSuccess={fetchCalendarData}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onAdd={handleAdd}
+                        teamEvents={teamData}
+                        isManager={isManager && showTeamView}
                     />
-                )}
+                </div>
             </div>
 
-            {/* Event Create/Edit Modal */}
+            {/* ─── Team Table (below, managers only) ─── */}
+            {showTeamView && isManager && (
+                <div className="mt-5 rounded-2xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-200">
+                        <Users size={16} className="text-indigo-600" />
+                        <h3 className="text-sm font-bold text-slate-700">Ekip Görünümü</h3>
+                        <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600">{teamData.length} kişi</span>
+                    </div>
+                    <TeamTable teamData={teamData} selectedDate={selectedDate} />
+                </div>
+            )}
+
+            {/* ─── Event Modal ─── */}
             {showModal && (
                 <AgendaEventModal
-                    onClose={() => setShowModal(false)}
+                    onClose={() => { setShowModal(false); setSelectedEventData(null); }}
                     onSuccess={handleModalSuccess}
-                    initialDate={selectedSlot}
+                    initialDate={selectedDate}
                     initialData={selectedEventData}
                 />
             )}
+
+            {/* Half-day holiday stripe CSS */}
+            <style>{`
+                .half-day-cell {
+                    background: repeating-linear-gradient(
+                        -45deg,
+                        rgba(249, 115, 22, 0.1),
+                        rgba(249, 115, 22, 0.1) 3px,
+                        rgba(254, 226, 226, 0.2) 3px,
+                        rgba(254, 226, 226, 0.2) 6px
+                    );
+                }
+            `}</style>
         </div>
     );
 };
