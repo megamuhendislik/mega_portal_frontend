@@ -1666,18 +1666,9 @@ const Employees = () => {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        {showSettings ? (
-                            <>
-                                {/* Admin çalışanları sadece adminler düzenleyebilir */}
-                                {(!empData?.is_admin || hasPermission('SYSTEM_FULL_ACCESS')) && (
-                                    <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
-                                )}
-                                {hasPermission('SENSITIVE_DATA_CHANGE') && empData && !empData.is_admin && (
-                                    <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
-                                )}
-                            </>
-                        ) : (
-                            <button onClick={() => empData && handleEdit(empData)} className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-bold transition-colors">Detay</button>
+                        <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
+                        {showSettings && hasPermission('SENSITIVE_DATA_CHANGE') && empData && !empData.is_admin && (
+                            <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                         )}
                     </div>
                 </div>

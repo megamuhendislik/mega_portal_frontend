@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Calendar, UserPlus, Edit2, Trash2, Check, X, AlertCircle, Users, Shield,
-  ChevronDown, ChevronUp, Search, Clock, ArrowRightLeft, ToggleLeft, ToggleRight,
-  Plus, CheckCircle2, XCircle, CalendarDays, UserCheck, Briefcase, Loader2
+  UserPlus, Edit2, Trash2, X, AlertCircle, Users, Shield,
+  Search, Clock, ArrowRightLeft, Plus, CheckCircle2, XCircle,
+  CalendarDays, UserCheck, Loader2, ToggleLeft, ToggleRight,
+  ArrowRight
 } from 'lucide-react';
+import { Select, Tooltip } from 'antd';
+import StatCard from '../components/StatCard';
 import api from '../services/api';
 import { getIstanbulToday } from '../utils/dateUtils';
 
@@ -31,8 +34,6 @@ const SubstituteManagement = () => {
   });
 
   const [formErrors, setFormErrors] = useState({});
-  const [principalSearch, setPrincipalSearch] = useState('');
-  const [substituteSearch, setSubstituteSearch] = useState('');
 
   useEffect(() => {
     fetchDelegations();
@@ -66,6 +67,8 @@ const SubstituteManagement = () => {
     }
   };
 
+  // -- Computed --
+
   const getStatus = (d) => {
     const today = getIstanbulToday();
     if (!d.is_active) return 'passive';
@@ -76,19 +79,18 @@ const SubstituteManagement = () => {
 
   const stats = useMemo(() => {
     const today = getIstanbulToday();
-    const all = delegations;
-    const getStatusLocal = (d) => {
+    const s = (d) => {
       if (!d.is_active) return 'passive';
       if (d.valid_from > today) return 'future';
       if (d.valid_to < today) return 'expired';
       return 'active';
     };
     return {
-      active: all.filter(d => getStatusLocal(d) === 'active').length,
-      future: all.filter(d => getStatusLocal(d) === 'future').length,
-      expired: all.filter(d => getStatusLocal(d) === 'expired').length,
-      passive: all.filter(d => getStatusLocal(d) === 'passive').length,
-      total: all.length
+      active: delegations.filter(d => s(d) === 'active').length,
+      future: delegations.filter(d => s(d) === 'future').length,
+      expired: delegations.filter(d => s(d) === 'expired').length,
+      passive: delegations.filter(d => s(d) === 'passive').length,
+      total: delegations.length
     };
   }, [delegations]);
 
@@ -102,21 +104,38 @@ const SubstituteManagement = () => {
     );
   }, [delegations, myDelegations, activeTab, searchText]);
 
-  const filteredPrincipalEmployees = useMemo(() => {
-    if (!principalSearch) return employees;
-    const s = principalSearch.toLowerCase();
-    return employees.filter(e =>
-      `${e.first_name} ${e.last_name}`.toLowerCase().includes(s)
-    );
-  }, [employees, principalSearch]);
+  const employeeOptions = useMemo(() =>
+    employees.map(emp => ({
+      value: emp.id,
+      label: `${emp.first_name} ${emp.last_name}`,
+    }))
+  , [employees]);
 
-  const filteredSubstituteEmployees = useMemo(() => {
-    if (!substituteSearch) return employees;
-    const s = substituteSearch.toLowerCase();
-    return employees.filter(e =>
-      `${e.first_name} ${e.last_name}`.toLowerCase().includes(s)
-    );
-  }, [employees, substituteSearch]);
+  const getProgress = (d) => {
+    const status = getStatus(d);
+    if (status === 'expired') return 100;
+    if (status !== 'active') return 0;
+    const start = new Date(d.valid_from).getTime();
+    const end = new Date(d.valid_to).getTime();
+    const now = Date.now();
+    if (end <= start) return 100;
+    return Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
+  };
+
+  const getTotalDays = (d) => {
+    const start = new Date(d.valid_from).getTime();
+    const end = new Date(d.valid_to).getTime();
+    return Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+  };
+
+  const getRemainingDays = (d) => {
+    if (getStatus(d) !== 'active') return null;
+    const end = new Date(d.valid_to);
+    const now = new Date();
+    return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  };
+
+  // -- Handlers --
 
   const validateForm = () => {
     const errors = {};
@@ -124,7 +143,7 @@ const SubstituteManagement = () => {
     if (!formData.substitute) errors.substitute = 'Vekil yönetici seçiniz';
     if (!formData.valid_from) errors.valid_from = 'Başlangıç tarihi giriniz';
     if (!formData.valid_to) errors.valid_to = 'Bitiş tarihi giriniz';
-    if (formData.principal && formData.substitute && formData.principal === formData.substitute) {
+    if (formData.principal && formData.substitute && String(formData.principal) === String(formData.substitute)) {
       errors.substitute = 'Asıl yönetici ile vekil aynı kişi olamaz';
     }
     if (formData.valid_from && formData.valid_to && formData.valid_to < formData.valid_from) {
@@ -138,7 +157,6 @@ const SubstituteManagement = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-
     if (!validateForm()) return;
     if (submitting) return;
 
@@ -213,44 +231,128 @@ const SubstituteManagement = () => {
     setEditingId(null);
     setShowForm(false);
     setFormErrors({});
-    setPrincipalSearch('');
-    setSubstituteSearch('');
   };
 
-  const getStatusBadge = (delegation) => {
+  // -- UI Helpers --
+
+  const statusConfig = {
+    active: { bg: 'bg-emerald-50', text: 'text-emerald-600', ring: 'ring-emerald-200/60', label: 'Aktif', icon: CheckCircle2, border: 'border-l-emerald-400' },
+    future: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-200/60', label: 'Gelecek', icon: CalendarDays, border: 'border-l-blue-400' },
+    expired: { bg: 'bg-amber-50', text: 'text-amber-600', ring: 'ring-amber-200/60', label: 'Süresi Dolmuş', icon: Clock, border: 'border-l-amber-400' },
+    passive: { bg: 'bg-slate-50', text: 'text-slate-400', ring: 'ring-slate-200/60', label: 'Pasif', icon: XCircle, border: 'border-l-slate-300' }
+  };
+
+  const StatusBadge = ({ delegation }) => {
     const s = getStatus(delegation);
-    const config = {
-      active: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-200', label: 'Aktif', icon: <CheckCircle2 size={14} /> },
-      future: { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200', label: 'Gelecek', icon: <CalendarDays size={14} /> },
-      expired: { bg: 'bg-amber-100', text: 'text-amber-700', ring: 'ring-amber-200', label: 'Süresi Dolmuş', icon: <Clock size={14} /> },
-      passive: { bg: 'bg-slate-100', text: 'text-slate-500', ring: 'ring-slate-200', label: 'Pasif', icon: <XCircle size={14} /> }
-    };
-    const c = config[s];
+    const c = statusConfig[s];
+    const Icon = c.icon;
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${c.bg} ${c.text} ring-1 ${c.ring}`}>
-        {c.icon} {c.label}
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full ${c.bg} ${c.text} ring-1 ${c.ring}`}>
+        <Icon size={12} />
+        {c.label}
       </span>
     );
   };
 
-  const getRemainingDays = (delegation) => {
-    const s = getStatus(delegation);
-    if (s !== 'active') return null;
-    const end = new Date(delegation.valid_to);
-    const now = new Date();
-    const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-    return diff;
+  const PersonCell = ({ name, position, variant = 'principal' }) => {
+    const gradients = {
+      principal: 'from-blue-500 to-indigo-600',
+      substitute: 'from-emerald-500 to-teal-600'
+    };
+    return (
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${gradients[variant]} flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0`}>
+          {(name || '?')[0]}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-800 truncate">{name}</div>
+          {position && (
+            <div className="text-[11px] text-slate-400 font-medium truncate">{position}</div>
+          )}
+        </div>
+      </div>
+    );
   };
+
+  const PeriodCell = ({ delegation }) => {
+    const status = getStatus(delegation);
+    const progress = getProgress(delegation);
+    const totalDays = getTotalDays(delegation);
+    const progressColor = {
+      active: 'bg-emerald-400',
+      future: 'bg-blue-300',
+      expired: 'bg-amber-400',
+      passive: 'bg-slate-300'
+    }[status];
+
+    return (
+      <div className="space-y-1.5 min-w-[160px]">
+        <div className="text-sm text-slate-600 font-medium">
+          {new Date(delegation.valid_from).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+          {' — '}
+          {new Date(delegation.valid_to).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${progressColor}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{totalDays} gün</span>
+        </div>
+      </div>
+    );
+  };
+
+  const RemainingBadge = ({ delegation }) => {
+    const remaining = getRemainingDays(delegation);
+    if (remaining === null) return <span className="text-slate-300">—</span>;
+
+    const color = remaining <= 3
+      ? 'bg-red-50 text-red-600 ring-red-100'
+      : remaining <= 7
+        ? 'bg-amber-50 text-amber-600 ring-amber-100'
+        : 'bg-emerald-50 text-emerald-600 ring-emerald-100';
+
+    return (
+      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ring-1 ${color}`}>
+        <Clock size={11} />
+        {remaining} gün
+      </div>
+    );
+  };
+
+  // -- Loading Skeleton --
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-pulse space-y-4 w-full max-w-4xl px-6">
-          <div className="h-12 bg-slate-100 rounded-2xl w-64" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-2xl" />)}
+      <div className="space-y-6 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-9 w-60 bg-slate-200/60 rounded-xl" />
+            <div className="h-4 w-80 bg-slate-100 rounded-lg" />
           </div>
-          <div className="h-64 bg-slate-100 rounded-2xl" />
+          <div className="h-12 w-36 bg-slate-200/60 rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-100 p-6">
+              <div className="flex justify-between">
+                <div className="space-y-3">
+                  <div className="h-3 w-16 bg-slate-100 rounded" />
+                  <div className="h-8 w-12 bg-slate-200/60 rounded-lg" />
+                </div>
+                <div className="w-12 h-12 bg-slate-100 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="h-12 w-96 bg-slate-100 rounded-xl" />
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 bg-slate-50 rounded-xl" />
+          ))}
         </div>
       </div>
     );
@@ -258,189 +360,162 @@ const SubstituteManagement = () => {
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
-      {/* Header */}
+      {/* ─── Header ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-xl">
-              <ArrowRightLeft size={28} className="text-blue-600" />
+            <div className="p-2.5 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-100/50">
+              <ArrowRightLeft size={26} className="text-blue-600" />
             </div>
             Vekalet Yönetimi
           </h1>
-          <p className="text-slate-500 font-medium mt-1">Yönetici vekalet yetkilerini tanımlayın ve takip edin</p>
+          <p className="text-slate-400 font-medium mt-1.5 ml-[52px]">
+            Yönetici vekalet yetkilerini tanımlayın ve takip edin
+          </p>
         </div>
         <button
           onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }}
-          className={`group px-6 py-3 rounded-2xl font-bold shadow-lg transition-all flex items-center gap-2 active:scale-95 ${
+          className={`group px-6 py-3 rounded-2xl font-bold shadow-lg transition-all duration-300 flex items-center gap-2 active:scale-95 ${
             showForm
-              ? 'bg-slate-200 text-slate-700 shadow-slate-100 hover:bg-slate-300'
-              : 'bg-slate-900 hover:bg-black text-white shadow-slate-200'
+              ? 'bg-slate-100 text-slate-600 shadow-none hover:bg-slate-200'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02]'
           }`}
         >
-          {showForm ? <X size={20} /> : <Plus size={20} className="group-hover:rotate-90 transition-transform" />}
+          {showForm ? <X size={18} /> : <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />}
           {showForm ? 'İptal' : 'Yeni Vekalet'}
         </button>
       </div>
 
-      {/* Alerts */}
+      {/* ─── Alerts ─── */}
       {error && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 animate-in slide-in-from-top-2">
-          <AlertCircle size={20} className="shrink-0" />
-          <span className="font-medium">{error}</span>
-          <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-600"><X size={16} /></button>
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 animate-fade-in">
+          <div className="p-1.5 bg-red-100 rounded-lg">
+            <AlertCircle size={16} />
+          </div>
+          <span className="font-medium text-sm flex-1">{error}</span>
+          <button onClick={() => setError('')} className="p-1 text-red-300 hover:text-red-500 transition"><X size={16} /></button>
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 animate-in slide-in-from-top-2">
-          <CheckCircle2 size={20} className="shrink-0" />
-          <span className="font-medium">{success}</span>
-          <button onClick={() => setSuccess('')} className="ml-auto text-emerald-400 hover:text-emerald-600"><X size={16} /></button>
+        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 animate-fade-in">
+          <div className="p-1.5 bg-emerald-100 rounded-lg">
+            <CheckCircle2 size={16} />
+          </div>
+          <span className="font-medium text-sm flex-1">{success}</span>
+          <button onClick={() => setSuccess('')} className="p-1 text-emerald-300 hover:text-emerald-500 transition"><X size={16} /></button>
         </div>
       )}
 
-      {/* Summary Cards */}
+      {/* ─── Stat Cards ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all group">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Aktif</p>
-              <h3 className="text-3xl font-bold text-emerald-600 tracking-tight group-hover:scale-105 transition-transform origin-left">{stats.active}</h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50">
-              <CheckCircle2 size={20} className="text-emerald-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all group">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Gelecek</p>
-              <h3 className="text-3xl font-bold text-blue-600 tracking-tight group-hover:scale-105 transition-transform origin-left">{stats.future}</h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50">
-              <CalendarDays size={20} className="text-blue-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all group">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Süresi Dolmuş</p>
-              <h3 className="text-3xl font-bold text-amber-600 tracking-tight group-hover:scale-105 transition-transform origin-left">{stats.expired}</h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50">
-              <Clock size={20} className="text-amber-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all group">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Toplam</p>
-              <h3 className="text-3xl font-bold text-slate-800 tracking-tight group-hover:scale-105 transition-transform origin-left">{stats.total}</h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-50">
-              <Users size={20} className="text-slate-500" />
-            </div>
-          </div>
-        </div>
+        <StatCard
+          icon={CheckCircle2}
+          title="Aktif"
+          value={stats.active}
+          color="emerald"
+          subLabel={stats.active > 0 ? 'devam eden' : undefined}
+        />
+        <StatCard
+          icon={CalendarDays}
+          title="Gelecek"
+          value={stats.future}
+          color="blue"
+          subLabel={stats.future > 0 ? 'planlı' : undefined}
+        />
+        <StatCard
+          icon={Clock}
+          title="Süresi Dolmuş"
+          value={stats.expired}
+          color="amber"
+        />
+        <StatCard
+          icon={Users}
+          title="Toplam"
+          value={stats.total}
+          color="indigo"
+          subValue={stats.passive > 0 ? `${stats.passive} pasif` : undefined}
+        />
       </div>
 
-      {/* Form */}
+      {/* ─── Form ─── */}
       {showForm && (
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden animate-in slide-in-from-top-4 duration-300">
-          <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white">
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              {editingId ? <Edit2 size={20} className="text-blue-600" /> : <UserPlus size={20} className="text-blue-600" />}
+        <div className="glass-card overflow-hidden animate-fade-in">
+          <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2.5">
+              <div className="p-1.5 bg-blue-50 rounded-lg">
+                {editingId ? <Edit2 size={18} className="text-blue-600" /> : <UserPlus size={18} className="text-blue-600" />}
+              </div>
               {editingId ? 'Vekalet Düzenle' : 'Yeni Vekalet Oluştur'}
             </h2>
           </div>
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Principal */}
+              {/* Principal Select */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Asıl Yönetici <span className="text-red-500">*</span>
+                  Asıl Yönetici <span className="text-red-400">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Ara..."
-                    value={principalSearch}
-                    onChange={(e) => setPrincipalSearch(e.target.value)}
-                    className="w-full px-3 py-2 mb-1 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-slate-50"
-                  />
-                  <select
-                    value={formData.principal}
-                    onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
-                    required
-                    className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition ${
-                      formErrors.principal ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-                    }`}
-                  >
-                    <option value="">Seçiniz...</option>
-                    {filteredPrincipalEmployees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {formErrors.principal && <p className="mt-1 text-xs text-red-500 font-medium">{formErrors.principal}</p>}
+                <Select
+                  showSearch
+                  placeholder="Personel seçiniz..."
+                  value={formData.principal || undefined}
+                  onChange={(val) => setFormData({ ...formData, principal: val || '' })}
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={employeeOptions}
+                  className="w-full"
+                  size="large"
+                  allowClear
+                  status={formErrors.principal ? 'error' : undefined}
+                  notFoundContent="Sonuç bulunamadı"
+                />
+                {formErrors.principal && <p className="mt-1.5 text-xs text-red-500 font-medium">{formErrors.principal}</p>}
               </div>
 
-              {/* Substitute */}
+              {/* Substitute Select */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Vekil Yönetici <span className="text-red-500">*</span>
+                  Vekil Yönetici <span className="text-red-400">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Ara..."
-                    value={substituteSearch}
-                    onChange={(e) => setSubstituteSearch(e.target.value)}
-                    className="w-full px-3 py-2 mb-1 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-slate-50"
-                  />
-                  <select
-                    value={formData.substitute}
-                    onChange={(e) => setFormData({ ...formData, substitute: e.target.value })}
-                    required
-                    className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition ${
-                      formErrors.substitute ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-                    }`}
-                  >
-                    <option value="">Seçiniz...</option>
-                    {filteredSubstituteEmployees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {formErrors.substitute && <p className="mt-1 text-xs text-red-500 font-medium">{formErrors.substitute}</p>}
+                <Select
+                  showSearch
+                  placeholder="Personel seçiniz..."
+                  value={formData.substitute || undefined}
+                  onChange={(val) => setFormData({ ...formData, substitute: val || '' })}
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={employeeOptions}
+                  className="w-full"
+                  size="large"
+                  allowClear
+                  status={formErrors.substitute ? 'error' : undefined}
+                  notFoundContent="Sonuç bulunamadı"
+                />
+                {formErrors.substitute && <p className="mt-1.5 text-xs text-red-500 font-medium">{formErrors.substitute}</p>}
               </div>
 
-              {/* Dates */}
+              {/* Start Date */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Başlangıç Tarihi <span className="text-red-500">*</span>
+                  Başlangıç Tarihi <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="date"
                   value={formData.valid_from}
                   onChange={(e) => setFormData({ ...formData, valid_from: e.target.value })}
                   required
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition ${
-                    formErrors.valid_from ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-                  }`}
+                  className={`input-field ${formErrors.valid_from ? '!border-red-300 !bg-red-50/50' : ''}`}
                 />
-                {formErrors.valid_from && <p className="mt-1 text-xs text-red-500 font-medium">{formErrors.valid_from}</p>}
+                {formErrors.valid_from && <p className="mt-1.5 text-xs text-red-500 font-medium">{formErrors.valid_from}</p>}
               </div>
 
+              {/* End Date */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Bitiş Tarihi <span className="text-red-500">*</span>
+                  Bitiş Tarihi <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="date"
@@ -448,35 +523,35 @@ const SubstituteManagement = () => {
                   onChange={(e) => setFormData({ ...formData, valid_to: e.target.value })}
                   required
                   min={formData.valid_from || undefined}
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition ${
-                    formErrors.valid_to ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-                  }`}
+                  className={`input-field ${formErrors.valid_to ? '!border-red-300 !bg-red-50/50' : ''}`}
                 />
-                {formErrors.valid_to && <p className="mt-1 text-xs text-red-500 font-medium">{formErrors.valid_to}</p>}
+                {formErrors.valid_to && <p className="mt-1.5 text-xs text-red-500 font-medium">{formErrors.valid_to}</p>}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+            {/* Active Toggle */}
+            <div className="flex items-center gap-3 p-3.5 bg-slate-50/80 rounded-xl border border-slate-100">
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 transition-colors"
               >
                 {formData.is_active
                   ? <ToggleRight size={28} className="text-emerald-500" />
                   : <ToggleLeft size={28} className="text-slate-400" />
                 }
               </button>
-              <span className={`text-sm font-bold ${formData.is_active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                {formData.is_active ? 'Aktif' : 'Pasif'}
+              <span className={`text-sm font-bold transition-colors ${formData.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {formData.is_active ? 'Aktif olarak oluştur' : 'Pasif olarak oluştur'}
               </span>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {submitting && <Loader2 size={16} className="animate-spin" />}
                 {submitting ? 'Kaydediliyor...' : (editingId ? 'Güncelle' : 'Oluştur')}
@@ -484,7 +559,7 @@ const SubstituteManagement = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition"
+                className="btn-secondary w-auto px-8"
               >
                 İptal
               </button>
@@ -493,219 +568,349 @@ const SubstituteManagement = () => {
         </div>
       )}
 
-      {/* Tabs + Search */}
+      {/* ─── Tabs + Search ─── */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex bg-slate-100 p-1 rounded-xl">
+        <div className="flex bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
           <button
             onClick={() => setActiveTab('given')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'given' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${
+              activeTab === 'given'
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200/50'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            <Shield size={16} />
-            Verdiğim / Tüm Vekaletler
+            <Shield size={15} />
+            <span className="hidden sm:inline">Verdiğim / Tüm</span>
+            <span className="sm:hidden">Tüm</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
               activeTab === 'given' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'
             }`}>{delegations.length}</span>
           </button>
           <button
             onClick={() => setActiveTab('received')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'received' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${
+              activeTab === 'received'
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200/50'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            <UserCheck size={16} />
-            Vekil Olduğum
+            <UserCheck size={15} />
+            <span className="hidden sm:inline">Vekil Olduğum</span>
+            <span className="sm:hidden">Vekil</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
               activeTab === 'received' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'
             }`}>{myDelegations.length}</span>
           </button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <div className="relative w-full sm:w-auto">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
             type="text"
             placeholder="İsim ile ara..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
           />
         </div>
       </div>
 
-      {/* Delegations Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      {/* ─── Delegations ─── */}
+      <div className="glass-card overflow-hidden">
         {filteredDelegations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-              <ArrowRightLeft size={32} className="text-slate-300" />
+          /* Empty State */
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+            <div className="relative mb-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 rotate-3 shadow-sm">
+                <ArrowRightLeft size={32} className="text-slate-300" />
+              </div>
+              <div className="absolute -top-1.5 -right-1.5 w-7 h-7 bg-blue-50 rounded-full flex items-center justify-center border border-blue-100">
+                <Plus size={13} className="text-blue-500" />
+              </div>
             </div>
             <h3 className="text-lg font-bold text-slate-700">
               {activeTab === 'given' ? 'Vekalet kaydı bulunmuyor' : 'Vekil olarak atanmış kaydınız yok'}
             </h3>
-            <p className="text-sm text-slate-500 mt-1">
-              {activeTab === 'given' ? 'Yeni bir vekalet tanımlamak için "Yeni Vekalet" butonunu kullanın.' : 'Henüz hiçbir yönetici sizi vekil olarak atamamış.'}
+            <p className="text-sm text-slate-400 mt-1.5 max-w-xs">
+              {activeTab === 'given'
+                ? 'Yeni bir vekalet tanımlamak için yukarıdaki "Yeni Vekalet" butonunu kullanın.'
+                : 'Henüz hiçbir yönetici sizi vekil olarak atamamış.'}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50/80">
-                  <th className="px-5 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Durum</th>
-                  <th className="px-5 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Asıl Yönetici</th>
-                  <th className="px-5 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vekil</th>
-                  <th className="px-5 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tarih Aralığı</th>
-                  <th className="px-5 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Kalan</th>
-                  {activeTab === 'given' && (
-                    <th className="px-5 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">İşlemler</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredDelegations.map(d => {
-                  const remaining = getRemainingDays(d);
-                  return (
-                    <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-4">{getStatusBadge(d)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                            {(d.principal_name || '?')[0]}
-                          </div>
-                          <span className="text-sm font-bold text-slate-800">{d.principal_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs">
-                            {(d.substitute_name || '?')[0]}
-                          </div>
-                          <span className="text-sm font-bold text-slate-800">{d.substitute_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="text-sm text-slate-600 font-medium">
-                          {new Date(d.valid_from).toLocaleDateString('tr-TR')} — {new Date(d.valid_to).toLocaleDateString('tr-TR')}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        {remaining !== null ? (
-                          <span className={`text-sm font-bold ${remaining <= 3 ? 'text-red-600' : remaining <= 7 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                            {remaining} gün
-                          </span>
-                        ) : (
-                          <span className="text-sm text-slate-400">—</span>
-                        )}
-                      </td>
-                      {activeTab === 'given' && (
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-1.5 justify-end">
-                            <button
-                              onClick={() => handleEdit(d)}
-                              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                              title="Düzenle"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              onClick={() => setConfirmToggle(d)}
-                              className={`p-2 rounded-lg transition ${d.is_active
-                                ? 'text-slate-500 hover:text-amber-600 hover:bg-amber-50'
-                                : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50'
-                              }`}
-                              title={d.is_active ? 'Pasif Yap' : 'Aktif Yap'}
-                            >
-                              {d.is_active ? <ToggleRight size={18} className="text-emerald-500" /> : <ToggleLeft size={18} />}
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete(d.id)}
-                              className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                              title="Sil"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+          <>
+            {/* ── Desktop Table ── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="pl-5 pr-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Durum</th>
+                    <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Asıl Yönetici</th>
+                    <th className="px-1 py-3.5 w-8" />
+                    <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Vekil</th>
+                    <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Süre</th>
+                    <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Kalan</th>
+                    {activeTab === 'given' && (
+                      <th className="px-5 py-3.5 text-right text-[11px] font-bold text-slate-400 uppercase tracking-widest">İşlemler</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDelegations.map((d, idx) => {
+                    const status = getStatus(d);
+                    const borderColor = statusConfig[status].border;
+                    return (
+                      <tr
+                        key={d.id}
+                        className={`border-b border-slate-50 last:border-b-0 hover:bg-slate-50/60 transition-colors duration-150 border-l-[3px] ${borderColor}`}
+                      >
+                        <td className="pl-5 pr-3 py-4">
+                          <StatusBadge delegation={d} />
+                        </td>
+                        <td className="px-3 py-4">
+                          <PersonCell
+                            name={d.principal_name}
+                            position={d.principal_position}
+                            variant="principal"
+                          />
+                        </td>
+                        <td className="px-1 py-4">
+                          <div className="flex items-center justify-center">
+                            <ArrowRight size={14} className="text-slate-300" />
                           </div>
                         </td>
+                        <td className="px-3 py-4">
+                          <PersonCell
+                            name={d.substitute_name}
+                            position={d.substitute_position}
+                            variant="substitute"
+                          />
+                        </td>
+                        <td className="px-3 py-4">
+                          <PeriodCell delegation={d} />
+                        </td>
+                        <td className="px-3 py-4">
+                          <RemainingBadge delegation={d} />
+                        </td>
+                        {activeTab === 'given' && (
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Tooltip title="Düzenle">
+                                <button
+                                  onClick={() => handleEdit(d)}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                >
+                                  <Edit2 size={15} />
+                                </button>
+                              </Tooltip>
+                              <Tooltip title={d.is_active ? 'Pasif Yap' : 'Aktif Yap'}>
+                                <button
+                                  onClick={() => setConfirmToggle(d)}
+                                  className={`p-2 rounded-lg transition-all duration-200 ${d.is_active
+                                    ? 'text-emerald-500 hover:text-amber-600 hover:bg-amber-50'
+                                    : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                  }`}
+                                >
+                                  {d.is_active ? <ToggleRight size={17} /> : <ToggleLeft size={17} />}
+                                </button>
+                              </Tooltip>
+                              <Tooltip title="Sil">
+                                <button
+                                  onClick={() => setConfirmDelete(d.id)}
+                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </Tooltip>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Mobile Cards ── */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredDelegations.map(d => {
+                const status = getStatus(d);
+                const remaining = getRemainingDays(d);
+                const progress = getProgress(d);
+                const totalDays = getTotalDays(d);
+                const borderColor = statusConfig[status].border;
+
+                return (
+                  <div key={d.id} className={`p-4 border-l-[3px] ${borderColor}`}>
+                    {/* Top: Status + Remaining */}
+                    <div className="flex items-center justify-between mb-3">
+                      <StatusBadge delegation={d} />
+                      {remaining !== null && (
+                        <span className={`text-xs font-bold ${
+                          remaining <= 3 ? 'text-red-500' : remaining <= 7 ? 'text-amber-500' : 'text-emerald-500'
+                        }`}>
+                          {remaining} gün kaldı
+                        </span>
                       )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+
+                    {/* People Flow */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">
+                          {(d.principal_name || '?')[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-800 truncate">{d.principal_name}</div>
+                          {d.principal_position && <div className="text-[10px] text-slate-400 truncate">{d.principal_position}</div>}
+                        </div>
+                      </div>
+                      <ArrowRight size={14} className="text-slate-300 shrink-0 mx-1" />
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">
+                          {(d.substitute_name || '?')[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-800 truncate">{d.substitute_name}</div>
+                          {d.substitute_position && <div className="text-[10px] text-slate-400 truncate">{d.substitute_position}</div>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Period */}
+                    <div className="space-y-1.5 mb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500 font-medium">
+                          {new Date(d.valid_from).toLocaleDateString('tr-TR')} — {new Date(d.valid_to).toLocaleDateString('tr-TR')}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">{totalDays} gün</span>
+                      </div>
+                      {(status === 'active' || status === 'expired') && (
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ${
+                              status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    {activeTab === 'given' && (
+                      <div className="flex items-center gap-1.5 pt-3 border-t border-slate-100">
+                        <button
+                          onClick={() => handleEdit(d)}
+                          className="flex-1 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition flex items-center justify-center gap-1.5"
+                        >
+                          <Edit2 size={12} /> Düzenle
+                        </button>
+                        <button
+                          onClick={() => setConfirmToggle(d)}
+                          className={`flex-1 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
+                            d.is_active
+                              ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                              : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                          }`}
+                        >
+                          {d.is_active ? <><ToggleLeft size={12} /> Pasif</> : <><ToggleRight size={12} /> Aktif</>}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(d.id)}
+                          className="flex-1 py-2 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 size={12} /> Sil
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Delete Confirmation */}
+      {/* ─── Delete Confirmation Modal ─── */}
       {confirmDelete && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-in zoom-in-95">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 size={24} className="text-red-600" />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+            <div className="h-1 bg-gradient-to-r from-red-400 to-rose-500" />
+            <div className="p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center shrink-0 border border-red-100">
+                  <Trash2 size={22} className="text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Vekaleti Sil</h3>
+                  <p className="text-sm text-slate-500 mt-1">Bu işlem geri alınamaz. Vekalet kaydı kalıcı olarak silinecektir.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">Vekalet Sil</h3>
-                <p className="text-sm text-slate-500">Bu işlem geri alınamaz.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  onClick={() => handleDelete(confirmDelete)}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold rounded-xl hover:from-red-600 hover:to-rose-600 shadow-lg shadow-red-500/20 transition-all active:scale-95"
+                >
+                  Sil
+                </button>
               </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition"
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDelete)}
-                className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-500/20 transition active:scale-95"
-              >
-                Sil
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toggle Active/Passive Confirmation */}
+      {/* ─── Toggle Confirmation Modal ─── */}
       {confirmToggle && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-in zoom-in-95">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${confirmToggle.is_active ? 'bg-amber-100' : 'bg-emerald-100'}`}>
-                {confirmToggle.is_active
-                  ? <ToggleLeft size={24} className="text-amber-600" />
-                  : <ToggleRight size={24} className="text-emerald-600" />
-                }
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" onClick={() => setConfirmToggle(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+            <div className={`h-1 bg-gradient-to-r ${confirmToggle.is_active ? 'from-amber-400 to-orange-400' : 'from-emerald-400 to-teal-400'}`} />
+            <div className="p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
+                  confirmToggle.is_active ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'
+                }`}>
+                  {confirmToggle.is_active
+                    ? <ToggleLeft size={22} className="text-amber-500" />
+                    : <ToggleRight size={22} className="text-emerald-500" />
+                  }
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {confirmToggle.is_active ? 'Vekaleti Pasif Yap' : 'Vekaleti Aktif Yap'}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1.5 text-sm text-slate-500">
+                    <span className="font-medium">{confirmToggle.principal_name}</span>
+                    <ArrowRight size={12} className="text-slate-300" />
+                    <span className="font-medium">{confirmToggle.substitute_name}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">
-                  {confirmToggle.is_active ? 'Vekalet Pasif Yap' : 'Vekalet Aktif Yap'}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {confirmToggle.principal_name} → {confirmToggle.substitute_name}
-                </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmToggle(null)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  onClick={() => handleToggleActive(confirmToggle)}
+                  className={`flex-1 py-2.5 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 ${
+                    confirmToggle.is_active
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/20'
+                  }`}
+                >
+                  {confirmToggle.is_active ? 'Pasif Yap' : 'Aktif Yap'}
+                </button>
               </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setConfirmToggle(null)}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition"
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => handleToggleActive(confirmToggle)}
-                className={`flex-1 py-2.5 text-white font-bold rounded-xl shadow-lg transition active:scale-95 ${
-                  confirmToggle.is_active
-                    ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
-                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
-                }`}
-              >
-                {confirmToggle.is_active ? 'Pasif Yap' : 'Aktif Yap'}
-              </button>
             </div>
           </div>
         </div>

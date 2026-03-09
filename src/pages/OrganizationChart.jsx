@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactDOM from 'react-dom';
-import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star, Clock, Users, Eye, EyeOff, CheckSquare } from 'lucide-react';
+import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star, Clock, Users, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
@@ -331,7 +331,7 @@ const countEmployeesRecursive = (node) => {
 };
 
 // Employee Card
-const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu, showManagerInfo, showSecondaryManagers, isSelected, onSelect }) => {
+const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu, showManagerInfo, showSecondaryManagers }) => {
     const category = getRoleCategory(emp.title);
     const colorKey = getColorForCategory(category);
     const theme = getThemeClasses(colorKey);
@@ -365,26 +365,16 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu, 
                 ${isDragSource ? 'opacity-40 scale-95' : !emp.is_online ? 'opacity-50' : ''}
                 ${isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : ''}
                 ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
-                ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/30' : ''}
             `}
             onClick={(e) => {
                 e.stopPropagation();
-                if (onSelect) {
-                    onSelect(emp.id);
-                } else if (onClick) {
+                if (onClick) {
                     onClick(emp);
                 }
             }}
             onMouseDown={isEditMode ? (e) => e.stopPropagation() : undefined}
             onContextMenu={isEditMode && onContextMenu ? (e) => onContextMenu(e, empData) : undefined}
         >
-            {/* Checkbox */}
-            {onSelect && (
-                <div className={`absolute top-1 left-1 w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300 group-hover:border-blue-400'}`}>
-                    {isSelected && <CheckSquare size={10} className="text-white" />}
-                </div>
-            )}
-
             {/* Avatar */}
             <div className="relative shrink-0">
                 <div className={`
@@ -517,7 +507,7 @@ const DepartmentNode = ({ node, isEditMode, onAddChild, onEdit, onDelete, dnd, o
 
 // Stacked Group Node (New)
 // Grid Group Node (Modified)
-const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onContextMenu, showManagerInfo, showSecondaryManagers, selectedIds, onSelect }) => {
+const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onContextMenu, showManagerInfo, showSecondaryManagers }) => {
     // Define Color Styles
     const colors = {
         'blue': 'bg-blue-50/50 border-blue-200 text-blue-900',
@@ -562,15 +552,13 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
                     <div key={emp.id} className="transform transition-transform hover:scale-105 active:scale-95">
                         <EmployeeNode
                             emp={{ ...emp, is_secondary: false }} // Ensure clean props
-                            onClick={onSelect ? undefined : onClick}
+                            onClick={onClick}
                             showTags={showTags}
                             dnd={dnd}
                             isEditMode={isEditMode}
                             onContextMenu={onContextMenu}
                             showManagerInfo={showManagerInfo}
                             showSecondaryManagers={showSecondaryManagers}
-                            isSelected={selectedIds?.has(emp.id)}
-                            onSelect={onSelect}
                         />
                     </div>
                 ))}
@@ -579,7 +567,7 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
     );
 };
 
-const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu, showManagerInfo, showSecondaryManagers, selectedIds, onSelect }) => {
+const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMode, onAddChild, onEdit, onDelete, dnd, onContextMenu, showManagerInfo, showSecondaryManagers }) => {
     // 1. Determine Type Dynamically
     // CRITICAL FIX: Explicitly exclude 'group' type from being considered a department
     // because groups have 'employees' property which triggers the department logic
@@ -719,21 +707,17 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                         onContextMenu={onContextMenu}
                         showManagerInfo={showManagerInfo}
                         showSecondaryManagers={showSecondaryManagers}
-                        selectedIds={selectedIds}
-                        onSelect={onSelect}
                     />
                 ) : (
                     <EmployeeNode
                         emp={node}
-                        onClick={onSelect ? undefined : onEmployeeClick}
+                        onClick={onEmployeeClick}
                         showTags={showTags}
                         dnd={dnd}
                         isEditMode={isEditMode}
                         onContextMenu={onContextMenu}
                         showManagerInfo={showManagerInfo}
                         showSecondaryManagers={showSecondaryManagers}
-                        isSelected={selectedIds?.has(node.id)}
-                        onSelect={onSelect}
                     />
                 )}
             </div>
@@ -756,8 +740,6 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
                             onContextMenu={onContextMenu}
                             showManagerInfo={showManagerInfo}
                             showSecondaryManagers={showSecondaryManagers}
-                            selectedIds={selectedIds}
-                            onSelect={onSelect}
                         />
                     ))}
                 </ul>
@@ -775,8 +757,6 @@ const OrganizationChart = () => {
     const [showDebug, setShowDebug] = useState(false);
     const [showManagerInfo, setShowManagerInfo] = useState(false);
     const [showSecondaryManagers, setShowSecondaryManagers] = useState(false);
-    const [selectionMode, setSelectionMode] = useState(false);
-    const [selectedIds, setSelectedIds] = useState(new Set());
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -1077,15 +1057,6 @@ const OrganizationChart = () => {
         }
     };
 
-    // Selection handler
-    const handleToggleSelect = useCallback((empId) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(empId)) next.delete(empId);
-            else next.add(empId);
-            return next;
-        });
-    }, []);
 
     // Zoom Handlers
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
@@ -1237,23 +1208,7 @@ const OrganizationChart = () => {
                             <Star size={13} className="text-amber-500" />
                             <span className="text-[11px] font-medium text-slate-600 hidden lg:inline">İkincil</span>
                         </label>
-                        <div className="w-px h-4 bg-slate-200" />
-                        <label className="flex items-center gap-1.5 cursor-pointer select-none px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors" title="Seçim modu">
-                            <input type="checkbox" checked={selectionMode} onChange={(e) => { setSelectionMode(e.target.checked); if (!e.target.checked) setSelectedIds(new Set()); }} className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
-                            <CheckSquare size={13} className="text-emerald-500" />
-                            <span className="text-[11px] font-medium text-slate-600 hidden lg:inline">Seçim</span>
-                        </label>
                     </div>
-
-                    {/* Selection count badge */}
-                    {selectionMode && selectedIds.size > 0 && (
-                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1">
-                            <span className="text-[11px] font-bold text-blue-700">{selectedIds.size} kişi seçili</span>
-                            <button onClick={() => setSelectedIds(new Set())} className="text-blue-400 hover:text-blue-600 transition-colors" title="Seçimi temizle">
-                                <XIcon size={12} />
-                            </button>
-                        </div>
-                    )}
 
                     <button
                         onClick={() => setShowDebug(!showDebug)}
@@ -1336,7 +1291,7 @@ const OrganizationChart = () => {
                                     node={{ ...node, type: node.type || 'department' }}
                                     showAllEmployees={true} // ALWAYS FORCE SHOW
                                     showTags={showTags}
-                                    onEmployeeClick={selectionMode ? undefined : setSelectedEmployee}
+                                    onEmployeeClick={setSelectedEmployee}
                                     isEditMode={isEditMode}
                                     onAddChild={(node) => setModalConfig({ mode: 'create', node })}
                                     onEdit={(node) => setModalConfig({ mode: 'edit', node })}
@@ -1345,8 +1300,6 @@ const OrganizationChart = () => {
                                     onContextMenu={isEditMode && canReassign ? dnd.handleContextMenu : undefined}
                                     showManagerInfo={showManagerInfo}
                                     showSecondaryManagers={showSecondaryManagers}
-                                    selectedIds={selectionMode ? selectedIds : undefined}
-                                    onSelect={selectionMode ? handleToggleSelect : undefined}
                                 />
                             ))}
                         </ul>
