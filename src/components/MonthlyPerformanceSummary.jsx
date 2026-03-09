@@ -1,5 +1,62 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale, ChevronUp, ChevronDown } from 'lucide-react';
+import { Popover } from 'antd';
+
+const EffortDetailPopover = ({ stats }) => {
+    if (!stats) return null;
+    const rows = [
+        { label: 'Hedef', value: `${stats.targetHours} sa` },
+        { label: 'Normal Çalışma', value: `${stats.completedHours} sa` },
+        { label: 'Onaylı OT', value: `${stats.overtimeHours} sa` },
+        { type: 'divider' },
+        { label: 'Onaylı Toplam', value: `${stats.netWorkHours} sa`, bold: true },
+        { type: 'divider' },
+        {
+            label: stats.isNetNeutral ? 'Durum' : (stats.isNetSurplus ? 'Net Fazla' : 'Net Eksik'),
+            value: stats.isNetNeutral
+                ? 'Hedefe Ulaşıldı'
+                : `${stats.isNetSurplus ? '+' : '-'}${stats.netBalanceForLabelHours} sa`,
+            bold: true,
+            color: stats.isNetNeutral ? 'text-slate-600' : (stats.isNetSurplus ? 'text-emerald-600' : 'text-rose-600')
+        },
+    ];
+
+    if (parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) {
+        rows.push({ type: 'divider' });
+        if (parseFloat(stats.otPendingHours) > 0) {
+            rows.push({ label: 'Bekleyen OT', value: `${stats.otPendingHours} sa`, color: 'text-amber-600', muted: true });
+        }
+        if (parseFloat(stats.otPotentialHours) > 0) {
+            rows.push({ label: 'Potansiyel OT', value: `${stats.otPotentialHours} sa`, color: 'text-slate-500', muted: true });
+        }
+        rows.push({ label: 'Projeksiyon', value: `${stats.projectedWorkHours} sa`, bold: true, color: 'text-indigo-600' });
+    }
+
+    return (
+        <div className="min-w-[220px] p-1">
+            <div className="text-xs font-black text-slate-700 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-indigo-500" />
+                Aylık Efor Detayı
+            </div>
+            <div className="space-y-1">
+                {rows.map((row, i) =>
+                    row.type === 'divider' ? (
+                        <div key={i} className="border-t border-slate-100 my-1.5" />
+                    ) : (
+                        <div key={i} className={`flex justify-between items-center ${row.muted ? 'opacity-70' : ''}`}>
+                            <span className={`text-xs ${row.bold ? 'font-black' : 'font-medium'} ${row.color || 'text-slate-600'}`}>
+                                {row.label}
+                            </span>
+                            <span className={`text-xs ${row.bold ? 'font-black' : 'font-semibold'} ${row.color || 'text-slate-800'} tabular-nums`}>
+                                {row.value}
+                            </span>
+                        </div>
+                    )
+                )}
+            </div>
+        </div>
+    );
+};
 
 const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
@@ -101,6 +158,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pProjected: targetSec > 0 ? Math.min(100, ((netWorkSec + otPendingSec + otPotentialSec) / targetSec) * 100) : 0,
                 pPending: targetSec > 0 ? Math.min(100 - (Math.min(100, (netWorkSec / targetSec) * 100)), (otPendingSec / targetSec) * 100) : 0,
                 pPotential: targetSec > 0 ? Math.min(100 - (Math.min(100, ((netWorkSec + otPendingSec) / targetSec) * 100)), (otPotentialSec / targetSec) * 100) : 0,
+
+                // Target indicator position for "Toplam Efor" bar
+                triangleLeft: targetSec > 0 ? Math.min(100, (targetSec / Math.max(targetSec, netWorkSec + otPendingSec + otPotentialSec)) * 100) : 100,
+
+                // Net balance for label (approved only: normal + approved OT vs target)
+                netBalanceForLabelHours: (Math.abs(netWorkSec - targetSec) / 3600).toFixed(1),
+                isNetSurplus: (netWorkSec - targetSec) > 0,
+                isNetNeutral: Math.abs(netWorkSec - targetSec) < 360, // ±0.1 sa threshold
 
                 // Fiscal month from backend (not JS Date)
                 fiscalMonth: periodSummary.fiscal_month || (new Date().getMonth() + 1),
@@ -222,8 +287,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             </div>
 
             {/* DUAL BAR LAYOUT */}
-            <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200 space-y-10 border border-slate-200 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-bl-full -mr-10 -mt-20 z-0 pointer-events-none opacity-50"></div>
+            <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200 space-y-10 border border-slate-200 relative">
+                <div className="absolute top-0 right-0 w-64 h-64 overflow-hidden pointer-events-none z-0">
+                    <div className="w-64 h-64 bg-slate-50 rounded-bl-full -mr-10 -mt-20 opacity-50"></div>
+                </div>
 
                 {/* 1. Normal Work Bar */}
                 <div className="relative z-10">
@@ -256,6 +323,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                 {/* 2. Total Work (Net) Bar */}
                 <div className="relative z-10 pt-6 border-t border-slate-100">
+                    {/* Header row */}
                     <div className="flex justify-between items-center mb-3">
                         <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
                             Toplam Efor (Onaylı Mesai Dahil)
@@ -263,28 +331,78 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </span>
                         <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.netWorkHours} / {stats.targetHours} sa</span>
                     </div>
-                    {/* ENHANCED BAR with ghost projected sections */}
-                    <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
-                        {/* Approved total (solid) */}
-                        <div
-                            className={`h-full transition-all duration-1000 relative z-10 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.5)]'}`}
-                            style={{ width: `${stats.pTotal}%` }}
-                        >
-                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent"></div>
+
+                    {/* Bar + Target Indicator Container */}
+                    <div className="relative">
+                        {/* Target indicator - only show when target > 0 */}
+                        {parseFloat(stats.targetHours) > 0 && (
+                            <Popover
+                                content={<EffortDetailPopover stats={stats} />}
+                                trigger="click"
+                                placement="bottom"
+                                getPopupContainer={(trigger) => trigger.parentElement}
+                            >
+                                <div
+                                    className="absolute z-30 flex flex-col items-center cursor-pointer group"
+                                    style={{
+                                        left: `${stats.triangleLeft}%`,
+                                        top: '-20px',
+                                        transform: `translateX(${stats.triangleLeft > 90 ? '-80%' : stats.triangleLeft < 10 ? '-20%' : '-50%'})`
+                                    }}
+                                >
+                                    {/* Triangle marker */}
+                                    <svg width="12" height="8" viewBox="0 0 12 8" className="text-slate-500 group-hover:text-indigo-500 transition-colors drop-shadow-sm">
+                                        <polygon points="6,8 0,0 12,0" fill="currentColor" />
+                                    </svg>
+                                    {/* Dashed vertical line */}
+                                    <div className="w-0 border-l-2 border-dashed border-slate-400/60 group-hover:border-indigo-400/80 transition-colors" style={{ height: '42px' }} />
+                                    {/* Net deficit/surplus badge */}
+                                    <div className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-black whitespace-nowrap border shadow-sm transition-all group-hover:shadow-md ${
+                                        stats.isNetNeutral
+                                            ? 'bg-slate-50 text-slate-600 border-slate-200'
+                                            : stats.isNetSurplus
+                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                                : 'bg-rose-50 text-rose-600 border-rose-200'
+                                    }`}>
+                                        {stats.isNetNeutral ? (
+                                            <span className="flex items-center gap-1">
+                                                <CheckCircle className="w-3 h-3" /> Hedefte
+                                            </span>
+                                        ) : stats.isNetSurplus ? (
+                                            <span className="flex items-center gap-1">
+                                                <TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelHours} sa
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1">
+                                                <AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelHours} sa
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </Popover>
+                        )}
+
+                        {/* Progress Bar */}
+                        <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50 mt-3">
+                            <div
+                                className={`h-full transition-all duration-1000 relative z-10 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.5)]'}`}
+                                style={{ width: `${stats.pTotal}%` }}
+                            >
+                                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent"></div>
+                            </div>
+                            {stats.pPending > 0 && (
+                                <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-50"
+                                    style={{ left: `${stats.pTotal}%`, width: `${stats.pPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 3px, #f59e0b 3px, #f59e0b 6px)' }} />
+                            )}
+                            {stats.pPotential > 0 && (
+                                <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-40"
+                                    style={{ left: `${stats.pTotal + stats.pPending}%`, width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #94a3b8 3px, #94a3b8 6px)' }} />
+                            )}
                         </div>
-                        {/* Pending ghost (amber striped) */}
-                        {stats.pPending > 0 && (
-                            <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-50"
-                                style={{ left: `${stats.pTotal}%`, width: `${stats.pPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 3px, #f59e0b 3px, #f59e0b 6px)' }} />
-                        )}
-                        {/* Potential ghost (gray striped) */}
-                        {stats.pPotential > 0 && (
-                            <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-40"
-                                style={{ left: `${stats.pTotal + stats.pPending}%`, width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #94a3b8 3px, #94a3b8 6px)' }} />
-                        )}
                     </div>
-                    {/* Summary row below bar */}
-                    <div className="flex items-center justify-between mt-2 px-1">
+
+                    {/* Summary row below bar — increased mt for badge space */}
+                    <div className="flex items-center justify-between mt-8 px-1">
                         <div className="flex items-center gap-3 text-[10px] font-bold">
                             <span className="text-slate-600">Onaylı: <span className="font-black">{stats.netWorkHours} sa</span></span>
                             {parseFloat(stats.otPendingHours) > 0 && (
