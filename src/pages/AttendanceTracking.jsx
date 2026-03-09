@@ -16,6 +16,7 @@ import {
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
 import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
+import TeamAttendanceAnalytics from '../components/TeamAttendanceAnalytics';
 import OvertimeManagementTab from './attendance-tracking/OvertimeManagementTab';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
@@ -754,7 +755,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             {/* Analytics View */}
             {viewMode === 'analytics' && stats.length > 0 && teamTab === 'primary' && (
-                <TeamAnalyticsDashboard stats={stats} year={year} month={month} departmentId={selectedDept} />
+                <TeamAttendanceAnalytics
+                    stats={stats}
+                    year={year}
+                    month={month}
+                    secondaryTeam={secondaryTeam}
+                    onPersonClick={(person) => setSelectedEmployee(person)}
+                />
             )}
             {viewMode === 'analytics' && secondaryStats.length > 0 && teamTab === 'secondary' && (
                 <TeamAnalyticsDashboard stats={secondaryStats} year={year} month={month} departmentId={selectedDept} relationshipType="SECONDARY" />
