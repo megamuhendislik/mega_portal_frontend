@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-    Search, Users, Shield, Inbox, UserCheck, UserCog
+    Search, Users, Shield, UserCheck, UserCog, Clock, FileText
 } from 'lucide-react';
 import api from '../../services/api';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
@@ -13,15 +13,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
     const [substituteData, setSubstituteData] = useState(null);
     const [subordinates, setSubordinates] = useState([]);
-    const [secondaryOnlyIds, setSecondaryOnlyIds] = useState(new Set());
+    const [secondarySubIds, setSecondarySubIds] = useState(new Set());
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Sub-tab: 'direct_incoming' | 'team_requests'
-    const [activeSubTab, setActiveSubTab] = useState('direct_incoming');
-
-    // Manager type filter for direct incoming: 'all' | 'primary' | 'secondary'
-    const [directManagerFilter, setDirectManagerFilter] = useState('all');
+    // Sub-tab: 'primary_team' | 'secondary_team'
+    const [activeSubTab, setActiveSubTab] = useState('primary_team');
 
     // Filters
     const [typeFilter, setTypeFilter] = useState(filterType === 'overtime' ? 'OVERTIME' : 'ALL');
@@ -33,13 +30,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedRequestType, setSelectedRequestType] = useState(null);
 
-    // Expandable row state for direct incoming (flat table)
-    const [directExpandedId, setDirectExpandedId] = useState(null);
+    // Expandable row state (flat table)
+    const [expandedId, setExpandedId] = useState(null);
 
-    // Open groups state for team requests (employee accordion)
+    // Open groups state (employee accordion)
     const [openGroups, setOpenGroups] = useState(new Set());
 
-    // Compute directSubordinateIds
+    // Compute directSubordinateIds (PRIMARY subordinates)
     const directSubordinateIds = useMemo(() => {
         if (!subordinates.length || !currentUserEmployeeId) return new Set();
         return new Set(
@@ -70,12 +67,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (subsRes.status === 'fulfilled') {
                 const allSubs = subsRes.value.data || [];
                 setSubordinates(allSubs);
-                const priSubIds = new Set(allSubs.map(s => s.id));
                 if (secSubRes.status === 'fulfilled') {
                     const secSubs = secSubRes.value.data || [];
-                    const secIds = new Set(secSubs.map(s => s.id));
-                    const secOnly = new Set([...secIds].filter(id => !priSubIds.has(id)));
-                    setSecondaryOnlyIds(secOnly);
+                    setSecondarySubIds(new Set(secSubs.map(s => s.id)));
                 }
             }
             if (teamRes.status === 'fulfilled') {
@@ -227,22 +221,22 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         _principalName: principalName,
     });
 
-    // --- SUB-TAB 1: Doğrudan Gelen (request_scope = 'direct', PENDING + substitute) ---
-    const directIncomingItems = useMemo(() => {
+    // --- PRIMARY TEAM: manager_type PRIMARY or null + substitute + history ---
+    const primaryTeamItems = useMemo(() => {
         const items = [];
         const seen = new Set();
 
-        // PENDING incoming requests — sadece doğrudan bana yönlendirilmiş (backend request_scope)
+        // All incoming requests with manager_type PRIMARY or null
         (incomingRequests || []).forEach(r => {
-            if (r.status !== 'PENDING') return;
-            if (r.request_scope !== 'direct') return;
+            const mType = (r.manager_type || 'PRIMARY').toUpperCase();
+            if (mType !== 'PRIMARY') return;
             const key = `${r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : r.type}-${r.id}`;
             if (seen.has(key)) return;
             seen.add(key);
             items.push(normalizeRequest(r, r.level === 'direct' ? 'DIRECT' : 'INDIRECT'));
         });
 
-        // Substitute requests (vekalet — her zaman doğrudan gelen'de, manager_type='primary')
+        // Substitute requests always go to primary team
         if (substituteData) {
             const authorities = substituteData.authorities || [];
             (substituteData.leave_requests || []).forEach(r => {
@@ -277,77 +271,60 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             });
         }
 
+        // Include team history for PRIMARY subordinates (non-duplicate leave history)
+        (teamHistoryRequests || []).forEach(r => {
+            const empId = r.employee?.id || r.employee;
+            // Skip if this employee is a secondary-only subordinate
+            if (secondarySubIds.has(empId) && !directSubordinateIds.has(empId)) return;
+            const histType = r.type || 'LEAVE';
+            const key = `${histType}-${r.id}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            items.push(normalizeRequest({ ...r, type: histType }, 'INDIRECT'));
+        });
+
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
-    }, [incomingRequests, substituteData]);
+    }, [incomingRequests, substituteData, teamHistoryRequests, secondarySubIds, directSubordinateIds]);
 
-    // PRIMARY / SECONDARY counts for direct incoming badge
-    const primaryCount = useMemo(() =>
-        directIncomingItems.filter(r => (r.manager_type || 'PRIMARY') === 'PRIMARY').length
-    , [directIncomingItems]);
-
-    const secondaryCount = useMemo(() =>
-        directIncomingItems.filter(r => r.manager_type === 'SECONDARY').length
-    , [directIncomingItems]);
-
-    // --- SUB-TAB 2: Ekip Talepleri (alt yöneticilere gelen talepler, tüm durumlar) ---
-    const teamItems = useMemo(() => {
+    // --- SECONDARY TEAM: Only OVERTIME requests where manager_type is SECONDARY ---
+    const secondaryTeamItems = useMemo(() => {
         const items = [];
         const seen = new Set();
 
-        // Team requests — backend request_scope='team' olanlar (alt yöneticilere gelen)
         (incomingRequests || []).forEach(r => {
-            if (r.request_scope === 'direct') return;
+            if (r.manager_type !== 'SECONDARY') return;
+            // SECONDARY can only see OVERTIME
             const type = r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN');
+            if (type !== 'OVERTIME') return;
             const key = `${type}-${r.id}`;
             if (seen.has(key)) return;
             seen.add(key);
             items.push(normalizeRequest(r, r.level === 'direct' ? 'DIRECT' : 'INDIRECT'));
         });
 
-        // History (leave requests — don't duplicate) — sadece dolaylı çalışanların geçmişi
-        (teamHistoryRequests || []).forEach(r => {
-            const empId = r.employee?.id || r.employee;
-            if (directSubordinateIds.has(empId)) return;
-            const histTargetId = typeof r.target_approver === 'object'
-                ? r.target_approver?.id
-                : r.target_approver;
-            if (histTargetId === currentUserEmployeeId) return;
-            const histType = r.type || 'LEAVE';
-            const key = `${histType}-${r.id}`;
-            if (seen.has(key)) return;
-            seen.add(key);
-            items.push(normalizeRequest(
-                { ...r, type: histType },
-                'INDIRECT'
-            ));
-        });
-
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
-    }, [incomingRequests, teamHistoryRequests, directSubordinateIds, currentUserEmployeeId]);
+    }, [incomingRequests]);
 
     // Current items based on sub-tab
-    const currentItems = activeSubTab === 'direct_incoming' ? directIncomingItems : teamItems;
+    const currentItems = activeSubTab === 'primary_team' ? primaryTeamItems : secondaryTeamItems;
 
-    // Apply filters (including manager_type filter for direct)
+    // Badge counts
+    const primaryPendingCount = useMemo(() =>
+        primaryTeamItems.filter(r => r.status === 'PENDING' || r._isSubstitute).length
+    , [primaryTeamItems]);
+
+    const secondaryPendingCount = useMemo(() =>
+        secondaryTeamItems.filter(r => r.status === 'PENDING').length
+    , [secondaryTeamItems]);
+
+    // Apply filters
     const filtered = useMemo(() => {
         return currentItems.filter(r => {
-            // Manager type filter for direct incoming
-            if (activeSubTab === 'direct_incoming' && directManagerFilter !== 'all') {
-                const mType = (r.manager_type || 'PRIMARY').toUpperCase();
-                if (directManagerFilter === 'primary' && mType !== 'PRIMARY') return false;
-                if (directManagerFilter === 'secondary' && mType !== 'SECONDARY') return false;
-            }
-            // SECONDARY-only employee safety filter: only show OT requests
-            const empId = r.employee_id || r.employee?.id || r.employee;
-            if (empId && secondaryOnlyIds.has(empId)) {
-                const rType = r.type || '';
-                if (!rType.includes('OVERTIME') && rType !== 'OVERTIME') return false;
-            }
             if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
             if (r.status === 'POTENTIAL') return false;
-            if (activeSubTab === 'team_requests' && statusFilter !== 'ALL') {
+            if (statusFilter !== 'ALL') {
                 const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELLED': 'REJECTED' };
                 const effectiveStatus = statusGroup[r.status] || r.status;
                 if (effectiveStatus !== statusFilter) return false;
@@ -358,22 +335,21 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             return true;
         });
-    }, [currentItems, typeFilter, statusFilter, searchText, activeSubTab, secondaryOnlyIds, directManagerFilter]);
+    }, [currentItems, typeFilter, statusFilter, searchText]);
 
-    // Badge counts
-    const directPendingCount = useMemo(() =>
-        directIncomingItems.filter(r => r.status === 'PENDING' || r._isSubstitute).length
-    , [directIncomingItems]);
+    // Split filtered into pending and history
+    const pendingItems = useMemo(() =>
+        filtered.filter(r => r.status === 'PENDING' || r._isSubstitute)
+    , [filtered]);
 
-    const teamPendingCount = useMemo(() =>
-        teamItems.filter(r => r.status === 'PENDING').length
-    , [teamItems]);
+    const historyItems = useMemo(() =>
+        filtered.filter(r => r.status !== 'PENDING' && !r._isSubstitute)
+    , [filtered]);
 
-    // Group filtered items by employee for team_requests sub-tab
-    const groupedByEmployee = useMemo(() => {
-        if (activeSubTab !== 'team_requests') return [];
+    // Group history items by employee
+    const groupedHistory = useMemo(() => {
         const groups = {};
-        filtered.forEach(r => {
+        historyItems.forEach(r => {
             const empKey = r.employee_id || r.employee || r.employee_name || 'unknown';
             const name = r.employee_name || 'Bilinmiyor';
             if (!groups[empKey]) {
@@ -387,47 +363,43 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             groups[empKey].requests.push(r);
         });
-        return Object.values(groups).sort((a, b) => {
-            const aPending = a.requests.filter(r => r.status === 'PENDING').length;
-            const bPending = b.requests.filter(r => r.status === 'PENDING').length;
-            if (bPending !== aPending) return bPending - aPending;
-            return a.employeeName.localeCompare(b.employeeName, 'tr');
-        });
-    }, [filtered, activeSubTab]);
-
-    // Initialize open groups only once when first switching to team_requests
-    const groupsInitialized = useRef(false);
-    useEffect(() => {
-        if (activeSubTab === 'team_requests' && groupedByEmployee.length > 0 && !groupsInitialized.current) {
-            const pendingGroups = new Set(
-                groupedByEmployee
-                    .filter(g => g.requests.some(r => r.status === 'PENDING'))
-                    .map(g => g.employeeKey)
-            );
-            setOpenGroups(pendingGroups);
-            groupsInitialized.current = true;
-        }
-        if (activeSubTab !== 'team_requests') {
-            groupsInitialized.current = false;
-        }
-    }, [activeSubTab, groupedByEmployee]);
+        return Object.values(groups).sort((a, b) =>
+            a.employeeName.localeCompare(b.employeeName, 'tr')
+        );
+    }, [historyItems]);
 
     // Type filter options
     const typeFilterOptions = filterType
         ? []
-        : [
-            { key: 'ALL', label: 'Tümü' },
-            { key: 'LEAVE', label: 'İzin' },
-            { key: 'OVERTIME', label: 'Mesai' },
-            { key: 'MEAL', label: 'Yemek' },
-            { key: 'CARDLESS_ENTRY', label: 'Kartsız' },
-            { key: 'HEALTH_REPORT', label: 'Sağlık R.' },
-            { key: 'HOSPITAL_VISIT', label: 'Hastane' },
-        ];
+        : activeSubTab === 'secondary_team'
+            ? [
+                { key: 'ALL', label: 'Tümü' },
+                { key: 'OVERTIME', label: 'Mesai' },
+            ]
+            : [
+                { key: 'ALL', label: 'Tümü' },
+                { key: 'LEAVE', label: 'İzin' },
+                { key: 'OVERTIME', label: 'Mesai' },
+                { key: 'MEAL', label: 'Yemek' },
+                { key: 'CARDLESS_ENTRY', label: 'Kartsız' },
+                { key: 'HEALTH_REPORT', label: 'Sağlık R.' },
+                { key: 'HOSPITAL_VISIT', label: 'Hastane' },
+            ];
+
+    // Approve/reject handler wrapper
+    const wrapApprove = (r, notes) => {
+        if (r._isSubstitute) handleSubstituteApprove(r);
+        else handleApprove(r, notes);
+    };
+    const wrapReject = (r, reason) => {
+        if (r._isSubstitute) handleSubstituteReject(r, reason);
+        else handleReject(r, reason);
+    };
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
     const authorities = substituteData?.authorities || [];
+    const hasSecondaryTeam = secondarySubIds.size > 0 || secondaryTeamItems.length > 0;
 
     return (
         <div className="space-y-6">
@@ -453,67 +425,40 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 {/* Sub-tab pills */}
                 <div className="flex flex-wrap gap-2">
                     <button
-                        onClick={() => { setActiveSubTab('direct_incoming'); setStatusFilter('ALL'); setDirectManagerFilter('all'); }}
+                        onClick={() => { setActiveSubTab('primary_team'); setStatusFilter('ALL'); setTypeFilter(filterType === 'overtime' ? 'OVERTIME' : 'ALL'); }}
                         className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                            activeSubTab === 'direct_incoming'
+                            activeSubTab === 'primary_team'
                                 ? 'bg-slate-900 text-white shadow-lg'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                     >
-                        <Inbox size={14} />
-                        Doğrudan Talepler
-                        {directPendingCount > 0 && (
+                        <UserCheck size={14} />
+                        Birincil Ekip
+                        {primaryPendingCount > 0 && (
                             <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                                activeSubTab === 'direct_incoming' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
-                            }`}>{directPendingCount}</span>
+                                activeSubTab === 'primary_team' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+                            }`}>{primaryPendingCount}</span>
                         )}
                     </button>
-                    <button
-                        onClick={() => setActiveSubTab('team_requests')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                            activeSubTab === 'team_requests'
-                                ? 'bg-slate-900 text-white shadow-lg'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                        <Users size={14} />
-                        Ekip Talepleri
-                        {teamPendingCount > 0 && (
-                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                                activeSubTab === 'team_requests' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
-                            }`}>{teamPendingCount}</span>
-                        )}
-                    </button>
+                    {hasSecondaryTeam && (
+                        <button
+                            onClick={() => { setActiveSubTab('secondary_team'); setStatusFilter('ALL'); setTypeFilter('ALL'); }}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                                activeSubTab === 'secondary_team'
+                                    ? 'bg-slate-900 text-white shadow-lg'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                            <UserCog size={14} />
+                            İkincil Ekip
+                            {secondaryPendingCount > 0 && (
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                                    activeSubTab === 'secondary_team' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+                                }`}>{secondaryPendingCount}</span>
+                            )}
+                        </button>
+                    )}
                 </div>
-
-                {/* PRIMARY / SECONDARY sub-filter for direct incoming */}
-                {activeSubTab === 'direct_incoming' && secondaryCount > 0 && (
-                    <div className="flex gap-1.5 border-t border-slate-100 pt-3">
-                        {[
-                            { key: 'all', label: 'Tümü', count: directPendingCount },
-                            { key: 'primary', label: 'Birincil Yönetici', icon: <UserCheck size={12} />, count: primaryCount },
-                            { key: 'secondary', label: 'İkincil Yönetici', icon: <UserCog size={12} />, count: secondaryCount },
-                        ].map(opt => (
-                            <button
-                                key={opt.key}
-                                onClick={() => setDirectManagerFilter(opt.key)}
-                                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
-                                    directManagerFilter === opt.key
-                                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                }`}
-                            >
-                                {opt.icon}
-                                {opt.label}
-                                {opt.count > 0 && (
-                                    <span className={`px-1 py-0.5 rounded text-[9px] ${
-                                        directManagerFilter === opt.key ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
-                                    }`}>{opt.count}</span>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                )}
 
                 {/* Type + Status + Search */}
                 <div className="flex flex-col xl:flex-row gap-3 justify-between items-start xl:items-center">
@@ -528,7 +473,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {/* Type filter — hidden when filterType prop locks it */}
+                        {/* Type filter */}
                         {typeFilterOptions.length > 0 && (
                             <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg gap-0.5">
                                 {typeFilterOptions.map(t => (
@@ -542,20 +487,18 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                 ))}
                             </div>
                         )}
-                        {/* Status filter — only for Ekip Talepleri tab */}
-                        {activeSubTab === 'team_requests' && (
-                            <div className="flex bg-slate-100 p-1 rounded-lg">
-                                {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
-                                    <button key={s} onClick={() => setStatusFilter(s)}
-                                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                            statusFilter === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                    >
-                                        {s === 'ALL' ? 'Hepsi' : s === 'PENDING' ? 'Bekleyen' : s === 'APPROVED' ? 'Onaylı' : 'Red'}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {/* Status filter */}
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
+                                <button key={s} onClick={() => setStatusFilter(s)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                                        statusFilter === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                                >
+                                    {s === 'ALL' ? 'Hepsi' : s === 'PENDING' ? 'Bekleyen' : s === 'APPROVED' ? 'Onaylı' : 'Red'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -567,84 +510,90 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         <Users size={32} className="text-slate-300" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-700">
-                        {activeSubTab === 'direct_incoming' ? 'Bekleyen Gelen Talep Yok' : 'Ekip Talebi Yok'}
+                        {activeSubTab === 'primary_team' ? 'Birincil Ekipte Talep Yok' : 'İkincil Ekipte Talep Yok'}
                     </h3>
                     <p className="text-sm text-slate-500 mt-1">Seçili kriterlere uygun talep bulunmamaktadır.</p>
                 </div>
-            ) : activeSubTab === 'direct_incoming' ? (
-                /* Doğrudan Gelen — flat expandable table */
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
-                                    <th className="pl-3 pr-1 py-2 w-8"></th>
-                                    <th className="px-3 py-2 font-bold">Talep Eden</th>
-                                    <th className="px-3 py-2 font-bold">Tür</th>
-                                    <th className="px-3 py-2 font-bold">Tarih</th>
-                                    <th className="px-3 py-2 font-bold">Saat Aralığı</th>
-                                    <th className="px-3 py-2 font-bold">Süre</th>
-                                    <th className="px-3 py-2 font-bold">Durum</th>
-                                    <th className="px-3 py-2 font-bold text-right">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filtered.map(req => (
-                                    <ExpandableRequestRow
-                                        key={`${req.type}-${req.id}`}
-                                        req={req}
-                                        isExpanded={directExpandedId === `${req.type}-${req.id}`}
+            ) : (
+                <div className="space-y-6">
+                    {/* PENDING requests — flat table */}
+                    {pendingItems.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="px-4 py-3 border-b border-slate-100 bg-amber-50/30">
+                                <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2">
+                                    <Clock size={14} />
+                                    Onay Bekleyen ({pendingItems.length})
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
+                                            <th className="pl-3 pr-1 py-2 w-8"></th>
+                                            <th className="px-3 py-2 font-bold">Talep Eden</th>
+                                            <th className="px-3 py-2 font-bold">Tür</th>
+                                            <th className="px-3 py-2 font-bold">Tarih</th>
+                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                            <th className="px-3 py-2 font-bold">Süre</th>
+                                            <th className="px-3 py-2 font-bold">Durum</th>
+                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {pendingItems.map(req => (
+                                            <ExpandableRequestRow
+                                                key={`${req.type}-${req.id}`}
+                                                req={req}
+                                                isExpanded={expandedId === `${req.type}-${req.id}`}
+                                                onToggle={() => {
+                                                    const key = `${req.type}-${req.id}`;
+                                                    setExpandedId(prev => prev === key ? null : key);
+                                                }}
+                                                onViewDetails={handleViewDetails}
+                                                onApprove={wrapApprove}
+                                                onReject={wrapReject}
+                                                showEmployeeColumn={true}
+                                                mode="incoming"
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* History — grouped by employee */}
+                    {groupedHistory.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2">
+                                <FileText size={14} />
+                                Geçmiş Talepler
+                            </h3>
+                            <div className="space-y-3">
+                                {groupedHistory.map(group => (
+                                    <EmployeeRequestGroup
+                                        key={group.employeeKey}
+                                        employeeName={group.employeeName}
+                                        employeeDepartment={group.employeeDepartment}
+                                        employeePosition={group.employeePosition}
+                                        requests={group.requests}
+                                        isOpen={openGroups.has(group.employeeKey)}
                                         onToggle={() => {
-                                            const key = `${req.type}-${req.id}`;
-                                            setDirectExpandedId(prev => prev === key ? null : key);
+                                            setOpenGroups(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(group.employeeKey)) next.delete(group.employeeKey);
+                                                else next.add(group.employeeKey);
+                                                return next;
+                                            });
                                         }}
                                         onViewDetails={handleViewDetails}
-                                        onApprove={(r, notes) => {
-                                            if (r._isSubstitute) handleSubstituteApprove(r);
-                                            else handleApprove(r, notes);
-                                        }}
-                                        onReject={(r, reason) => {
-                                            if (r._isSubstitute) handleSubstituteReject(r, reason);
-                                            else handleReject(r, reason);
-                                        }}
-                                        showEmployeeColumn={true}
-                                        mode="incoming"
+                                        onApprove={wrapApprove}
+                                        onReject={wrapReject}
                                     />
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            ) : (
-                /* Ekip Talepleri — employee-grouped accordion */
-                <div className="space-y-3">
-                    {groupedByEmployee.map(group => (
-                        <EmployeeRequestGroup
-                            key={group.employeeKey}
-                            employeeName={group.employeeName}
-                            employeeDepartment={group.employeeDepartment}
-                            employeePosition={group.employeePosition}
-                            requests={group.requests}
-                            isOpen={openGroups.has(group.employeeKey)}
-                            onToggle={() => {
-                                setOpenGroups(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(group.employeeKey)) next.delete(group.employeeKey);
-                                    else next.add(group.employeeKey);
-                                    return next;
-                                });
-                            }}
-                            onViewDetails={handleViewDetails}
-                            onApprove={(req, notes) => {
-                                if (req._isSubstitute) handleSubstituteApprove(req);
-                                else handleApprove(req, notes);
-                            }}
-                            onReject={(req, reason) => {
-                                if (req._isSubstitute) handleSubstituteReject(req, reason);
-                                else handleReject(req, reason);
-                            }}
-                        />
-                    ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
