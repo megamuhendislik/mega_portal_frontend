@@ -147,9 +147,15 @@ export const LeaveRequestForm = ({
                         </details>
                     )}
                     {entitlementInfo && !entitlementInfo.has_entitlement && (
-                        <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 p-2 rounded">
-                            <AlertCircle size={12} />
-                            Yıllık izin hakediş kaydınız bulunmamaktadır. Lütfen İK ile iletişime geçin.
+                        <div className="mt-2 text-xs text-red-600 font-bold flex items-start gap-2 bg-red-50 p-3 rounded-lg border border-red-200">
+                            <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p>Yıllık izin hakediş kaydınız bulunmamaktadır.</p>
+                                <p className="text-[10px] font-normal text-red-500 mt-1">
+                                    Yöneticiniz veya İK birimi, <strong>Personel</strong> sayfasından ilgili çalışanı seçip
+                                    <strong> İzin Yönetimi</strong> sekmesinden yıl bazlı hak edişlerinizi tanımlayabilir.
+                                </p>
+                            </div>
                         </div>
                     )}
                     {isInsufficient && (

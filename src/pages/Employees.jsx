@@ -675,6 +675,21 @@ const StepLeave = ({ formData, handleChange }) => {
             days_entitled: formData.auto_calculated_rate || formData.annual_leave_accrual_rate || 14,
             days_used: 0
         };
+
+        // FIX-6: Check for year gaps and warn
+        const allYears = [...currentYears, nextYear].sort((a, b) => a - b);
+        const gaps = [];
+        for (let i = 1; i < allYears.length; i++) {
+            if (allYears[i] - allYears[i - 1] > 1) {
+                for (let y = allYears[i - 1] + 1; y < allYears[i]; y++) {
+                    gaps.push(y);
+                }
+            }
+        }
+        if (gaps.length > 0) {
+            toast.warning(`Dikkat: ${gaps.join(', ')} yıl(lar)ı eksik. Ardışık yıllar önerilir.`, { duration: 5000 });
+        }
+
         handleChange('leave_entitlements', [...(formData.leave_entitlements || []), newRow]);
     };
 
@@ -687,6 +702,12 @@ const StepLeave = ({ formData, handleChange }) => {
                 toast.error(`${value} yılı zaten mevcut.`);
                 return;
             }
+        }
+
+        // FIX-5: Prevent negative days_entitled
+        if (field === 'days_entitled' && parseFloat(value) < 0) {
+            toast.error('Hak edilen gün sayısı negatif olamaz.');
+            return;
         }
 
         newRows[index] = { ...newRows[index], [field]: value };
@@ -814,7 +835,7 @@ const StepLeave = ({ formData, handleChange }) => {
                                             <input type="number" value={ent.year} onChange={e => updateRow(idx, 'year', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none font-mono text-center font-bold text-slate-700" />
                                         </td>
                                         <td className="px-4 py-2">
-                                            <input type="number" value={ent.days_entitled} onChange={e => updateRow(idx, 'days_entitled', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none text-center font-bold text-emerald-600" />
+                                            <input type="number" min="0" step="0.5" value={ent.days_entitled} onChange={e => updateRow(idx, 'days_entitled', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none text-center font-bold text-emerald-600" />
                                         </td>
                                         <td className="px-4 py-2 text-center text-slate-500 font-mono text-xs">
                                             {ent.days_used}
