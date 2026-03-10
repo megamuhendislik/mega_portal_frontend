@@ -465,7 +465,11 @@ const Dashboard = () => {
                                 </div>
                                 <p className="text-[10px] text-slate-400 font-medium">
                                     {monthlySummary?.birthday_leave_used ? (
-                                        <span className="text-emerald-600 font-bold">Kullanıldı ✓</span>
+                                        <span className="text-emerald-600 font-bold">
+                                            {monthlySummary?.birthday_leave_used_date
+                                                ? `${monthlySummary.birthday_leave_used_date.split('-')[2]}.${monthlySummary.birthday_leave_used_date.split('-')[1]} tarihinde kullanıldı ✓`
+                                                : 'Kullanıldı ✓'}
+                                        </span>
                                     ) : (
                                         <span className="text-pink-600 font-bold">Kullanılabilir 🎂</span>
                                     )}
