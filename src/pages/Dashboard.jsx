@@ -232,6 +232,8 @@ const Dashboard = () => {
         );
     };
 
+    const groupedEvents = useMemo(() => groupEventsByDay(calendarEvents), [calendarEvents]);
+
     if (loading) {
         return (
             <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-6">
@@ -243,8 +245,6 @@ const Dashboard = () => {
             </div>
         );
     }
-
-    const groupedEvents = useMemo(() => groupEventsByDay(calendarEvents), [calendarEvents]);
 
     return (
         <div className="max-w-[1700px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
