@@ -57,6 +57,68 @@ const statusBadges = {
     CANCELLED: { label: 'İptal', className: 'bg-slate-100 text-slate-500' },
 };
 
+// Ardışık tatilleri birleştir (ör: Ramazan Bayramı 4 gün → tek satır)
+const mergeConsecutiveHolidays = (events) => {
+    const holidays = events
+        .filter(e => e.type === 'HOLIDAY')
+        .sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+    const others = events.filter(e => e.type !== 'HOLIDAY');
+
+    if (holidays.length === 0) return events;
+
+    // Ardışık günleri grupla
+    const runs = [];
+    let run = [holidays[0]];
+    for (let i = 1; i < holidays.length; i++) {
+        const prevStr = run[run.length - 1].start?.split('T')[0] || run[run.length - 1].start;
+        const currStr = holidays[i].start?.split('T')[0] || holidays[i].start;
+        const [py, pm, pd] = prevStr.split('-').map(Number);
+        const [cy, cm, cd] = currStr.split('-').map(Number);
+        const diff = (new Date(cy, cm - 1, cd) - new Date(py, pm - 1, pd)) / 86400000;
+        if (diff === 1) {
+            run.push(holidays[i]);
+        } else {
+            runs.push(run);
+            run = [holidays[i]];
+        }
+    }
+    runs.push(run);
+
+    // Her grubu birleştir
+    const merged = runs.map(group => {
+        if (group.length === 1) return group[0];
+
+        // Ortak ismi bul (Arifesi, X. Gün, Yarım Gün gibi ekleri sıyır)
+        const cleaned = group.map(h =>
+            h.title.replace(/\s*\(Yarım Gün\)/i, '').replace(/\s*Arifesi/i, '')
+                .replace(/\s*\d+\.\s*Gün/i, '').trim()
+        );
+        const freq = {};
+        cleaned.forEach(c => { freq[c] = (freq[c] || 0) + 1; });
+        const baseName = Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0];
+
+        // Tarih aralığı
+        const firstStr = group[0].start?.split('T')[0] || group[0].start;
+        const lastStr = group[group.length - 1].start?.split('T')[0] || group[group.length - 1].start;
+        const [fy, fm, fd] = firstStr.split('-').map(Number);
+        const [ly, lm, ld] = lastStr.split('-').map(Number);
+        const firstFmt = format(new Date(fy, fm - 1, fd), 'd MMM', { locale: tr });
+        const lastFmt = format(new Date(ly, lm - 1, ld), 'd MMM', { locale: tr });
+        const dateRange = fm === lm ? `${fd}–${lastFmt}` : `${firstFmt}–${lastFmt}`;
+
+        // Toplam gün (yarım gün varsa 0.5)
+        const totalDays = group.reduce((s, h) => s + (h.is_half_day ? 0.5 : 1), 0);
+        const dayLabel = totalDays % 1 === 0 ? `${totalDays} gün` : `${String(totalDays.toFixed(1)).replace('.', ',')} gün`;
+
+        return {
+            ...group[0],
+            title: `${baseName} (${dateRange}, ${dayLabel})`,
+        };
+    });
+
+    return [...others, ...merged];
+};
+
 const groupEventsByDay = (events) => {
     const today = getIstanbulToday();
     const tomorrow = getIstanbulDateOffset(1);
@@ -232,7 +294,7 @@ const Dashboard = () => {
         );
     };
 
-    const groupedEvents = useMemo(() => groupEventsByDay(calendarEvents), [calendarEvents]);
+    const groupedEvents = useMemo(() => groupEventsByDay(mergeConsecutiveHolidays(calendarEvents)), [calendarEvents]);
 
     if (loading) {
         return (
