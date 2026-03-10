@@ -311,7 +311,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             content={<EffortDetailPopover stats={stats} />}
                             trigger="click"
                             placement="bottom"
-                            getPopupContainer={(trigger) => trigger.parentElement}
+                            zIndex={1050}
                         >
                             <div
                                 className="absolute z-30 cursor-pointer group"
