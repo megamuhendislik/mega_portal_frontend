@@ -570,71 +570,71 @@ const Dashboard = () => {
                 </div>
 
                 {/* Activity / Requests (4 Cols) - Moved up from bottom */}
-                <div className="xl:col-span-4 h-[280px] md:h-[420px] bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col">
-                    <div className="flex items-center justify-between mb-6">
+                <div className="xl:col-span-4 h-[280px] md:h-[420px] bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                             <FileText size={20} className="text-indigo-500" />
                             Son Aktiviteler
                         </h3>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 max-h-[300px]">
+                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-2" style={{ scrollbarWidth: 'thin' }}>
                         {requestTab === 'my_requests' ? (
                             myRequests.length > 0 ? myRequests.map((r, i) => <RequestItem key={i} req={r} />) : <p className="text-slate-400 text-sm text-center py-4">Talep bulunamadı.</p>
                         ) : (
                             incomingRequests.length > 0 ? incomingRequests.map((r, i) => <RequestItem key={i} req={r} />) : <p className="text-slate-400 text-sm text-center py-4">Onay bekleyen talep yok.</p>
                         )}
-                    </div>
 
-                    <div className="mt-6 pt-4 border-t border-slate-100">
-                        <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
-                            <CalendarIcon size={16} className="text-emerald-500" />
-                            Yaklaşan Etkinlikler
-                            {calendarEvents.length > 0 && (
-                                <span className="text-xs font-normal text-slate-400">({calendarEvents.length})</span>
-                            )}
-                        </h4>
-                        <div className="max-h-72 overflow-y-auto space-y-3 pr-1" style={{ scrollbarWidth: 'thin' }}>
-                            {calendarEvents.length === 0 ? (
-                                <div className="text-center py-6 text-slate-400">
-                                    <CalendarIcon size={24} className="mx-auto mb-2 opacity-50" />
-                                    <p className="text-xs">Önümüzdeki 2 haftada etkinlik yok</p>
-                                </div>
-                            ) : (
-                                groupedEvents.map(group => (
-                                    <div key={group.dateStr}>
-                                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                                            {group.label}
-                                        </div>
-                                        <div className="space-y-1">
-                                            {group.items.map((ev, i) => {
-                                                const timeStr = !ev.allDay && ev.start?.includes('T') && ev.end?.includes('T')
-                                                    ? `${ev.start.split('T')[1]?.slice(0,5)}–${ev.end.split('T')[1]?.slice(0,5)}`
-                                                    : null;
-                                                const badge = ev.status && statusBadges[ev.status];
-                                                const showStatus = ev.type !== 'HOLIDAY' && ev.type !== 'PERSONAL';
-                                                return (
-                                                    <div key={ev.id || i} className="flex items-center gap-2 text-xs bg-slate-50/80 hover:bg-slate-100/80 transition-colors p-2 rounded-lg border border-slate-100">
-                                                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${eventDotColors[ev.type] || 'bg-slate-400'}`} />
-                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${eventTypeColors[ev.type] || 'bg-slate-100 text-slate-600'}`}>
-                                                            {eventTypeLabels[ev.type] || ev.type}
-                                                        </span>
-                                                        <span className="font-medium text-slate-700 truncate flex-1 min-w-0" title={ev.title}>{ev.title}</span>
-                                                        {timeStr && (
-                                                            <span className="text-slate-400 flex-shrink-0">{timeStr}</span>
-                                                        )}
-                                                        {showStatus && badge && (
-                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${badge.className}`}>
-                                                                {badge.label}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                        <div className="pt-3 border-t border-slate-100">
+                            <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
+                                <CalendarIcon size={16} className="text-emerald-500" />
+                                Yaklaşan Etkinlikler
+                                {calendarEvents.length > 0 && (
+                                    <span className="text-xs font-normal text-slate-400">({calendarEvents.length})</span>
+                                )}
+                            </h4>
+                            <div className="space-y-3">
+                                {calendarEvents.length === 0 ? (
+                                    <div className="text-center py-4 text-slate-400">
+                                        <CalendarIcon size={20} className="mx-auto mb-1 opacity-50" />
+                                        <p className="text-xs">Önümüzdeki 2 haftada etkinlik yok</p>
                                     </div>
-                                ))
-                            )}
+                                ) : (
+                                    groupedEvents.map(group => (
+                                        <div key={group.dateStr}>
+                                            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                                                {group.label}
+                                            </div>
+                                            <div className="space-y-1">
+                                                {group.items.map((ev, i) => {
+                                                    const timeStr = !ev.allDay && ev.start?.includes('T') && ev.end?.includes('T')
+                                                        ? `${ev.start.split('T')[1]?.slice(0,5)}–${ev.end.split('T')[1]?.slice(0,5)}`
+                                                        : null;
+                                                    const badge = ev.status && statusBadges[ev.status];
+                                                    const showStatus = ev.type !== 'HOLIDAY' && ev.type !== 'PERSONAL';
+                                                    return (
+                                                        <div key={ev.id || i} className="flex items-center gap-2 text-xs bg-slate-50/80 hover:bg-slate-100/80 transition-colors p-2 rounded-lg border border-slate-100">
+                                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${eventDotColors[ev.type] || 'bg-slate-400'}`} />
+                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${eventTypeColors[ev.type] || 'bg-slate-100 text-slate-600'}`}>
+                                                                {eventTypeLabels[ev.type] || ev.type}
+                                                            </span>
+                                                            <span className="font-medium text-slate-700 truncate flex-1 min-w-0" title={ev.title}>{ev.title}</span>
+                                                            {timeStr && (
+                                                                <span className="text-slate-400 flex-shrink-0">{timeStr}</span>
+                                                            )}
+                                                            {showStatus && badge && (
+                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${badge.className}`}>
+                                                                    {badge.label}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
