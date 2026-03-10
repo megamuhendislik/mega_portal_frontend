@@ -136,8 +136,8 @@ const Dashboard = () => {
         fetchDashboardData();
     }, [user]);
 
-    // Smart Polling (Every 30s)
-    useSmartPolling(fetchDashboardData, 30000);
+    // Smart Polling (Every 60s)
+    useSmartPolling(fetchDashboardData, 60000);
 
     // Format Helpers
     const formatHours = (sec) => ((sec || 0) / 3600).toFixed(1);
