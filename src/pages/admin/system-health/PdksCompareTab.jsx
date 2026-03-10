@@ -34,6 +34,7 @@ import {
     DownloadOutlined,
     LoadingOutlined,
     CodeOutlined,
+    RollbackOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -576,6 +577,9 @@ export default function PdksCompareTab() {
     const [previewing, setPreviewing] = useState(false);
     const [executing, setExecuting] = useState(false);
 
+    // Undo state
+    const [undoing, setUndoing] = useState(false);
+
     // Real-time log modal state
     const [logModalOpen, setLogModalOpen] = useState(false);
     const [resetLogs, setResetLogs] = useState([]);
@@ -982,7 +986,7 @@ export default function PdksCompareTab() {
                     <Alert
                         type="error"
                         showIcon
-                        message="DİKKAT: Bu işlem geri alınamaz!"
+                        message="DİKKAT: Bu işlem mevcut kayıtları siler ve yeniden oluşturur!"
                         description={
                             <div className="mt-1 space-y-1">
                                 <p>Seçili tarih aralığındaki TÜM attendance kayıtları silinecek.</p>
@@ -1021,6 +1025,7 @@ export default function PdksCompareTab() {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('session_id', sid);
+                formData.append('preview_confirmed', 'true');
                 try {
                     const res = await api.post('/system/health-check/pdks-full-reset-execute/', formData, {
                         headers: { 'Content-Type': 'multipart/form-data' },
@@ -1064,6 +1069,56 @@ export default function PdksCompareTab() {
             },
         });
     }, [file, resetPreview, startProgressPolling]);
+
+    // -----------------------------------------------------------------------
+    // Undo — Geri Al
+    // -----------------------------------------------------------------------
+    const handleUndo = useCallback(() => {
+        const snapshotId = resetResults?.snapshot_id;
+        if (!snapshotId) {
+            message.error('Snapshot bilgisi bulunamadı — geri alma mümkün değil.');
+            return;
+        }
+        Modal.confirm({
+            title: 'GERİ ALMA ONAYI',
+            icon: <ExclamationCircleOutlined />,
+            width: 480,
+            content: (
+                <div className="mt-2 text-sm space-y-2">
+                    <Alert
+                        type="warning"
+                        showIcon
+                        message="Reset öncesi duruma geri dönülecek"
+                        description="Tüm attendance ve ek mesai kayıtları reset öncesindeki haline geri yüklenecektir."
+                    />
+                </div>
+            ),
+            okText: 'Geri Al',
+            okButtonProps: { danger: true },
+            cancelText: 'İptal',
+            onOk: async () => {
+                setUndoing(true);
+                try {
+                    const res = await api.post('/system/health-check/pdks-full-reset-undo/', {
+                        snapshot_id: snapshotId,
+                    }, { timeout: 600000 });
+                    const d = res.data;
+                    if (d.status === 'success') {
+                        message.success(`Geri alma tamamlandı: ${d.restored_days} gün, ${d.restored_attendance} attendance, ${d.restored_ot} OT geri yüklendi.`);
+                    } else {
+                        message.warning(`Kısmi geri alma: ${d.restored_days} gün geri yüklendi, ${d.errors?.length || 0} hata.`);
+                    }
+                    setResetResults(null);
+                    setResetPreview(null);
+                } catch (e) {
+                    const errMsg = e.response?.data?.error || e.message;
+                    message.error('Geri alma hatası: ' + errMsg);
+                } finally {
+                    setUndoing(false);
+                }
+            },
+        });
+    }, [resetResults]);
 
     // -----------------------------------------------------------------------
     // Export preview as TXT
@@ -3216,6 +3271,22 @@ export default function PdksCompareTab() {
                                         </div>
                                     }
                                 />
+                            )}
+
+                            {/* Geri Al butonu */}
+                            {resetResults.snapshot_id && (
+                                <div className="flex justify-center pt-3">
+                                    <Button
+                                        danger
+                                        size="large"
+                                        icon={<RollbackOutlined />}
+                                        onClick={handleUndo}
+                                        loading={undoing}
+                                        disabled={undoing}
+                                    >
+                                        {undoing ? 'Geri Alınıyor...' : 'Geri Al (Reset Öncesine Dön)'}
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     )}
