@@ -1,20 +1,86 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
-import UpcomingEventsCard from '../components/UpcomingEventsCard';
 
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
-import BreakAnalysisWidget from '../components/BreakAnalysisWidget';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
 import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle, Cake } from 'lucide-react';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulDateOffset } from '../utils/dateUtils';
+
+// Yaklaşan Etkinlikler sabit tanımlar (component dışında — re-render'da yeniden oluşturulmaz)
+const eventTypeLabels = {
+    HOLIDAY: 'Tatil',
+    LEAVE_REQUEST: 'İzin',
+    OVERTIME_ASSIGNMENT: 'Mesai Ataması',
+    OVERTIME_REQUEST: 'Mesai Talebi',
+    HEALTH_REPORT: 'Sağlık R.',
+    PERSONAL: 'Kişisel',
+    EXTERNAL_DUTY: 'Dış Görev',
+    CARDLESS_ENTRY: 'Kartsız Giriş',
+};
+
+const eventTypeColors = {
+    HOLIDAY: 'bg-red-100 text-red-700',
+    LEAVE_REQUEST: 'bg-emerald-100 text-emerald-700',
+    OVERTIME_ASSIGNMENT: 'bg-purple-100 text-purple-700',
+    OVERTIME_REQUEST: 'bg-amber-100 text-amber-700',
+    HEALTH_REPORT: 'bg-pink-100 text-pink-700',
+    PERSONAL: 'bg-blue-100 text-blue-700',
+    EXTERNAL_DUTY: 'bg-cyan-100 text-cyan-700',
+    CARDLESS_ENTRY: 'bg-orange-100 text-orange-700',
+};
+
+const eventDotColors = {
+    HOLIDAY: 'bg-red-500',
+    LEAVE_REQUEST: 'bg-emerald-500',
+    OVERTIME_ASSIGNMENT: 'bg-purple-500',
+    OVERTIME_REQUEST: 'bg-amber-500',
+    HEALTH_REPORT: 'bg-pink-500',
+    PERSONAL: 'bg-blue-500',
+    EXTERNAL_DUTY: 'bg-cyan-500',
+    CARDLESS_ENTRY: 'bg-orange-500',
+};
+
+const statusBadges = {
+    APPROVED: { label: 'Onaylandı', className: 'bg-emerald-100 text-emerald-700' },
+    PENDING: { label: 'Bekliyor', className: 'bg-amber-100 text-amber-700' },
+    CLAIMED: { label: 'Talep Edildi', className: 'bg-blue-100 text-blue-700' },
+    EXPIRED: { label: 'Süresi Doldu', className: 'bg-slate-100 text-slate-500' },
+    REJECTED: { label: 'Reddedildi', className: 'bg-red-100 text-red-700' },
+    CANCELLED: { label: 'İptal', className: 'bg-slate-100 text-slate-500' },
+};
+
+const groupEventsByDay = (events) => {
+    const today = getIstanbulToday();
+    const tomorrow = getIstanbulDateOffset(1);
+
+    const groups = {};
+    events.forEach(ev => {
+        const dateStr = ev.start?.split('T')[0] || ev.start;
+        if (!groups[dateStr]) groups[dateStr] = [];
+        groups[dateStr].push(ev);
+    });
+
+    return Object.entries(groups)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dateStr, items]) => {
+            let label;
+            if (dateStr === today) label = 'Bugün';
+            else if (dateStr === tomorrow) label = 'Yarın';
+            else {
+                const [ey, em, ed] = dateStr.split('-').map(Number);
+                label = format(new Date(ey, em - 1, ed), 'd MMM EEEE', { locale: tr });
+            }
+            return { dateStr, label, items };
+        });
+};
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -82,7 +148,7 @@ const Dashboard = () => {
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
-                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${(() => { const [y,m,d] = getIstanbulToday().split('-').map(Number); const dt = new Date(y, m-1, d+7); return format(dt, 'yyyy-MM-dd'); })()}&employee_id=${employeeId}&include_ot_assignments=true&include_ot_requests=true&include_leaves=true&include_health_reports=true`),
+                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${getIstanbulDateOffset(14)}&employee_id=${employeeId}&include_ot_assignments=true&include_ot_requests=true&include_leaves=true&include_health_reports=true&include_cardless=true`),
                 api.get('/leave-requests/birthday-balance/')
             ]);
 
@@ -110,7 +176,7 @@ const Dashboard = () => {
             if (eventsRes.status === 'fulfilled') {
                 const results = eventsRes.value.data.results || eventsRes.value.data || [];
                 // Show all upcoming event types: personal events, holidays, OT, leaves, health reports
-                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'OVERTIME_ASSIGNMENT', 'OVERTIME_REQUEST', 'LEAVE', 'HEALTH_REPORT'].includes(e.type));
+                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'OVERTIME_ASSIGNMENT', 'OVERTIME_REQUEST', 'LEAVE_REQUEST', 'HEALTH_REPORT', 'EXTERNAL_DUTY', 'CARDLESS_ENTRY'].includes(e.type));
 
                 // Sort by start date
                 agendaItems.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -177,6 +243,8 @@ const Dashboard = () => {
             </div>
         );
     }
+
+    const groupedEvents = useMemo(() => groupEventsByDay(calendarEvents), [calendarEvents]);
 
     return (
         <div className="max-w-[1700px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
@@ -522,26 +590,51 @@ const Dashboard = () => {
                         <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
                             <CalendarIcon size={16} className="text-emerald-500" />
                             Yaklaşan Etkinlikler
+                            {calendarEvents.length > 0 && (
+                                <span className="text-xs font-normal text-slate-400">({calendarEvents.length})</span>
+                            )}
                         </h4>
-                        <div className="space-y-2">
-                            {calendarEvents.slice(0, 6).map((ev, i) => {
-                                const colorMap = {
-                                    HOLIDAY: 'bg-red-500',
-                                    PERSONAL: 'bg-blue-500',
-                                    OVERTIME_ASSIGNMENT: 'bg-purple-500',
-                                    OVERTIME_REQUEST: 'bg-amber-500',
-                                    LEAVE: 'bg-emerald-500',
-                                    HEALTH_REPORT: 'bg-pink-500',
-                                };
-                                return (
-                                    <div key={i} className="text-xs bg-slate-50 p-2 rounded border border-slate-100 flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full shrink-0 ${colorMap[ev.type] || 'bg-slate-400'}`} />
-                                        <span className="font-bold text-slate-600 truncate flex-1" title={ev.title}>{ev.title}</span>
-                                        <span className="text-slate-400 shrink-0">{ev.start ? format(new Date(ev.start), 'd MMM') : '-'}</span>
+                        <div className="max-h-72 overflow-y-auto space-y-3 pr-1" style={{ scrollbarWidth: 'thin' }}>
+                            {calendarEvents.length === 0 ? (
+                                <div className="text-center py-6 text-slate-400">
+                                    <CalendarIcon size={24} className="mx-auto mb-2 opacity-50" />
+                                    <p className="text-xs">Önümüzdeki 2 haftada etkinlik yok</p>
+                                </div>
+                            ) : (
+                                groupedEvents.map(group => (
+                                    <div key={group.dateStr}>
+                                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                                            {group.label}
+                                        </div>
+                                        <div className="space-y-1">
+                                            {group.items.map((ev, i) => {
+                                                const timeStr = !ev.allDay && ev.start?.includes('T') && ev.end?.includes('T')
+                                                    ? `${ev.start.split('T')[1]?.slice(0,5)}–${ev.end.split('T')[1]?.slice(0,5)}`
+                                                    : null;
+                                                const badge = ev.status && statusBadges[ev.status];
+                                                const showStatus = ev.type !== 'HOLIDAY' && ev.type !== 'PERSONAL';
+                                                return (
+                                                    <div key={ev.id || i} className="flex items-center gap-2 text-xs bg-slate-50/80 hover:bg-slate-100/80 transition-colors p-2 rounded-lg border border-slate-100">
+                                                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${eventDotColors[ev.type] || 'bg-slate-400'}`} />
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${eventTypeColors[ev.type] || 'bg-slate-100 text-slate-600'}`}>
+                                                            {eventTypeLabels[ev.type] || ev.type}
+                                                        </span>
+                                                        <span className="font-medium text-slate-700 truncate flex-1 min-w-0" title={ev.title}>{ev.title}</span>
+                                                        {timeStr && (
+                                                            <span className="text-slate-400 flex-shrink-0">{timeStr}</span>
+                                                        )}
+                                                        {showStatus && badge && (
+                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${badge.className}`}>
+                                                                {badge.label}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                );
-                            })}
-                            {calendarEvents.length === 0 && <p className="text-xs text-slate-400">Etkinlik yok.</p>}
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
