@@ -274,8 +274,8 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             _type: r.report_type === 'HOSPITAL_VISIT' ? 'HOSPITAL_VISIT' : 'HEALTH_REPORT',
             type: r.report_type === 'HOSPITAL_VISIT' ? 'HOSPITAL_VISIT' : 'HEALTH_REPORT',
             _sortDate: r.start_date || r.created_at,
-            target_approver_name: r.target_approver_detail?.full_name || null,
-            approved_by_name: r.approved_by_detail?.full_name || null,
+            target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
+            approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
@@ -292,7 +292,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             }
             if (typeFilter !== 'ALL' && r._type !== typeFilter) return false;
             if (statusFilter !== 'ALL') {
-                const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELLED': 'REJECTED' };
+                const statusGroup = { 'ORDERED': 'APPROVED' };
                 const effectiveStatus = statusGroup[r.status] || r.status;
                 if (effectiveStatus !== statusFilter) return false;
             }
@@ -320,7 +320,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             hospital_visit: actual.filter(r => r._type === 'HOSPITAL_VISIT').length,
             pending: actual.filter(r => r.status === 'PENDING').length,
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
-            rejected: actual.filter(r => ['REJECTED', 'CANCELLED'].includes(r.status)).length,
+            rejected: actual.filter(r => r.status === 'REJECTED').length,
         };
     }, [allMyRequests, filterYear, filterMonth]);
 

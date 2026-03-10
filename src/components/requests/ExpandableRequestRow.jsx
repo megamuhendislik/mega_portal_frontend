@@ -306,9 +306,26 @@ const ExpandableRequestRow = ({
                     <DurationCell req={req} />
                 </td>
 
-                {/* Durum */}
+                {/* Durum + Onaylayan */}
                 <td className="px-3 py-3">
-                    {getStatusBadge(req.status)}
+                    <div className="flex flex-col gap-1">
+                        {getStatusBadge(req.status)}
+                        {mode === 'personal' && req.status === 'PENDING' && req.target_approver_name && (
+                            <span className="text-[10px] text-blue-600 font-medium truncate max-w-[140px]" title={req.target_approver_name}>
+                                ↗ {req.target_approver_name}
+                            </span>
+                        )}
+                        {mode === 'personal' && req.status === 'APPROVED' && req.approved_by_name && (
+                            <span className="text-[10px] text-emerald-600 font-medium truncate max-w-[140px]" title={req.approved_by_name}>
+                                ✓ {req.approved_by_name}
+                            </span>
+                        )}
+                        {mode === 'personal' && req.status === 'REJECTED' && req.approved_by_name && (
+                            <span className="text-[10px] text-red-600 font-medium truncate max-w-[140px]" title={req.approved_by_name}>
+                                ✗ {req.approved_by_name}
+                            </span>
+                        )}
+                    </div>
                 </td>
 
                 {/* Islemler */}
