@@ -32,12 +32,9 @@ const Dashboard = () => {
     const [birthdayBalance, setBirthdayBalance] = useState(null);
     const [birthdayBannerVisible, setBirthdayBannerVisible] = useState(() => {
         const todayKey = getIstanbulToday();
-        const yearKey = todayKey.slice(0, 4);
-        const dismissed = localStorage.getItem(`birthday_banner_dismissed_${yearKey}`);
-        const seenToday = localStorage.getItem(`birthday_banner_seen_${todayKey}`);
-        if (dismissed || seenToday) return false;
-        localStorage.setItem(`birthday_banner_seen_${todayKey}`, '1');
-        return true;
+        const monthKey = todayKey.slice(0, 7); // "2026-03"
+        const dismissed = localStorage.getItem(`birthday_banner_dismissed_${monthKey}`);
+        return !dismissed;
     });
 
     // UI States
@@ -212,7 +209,7 @@ const Dashboard = () => {
                 birthdayBalance.is_birthday_today ? (
                     <div className="relative overflow-hidden bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl p-5 text-white shadow-lg">
                         <div className="birthday-confetti" />
-                        <button onClick={() => { localStorage.setItem(`birthday_banner_dismissed_${new Date().getFullYear()}`, '1'); setBirthdayBannerVisible(false); }} className="absolute top-3 right-3 text-white/60 hover:text-white text-xs font-medium bg-white/10 px-2 py-1 rounded-full transition-colors">
+                        <button onClick={() => { localStorage.setItem(`birthday_banner_dismissed_${getIstanbulToday().slice(0, 7)}`, '1'); setBirthdayBannerVisible(false); }} className="absolute top-3 right-3 text-white/60 hover:text-white text-xs font-medium bg-white/10 px-2 py-1 rounded-full transition-colors">
                             Bir daha gösterme
                         </button>
                         <div className="flex items-center gap-4">
@@ -229,7 +226,7 @@ const Dashboard = () => {
                     </div>
                 ) : (
                     <div className="relative overflow-hidden bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 rounded-2xl p-5 text-white shadow-lg">
-                        <button onClick={() => { localStorage.setItem(`birthday_banner_dismissed_${new Date().getFullYear()}`, '1'); setBirthdayBannerVisible(false); }} className="absolute top-3 right-3 text-white/60 hover:text-white text-xs font-medium bg-white/10 px-2 py-1 rounded-full transition-colors">
+                        <button onClick={() => { localStorage.setItem(`birthday_banner_dismissed_${getIstanbulToday().slice(0, 7)}`, '1'); setBirthdayBannerVisible(false); }} className="absolute top-3 right-3 text-white/60 hover:text-white text-xs font-medium bg-white/10 px-2 py-1 rounded-full transition-colors">
                             Bir daha gösterme
                         </button>
                         <div className="flex items-center gap-4">
