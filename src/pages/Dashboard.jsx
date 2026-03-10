@@ -85,7 +85,7 @@ const Dashboard = () => {
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
-                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${(() => { const [y,m,d] = getIstanbulToday().split('-').map(Number); const dt = new Date(y, m-1, d+7); return format(dt, 'yyyy-MM-dd'); })()}&employee_id=${employeeId}`),
+                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${(() => { const [y,m,d] = getIstanbulToday().split('-').map(Number); const dt = new Date(y, m-1, d+7); return format(dt, 'yyyy-MM-dd'); })()}&employee_id=${employeeId}&include_ot_assignments=true&include_ot_requests=true&include_leaves=true&include_health_reports=true`),
                 api.get('/leave-requests/birthday-balance/')
             ]);
 
@@ -112,9 +112,8 @@ const Dashboard = () => {
 
             if (eventsRes.status === 'fulfilled') {
                 const results = eventsRes.value.data.results || eventsRes.value.data || [];
-                // Filter out standard Attendance logs unless abnormal? No, just show Agenda items.
-                // Prioritize PERSONAL, HOLIDAY only (User requested to exclude REQUESTS from this view)
-                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY'].includes(e.type));
+                // Show all upcoming event types: personal events, holidays, OT, leaves, health reports
+                const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'OVERTIME_ASSIGNMENT', 'OVERTIME_REQUEST', 'LEAVE', 'HEALTH_REPORT'].includes(e.type));
 
                 // Sort by start date
                 agendaItems.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -524,12 +523,23 @@ const Dashboard = () => {
                             Yaklaşan Etkinlikler
                         </h4>
                         <div className="space-y-2">
-                            {calendarEvents.slice(0, 4).map((ev, i) => (
-                                <div key={i} className="text-xs bg-slate-50 p-2 rounded border border-slate-100 flex justify-between">
-                                    <span className="font-bold text-slate-600 truncate max-w-[150px]" title={ev.title}>{ev.title}</span>
-                                    <span className="text-slate-400 shrink-0">{ev.start ? format(new Date(ev.start), 'd MMM') : '-'}</span>
-                                </div>
-                            ))}
+                            {calendarEvents.slice(0, 6).map((ev, i) => {
+                                const colorMap = {
+                                    HOLIDAY: 'bg-red-500',
+                                    PERSONAL: 'bg-blue-500',
+                                    OVERTIME_ASSIGNMENT: 'bg-purple-500',
+                                    OVERTIME_REQUEST: 'bg-amber-500',
+                                    LEAVE: 'bg-emerald-500',
+                                    HEALTH_REPORT: 'bg-pink-500',
+                                };
+                                return (
+                                    <div key={i} className="text-xs bg-slate-50 p-2 rounded border border-slate-100 flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${colorMap[ev.type] || 'bg-slate-400'}`} />
+                                        <span className="font-bold text-slate-600 truncate flex-1" title={ev.title}>{ev.title}</span>
+                                        <span className="text-slate-400 shrink-0">{ev.start ? format(new Date(ev.start), 'd MMM') : '-'}</span>
+                                    </div>
+                                );
+                            })}
                             {calendarEvents.length === 0 && <p className="text-xs text-slate-400">Etkinlik yok.</p>}
                         </div>
                     </div>
