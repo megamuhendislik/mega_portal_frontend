@@ -7,7 +7,7 @@ import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow
 import EmployeeRequestGroup from '../../components/requests/EmployeeRequestGroup';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
-const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType }) => {
+const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -130,6 +130,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 await api.post(`/health-reports/${req.id}/approve/`);
             }
             fetchAllData();
+            onDataChange?.();
         } catch (e) {
             alert(e.response?.data?.error || 'İşlem başarısız');
         }
@@ -148,6 +149,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 await api.post(`/health-reports/${req.id}/reject/`, { reason });
             }
             fetchAllData();
+            onDataChange?.();
         } catch (e) {
             alert(e.response?.data?.error || 'İşlem başarısız');
         }
@@ -169,6 +171,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 });
             }
             fetchAllData();
+            onDataChange?.();
         } catch (e) {
             alert(e.response?.data?.error || 'İşlem başarısız');
         }
@@ -191,6 +194,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 });
             }
             fetchAllData();
+            onDataChange?.();
         } catch (e) {
             alert(e.response?.data?.error || 'İşlem başarısız');
         }
@@ -650,7 +654,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, refreshTrigger, filterType 
                 onClose={() => { setShowDetailModal(false); setSelectedRequest(null); }}
                 request={selectedRequest}
                 requestType={selectedRequestType}
-                onUpdate={fetchAllData}
+                onUpdate={() => { fetchAllData(); onDataChange?.(); }}
             />
         </div>
     );
