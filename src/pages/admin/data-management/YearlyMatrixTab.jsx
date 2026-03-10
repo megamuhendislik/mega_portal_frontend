@@ -84,6 +84,8 @@ export default function YearlyMatrixTab({ onNavigateToPersonel }) {
             year: listYear,
             month,
             netBalance: balance,
+            compensated: stat.compensated || 0,
+            isSettled: (stat.compensated || 0) !== 0,
         });
     };
 
@@ -196,26 +198,36 @@ export default function YearlyMatrixTab({ onNavigateToPersonel }) {
                                                 const stat = empStats[m] || {};
                                                 const hasOt = stat.ot > 300;
                                                 const hasMissing = stat.missing > 300;
-                                                const isEmpty = !hasOt && !hasMissing;
+                                                const isSettled = (stat.compensated || 0) !== 0;
+                                                const isEmpty = !hasOt && !hasMissing && !isSettled;
 
                                                 return (
                                                     <td
                                                         key={m}
                                                         className={`px-1 py-2 text-center border-r border-slate-50 text-xs ${
-                                                            m % 2 === 0 ? 'bg-slate-50/30' : ''
+                                                            isSettled
+                                                                ? 'bg-emerald-50/60'
+                                                                : m % 2 === 0
+                                                                    ? 'bg-slate-50/30'
+                                                                    : ''
                                                         }`}
                                                     >
                                                         {isEmpty ? (
                                                             <span className="text-slate-200">-</span>
                                                         ) : (
                                                             <div className="flex flex-col items-center gap-0.5">
+                                                                {isSettled && (
+                                                                    <span className="text-emerald-700 bg-emerald-100 px-1.5 rounded font-bold whitespace-nowrap flex items-center gap-0.5">
+                                                                        <span className="text-[10px]">&#10003;</span> Mutabakat
+                                                                    </span>
+                                                                )}
                                                                 {hasOt && (
-                                                                    <span className="text-amber-700 bg-amber-50 px-1.5 rounded font-bold whitespace-nowrap">
+                                                                    <span className={`px-1.5 rounded font-bold whitespace-nowrap ${isSettled ? 'text-slate-500 bg-slate-100 line-through' : 'text-amber-700 bg-amber-50'}`}>
                                                                         +{formatHours(stat.ot)}
                                                                     </span>
                                                                 )}
                                                                 {hasMissing && (
-                                                                    <span className="text-red-700 bg-red-50 px-1.5 rounded font-bold whitespace-nowrap">
+                                                                    <span className={`px-1.5 rounded font-bold whitespace-nowrap ${isSettled ? 'text-slate-500 bg-slate-100 line-through' : 'text-red-700 bg-red-50'}`}>
                                                                         -{formatHours(stat.missing)}
                                                                     </span>
                                                                 )}
@@ -223,16 +235,20 @@ export default function YearlyMatrixTab({ onNavigateToPersonel }) {
                                                         )}
 
                                                         {/* Settlement trigger on hover */}
-                                                        {!isEmpty && (
+                                                        {(!isEmpty || isSettled) && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openSettlement(emp, m, stat);
                                                                 }}
-                                                                className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 rounded"
-                                                                title="Mahsuplaş / Sıfırla"
+                                                                className={`mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] px-1.5 rounded ${
+                                                                    isSettled
+                                                                        ? 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+                                                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                                                                }`}
+                                                                title={isSettled ? 'Mutabakat Geri Al / Düzenle' : 'Mahsuplaş / Sıfırla'}
                                                             >
-                                                                Sıfırla
+                                                                {isSettled ? 'Geri Al' : 'Sıfırla'}
                                                             </button>
                                                         )}
                                                     </td>

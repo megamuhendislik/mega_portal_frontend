@@ -6,6 +6,7 @@ import { tr } from 'date-fns/locale';
 import api from '../../../services/api';
 import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
+import SettlementModal from './SettlementModal';
 
 export default function PersonelTab({ initialEmployee }) {
     // ── State ──────────────────────────────────────────────────────
@@ -16,6 +17,8 @@ export default function PersonelTab({ initialEmployee }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const [loadingEmployees, setLoadingEmployees] = useState(false);
     const [loadingCalendar, setLoadingCalendar] = useState(false);
+    const [balanceSummary, setBalanceSummary] = useState(null);
+    const [settlementData, setSettlementData] = useState(null);
 
     // ── Personel listesini yükle ───────────────────────────────────
     useEffect(() => {
@@ -60,11 +63,24 @@ export default function PersonelTab({ initialEmployee }) {
             .finally(() => setLoadingCalendar(false));
     }, [selectedEmployee, currentMonth]);
 
+    // ── Bakiye özeti yükle (attendance monthly_summary) ────────────
+    const fetchBalanceSummary = useCallback(() => {
+        if (!selectedEmployee) return;
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        api.get('/attendance/monthly_summary/', {
+            params: { employee_id: selectedEmployee.id, year, month }
+        })
+            .then((res) => setBalanceSummary(res.data || null))
+            .catch(() => setBalanceSummary(null));
+    }, [selectedEmployee, currentMonth]);
+
     useEffect(() => {
         if (selectedEmployee) {
             fetchMonthlyData();
+            fetchBalanceSummary();
         }
-    }, [selectedEmployee, currentMonth, fetchMonthlyData]);
+    }, [selectedEmployee, currentMonth, fetchMonthlyData, fetchBalanceSummary]);
 
     // ── Handlers ───────────────────────────────────────────────────
     const handleEmployeeChange = (empId) => {
@@ -134,6 +150,29 @@ export default function PersonelTab({ initialEmployee }) {
 
     const handleSaveSuccess = () => {
         fetchMonthlyData();
+        fetchBalanceSummary();
+    };
+
+    const openSettlement = () => {
+        if (!selectedEmployee || !balanceSummary) return;
+        const netBal = balanceSummary.net_balance_seconds || 0;
+        const fiscalMonth = balanceSummary.fiscal_month || (currentMonth.getMonth() + 1);
+        const fiscalYear = balanceSummary.fiscal_year || currentMonth.getFullYear();
+        const compensated = balanceSummary.cumulative?.ytd_compensated_seconds || 0;
+
+        // Check current month's compensated from breakdown
+        const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
+        const monthCompensated = bd?.compensated || 0;
+
+        setSettlementData({
+            isOpen: true,
+            employee: selectedEmployee,
+            year: fiscalYear,
+            month: fiscalMonth,
+            netBalance: netBal,
+            compensated: monthCompensated,
+            isSettled: monthCompensated !== 0,
+        });
     };
 
     // ── Select options ─────────────────────────────────────────────
@@ -251,7 +290,87 @@ export default function PersonelTab({ initialEmployee }) {
                     />
                 </div>
             ) : (
-                /* Personel secili: Takvim + Panel */
+                /* Personel secili: Bakiye Kartı + Takvim + Panel */
+                <>
+                {/* ── Aylık Bakiye Özeti Kartı ──────────────────────── */}
+                {balanceSummary && (() => {
+                    const target = balanceSummary.target_gross || 0;
+                    const completed = balanceSummary.completed_seconds || 0;
+                    const overtime = balanceSummary.overtime_seconds || 0;
+                    const netWork = balanceSummary.total_work_seconds || 0;
+                    const netBalance = balanceSummary.past_target_balance_seconds ?? balanceSummary.net_balance_seconds ?? 0;
+                    const carryOver = (balanceSummary.cumulative?.carry_over_seconds || 0) + (balanceSummary.cumulative?.previous_year_balance_seconds || 0);
+                    const totalCumulative = balanceSummary.cumulative?.total_net_balance_seconds || 0;
+                    const fiscalMonth = balanceSummary.fiscal_month || (currentMonth.getMonth() + 1);
+                    const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
+                    const isSettled = bd && bd.compensated !== 0;
+
+                    const fmtH = (sec) => (Math.abs(sec) / 3600).toFixed(1);
+                    const sign = (sec) => sec >= 0 ? '+' : '-';
+                    const MNAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+                    return (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1 h-5 rounded-full bg-indigo-500"></div>
+                                    <h3 className="font-bold text-slate-700 text-sm">
+                                        Aylık Bakiye Özeti — {MNAMES[fiscalMonth]} {balanceSummary.fiscal_year || currentMonth.getFullYear()}
+                                    </h3>
+                                    {isSettled && (
+                                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                            &#10003; Mutabakat Yapılmış
+                                        </span>
+                                    )}
+                                </div>
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    onClick={openSettlement}
+                                    className={isSettled ? '!bg-amber-500 !border-amber-500 hover:!bg-amber-600' : ''}
+                                >
+                                    {isSettled ? 'Mutabakat Düzenle' : 'Mutabakat Yap'}
+                                </Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                {/* Hedef */}
+                                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Hedef</div>
+                                    <div className="text-lg font-black text-slate-700 mt-0.5">{fmtH(target)} <span className="text-xs text-slate-400 font-medium">sa</span></div>
+                                </div>
+                                {/* Çalışılan */}
+                                <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100">
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Çalışılan</div>
+                                    <div className="text-lg font-black text-indigo-700 mt-0.5">{fmtH(netWork)} <span className="text-xs text-indigo-400 font-medium">sa</span></div>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">Normal: {fmtH(completed)} + OT: {fmtH(overtime)}</div>
+                                </div>
+                                {/* Bu Ay Bakiye */}
+                                <div className={`p-3 rounded-lg border ${netBalance >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bu Ay Bakiye</div>
+                                    <div className={`text-lg font-black mt-0.5 ${netBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {sign(netBalance)}{fmtH(netBalance)} <span className="text-xs font-medium opacity-60">sa</span>
+                                    </div>
+                                </div>
+                                {/* Önceki Aylardan Devir */}
+                                <div className={`p-3 rounded-lg border ${carryOver >= 0 ? 'bg-emerald-50/50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Önceki Aylardan Devir</div>
+                                    <div className={`text-lg font-black mt-0.5 ${carryOver >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                        {carryOver === 0 ? '0.0' : `${sign(carryOver)}${fmtH(carryOver)}`} <span className="text-xs font-medium opacity-60">sa</span>
+                                    </div>
+                                </div>
+                                {/* Toplam Kümülatif */}
+                                <div className={`p-3 rounded-lg border-2 ${totalCumulative >= 0 ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'}`}>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Toplam Kümülatif</div>
+                                    <div className={`text-xl font-black mt-0.5 ${totalCumulative >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {sign(totalCumulative)}{fmtH(totalCumulative)} <span className="text-xs font-medium opacity-60">sa</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-4">
                     {/* Sol: Takvim */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4">
@@ -289,6 +408,15 @@ export default function PersonelTab({ initialEmployee }) {
                         )}
                     </div>
                 </div>
+
+                {/* Settlement Modal */}
+                <SettlementModal
+                    isOpen={settlementData?.isOpen}
+                    onClose={() => setSettlementData(null)}
+                    data={settlementData}
+                    onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); }}
+                />
+                </>
             )}
         </div>
     );

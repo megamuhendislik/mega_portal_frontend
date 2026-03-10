@@ -8,17 +8,19 @@ const MONTH_NAMES = [
 ];
 
 export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }) {
-    const [mode, setMode] = useState('settle'); // 'settle' | 'real_reset'
+    const [mode, setMode] = useState('settle'); // 'settle' | 'real_reset' | 'undo'
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState('');
 
+    const isSettled = data?.isSettled || (data?.compensated && data.compensated !== 0);
+
     useEffect(() => {
         if (isOpen) {
-            setMode('settle');
+            setMode(isSettled ? 'undo' : 'settle');
             setLoading(false);
             setConfirmText('');
         }
-    }, [isOpen]);
+    }, [isOpen, isSettled]);
 
     const handleAction = async () => {
         if (mode === 'real_reset' && confirmText !== 'ONAYLA') {
@@ -27,9 +29,11 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
         }
         setLoading(true);
         try {
-            const endpoint = mode === 'settle'
-                ? '/system-data/settle_balance/'
-                : '/system-data/real_reset/';
+            let endpoint;
+            if (mode === 'settle') endpoint = '/system-data/settle_balance/';
+            else if (mode === 'undo') endpoint = '/system-data/undo_settle_balance/';
+            else endpoint = '/system-data/real_reset/';
+
             const res = await api.post(endpoint, {
                 employee_id: data.employee.id,
                 year: data.year,
@@ -55,12 +59,16 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
     const empDept = data.employee.department_name || data.employee.department?.name || '';
     const periodLabel = `${MONTH_NAMES[data.month] || data.month} ${data.year}`;
 
+    // Carry-over impact calculation
+    const carryOverImpact = data.netBalance || 0;
+    const carryOverHours = (Math.abs(carryOverImpact) / 3600).toFixed(1);
+
     return (
         <Modal
             open={isOpen}
             onCancel={onClose}
             footer={null}
-            width={520}
+            width={540}
             destroyOnClose
             centered
             closable={false}
@@ -84,6 +92,11 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
                             <span className="text-sm font-semibold text-blue-300">
                                 {periodLabel}
                             </span>
+                            {isSettled && (
+                                <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">
+                                    &#10003; Mutabakat Yapılmış
+                                </span>
+                            )}
                         </div>
                     </div>
                     <button
@@ -117,10 +130,71 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
                         </span>
                     </div>
                 </div>
+
+                {/* Carry-over impact info */}
+                {(isSurplus || isDeficit) && !isSettled && (
+                    <div className="mt-3 p-3 rounded-lg bg-indigo-50 border border-indigo-100">
+                        <div className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mb-1">
+                            Sonraki Aylara Etkisi
+                        </div>
+                        <p className="text-xs text-indigo-600">
+                            {isDeficit
+                                ? `Bu ayın ${carryOverHours} saatlik borcu, mutabakat yapılmazsa sonraki aylara kümülatif olarak devrolacak.`
+                                : `Bu ayın ${carryOverHours} saatlik fazlası, mutabakat yapılmazsa sonraki ayların bakiyesine eklenecek.`
+                            }
+                        </p>
+                        <div className="flex items-center gap-3 mt-2 text-[10px] font-bold">
+                            <span className={`px-2 py-1 rounded ${isDeficit ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                Şimdi: {isSurplus ? '+' : '-'}{carryOverHours} sa devir
+                            </span>
+                            <span className="text-indigo-400">&rarr;</span>
+                            <span className="px-2 py-1 rounded bg-slate-100 text-slate-600">
+                                Mutabakat sonrası: 0 sa devir
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {isSettled && (
+                    <div className="mt-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                        <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                            Mutabakat Durumu
+                        </div>
+                        <p className="text-xs text-emerald-600">
+                            Bu ayın bakiyesi mutabakat ile sıfırlanmış. Sonraki aylara devir engellendi.
+                            Geri almak isterseniz bakiye tekrar devrolmaya başlayacak.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Options */}
             <div className="px-6 py-5 space-y-3">
+                {/* Option: Undo Settlement (only if settled) */}
+                {isSettled && (
+                    <div
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            mode === 'undo'
+                                ? 'border-amber-500 bg-amber-50'
+                                : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        onClick={() => setMode('undo')}
+                    >
+                        <div className="flex items-start gap-3">
+                            <Radio checked={mode === 'undo'} />
+                            <div>
+                                <div className="font-bold text-slate-900">
+                                    Mutabakat Geri Al
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    Mutabakatı iptal eder. Bu ayın bakiyesi tekrar bir sonraki aya devrolur.
+                                    Kayıtlar değişmez, sadece devir engeli kalkar.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Option 1: Mutabakat */}
                 <div
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -134,7 +208,7 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
                         <Radio checked={mode === 'settle'} />
                         <div>
                             <div className="font-bold text-slate-900">
-                                Mutabakat (Sıfırla)
+                                {isSettled ? 'Mutabakat Yenile' : 'Mutabakat (Sıfırla)'}
                             </div>
                             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                                 Bakiyeyi sıfırlar ve bir sonraki aya devretmesini engeller.
@@ -196,8 +270,9 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
                     loading={loading}
                     disabled={mode === 'real_reset' && confirmText !== 'ONAYLA'}
                     onClick={handleAction}
+                    className={mode === 'undo' ? '!bg-amber-500 !border-amber-500 hover:!bg-amber-600' : ''}
                 >
-                    {mode === 'real_reset' ? 'Gerçek Sıfırla' : 'Mutabakat Yap'}
+                    {mode === 'real_reset' ? 'Gerçek Sıfırla' : mode === 'undo' ? 'Mutabakat Geri Al' : 'Mutabakat Yap'}
                 </Button>
             </div>
         </Modal>
