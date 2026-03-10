@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Drawer, Tag, Button, Popconfirm, Input, InputNumber, message, Spin, Collapse } from 'antd';
 import api from '../../services/api';
+import { getIstanbulToday } from '../../utils/dateUtils';
 
 // --- Config maps ---
 
@@ -55,10 +56,6 @@ function formatDateTurkish(dateStr) {
   } catch {
     return dateStr;
   }
-}
-
-function getIstanbulToday() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
 }
 
 // Status pill component

@@ -31,8 +31,8 @@ const Dashboard = () => {
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [birthdayBalance, setBirthdayBalance] = useState(null);
     const [birthdayBannerVisible, setBirthdayBannerVisible] = useState(() => {
-        const todayKey = new Date().toISOString().slice(0, 10);
-        const yearKey = String(new Date().getFullYear());
+        const todayKey = getIstanbulToday();
+        const yearKey = todayKey.slice(0, 4);
         const dismissed = localStorage.getItem(`birthday_banner_dismissed_${yearKey}`);
         const seenToday = localStorage.getItem(`birthday_banner_seen_${todayKey}`);
         if (dismissed || seenToday) return false;
@@ -85,7 +85,7 @@ const Dashboard = () => {
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
-                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${format(addDays(new Date(getIstanbulToday() + 'T00:00:00'), 7), 'yyyy-MM-dd')}&employee_id=${employeeId}`),
+                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${(() => { const [y,m,d] = getIstanbulToday().split('-').map(Number); const dt = new Date(y, m-1, d+7); return format(dt, 'yyyy-MM-dd'); })()}&employee_id=${employeeId}`),
                 api.get('/leave-requests/birthday-balance/')
             ]);
 

@@ -1313,7 +1313,7 @@ export default function PdksCompareTab() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `pdks-dry-run-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.download = `pdks-dry-run-${new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' })}.txt`;
         a.click();
         URL.revokeObjectURL(url);
         message.success('Dry-run raporu indirildi.');
@@ -1489,7 +1489,7 @@ export default function PdksCompareTab() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `pdks-karsilastirma-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.download = `pdks-karsilastirma-${new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' })}.txt`;
         a.click();
         URL.revokeObjectURL(url);
         message.success('Karşılaştırma raporu indirildi.');

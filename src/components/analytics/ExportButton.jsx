@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import { getIstanbulToday } from '../../utils/dateUtils';
 
 export default function ExportButton({ type, range }) {
   const [open, setOpen] = useState(false);
@@ -35,7 +36,7 @@ export default function ExportButton({ type, range }) {
       );
 
       const ext = format === 'xlsx' ? 'xlsx' : 'csv';
-      const filename = `analitik_rapor_${type || 'genel'}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+      const filename = `analitik_rapor_${type || 'genel'}_${getIstanbulToday()}.${ext}`;
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
