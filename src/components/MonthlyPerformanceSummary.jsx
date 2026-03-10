@@ -5,10 +5,11 @@ import { Popover } from 'antd';
 const EffortDetailPopover = ({ stats }) => {
     if (!stats) return null;
     const rows = [
-        { label: 'Hedef', value: `${stats.targetHours} sa` },
+        { label: 'Aylık Hedef', value: `${stats.targetHours} sa` },
+        { label: 'Bugüne Kadar Hedef', value: `${stats.pastTargetHours} sa` },
+        { type: 'divider' },
         { label: 'Normal Çalışma', value: `${stats.completedHours} sa` },
         { label: 'Onaylı OT', value: `${stats.overtimeHours} sa` },
-        { type: 'divider' },
         { label: 'Onaylı Toplam', value: `${stats.netWorkHours} sa`, bold: true },
         { type: 'divider' },
         {
@@ -29,7 +30,10 @@ const EffortDetailPopover = ({ stats }) => {
         if (parseFloat(stats.otPotentialHours) > 0) {
             rows.push({ label: 'Potansiyel OT', value: `${stats.otPotentialHours} sa`, color: 'text-slate-500', muted: true });
         }
-        rows.push({ label: 'Projeksiyon', value: `${stats.projectedWorkHours} sa`, bold: true, color: 'text-indigo-600' });
+    }
+    if (parseFloat(stats.remainingHours) > 0) {
+        rows.push({ type: 'divider' });
+        rows.push({ label: 'Kalan Tam Çalışılırsa', value: `${stats.projectionIfFullHours} sa`, bold: true, color: 'text-indigo-600' });
     }
 
     return (
@@ -159,13 +163,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pPending: targetSec > 0 ? Math.min(100 - (Math.min(100, (netWorkSec / targetSec) * 100)), (otPendingSec / targetSec) * 100) : 0,
                 pPotential: targetSec > 0 ? Math.min(100 - (Math.min(100, ((netWorkSec + otPendingSec) / targetSec) * 100)), (otPotentialSec / targetSec) * 100) : 0,
 
-                // Target indicator position for "Toplam Efor" bar
-                triangleLeft: targetSec > 0 ? Math.min(100, (targetSec / Math.max(targetSec, netWorkSec + otPendingSec + otPotentialSec)) * 100) : 100,
+                // Past target = completed + missing = what should have been done by today
+                pastTargetSec: realizedSec + missingSec,
+                pastTargetHours: ((realizedSec + missingSec) / 3600).toFixed(1),
 
-                // Net balance for label (approved only: normal + approved OT vs target)
-                netBalanceForLabelHours: (Math.abs(netWorkSec - targetSec) / 3600).toFixed(1),
-                isNetSurplus: (netWorkSec - targetSec) > 0,
-                isNetNeutral: Math.abs(netWorkSec - targetSec) < 360, // ±0.1 sa threshold
+                // Indicator position: past_target as % of full month target
+                indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + missingSec) / targetSec) * 100) : 0,
+
+                // Net balance vs past_target (total work vs what should have been done)
+                netBalanceForLabelHours: (Math.abs(netWorkSec - (realizedSec + missingSec)) / 3600).toFixed(1),
+                isNetSurplus: netWorkSec - (realizedSec + missingSec) > 0,
+                isNetNeutral: Math.abs(netWorkSec - (realizedSec + missingSec)) < 360, // ±0.1 sa threshold
+
+                // Projection: if all remaining hours fully worked
+                projectionIfFullHours: ((netWorkSec + remainingSec) / 3600).toFixed(1),
 
                 // Fiscal month from backend (not JS Date)
                 fiscalMonth: periodSummary.fiscal_month || (new Date().getMonth() + 1),
@@ -292,98 +303,100 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     <div className="w-64 h-64 bg-slate-50 rounded-bl-full -mr-10 -mt-20 opacity-50"></div>
                 </div>
 
-                {/* 1. Normal Work Bar */}
+                {/* 1 & 2. Normal Work + Total Effort — shared wrapper for indicator */}
                 <div className="relative z-10">
-                    <div className="flex justify-between items-center mb-3">
-                        <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Normal Mesai Dağılımı</span>
-                        <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
-                            <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Tamamlanan</span>
-                            <span className="flex items-center gap-1.5 text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>Eksik</span>
-                            <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
-                        </div>
-                    </div>
-                    {/* ENHANCED BAR VISUALS */}
-                    <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)] relative group" style={{ width: `${stats.pCompleted}%` }}>
-                            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        </div>
-                        <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
-                            {/* Striped pattern for Missing */}
-                            <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
-                        </div>
-                        <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} />
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
-                        <span className="text-blue-700">{stats.completedHours} sa</span>
-                        {/* Improved Missing Text: show negative if it's confusing, but maybe user wants it clearer */}
-                        <span className="text-rose-600">{stats.missingHours > 0 ? `-${stats.missingHours} sa` : ''}</span>
-                        <span className="text-slate-400">{stats.remainingHours} sa</span>
-                    </div>
-                </div>
-
-                {/* 2. Total Work (Net) Bar */}
-                <div className="relative z-10 pt-6 border-t border-slate-100">
-                    {/* Header row */}
-                    <div className="flex justify-between items-center mb-3">
-                        <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
-                            Toplam Efor (Onaylı Mesai Dahil)
-                            {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
-                        </span>
-                        <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.netWorkHours} / {stats.targetHours} sa</span>
-                    </div>
-
-                    {/* Bar + Target Indicator Container */}
-                    <div className="relative">
-                        {/* Target indicator - only show when target > 0 */}
-                        {parseFloat(stats.targetHours) > 0 && (
-                            <Popover
-                                content={<EffortDetailPopover stats={stats} />}
-                                trigger="click"
-                                placement="bottom"
-                                getPopupContainer={(trigger) => trigger.parentElement}
+                    {/* Target indicator spanning both bars — only show when target > 0 */}
+                    {parseFloat(stats.targetHours) > 0 && (
+                        <Popover
+                            content={<EffortDetailPopover stats={stats} />}
+                            trigger="click"
+                            placement="bottom"
+                            getPopupContainer={(trigger) => trigger.parentElement}
+                        >
+                            <div
+                                className="absolute z-30 cursor-pointer group"
+                                style={{
+                                    left: `${stats.indicatorLeft}%`,
+                                    top: '28px',
+                                    bottom: '0px',
+                                    width: '0px'
+                                }}
                             >
-                                <div
-                                    className="absolute z-30 flex flex-col items-center cursor-pointer group"
-                                    style={{
-                                        left: `${stats.triangleLeft}%`,
-                                        top: '-20px',
-                                        transform: `translateX(${stats.triangleLeft > 90 ? '-80%' : stats.triangleLeft < 10 ? '-20%' : '-50%'})`
-                                    }}
-                                >
-                                    {/* Triangle marker */}
+                                {/* Triangle marker at top */}
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2">
                                     <svg width="12" height="8" viewBox="0 0 12 8" className="text-slate-500 group-hover:text-indigo-500 transition-colors drop-shadow-sm">
                                         <polygon points="6,8 0,0 12,0" fill="currentColor" />
                                     </svg>
-                                    {/* Dashed vertical line */}
-                                    <div className="w-0 border-l-2 border-dashed border-slate-400/60 group-hover:border-indigo-400/80 transition-colors" style={{ height: '42px' }} />
-                                    {/* Net deficit/surplus badge */}
-                                    <div className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-black whitespace-nowrap border shadow-sm transition-all group-hover:shadow-md ${
-                                        stats.isNetNeutral
-                                            ? 'bg-slate-50 text-slate-600 border-slate-200'
-                                            : stats.isNetSurplus
-                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                                : 'bg-rose-50 text-rose-600 border-rose-200'
-                                    }`}>
-                                        {stats.isNetNeutral ? (
-                                            <span className="flex items-center gap-1">
-                                                <CheckCircle className="w-3 h-3" /> Hedefte
-                                            </span>
-                                        ) : stats.isNetSurplus ? (
-                                            <span className="flex items-center gap-1">
-                                                <TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelHours} sa
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1">
-                                                <AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelHours} sa
-                                            </span>
-                                        )}
-                                    </div>
                                 </div>
-                            </Popover>
-                        )}
+                                {/* Dashed vertical line — full height */}
+                                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0 border-l-2 border-dashed border-slate-400/60 group-hover:border-indigo-400/80 transition-colors" />
+                                {/* Net deficit/surplus badge at bottom */}
+                                <div className={`absolute -bottom-7 left-1/2 px-2 py-0.5 rounded-md text-[10px] font-black whitespace-nowrap border shadow-sm transition-all group-hover:shadow-md ${
+                                    stats.isNetNeutral
+                                        ? 'bg-slate-50 text-slate-600 border-slate-200'
+                                        : stats.isNetSurplus
+                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                            : 'bg-rose-50 text-rose-600 border-rose-200'
+                                }`} style={{ transform: `translateX(${stats.indicatorLeft > 90 ? '-80%' : stats.indicatorLeft < 10 ? '-20%' : '-50%'})` }}>
+                                    {stats.isNetNeutral ? (
+                                        <span className="flex items-center gap-1">
+                                            <CheckCircle className="w-3 h-3" /> Hedefte
+                                        </span>
+                                    ) : stats.isNetSurplus ? (
+                                        <span className="flex items-center gap-1">
+                                            <TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelHours} sa
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelHours} sa
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </Popover>
+                    )}
+
+                    {/* Bar 1: Normal Mesai */}
+                    <div>
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Normal Mesai Dağılımı</span>
+                            <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
+                                <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Tamamlanan</span>
+                                <span className="flex items-center gap-1.5 text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>Eksik</span>
+                                <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
+                            </div>
+                        </div>
+                        {/* ENHANCED BAR VISUALS */}
+                        <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
+                            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)] relative group" style={{ width: `${stats.pCompleted}%` }}>
+                                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
+                            <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
+                                {/* Striped pattern for Missing */}
+                                <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
+                            </div>
+                            <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} />
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
+                            <span className="text-blue-700">{stats.completedHours} sa</span>
+                            <span className="text-rose-600">{stats.missingHours > 0 ? `-${stats.missingHours} sa` : ''}</span>
+                            <span className="text-slate-400">{stats.remainingHours} sa</span>
+                        </div>
+                    </div>
+
+                    {/* Bar 2: Toplam Efor */}
+                    <div className="pt-6 border-t border-slate-100">
+                        {/* Header row */}
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
+                                Toplam Efor (Onaylı Mesai Dahil)
+                                {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
+                            </span>
+                            <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.netWorkHours} / {stats.targetHours} sa</span>
+                        </div>
 
                         {/* Progress Bar */}
-                        <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50 mt-3">
+                        <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
                             <div
                                 className={`h-full transition-all duration-1000 relative z-10 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.5)]'}`}
                                 style={{ width: `${stats.pTotal}%` }}
@@ -399,24 +412,24 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                     style={{ left: `${stats.pTotal + stats.pPending}%`, width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #94a3b8 3px, #94a3b8 6px)' }} />
                             )}
                         </div>
-                    </div>
 
-                    {/* Summary row below bar — increased mt for badge space */}
-                    <div className="flex items-center justify-between mt-8 px-1">
-                        <div className="flex items-center gap-3 text-[10px] font-bold">
-                            <span className="text-slate-600">Onaylı: <span className="font-black">{stats.netWorkHours} sa</span></span>
-                            {parseFloat(stats.otPendingHours) > 0 && (
-                                <span className="text-amber-600">+ Bekleyen: <span className="font-black">{stats.otPendingHours} sa</span></span>
-                            )}
-                            {parseFloat(stats.otPotentialHours) > 0 && (
-                                <span className="text-slate-500">+ Potansiyel: <span className="font-black">{stats.otPotentialHours} sa</span></span>
+                        {/* Summary row below bar */}
+                        <div className="flex items-center justify-between mt-2 px-1">
+                            <div className="flex items-center gap-3 text-[10px] font-bold">
+                                <span className="text-slate-600">Onaylı: <span className="font-black">{stats.netWorkHours} sa</span></span>
+                                {parseFloat(stats.otPendingHours) > 0 && (
+                                    <span className="text-amber-600">+ Bekleyen: <span className="font-black">{stats.otPendingHours} sa</span></span>
+                                )}
+                                {parseFloat(stats.otPotentialHours) > 0 && (
+                                    <span className="text-slate-500">+ Potansiyel: <span className="font-black">{stats.otPotentialHours} sa</span></span>
+                                )}
+                            </div>
+                            {(parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) && (
+                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100">
+                                    Potansiyel Dahil: {stats.projectedWorkHours} sa
+                                </span>
                             )}
                         </div>
-                        {(parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) && (
-                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100">
-                                Potansiyel Dahil: {stats.projectedWorkHours} sa
-                            </span>
-                        )}
                     </div>
                 </div>
 
