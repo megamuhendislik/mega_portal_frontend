@@ -423,7 +423,7 @@ const MainLayout = () => {
 
                         {/* Mola Göstergesi — aktif vardiyası olan herkes (off-day'de gizle) */}
                         {liveStatus?.status === 'INSIDE' && !liveStatus?.is_off_day && (liveStatus?.daily_break_allowance_seconds > 0) && (() => {
-                            const used = Math.round((liveStatus.break_seconds || 0) / 60);
+                            const used = Math.round((liveStatus.potential_break_seconds || 0) / 60);
                             const allowed = Math.round((liveStatus.daily_break_allowance_seconds || 1800) / 60);
                             const isOver = used > allowed;
                             const isFull = used === allowed;
