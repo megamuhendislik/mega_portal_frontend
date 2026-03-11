@@ -711,7 +711,7 @@ export default function OvertimeManagementTab({ employees, onRefresh }) {
                           </span>
                         </div>
                         <p className="text-[10px] text-red-600 ml-6">
-                          İş Kanunu 41. madde &mdash; haftalık fazla çalışma sınırı riski
+                          Haftalık fazla çalışma sınırı aşılacak
                         </p>
                       </div>
                     )}

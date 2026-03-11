@@ -110,7 +110,7 @@ const helpContent = [
             { type: 'success', text: 'Geriye dönük izin talebi 2 mali ay penceresi içinde verilebilir. Örneğin Şubat dönemindeyseniz (26 Ocak – 25 Şubat), Aralık dönemine kadar geriye dönük talep oluşturabilirsiniz.' }
         ],
         faq: [
-            { q: 'Kaç gün izin hakkım var?', a: 'İzin hakkınız kıdeminize göre belirlenir (İş Kanunu Madde 53): 1–5 yıl (5 yıl dahil): 14 gün, 5 yıldan fazla–15 yıla kadar: 20 gün, 15 yıl ve üzeri: 26 gün. Örneğin tam 5 yıllık kıdeminiz varsa 14 gün, 5 yıl 1 gün olduğunda 20 güne yükselir. Talepler sayfasında güncel bakiyenizi ve her hak ediş döneminin kalan gün sayısını görebilirsiniz.' },
+            { q: 'Kaç gün izin hakkım var?', a: 'İzin hakkınız kıdeminize göre belirlenir: 1–5 yıl (5 yıl dahil): 14 gün, 5 yıldan fazla–15 yıla kadar: 20 gün, 15 yıl ve üzeri: 26 gün. Örneğin tam 5 yıllık kıdeminiz varsa 14 gün, 5 yıl 1 gün olduğunda 20 güne yükselir. Talepler sayfasında güncel bakiyenizi ve her hak ediş döneminin kalan gün sayısını görebilirsiniz.' },
             { q: 'Avans izin nedir?', a: 'Henüz hak etmediğiniz izin günlerini önceden kullanmanızdır. 2026 itibari ile sadece ilk yılında olan çalışanlara bu hak tanınacaktır.' },
             { q: 'Mazeret izni nasıl kullanırım?', a: 'İzin talebi oluştururken "Mazeret İzni" türünü seçin. Evlilik, doğum, vefat gibi yasal mazeret izinleri yıllık izin hakkınızdan düşülmez. Mazeret izin günleri kanunla belirlenmiştir.' },
             { q: 'Bakiyemde kullanılan günler neden farklı görünüyor?', a: 'Sıralı düşüm sistemi nedeniyle, izin kullanımı farklı hak ediş dönemlerinden düşülmüş olabilir. Her dönemin kalan bakiyesi ayrıca gösterilir. Hak edişi sıfıra inmiş dönemler listeden düşer.' }

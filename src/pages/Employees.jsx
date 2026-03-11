@@ -771,7 +771,7 @@ const StepLeave = ({ formData, handleChange }) => {
                         {formData.auto_calculated_rate && Number(formData.annual_leave_accrual_rate) !== Number(formData.auto_calculated_rate) ? (
                             <div className="text-[10px] text-amber-600 mt-0.5 font-bold">Override (Kanuni: {formData.auto_calculated_rate} gün)</div>
                         ) : (
-                            <div className="text-[10px] text-emerald-500 mt-0.5">4857 Madde 53'e göre otomatik</div>
+                            <div className="text-[10px] text-emerald-500 mt-0.5">Kıdeme göre otomatik hesaplanır</div>
                         )}
                     </div>
                 </div>
