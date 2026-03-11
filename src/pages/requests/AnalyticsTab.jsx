@@ -14,6 +14,7 @@ import {
     ExportButton, SectionCard
 } from '../../components/analytics';
 import TeamOvertimeAnalytics from '../../components/TeamOvertimeAnalytics';
+import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import clsx from 'clsx';
 
 // ============================================================
@@ -813,6 +814,8 @@ const AnalyticsTab = ({ refreshTrigger }) => {
     const { hasPermission } = useAuth();
     const [activeSubTab, setActiveSubTab] = useState('personal');
     const [range, setRange] = useState(6);
+    const [fiscalDateFrom, setFiscalDateFrom] = useState('');
+    const [fiscalDateTo, setFiscalDateTo] = useState('');
     const [subordinates, setSubordinates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -854,6 +857,12 @@ const AnalyticsTab = ({ refreshTrigger }) => {
         <div className="space-y-0 animate-in fade-in">
             {/* Header with range selector and refresh */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                <FiscalMonthPicker
+                    dateFrom={fiscalDateFrom}
+                    dateTo={fiscalDateTo}
+                    onDateChange={(from, to) => { setFiscalDateFrom(from); setFiscalDateTo(to); }}
+                />
+
                 {/* Range selector */}
                 <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
                     {RANGE_OPTIONS.map(opt => (
