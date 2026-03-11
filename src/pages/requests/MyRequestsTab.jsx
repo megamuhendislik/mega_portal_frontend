@@ -400,34 +400,11 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
             </div>
 
-            {/* Tarih Aralığı Filtresi */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {/* Mali Dönem Filtresi */}
+            <div className="mb-4">
                 <FiscalMonthPicker
-                    dateFrom={dateFrom}
-                    dateTo={dateTo}
                     onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
                 />
-                <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                />
-                <span className="text-slate-400 text-xs font-bold">—</span>
-                <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                />
-                {(dateFrom || dateTo) && (
-                    <button
-                        onClick={() => { setDateFrom(''); setDateTo(''); }}
-                        className="text-xs text-slate-400 hover:text-slate-600 font-bold"
-                    >
-                        Temizle
-                    </button>
-                )}
             </div>
 
             {/* Filter Chips */}

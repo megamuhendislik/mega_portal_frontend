@@ -486,36 +486,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                             <option key={id} value={id}>{name}</option>
                         ))}
                     </select>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <FiscalMonthPicker
-                            dateFrom={dateFrom}
-                            dateTo={dateTo}
-                            onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
-                        />
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            placeholder="Başlangıç"
-                        />
-                        <span className="text-slate-400 text-xs font-bold">—</span>
-                        <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
-                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            placeholder="Bitiş"
-                        />
-                        {(dateFrom || dateTo) && (
-                            <button
-                                onClick={() => { setDateFrom(''); setDateTo(''); }}
-                                className="text-xs text-slate-400 hover:text-slate-600 font-bold"
-                            >
-                                Temizle
-                            </button>
-                        )}
-                    </div>
+                    <FiscalMonthPicker
+                        onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
+                    />
                 </div>
                 {/* Filters row 2: Type + Status */}
                 <div className="flex flex-wrap gap-2 items-center">

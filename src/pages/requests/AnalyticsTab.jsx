@@ -858,8 +858,6 @@ const AnalyticsTab = ({ refreshTrigger }) => {
             {/* Header with range selector and refresh */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                 <FiscalMonthPicker
-                    dateFrom={fiscalDateFrom}
-                    dateTo={fiscalDateTo}
                     onDateChange={(from, to) => { setFiscalDateFrom(from); setFiscalDateTo(to); }}
                 />
 

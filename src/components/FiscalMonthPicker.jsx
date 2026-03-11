@@ -1,11 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Select } from 'antd';
 import { Calendar } from 'lucide-react';
 import api from '../services/api';
 
-const CUSTOM_VALUE = '__CUSTOM__';
+const SHORT_MONTHS = {
+  1: 'Oca', 2: 'Şub', 3: 'Mar', 4: 'Nis',
+  5: 'May', 6: 'Haz', 7: 'Tem', 8: 'Ağu',
+  9: 'Eyl', 10: 'Eki', 11: 'Kas', 12: 'Ara'
+};
 
-export default function FiscalMonthPicker({ dateFrom, dateTo, onDateChange }) {
+function formatDateRange(startDate, endDate) {
+  if (!startDate || !endDate) return '';
+  const s = new Date(startDate + 'T00:00:00');
+  const e = new Date(endDate + 'T00:00:00');
+  return `${s.getDate()} ${SHORT_MONTHS[s.getMonth() + 1]} – ${e.getDate()} ${SHORT_MONTHS[e.getMonth() + 1]}`;
+}
+
+export default function FiscalMonthPicker({ onDateChange }) {
   const [periods, setPeriods] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +30,8 @@ export default function FiscalMonthPicker({ dateFrom, dateTo, onDateChange }) {
         setPeriods(data);
         const current = data.find(p => p.is_current);
         if (current) {
-          setSelectedPeriod(`${current.year}-${current.month}`);
+          const key = `${current.year}-${current.month}`;
+          setSelectedPeriod(key);
           onDateChange(current.start_date, current.end_date);
         }
       })
@@ -28,20 +40,7 @@ export default function FiscalMonthPicker({ dateFrom, dateTo, onDateChange }) {
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!periods.length || !selectedPeriod || selectedPeriod === CUSTOM_VALUE) return;
-    const selected = periods.find(p => `${p.year}-${p.month}` === selectedPeriod);
-    if (selected && (dateFrom !== selected.start_date || dateTo !== selected.end_date)) {
-      setSelectedPeriod(CUSTOM_VALUE);
-    }
-  }, [dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const handleSelect = (value) => {
-    if (value === CUSTOM_VALUE) {
-      setSelectedPeriod(CUSTOM_VALUE);
-      onDateChange('', '');
-      return;
-    }
     setSelectedPeriod(value);
     const period = periods.find(p => `${p.year}-${p.month}` === value);
     if (period) {
@@ -49,13 +48,19 @@ export default function FiscalMonthPicker({ dateFrom, dateTo, onDateChange }) {
     }
   };
 
-  const options = [
-    ...periods.map(p => ({
-      value: `${p.year}-${p.month}`,
-      label: p.is_current ? `${p.label} (Mevcut)` : p.label,
-    })),
-    { value: CUSTOM_VALUE, label: 'Özel Tarih Aralığı' },
-  ];
+  const options = periods.map(p => ({
+    value: `${p.year}-${p.month}`,
+    label: p.is_current ? `${p.label} (Mevcut)` : p.label,
+  }));
+
+  const selectedData = useMemo(() => {
+    if (!selectedPeriod) return null;
+    return periods.find(p => `${p.year}-${p.month}` === selectedPeriod);
+  }, [selectedPeriod, periods]);
+
+  const dateRangeText = selectedData
+    ? formatDateRange(selectedData.start_date, selectedData.end_date)
+    : '';
 
   return (
     <div className="flex items-center gap-2">
@@ -70,6 +75,11 @@ export default function FiscalMonthPicker({ dateFrom, dateTo, onDateChange }) {
         size="middle"
         popupMatchSelectWidth={false}
       />
+      {dateRangeText && (
+        <span className="text-xs font-semibold text-slate-400 whitespace-nowrap">
+          {dateRangeText}
+        </span>
+      )}
     </div>
   );
 }
