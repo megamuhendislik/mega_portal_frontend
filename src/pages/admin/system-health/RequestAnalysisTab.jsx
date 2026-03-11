@@ -22,6 +22,7 @@ export default function RequestAnalysisTab() {
     const [lcIssuesOnly, setLcIssuesOnly] = useState(false);
     const [lcSearch, setLcSearch] = useState('');
     const [lcExpandedId, setLcExpandedId] = useState(null);
+    const [lcExpandAll, setLcExpandAll] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -54,6 +55,40 @@ export default function RequestAnalysisTab() {
         } finally {
             setLifecycleLoading(false);
         }
+    };
+
+    const exportLifecycleTxt = () => {
+        if (!lifecycleData) return;
+        const lines = [];
+        const s = lifecycleData.summary;
+        lines.push('=== TALEP YAŞAM DÖNGÜSÜ ANALİZİ ===');
+        lines.push(`Tarih: ${lcDateFrom} → ${lcDateTo}`);
+        lines.push(`Toplam: ${s.total} | Sorunlu: ${s.with_issues}`);
+        lines.push(`Yön.Yok: ${s.issue_breakdown.no_approver} | Pasif Yön: ${s.issue_breakdown.inactive_approver} | Bld.Yok: ${s.issue_breakdown.no_notification} | Görünmez: ${s.issue_breakdown.not_visible} | Eski PEND: ${s.issue_breakdown.stale_pending} | Yanlış Yön: ${s.issue_breakdown.wrong_approver} | Çoklu PRIMARY: ${s.issue_breakdown.multi_primary_no_selection}`);
+        lines.push('');
+        lines.push('─'.repeat(120));
+
+        for (const req of lifecycleData.requests) {
+            const issues = (req.issues || []).map(i => `[${i.severity}] ${i.code}: ${i.description}`).join(' | ');
+            lines.push('');
+            lines.push(`#${req.id} | ${req.type} | ${req.employee_name} | ${req.date} | ${req.status} | Süre: ${req.duration_display || '-'} | Kaynak: ${req.source_type || '-'}`);
+            lines.push(`  Yönetici: ${req.target_approver ? `${req.target_approver.name} (${req.target_approver.relationship || '?'}) ${req.target_approver.is_active === false ? '[PASİF]' : ''}` : 'ATANMAMIŞ'}`);
+            lines.push(`  Bildirim: ${req.notification?.sent === true ? `Gönderildi (${req.notification.sent_at || ''}) ${req.notification.is_read ? '[Okundu]' : '[Okunmadı]'}` : req.notification?.sent === false ? 'GÖNDERİLMEMİŞ' : '-'}`);
+            lines.push(`  Görünürlük: ${req.visibility?.in_pending_approvals === true ? 'Görünür' : req.visibility?.in_pending_approvals === false ? `GÖRÜNMÜYOR — ${req.visibility.reason || ''}` : '-'}`);
+            if (req.approval_info?.approved_by) {
+                lines.push(`  Onay/Red: ${req.approval_info.approved_by} (${req.approval_info.approved_at || ''}) ${req.approval_info.rejection_reason ? `Sebep: ${req.approval_info.rejection_reason}` : ''}`);
+            }
+            lines.push(`  Oluşturulma: ${req.created_at ? new Date(req.created_at).toLocaleString('tr-TR') : '-'}`);
+            if (issues) lines.push(`  SORUNLAR: ${issues}`);
+        }
+
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `talep-yasam-dongusu-${lcDateFrom}-${lcDateTo}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     const toggleSection = (key) => {
@@ -513,12 +548,22 @@ export default function RequestAnalysisTab() {
                             <SummaryBadge label="Eski PEND" count={lifecycleData.summary.issue_breakdown.stale_pending} color="yellow" />
                         </div>
 
-                        {/* Arama */}
-                        <div className="relative">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input type="text" value={lcSearch} onChange={e => setLcSearch(e.target.value)}
-                                placeholder="Çalışan adı veya talep ID ile ara..."
-                                className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs" />
+                        {/* Arama + Aksiyonlar */}
+                        <div className="flex gap-2 items-center">
+                            <div className="relative flex-1">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input type="text" value={lcSearch} onChange={e => setLcSearch(e.target.value)}
+                                    placeholder="Çalışan adı veya talep ID ile ara..."
+                                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs" />
+                            </div>
+                            <button onClick={() => setLcExpandAll(p => !p)}
+                                className="px-3 py-2 border rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+                                {lcExpandAll ? 'Tümünü Kapat' : 'Tümünü Aç'}
+                            </button>
+                            <button onClick={exportLifecycleTxt}
+                                className="px-3 py-2 bg-slate-700 text-white rounded-lg text-xs font-bold hover:bg-slate-800 whitespace-nowrap">
+                                TXT İndir
+                            </button>
                         </div>
 
                         {/* Talep Listesi */}
@@ -534,7 +579,7 @@ export default function RequestAnalysisTab() {
                                     <LifecycleRow
                                         key={`${req.type}-${req.id}`}
                                         req={req}
-                                        expanded={lcExpandedId === `${req.type}-${req.id}`}
+                                        expanded={lcExpandAll || lcExpandedId === `${req.type}-${req.id}`}
                                         onToggle={() => setLcExpandedId(prev =>
                                             prev === `${req.type}-${req.id}` ? null : `${req.type}-${req.id}`
                                         )}
