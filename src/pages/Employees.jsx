@@ -207,6 +207,26 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                 <p className="text-slate-500 text-sm">Pozisyon, raporlama hattı ve departman atamaları.</p>
             </div>
 
+            {/* Personel Sicil No - üstte, zorunlu */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-2">
+                <div>
+                    <InputField
+                        label="Personel Sicil No"
+                        value={formData.employee_code}
+                        onChange={e => handleChange('employee_code', e.target.value)}
+                        required
+                        placeholder="Örn: 2478"
+                        className={showManagerValidation && !formData.employee_code ? '!border-red-400 !ring-2 !ring-red-200 !bg-red-50/50' : ''}
+                    />
+                    {showManagerValidation && !formData.employee_code && (
+                        <p className="text-xs text-red-500 mt-1 ml-1 font-medium">Personel sicil numarası zorunludur.</p>
+                    )}
+                </div>
+                <div>
+                    <InputField label="İşe Başlama Tarihi" value={formData.hired_date} onChange={e => handleChange('hired_date', e.target.value)} type="date" />
+                </div>
+            </div>
+
             {/* Matrix Alert Card */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 flex gap-4 items-start shadow-sm">
                 <div className="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
@@ -428,13 +448,7 @@ const StepCorporate = ({ formData, handleChange, departments, jobPositions, empl
                     </div>
                 </div>
 
-                <div>
-                    <InputField label="Personel Sicil No" value={formData.employee_code} onChange={e => handleChange('employee_code', e.target.value)} required placeholder="Örn: 2478" />
-                </div>
-
-                <div>
-                    <InputField label="İşe Başlama Tarihi" value={formData.hired_date} onChange={e => handleChange('hired_date', e.target.value)} type="date" />
-                </div>
+                {/* Personel Sicil No ve İşe Başlama Tarihi yukarı taşındı */}
             </div >
         </div >
     );
@@ -1252,9 +1266,9 @@ const Employees = () => {
                         return false;
                     }
                 }
-                // İkincil yönetici satırlarında eksik alan varsa engelle
+                // İkincil yönetici satırlarında sadece manager_id zorunlu (Stage 52: dept/pos kaldırıldı)
                 const sm = formData.secondary_managers || [];
-                if (sm.length > 0 && sm.some(e => !e.manager_id || !e.department_id || !e.job_position_id)) {
+                if (sm.length > 0 && sm.some(e => !e.manager_id)) {
                     return false;
                 }
                 return true;
