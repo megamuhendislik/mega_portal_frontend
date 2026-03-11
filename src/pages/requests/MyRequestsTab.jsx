@@ -8,6 +8,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
+import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
 const filterChipColors = {
@@ -401,7 +402,11 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
             {/* Tarih Aralığı Filtresi */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <Calendar size={16} className="text-slate-400 shrink-0" />
+                <FiscalMonthPicker
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
+                />
                 <input
                     type="date"
                     value={dateFrom}
