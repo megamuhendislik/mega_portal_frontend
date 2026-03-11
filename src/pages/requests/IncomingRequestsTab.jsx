@@ -6,8 +6,12 @@ import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
+import { useAuth } from '../../context/AuthContext';
 
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType }) => {
+    const { hasPermission } = useAuth();
+    const canApproveHealthReport = hasPermission('PAGE_HEALTH_REPORTS');
+
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -572,6 +576,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
                                                 mode="incoming"
+                                                canApproveHealthReport={canApproveHealthReport}
                                             />
                                         ))}
                                     </tbody>
@@ -618,6 +623,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
                                                 mode="incoming"
+                                                canApproveHealthReport={canApproveHealthReport}
                                             />
                                         ))}
                                     </tbody>

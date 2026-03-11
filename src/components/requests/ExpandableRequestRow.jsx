@@ -207,12 +207,14 @@ const ExpandableRequestRow = ({
     claimPotentialRenderer,
     showEmployeeColumn = true,
     mode = 'incoming',
+    canApproveHealthReport = true,
 }) => {
     if (!req) return null;
 
     const isPotential = req.status === 'POTENTIAL';
     const isPending = req.status === 'PENDING';
     const colCount = 7 + (showEmployeeColumn ? 1 : 0);
+    const isHealthType = req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT';
 
     return (
         <>
@@ -310,10 +312,16 @@ const ExpandableRequestRow = ({
                 <td className="px-3 py-3">
                     <div className="flex flex-col gap-1">
                         {getStatusBadge(req.status)}
-                        {mode === 'personal' && req.status === 'PENDING' && req.target_approver_name && (
-                            <span className="text-[10px] text-blue-600 font-medium truncate max-w-[140px]" title={req.target_approver_name}>
-                                ↗ {req.target_approver_name}
-                            </span>
+                        {mode === 'personal' && req.status === 'PENDING' && (
+                            isHealthType ? (
+                                <span className="text-[10px] text-blue-600 font-medium">
+                                    ↗ Muhasebe onayı bekliyor
+                                </span>
+                            ) : req.target_approver_name ? (
+                                <span className="text-[10px] text-blue-600 font-medium truncate max-w-[140px]" title={req.target_approver_name}>
+                                    ↗ {req.target_approver_name}
+                                </span>
+                            ) : null
                         )}
                         {mode === 'personal' && req.status === 'APPROVED' && req.approved_by_name && (
                             <span className="text-[10px] text-emerald-600 font-medium truncate max-w-[140px]" title={req.approved_by_name}>
@@ -346,7 +354,7 @@ const ExpandableRequestRow = ({
                         {claimPotentialRenderer && claimPotentialRenderer(req)}
 
                         {/* Incoming mode: Approve / Reject */}
-                        {mode === 'incoming' && isPending && onApprove && (
+                        {mode === 'incoming' && isPending && onApprove && !(isHealthType && !canApproveHealthReport) && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onApprove(req, 'Hızlı Onay'); }}
                                 className="w-7 h-7 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
@@ -355,7 +363,7 @@ const ExpandableRequestRow = ({
                                 <Check size={14} />
                             </button>
                         )}
-                        {mode === 'incoming' && isPending && onReject && (
+                        {mode === 'incoming' && isPending && onReject && !(isHealthType && !canApproveHealthReport) && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -367,6 +375,13 @@ const ExpandableRequestRow = ({
                             >
                                 <X size={14} />
                             </button>
+                        )}
+
+                        {/* Sağlık raporu: muhasebe onayı badge */}
+                        {mode === 'incoming' && isPending && !canApproveHealthReport && isHealthType && (
+                            <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap">
+                                Muhasebe onayı
+                            </span>
                         )}
 
                         {/* Personal mode: Edit / Delete */}
@@ -400,8 +415,8 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
-                                onApprove={onApprove}
-                                onReject={onReject}
+                                onApprove={isHealthType && !canApproveHealthReport ? null : onApprove}
+                                onReject={isHealthType && !canApproveHealthReport ? null : onReject}
                             />
                         </div>
                     </td>
