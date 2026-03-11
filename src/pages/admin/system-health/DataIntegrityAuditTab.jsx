@@ -28,6 +28,7 @@ const CATEGORY_LABELS = {
     missing_attendance: 'Eksik Mesai Kaydı',
     fiscal_integrity: 'Mali Dönem Bütünlüğü',
     timezone_diagnostics: 'Saat Dilimi Tanılama',
+    leave_ot_conflict: 'İzin-OT Konflikti',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
