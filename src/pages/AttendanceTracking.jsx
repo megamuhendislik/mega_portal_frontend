@@ -154,9 +154,18 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             setHierarchyData(hData);
 
             // Process secondary team
+            let secData = [];
             if (secondaryRes.status === 'fulfilled') {
-                const secData = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : [];
+                secData = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : [];
                 setSecondaryTeam(secData);
+            }
+
+            // Auto-switch to secondary tab if no primary team but secondary exists
+            const hasPrimary = data.some(d => d.relationship_type !== 'SECONDARY');
+            if (!hasPrimary && secData.length > 0) {
+                setTeamTab('secondary');
+            } else if (hasPrimary && teamTab === 'secondary' && secData.length === 0) {
+                setTeamTab('primary');
             }
 
             // Process substitute team
@@ -680,23 +689,25 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
-            {/* Ana Tab'lar */}
+            {/* Ana Tab'lar — show when secondary exists OR both exist */}
             {secondaryTeam.length > 0 && (
                 <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 w-fit">
-                    <button
-                        onClick={() => setTeamTab('primary')}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                            teamTab === 'primary'
-                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                        <Users size={16} />
-                        Ana Ekibim
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold tabular-nums">
-                            {primaryStats.length}
-                        </span>
-                    </button>
+                    {primaryStats.length > 0 && (
+                        <button
+                            onClick={() => setTeamTab('primary')}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                                teamTab === 'primary'
+                                    ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                            <Users size={16} />
+                            Ana Ekibim
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold tabular-nums">
+                                {primaryStats.length}
+                            </span>
+                        </button>
+                    )}
                     <button
                         onClick={() => setTeamTab('secondary')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
