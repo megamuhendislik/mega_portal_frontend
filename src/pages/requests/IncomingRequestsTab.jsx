@@ -6,12 +6,7 @@ import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
-import { useAuth } from '../../context/AuthContext';
-
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType }) => {
-    const { hasPermission } = useAuth();
-    const canApproveHealthReport = hasPermission('PAGE_HEALTH_REPORTS');
-
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -124,8 +119,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
-            } else if (req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') {
-                await api.post(`/health-reports/${req.id}/approve/`);
             }
             fetchAllData();
             onDataChange?.();
@@ -143,8 +136,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'reject', reason });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/reject/`, { reason });
-            } else if (req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') {
-                await api.post(`/health-reports/${req.id}/reject/`, { reason });
             }
             fetchAllData();
             onDataChange?.();
@@ -576,7 +567,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
                                                 mode="incoming"
-                                                canApproveHealthReport={canApproveHealthReport}
+
                                             />
                                         ))}
                                     </tbody>
@@ -623,7 +614,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
                                                 mode="incoming"
-                                                canApproveHealthReport={canApproveHealthReport}
+
                                             />
                                         ))}
                                     </tbody>

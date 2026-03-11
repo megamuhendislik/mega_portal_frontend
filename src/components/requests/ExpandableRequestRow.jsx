@@ -207,7 +207,6 @@ const ExpandableRequestRow = ({
     claimPotentialRenderer,
     showEmployeeColumn = true,
     mode = 'incoming',
-    canApproveHealthReport = true,
 }) => {
     if (!req) return null;
 
@@ -354,7 +353,7 @@ const ExpandableRequestRow = ({
                         {claimPotentialRenderer && claimPotentialRenderer(req)}
 
                         {/* Incoming mode: Approve / Reject */}
-                        {mode === 'incoming' && isPending && onApprove && !(isHealthType && !canApproveHealthReport) && (
+                        {mode === 'incoming' && isPending && onApprove && !isHealthType && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onApprove(req, 'Hızlı Onay'); }}
                                 className="w-7 h-7 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
@@ -363,7 +362,7 @@ const ExpandableRequestRow = ({
                                 <Check size={14} />
                             </button>
                         )}
-                        {mode === 'incoming' && isPending && onReject && !(isHealthType && !canApproveHealthReport) && (
+                        {mode === 'incoming' && isPending && onReject && !isHealthType && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -378,7 +377,7 @@ const ExpandableRequestRow = ({
                         )}
 
                         {/* Sağlık raporu: muhasebe onayı badge */}
-                        {mode === 'incoming' && isPending && !canApproveHealthReport && isHealthType && (
+                        {mode === 'incoming' && isHealthType && (
                             <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap">
                                 Muhasebe onayı
                             </span>
@@ -415,8 +414,8 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
-                                onApprove={isHealthType && !canApproveHealthReport ? null : onApprove}
-                                onReject={isHealthType && !canApproveHealthReport ? null : onReject}
+                                onApprove={isHealthType ? null : onApprove}
+                                onReject={isHealthType ? null : onReject}
                             />
                         </div>
                     </td>
