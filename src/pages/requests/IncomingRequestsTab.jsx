@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-    Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Calendar
+    Search, Users, Shield, UserCheck, UserCog, Clock, FileText
 } from 'lucide-react';
 import api from '../../services/api';
+import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
@@ -485,8 +486,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                             <option key={id} value={id}>{name}</option>
                         ))}
                     </select>
-                    <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-slate-400 shrink-0" />
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <FiscalMonthPicker
+                            dateFrom={dateFrom}
+                            dateTo={dateTo}
+                            onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
+                        />
                         <input
                             type="date"
                             value={dateFrom}
