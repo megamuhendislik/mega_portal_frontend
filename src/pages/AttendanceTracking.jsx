@@ -785,7 +785,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 />
             )}
             {viewMode === 'analytics' && secondaryStats.length > 0 && teamTab === 'secondary' && (
-                <TeamAnalyticsDashboard stats={secondaryStats} year={year} month={month} departmentId={selectedDept} relationshipType="SECONDARY" />
+                <TeamAnalyticsDashboard stats={secondaryStats} year={year} month={month} departmentId={selectedDept} relationshipType="SECONDARY" hierarchyData={hierarchyData} />
             )}
 
             {/* Overtime Management View */}

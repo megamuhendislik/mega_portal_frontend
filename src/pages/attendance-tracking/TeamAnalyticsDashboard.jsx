@@ -11,7 +11,8 @@ import {
     TrendingUp, TrendingDown, Award, Clock, AlertTriangle, Users,
     Target, Zap, Minus, ChevronDown, ChevronUp, Shield,
     Palmtree, BarChart3, Activity, Calendar, CheckCircle, Star,
-    UserCheck, ArrowRight, Flame, AlertCircle, Info, X, Briefcase, UtensilsCrossed
+    UserCheck, ArrowRight, Flame, AlertCircle, Info, X, Briefcase, UtensilsCrossed,
+    Eye, EyeOff, GitCompare
 } from 'lucide-react';
 import { formatMinutes } from './AttendanceComponents';
 
@@ -61,10 +62,12 @@ const AnalyticsCard = ({ title, subtitle, icon: Icon, children, className = '' }
 /* ═══════════════════════════════════════════════════
    PERSON DETAIL DRAWER
    ═══════════════════════════════════════════════════ */
-const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg }) => {
+const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarchyData = [] }) => {
     const [otDetail, setOtDetail] = useState(null);
     const [dailyTrend, setDailyTrend] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [decisionData, setDecisionData] = useState(null);
+    const [decisionLoading, setDecisionLoading] = useState(false);
 
     const isSecondary = person?.relationship_type === 'SECONDARY';
 
@@ -95,6 +98,30 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg }) => {
         fetchDetail();
         return () => { cancelled = true; };
     }, [person?.employee_id, isSecondary]);
+
+    // Fetch manager decisions if person is a sub-manager (has children in hierarchy)
+    useEffect(() => {
+        if (!person?.employee_id || !hierarchyData || hierarchyData.length === 0) {
+            setDecisionData(null);
+            return;
+        }
+        const checkSubManager = (nodes) => {
+            for (const n of nodes) {
+                if (n.id === person.employee_id && n.children && n.children.length > 0) return true;
+                if (n.children && checkSubManager(n.children)) return true;
+            }
+            return false;
+        };
+        if (!checkSubManager(hierarchyData)) { setDecisionData(null); return; }
+
+        let cancelled = false;
+        setDecisionLoading(true);
+        api.get('/request-analytics/manager-decisions/', { params: { manager_id: person.employee_id } })
+            .then(res => { if (!cancelled) setDecisionData(res.data); })
+            .catch(() => { if (!cancelled) setDecisionData(null); })
+            .finally(() => { if (!cancelled) setDecisionLoading(false); });
+        return () => { cancelled = true; };
+    }, [person?.employee_id, hierarchyData]);
 
     if (!person) return null;
 
@@ -756,6 +783,263 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg }) => {
                             })()}
                         </div>
                     )}
+
+                    {/* ── Yönetici Karar Analizi ── */}
+                    {decisionLoading && (
+                        <div className="text-center py-4 text-sm text-slate-400">Karar analizi yükleniyor...</div>
+                    )}
+                    {decisionData && (
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <Shield size={14} className="text-purple-600" />
+                                Karar Analizi
+                            </h4>
+
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-purple-50 rounded-xl p-3 text-center">
+                                    <div className="text-2xl font-black text-purple-700">{decisionData.summary?.total_decisions || 0}</div>
+                                    <div className="text-xs text-purple-500">Toplam Karar</div>
+                                </div>
+                                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                                    <div className="text-2xl font-black text-emerald-700">%{decisionData.summary?.approval_rate || 0}</div>
+                                    <div className="text-xs text-emerald-500">Onay Oranı</div>
+                                </div>
+                                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                                    <div className="text-2xl font-black text-blue-700">{decisionData.summary?.avg_response_hours || 0}s</div>
+                                    <div className="text-xs text-blue-500">Ort. Yanıt Süresi</div>
+                                </div>
+                                <div className="bg-amber-50 rounded-xl p-3 text-center">
+                                    <div className="text-2xl font-black text-amber-700">{decisionData.summary?.pending || 0}</div>
+                                    <div className="text-xs text-amber-500">Bekleyen</div>
+                                </div>
+                            </div>
+
+                            {/* Type Distribution Pie */}
+                            <div>
+                                <h5 className="text-xs font-semibold text-slate-600 mb-2">Talep Türü Dağılımı</h5>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: 'Ek Mesai', value: decisionData.by_type?.overtime?.total || 0 },
+                                                { name: 'İzin', value: decisionData.by_type?.leave?.total || 0 },
+                                                { name: 'Kartsız', value: decisionData.by_type?.cardless?.total || 0 },
+                                                { name: 'Rapor', value: decisionData.by_type?.health_report?.total || 0 },
+                                            ].filter(d => d.value > 0)}
+                                            cx="50%" cy="50%"
+                                            innerRadius={40} outerRadius={70}
+                                            dataKey="value"
+                                            label={({ name, value }) => `${name}: ${value}`}
+                                        >
+                                            {['#6366f1', '#10b981', '#f59e0b', '#ef4444'].map((c, i) => (
+                                                <Cell key={i} fill={c} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Monthly Trend */}
+                            {decisionData.monthly_trend && decisionData.monthly_trend.length > 0 && (
+                                <div>
+                                    <h5 className="text-xs font-semibold text-slate-600 mb-2">Aylık Karar Trendi</h5>
+                                    <ResponsiveContainer width="100%" height={180}>
+                                        <BarChart data={decisionData.monthly_trend}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                            <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                                            <YAxis tick={{ fontSize: 10 }} />
+                                            <Tooltip />
+                                            <Bar dataKey="approved" name="Onay" stackId="a" fill="#10b981" radius={[0,0,0,0]} />
+                                            <Bar dataKey="rejected" name="Red" stackId="a" fill="#ef4444" radius={[4,4,0,0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+
+                            {/* Rejection Reasons */}
+                            {decisionData.rejection_reasons && decisionData.rejection_reasons.length > 0 && (
+                                <div>
+                                    <h5 className="text-xs font-semibold text-slate-600 mb-2">En Sık Red Nedenleri</h5>
+                                    <div className="space-y-1.5">
+                                        {decisionData.rejection_reasons.slice(0, 3).map((r, i) => (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <div className="flex-1 bg-red-50 rounded-full h-5 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-red-400 rounded-full flex items-center pl-2"
+                                                        style={{ width: `${Math.max(20, r.count / (decisionData.rejection_reasons[0]?.count || 1) * 100)}%` }}
+                                                    >
+                                                        <span className="text-[10px] text-white font-medium truncate">{r.reason}</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-bold text-red-600 w-6 text-right">{r.count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Employee Breakdown */}
+                            {decisionData.employees && decisionData.employees.length > 0 && (
+                                <div>
+                                    <h5 className="text-xs font-semibold text-slate-600 mb-2">Çalışan Bazlı Kararlar</h5>
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="bg-slate-50">
+                                                <th className="px-2 py-1.5 text-left text-slate-600">Çalışan</th>
+                                                <th className="px-2 py-1.5 text-center text-slate-600">Toplam</th>
+                                                <th className="px-2 py-1.5 text-center text-emerald-600">Onay</th>
+                                                <th className="px-2 py-1.5 text-center text-red-600">Red</th>
+                                                <th className="px-2 py-1.5 text-center text-slate-600">Oran</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {decisionData.employees.slice(0, 10).map(emp => (
+                                                <tr key={emp.employee_id} className="border-b border-slate-50">
+                                                    <td className="px-2 py-1.5 font-medium text-slate-700">{emp.name}</td>
+                                                    <td className="px-2 py-1.5 text-center">{emp.total}</td>
+                                                    <td className="px-2 py-1.5 text-center text-emerald-600 font-semibold">{emp.approved}</td>
+                                                    <td className="px-2 py-1.5 text-center text-red-600 font-semibold">{emp.rejected}</td>
+                                                    <td className="px-2 py-1.5 text-center">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${emp.approval_rate >= 80 ? 'bg-emerald-100 text-emerald-700' : emp.approval_rate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                                            %{emp.approval_rate}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ═══════════════════════════════════════════════════
+   COMPARISON DRAWER
+   ═══════════════════════════════════════════════════ */
+const ComparisonDrawer = ({ persons, onClose }) => {
+    if (!persons || persons.length < 2) return null;
+
+    const maxOT = Math.max(...persons.map(p => (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0)), 1);
+    const maxMissing = Math.max(...persons.map(p => p.total_missing_minutes || 0), 1);
+
+    const radarData = [
+        { axis: 'Verimlilik', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, p.efficiency || 0])) },
+        { axis: 'Katılım', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, p.attendance_rate || 0])) },
+        { axis: 'FM Yoğunluğu', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, Math.min(100, Math.round(((p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0)) / maxOT * 100))])) },
+        { axis: 'Düşük Eksik', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, maxMissing > 0 ? Math.round(100 - (p.total_missing_minutes || 0) / maxMissing * 100) : 100])) },
+        { axis: 'İzin Dengesi', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, Math.min(100, Math.max(0, 100 - (p.leave_used_days || 0) * 5))])) },
+    ];
+
+    const kpiMetrics = [
+        { label: 'Çalışma (dk)', key: 'total_worked_minutes' },
+        { label: 'Hedef (dk)', key: 'target_minutes' },
+        { label: 'Verimlilik %', key: 'efficiency' },
+        { label: 'Kayıp (dk)', key: 'total_missing_minutes' },
+        { label: 'FM Toplam (dk)', getValue: p => (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0) },
+        { label: 'Katılım %', key: 'attendance_rate' },
+    ];
+
+    const barData = persons.map((p, i) => ({
+        name: (p.employee_name || '').split(' ')[0] || `Kişi ${i+1}`,
+        'Çalışma': Math.round((p.total_worked_minutes || 0) / 60),
+        'Kayıp': Math.round((p.total_missing_minutes || 0) / 60),
+        'FM': Math.round(((p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0)) / 60),
+    }));
+
+    return (
+        <div className="fixed inset-0 z-50 flex justify-end">
+            <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+            <div className="relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto animate-in slide-in-from-right">
+                <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <GitCompare size={18} className="text-indigo-600" />
+                        Kıyaslama ({persons.length} kişi)
+                    </h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
+                </div>
+                <div className="p-6 space-y-6">
+                    {/* Bar Chart */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-slate-700 mb-3">Metrik Karşılaştırma (saat)</h4>
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={barData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="Çalışma" fill="#6366f1" radius={[4,4,0,0]} />
+                                <Bar dataKey="Kayıp" fill="#ef4444" radius={[4,4,0,0]} />
+                                <Bar dataKey="FM" fill="#f59e0b" radius={[4,4,0,0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Radar Chart */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-slate-700 mb-3">Radar Profili</h4>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <RadarChart data={radarData}>
+                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10 }} />
+                                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
+                                {persons.map((p, i) => (
+                                    <Radar
+                                        key={p.employee_id}
+                                        name={(p.employee_name || '').split(' ')[0] || `Kişi ${i+1}`}
+                                        dataKey={`p${i}`}
+                                        stroke={DEPT_COLORS[i % DEPT_COLORS.length]}
+                                        fill={DEPT_COLORS[i % DEPT_COLORS.length]}
+                                        fillOpacity={0.15}
+                                    />
+                                ))}
+                                <Legend />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* KPI Table */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-slate-700 mb-3">KPI Karşılaştırma</h4>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="bg-slate-50">
+                                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Metrik</th>
+                                        {persons.map((p, i) => (
+                                            <th key={p.employee_id} className="px-3 py-2 text-center font-semibold" style={{ color: DEPT_COLORS[i % DEPT_COLORS.length] }}>
+                                                {(p.employee_name || '').split(' ')[0]}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {kpiMetrics.map(metric => {
+                                        const values = persons.map(p => metric.getValue ? metric.getValue(p) : (p[metric.key] || 0));
+                                        const maxVal = Math.max(...values);
+                                        const minVal = Math.min(...values);
+                                        return (
+                                            <tr key={metric.label} className="border-b border-slate-100">
+                                                <td className="px-3 py-2 font-medium text-slate-700">{metric.label}</td>
+                                                {values.map((val, i) => (
+                                                    <td key={i} className={`px-3 py-2 text-center font-semibold ${val === maxVal && maxVal !== minVal ? 'bg-emerald-50 text-emerald-700' : val === minVal && maxVal !== minVal ? 'bg-red-50 text-red-700' : 'text-slate-600'}`}>
+                                                        {typeof val === 'number' ? Math.round(val) : val}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -801,7 +1085,7 @@ const KpiCard = ({ label, value, subValue, icon: Icon, color, trend }) => {
 /* ═══════════════════════════════════════════════════
    MAIN DASHBOARD COMPONENT
    ═══════════════════════════════════════════════════ */
-const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relationshipType }) => {
+const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relationshipType, hierarchyData = [] }) => {
     const isSecondaryMode = relationshipType === 'SECONDARY';
     const [dailyTrend, setDailyTrend] = useState([]);
     const [trendLoading, setTrendLoading] = useState(false);
@@ -810,6 +1094,10 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
     const [expandedRisk, setExpandedRisk] = useState(null);
     const [activeRole, setActiveRole] = useState('all');
     const [detailPerson, setDetailPerson] = useState(null);
+    const [comparisonIds, setComparisonIds] = useState(new Set());
+    const [showComparison, setShowComparison] = useState(false);
+    const [activeSubTeam, setActiveSubTeam] = useState(null);
+    const [hiddenIds, setHiddenIds] = useState(new Set());
 
     // ── DEPARTMENT TAB SYSTEM ──
     const deptList = useMemo(() => {
@@ -834,9 +1122,35 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
     }, [scopedStats]);
 
     const filteredStats = useMemo(() => {
-        if (activeRole === 'all') return scopedStats;
-        return scopedStats.filter(s => s.job_title === activeRole);
-    }, [scopedStats, activeRole]);
+        let result = scopedStats;
+        if (activeRole !== 'all') result = result.filter(s => s.job_title === activeRole);
+        if (activeSubTeam) result = result.filter(s => activeSubTeam.memberIds.includes(s.employee_id));
+        return result;
+    }, [scopedStats, activeRole, activeSubTeam]);
+
+    const visibleStats = useMemo(() => {
+        return filteredStats.filter(s => !hiddenIds.has(s.employee_id));
+    }, [filteredStats, hiddenIds]);
+
+    const subTeams = useMemo(() => {
+        if (!hierarchyData || hierarchyData.length === 0) return [];
+        return hierarchyData
+            .filter(node => node.children && node.children.length > 0)
+            .map(node => {
+                const memberIds = new Set();
+                const flatten = (n) => { memberIds.add(n.id); if (n.children) n.children.forEach(flatten); };
+                node.children.forEach(flatten);
+                const mIds = [...memberIds];
+                const teamStats = stats.filter(s => mIds.includes(s.employee_id));
+                return {
+                    managerId: node.id,
+                    managerName: node.name,
+                    title: node.title,
+                    memberIds: mIds,
+                    stats: teamStats,
+                };
+            });
+    }, [hierarchyData, stats]);
 
     // ── FETCH DAILY TREND ──
     useEffect(() => {
@@ -861,11 +1175,11 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
 
     // ── COMPUTED ANALYTICS DATA ──
     const analytics = useMemo(() => {
-        if (!filteredStats || filteredStats.length === 0) return null;
+        if (!visibleStats || visibleStats.length === 0) return null;
 
         // Split stats: PRIMARY for work/leave/attendance, ALL for OT/meal
-        const primaryStats = filteredStats.filter(s => s.relationship_type !== 'SECONDARY');
-        const allStats = filteredStats; // Includes SECONDARY employees
+        const primaryStats = visibleStats.filter(s => s.relationship_type !== 'SECONDARY');
+        const allStats = visibleStats; // Includes SECONDARY employees
         const primaryCount = primaryStats.length;
         const allCount = allStats.length;
         const count = allCount; // Total count for display
@@ -944,8 +1258,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
         });
         const departments = Object.values(deptMap).sort((a, b) => b.count - a.count);
 
-        // Per-person computed fields — ALL employees for ranking table
-        const ranked = [...allStats].map(s => {
+        // Per-person computed fields — ALL employees for ranking table (uses filteredStats, not visibleStats, so hidden people appear dimmed)
+        const ranked = [...filteredStats].map(s => {
             const isSecondary = s.relationship_type === 'SECONDARY';
             const pCompleted = s.completed_minutes || s.total_worked || 0;
             const pPastTarget = s.past_target_minutes || s.monthly_required || 0;
@@ -1153,7 +1467,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
             totalLeaveUsed, totalLeaveRemaining, avgLeaveUsage,
             weekendOTData, leaveByDept,
         };
-    }, [filteredStats]);
+    }, [visibleStats, filteredStats]);
 
     // ── HEATMAP COMPUTATION ──
     const heatmapData = useMemo(() => {
@@ -1261,6 +1575,15 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                             dailyNormal: (analytics?.elapsedWorkDays || 1) > 0 ? Math.round(dept.completed / count / analytics.elapsedWorkDays) : 0,
                         };
                     })()}
+                    hierarchyData={hierarchyData}
+                />
+            )}
+
+            {/* ═══════ COMPARISON DRAWER ═══════ */}
+            {showComparison && comparisonIds.size >= 2 && (
+                <ComparisonDrawer
+                    persons={filteredStats.filter(s => comparisonIds.has(s.employee_id))}
+                    onClose={() => setShowComparison(false)}
                 />
             )}
 
@@ -1295,6 +1618,89 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                             </span>
                         </button>
                     ))}
+                </div>
+            )}
+
+            {/* ═══════ SUB-TEAM CARDS ═══════ */}
+            {subTeams.length > 0 && !isSecondaryMode && (
+                <div className="space-y-3">
+                    {activeSubTeam && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+                            <Users size={14} className="text-indigo-600" />
+                            <span className="font-semibold text-indigo-700">{activeSubTeam.managerName}&apos;in Ekibi</span>
+                            <span className="text-indigo-500">({activeSubTeam.memberIds.length} kişi)</span>
+                            <button
+                                onClick={() => setActiveSubTeam(null)}
+                                className="ml-auto px-2 py-0.5 text-xs text-indigo-600 hover:bg-indigo-100 rounded transition"
+                            >
+                                Temizle
+                            </button>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {subTeams.map((team, i) => {
+                            const avgEff = team.stats.length > 0
+                                ? Math.round(team.stats.reduce((s, p) => s + (p.efficiency || 0), 0) / team.stats.length)
+                                : 0;
+                            const avgOT = team.stats.length > 0
+                                ? Math.round(team.stats.reduce((s, p) => s + (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0), 0) / team.stats.length / 60)
+                                : 0;
+                            const avgMissing = team.stats.length > 0
+                                ? Math.round(team.stats.reduce((s, p) => s + (p.total_missing_minutes || 0), 0) / team.stats.length / 60)
+                                : 0;
+                            const isActive = activeSubTeam?.managerId === team.managerId;
+                            return (
+                                <button
+                                    key={team.managerId}
+                                    onClick={() => setActiveSubTeam(isActive ? null : team)}
+                                    className={`text-left p-4 rounded-xl border-l-4 transition-all ${isActive ? 'bg-indigo-50 ring-2 ring-indigo-300' : 'bg-white hover:bg-slate-50 border border-slate-200/80'}`}
+                                    style={{ borderLeftColor: DEPT_COLORS[i % DEPT_COLORS.length] }}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-bold text-slate-800">{team.managerName}</span>
+                                        <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{team.memberIds.length} kişi</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mb-2">{team.title}</p>
+                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                        <div>
+                                            <div className="text-xs text-slate-400">Verimlilik</div>
+                                            <div className="text-sm font-bold text-indigo-600">%{avgEff}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-slate-400">Ort. FM</div>
+                                            <div className="text-sm font-bold text-amber-600">{avgOT}s</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-slate-400">Ort. Kayıp</div>
+                                            <div className="text-sm font-bold text-red-600">{avgMissing}s</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Sub-team comparison bar chart */}
+                    {subTeams.length >= 2 && (
+                        <div className="bg-white rounded-xl p-4 border border-slate-200/80">
+                            <h4 className="text-sm font-semibold text-slate-700 mb-3">Alt Ekip Karşılaştırma</h4>
+                            <ResponsiveContainer width="100%" height={Math.max(150, subTeams.length * 40)}>
+                                <BarChart data={subTeams.map(t => ({
+                                    name: (t.managerName || '').split(' ')[0],
+                                    Verimlilik: t.stats.length > 0 ? Math.round(t.stats.reduce((s, p) => s + (p.efficiency || 0), 0) / t.stats.length) : 0,
+                                    'FM (s)': t.stats.length > 0 ? Math.round(t.stats.reduce((s, p) => s + (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0), 0) / t.stats.length / 60) : 0,
+                                }))} layout="vertical">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                    <XAxis type="number" tick={{ fontSize: 10 }} />
+                                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="Verimlilik" fill="#6366f1" radius={[0,4,4,0]} />
+                                    <Bar dataKey="FM (s)" fill="#f59e0b" radius={[0,4,4,0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -2045,10 +2451,42 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                     : `Eksik süreye göre sıralama — en az eksik en üstte (${analytics.ranked.length} kişi)`}
                 icon={Award}
             >
+                {comparisonIds.size >= 2 && (
+                    <div className="flex items-center gap-2 mb-3">
+                        <button
+                            onClick={() => setShowComparison(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition"
+                        >
+                            <GitCompare size={14} />
+                            Kıyasla ({comparisonIds.size} kişi)
+                        </button>
+                        <button
+                            onClick={() => setComparisonIds(new Set())}
+                            className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                        >
+                            Seçimi Temizle
+                        </button>
+                    </div>
+                )}
+                {hiddenIds.size > 0 && (
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                            <EyeOff size={12} />
+                            {hiddenIds.size} kişi gizlendi
+                        </span>
+                        <button
+                            onClick={() => setHiddenIds(new Set())}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                        >
+                            Tümünü Göster
+                        </button>
+                    </div>
+                )}
                 <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                         <thead>
                             <tr className="border-b border-slate-100">
+                                <th className="px-2 py-2.5 w-8"></th>
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">#</th>
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Çalışan</th>
                                 <th className="px-3 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">Departman</th>
@@ -2067,6 +2505,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                 {!isSecondaryMode && <th className="px-3 py-2.5 text-right font-bold text-emerald-400 uppercase tracking-wider">Katılım%</th>}
                                 <th className="px-3 py-2.5 text-right font-bold text-amber-400 uppercase tracking-wider">H.Sonu FM</th>
                                 <th className="px-3 py-2.5 text-right font-bold text-cyan-400 uppercase tracking-wider">Yemek/FM</th>
+                                <th className="px-2 py-2.5 w-8"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2075,7 +2514,27 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                 const balance = person.monthly_deviation || 0;
                                 const effBadge = isSecondary ? { cls: 'bg-slate-100 text-slate-400' } : getEfficiencyBadge(person.efficiency);
                                 return (
-                                    <tr key={person.employee_id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => setDetailPerson(person)}>
+                                    <tr key={person.employee_id || idx} className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer ${hiddenIds.has(person.employee_id) ? 'opacity-40' : ''}`} onClick={() => setDetailPerson(person)}>
+                                        <td className="px-2 py-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={comparisonIds.has(person.employee_id)}
+                                                onChange={(e) => {
+                                                    e.stopPropagation();
+                                                    setComparisonIds(prev => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(person.employee_id)) {
+                                                            next.delete(person.employee_id);
+                                                        } else if (next.size < 5) {
+                                                            next.add(person.employee_id);
+                                                        }
+                                                        return next;
+                                                    });
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                        </td>
                                         <td className="px-3 py-2 font-bold text-slate-400">{idx + 1}</td>
                                         <td className="px-3 py-2">
                                             <div className="flex items-center gap-2">
@@ -2145,6 +2604,29 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                         </td>
                                         <td className="px-3 py-2 text-right font-semibold text-cyan-600 tabular-nums">
                                             {(person.ot_days_total || 0) > 0 ? `%${Math.round((person.ot_meal_overlap || 0) / person.ot_days_total * 100)}` : <span className="text-slate-300">&mdash;</span>}
+                                        </td>
+                                        <td className="px-2 py-2 text-center">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setHiddenIds(prev => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(person.employee_id)) {
+                                                            next.delete(person.employee_id);
+                                                        } else {
+                                                            next.add(person.employee_id);
+                                                        }
+                                                        return next;
+                                                    });
+                                                }}
+                                                className="p-1 rounded hover:bg-slate-100 transition"
+                                                title={hiddenIds.has(person.employee_id) ? 'Göster' : 'Gizle'}
+                                            >
+                                                {hiddenIds.has(person.employee_id)
+                                                    ? <EyeOff size={14} className="text-slate-400" />
+                                                    : <Eye size={14} className="text-slate-300 hover:text-slate-500" />
+                                                }
+                                            </button>
                                         </td>
                                     </tr>
                                 );
