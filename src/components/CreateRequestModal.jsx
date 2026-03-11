@@ -596,11 +596,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 });
             }
 
-            // Hedef onaylayıcı bilgisini al
-            const data = response?.data;
-            const approverName = data?.target_approver_name || null;
+            // Sağlık raporu/hastane ziyareti → muhasebe onayı mesajı
+            const isHealthType = selectedType === 'HEALTH_REPORT' || selectedType === 'HOSPITAL_VISIT';
+            const approverLabel = isHealthType
+                ? 'Muhasebe tarafından onay verilecektir'
+                : (response?.data?.target_approver_name || null);
 
-            onSuccess(approverName);
+            onSuccess(approverLabel);
             onClose();
         } catch (err) {
             console.error('Error creating request:', err);
