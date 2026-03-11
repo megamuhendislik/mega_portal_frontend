@@ -14,6 +14,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [subordinates, setSubordinates] = useState([]);
     const [secondarySubIds, setSecondarySubIds] = useState(new Set());
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
+    const [allTeamData, setAllTeamData] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Sub-tab: 'primary_team' | 'secondary_team'
@@ -51,13 +52,14 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
-            const [meRes, subsRes, teamRes, histRes, subAuthRes, secSubRes] = await Promise.allSettled([
+            const [meRes, subsRes, teamRes, histRes, subAuthRes, secSubRes, allTeamRes] = await Promise.allSettled([
                 api.get('/employees/me/'),
                 api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
                 api.get('/team-requests/'),
                 api.get('/leave/requests/team_history/'),
                 api.get('/substitute-authority/pending_requests/'),
                 api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
+                api.get('/team-requests/all_team/'),
             ]);
 
             if (meRes.status === 'fulfilled') {
@@ -83,6 +85,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             } else {
                 setSubstituteData(null);
             }
+            if (allTeamRes.status === 'fulfilled') {
+                setAllTeamData(allTeamRes.value.data || []);
+            }
         } catch (e) {
             console.error('IncomingRequestsTab fetchAllData error:', e);
         } finally {
@@ -96,19 +101,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     useEffect(() => {
         if (refreshTrigger > 0) fetchAllData();
     }, [refreshTrigger, fetchAllData]);
-
-    // Notify parent about pending count
-    const pendingCount = useMemo(() => {
-        const teamPending = (incomingRequests || []).filter(r => r.status === 'PENDING').length;
-        const subLeave = (substituteData?.leave_requests || []).length;
-        const subOT = (substituteData?.overtime_requests || []).length;
-        const subCE = (substituteData?.cardless_entry_requests || []).length;
-        return teamPending + subLeave + subOT + subCE;
-    }, [incomingRequests, substituteData]);
-
-    useEffect(() => {
-        if (onPendingCountChange) onPendingCountChange(pendingCount);
-    }, [pendingCount, onPendingCountChange]);
 
     // --- Approval / Rejection Handlers ---
     const handleApprove = async (req, notes) => {
@@ -216,8 +208,121 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         _principalName: principalName,
     });
 
-    // --- PRIMARY TEAM: manager_type PRIMARY or null + substitute + history ---
+    // --- ALL TEAM: normalized data from all_team endpoint ---
+    const allTeamNormalized = useMemo(() => {
+        return (allTeamData || []).map(r => ({
+            ...r,
+            id: r.request_id || r.id,
+            employee_name: r.employee_name || '',
+            employee_department: r.department_name || r.employee_department || '',
+            target_approver_name: r.target_approver_name || '',
+            approved_by_name: r.approved_by_name || '',
+            start_date: r.date || r.start_date,
+            date: r.date,
+            leave_type_name: r.request_type_name || r.leave_type_name || '',
+            _source: 'ALL_TEAM',
+            _isSubstitute: false,
+            _principalName: '',
+        }));
+    }, [allTeamData]);
+
+    // --- PENDING ACTIONABLE: items where I can approve/reject (all_team is_actionable + substitutes) ---
+    const pendingActionable = useMemo(() => {
+        const items = [];
+        const seen = new Set();
+
+        // From all_team data: actionable pending
+        allTeamNormalized.forEach(r => {
+            if (r.is_actionable && r.status === 'PENDING') {
+                const key = `${r.type}-${r.id}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    items.push(r);
+                }
+            }
+        });
+
+        // Substitute requests (always in pending section)
+        if (substituteData) {
+            const authorities = substituteData.authorities || [];
+            (substituteData.leave_requests || []).forEach(r => {
+                const key = `LEAVE-${r.id}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    const principal = authorities.find(a => a.principal === r.principal_id);
+                    items.push({
+                        ...r,
+                        type: 'LEAVE',
+                        employee_name: r.employee_name || r.employee_detail?.full_name || '',
+                        employee_department: r.employee_department || r.employee_detail?.department_name || '',
+                        target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
+                        start_date: r.start_date || r.date,
+                        leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
+                        _source: 'SUBSTITUTE',
+                        _isSubstitute: true,
+                        _principalName: principal?.principal_name || '',
+                        is_actionable: true,
+                    });
+                }
+            });
+            (substituteData.overtime_requests || []).forEach(r => {
+                const key = `OVERTIME-${r.id}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    const principal = authorities.find(a => a.principal === r.principal_id);
+                    items.push({
+                        ...r,
+                        type: 'OVERTIME',
+                        employee_name: r.employee_name || r.employee_detail?.full_name || '',
+                        employee_department: '',
+                        target_approver_name: r.target_approver_name || '',
+                        start_date: r.date,
+                        _source: 'SUBSTITUTE',
+                        _isSubstitute: true,
+                        _principalName: principal?.principal_name || '',
+                        is_actionable: true,
+                    });
+                }
+            });
+            (substituteData.cardless_entry_requests || []).forEach(r => {
+                const key = `CARDLESS_ENTRY-${r.id}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    const principal = authorities.find(a => a.principal === r.principal_id);
+                    items.push({
+                        ...r,
+                        type: 'CARDLESS_ENTRY',
+                        employee_name: r.employee_name || r.employee_detail?.full_name || '',
+                        employee_department: '',
+                        target_approver_name: r.target_approver_name || '',
+                        start_date: r.date,
+                        _source: 'SUBSTITUTE',
+                        _isSubstitute: true,
+                        _principalName: principal?.principal_name || '',
+                        is_actionable: true,
+                    });
+                }
+            });
+        }
+
+        items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
+        return items;
+    }, [allTeamNormalized, substituteData]);
+
+    // Notify parent about pending count
+    const pendingCount = useMemo(() => {
+        return pendingActionable.length;
+    }, [pendingActionable]);
+
+    useEffect(() => {
+        if (onPendingCountChange) onPendingCountChange(pendingCount);
+    }, [pendingCount, onPendingCountChange]);
+
+    // --- PRIMARY TEAM (legacy): for pendingCount fallback and backward compat ---
     const primaryTeamItems = useMemo(() => {
+        // Use allTeamNormalized as the primary source when available, fallback to old logic
+        if (allTeamNormalized.length > 0) return allTeamNormalized;
+
         const items = [];
         const seen = new Set();
 
@@ -280,7 +385,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
-    }, [incomingRequests, substituteData, teamHistoryRequests, secondarySubIds, directSubordinateIds]);
+    }, [allTeamNormalized, incomingRequests, substituteData, teamHistoryRequests, secondarySubIds, directSubordinateIds]);
 
     // --- SECONDARY TEAM: Only OVERTIME requests where manager_type is SECONDARY ---
     const secondaryTeamItems = useMemo(() => {
@@ -302,13 +407,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         return items;
     }, [incomingRequests]);
 
-    // Current items based on sub-tab
+    // Current items based on sub-tab (primary uses allTeamNormalized when available)
     const currentItems = activeSubTab === 'primary_team' ? primaryTeamItems : secondaryTeamItems;
 
     // Badge counts
     const primaryPendingCount = useMemo(() =>
-        primaryTeamItems.filter(r => r.status === 'PENDING' || r._isSubstitute).length
-    , [primaryTeamItems]);
+        pendingActionable.length
+    , [pendingActionable]);
 
     const secondaryPendingCount = useMemo(() =>
         secondaryTeamItems.filter(r => r.status === 'PENDING').length
@@ -358,14 +463,48 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         });
     }, [currentItems, typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter]);
 
-    // Split filtered into pending and history
-    const pendingItems = useMemo(() =>
-        filtered.filter(r => r.status === 'PENDING' || r._isSubstitute)
-    , [filtered]);
+    // Filtered pending actionable items (for "Onay Bekleyen" section)
+    const filteredPendingActionable = useMemo(() => {
+        if (activeSubTab !== 'primary_team') {
+            // For secondary team, use old logic
+            return filtered.filter(r => r.status === 'PENDING' || r._isSubstitute);
+        }
+        return pendingActionable.filter(r => {
+            if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
+            if (r.status === 'POTENTIAL') return false;
+            if (statusFilter !== 'ALL') {
+                const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELLED': 'REJECTED' };
+                const effectiveStatus = statusGroup[r.status] || r.status;
+                if (effectiveStatus !== statusFilter) return false;
+            }
+            if (searchText) {
+                const s = searchText.toLowerCase();
+                if (!r.employee_name?.toLowerCase().includes(s)) return false;
+            }
+            if (dateFrom) {
+                const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr < dateFrom) return false;
+            }
+            if (dateTo) {
+                const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr > dateTo) return false;
+            }
+            if (personFilter !== 'ALL') {
+                const empId = String(r.employee_id || r.employee || '');
+                if (empId !== personFilter) return false;
+            }
+            return true;
+        });
+    }, [activeSubTab, filtered, pendingActionable, typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter]);
 
-    const historyItems = useMemo(() =>
-        filtered.filter(r => r.status !== 'PENDING' && !r._isSubstitute)
-    , [filtered]);
+    // All team filtered items (for "Ekip Talepleri" section — ALL statuses)
+    const allTeamFiltered = useMemo(() => {
+        if (activeSubTab !== 'primary_team') {
+            // For secondary team, use old history logic
+            return filtered.filter(r => r.status !== 'PENDING' && !r._isSubstitute);
+        }
+        return filtered;
+    }, [activeSubTab, filtered]);
 
     // Type filter options
     const typeFilterOptions = filterType
@@ -517,7 +656,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             </div>
 
             {/* Request list */}
-            {filtered.length === 0 ? (
+            {filteredPendingActionable.length === 0 && allTeamFiltered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
                         <Users size={32} className="text-slate-300" />
@@ -529,13 +668,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {/* PENDING requests — flat table */}
-                    {pendingItems.length > 0 && (
+                    {/* PENDING ACTIONABLE requests — flat table */}
+                    {filteredPendingActionable.length > 0 && (
                         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                             <div className="px-4 py-3 border-b border-slate-100 bg-amber-50/30">
                                 <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2">
                                     <Clock size={14} />
-                                    Onay Bekleyen ({pendingItems.length})
+                                    Onay Bekleyen ({filteredPendingActionable.length})
                                 </h3>
                             </div>
                             <div className="overflow-x-auto">
@@ -544,16 +683,17 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                         <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
                                             <th className="pl-3 pr-1 py-2 w-8"></th>
                                             <th className="px-3 py-2 font-bold">Talep Eden</th>
-                                            <th className="px-3 py-2 font-bold">Tür</th>
+                                            <th className="px-3 py-2 font-bold">Tur</th>
                                             <th className="px-3 py-2 font-bold">Tarih</th>
-                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
-                                            <th className="px-3 py-2 font-bold">Süre</th>
+                                            <th className="px-3 py-2 font-bold">Saat Araligi</th>
+                                            <th className="px-3 py-2 font-bold">Sure</th>
                                             <th className="px-3 py-2 font-bold">Durum</th>
-                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                            <th className="px-3 py-2 font-bold">Talep Edilen</th>
+                                            <th className="px-3 py-2 font-bold text-right">Islem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {pendingItems.map(req => (
+                                        {filteredPendingActionable.map(req => (
                                             <ExpandableRequestRow
                                                 key={`${req.type}-${req.id}`}
                                                 req={req}
@@ -567,7 +707,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
                                                 mode="incoming"
-
                                             />
                                         ))}
                                     </tbody>
@@ -576,13 +715,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         </div>
                     )}
 
-                    {/* History — flat chronological table */}
-                    {historyItems.length > 0 && (
+                    {/* Ekip Talepleri — ALL team requests (replaces old "Gecmis Talepler") */}
+                    {allTeamFiltered.length > 0 && (
                         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
                                 <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">
-                                    <FileText size={14} />
-                                    Geçmiş Talepler ({historyItems.length})
+                                    <Users size={14} />
+                                    {activeSubTab === 'primary_team' ? 'Ekip Talepleri' : 'Gecmis Talepler'} ({allTeamFiltered.length})
                                 </h3>
                             </div>
                             <div className="overflow-x-auto">
@@ -591,22 +730,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                         <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
                                             <th className="pl-3 pr-1 py-2 w-8"></th>
                                             <th className="px-3 py-2 font-bold">Talep Eden</th>
-                                            <th className="px-3 py-2 font-bold">Tür</th>
+                                            <th className="px-3 py-2 font-bold">Tur</th>
                                             <th className="px-3 py-2 font-bold">Tarih</th>
-                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
-                                            <th className="px-3 py-2 font-bold">Süre</th>
+                                            <th className="px-3 py-2 font-bold">Saat Araligi</th>
+                                            <th className="px-3 py-2 font-bold">Sure</th>
                                             <th className="px-3 py-2 font-bold">Durum</th>
-                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                            <th className="px-3 py-2 font-bold">Talep Edilen</th>
+                                            <th className="px-3 py-2 font-bold text-right">Islem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {historyItems.map(req => (
+                                        {allTeamFiltered.map(req => (
                                             <ExpandableRequestRow
-                                                key={`${req.type}-${req.id}`}
+                                                key={`team-${req.type}-${req.id}`}
                                                 req={req}
-                                                isExpanded={expandedId === `hist-${req.type}-${req.id}`}
+                                                isExpanded={expandedId === `team-${req.type}-${req.id}`}
                                                 onToggle={() => {
-                                                    const key = `hist-${req.type}-${req.id}`;
+                                                    const key = `team-${req.type}-${req.id}`;
                                                     setExpandedId(prev => prev === key ? null : key);
                                                 }}
                                                 onViewDetails={handleViewDetails}
@@ -614,7 +754,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
                                                 mode="incoming"
-
                                             />
                                         ))}
                                     </tbody>

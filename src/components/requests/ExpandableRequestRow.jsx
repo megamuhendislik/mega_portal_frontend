@@ -212,7 +212,7 @@ const ExpandableRequestRow = ({
 
     const isPotential = req.status === 'POTENTIAL';
     const isPending = req.status === 'PENDING';
-    const colCount = 7 + (showEmployeeColumn ? 1 : 0);
+    const colCount = 7 + (showEmployeeColumn ? 1 : 0) + (mode === 'incoming' ? 1 : 0);
     const isHealthType = req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT';
     const isReadOnlyType = isHealthType || req.type === 'MEAL';
 
@@ -336,6 +336,21 @@ const ExpandableRequestRow = ({
                     </div>
                 </td>
 
+                {/* Talep Edilen — only in incoming mode */}
+                {mode === 'incoming' && (
+                    <td className="px-3 py-3">
+                        <div className="flex flex-col gap-0.5">
+                            {req.target_approver_name ? (
+                                <span className="text-xs font-medium text-slate-600 truncate max-w-[130px]" title={req.target_approver_name}>
+                                    {req.target_approver_name}
+                                </span>
+                            ) : (
+                                <span className="text-xs text-slate-300">&mdash;</span>
+                            )}
+                        </div>
+                    </td>
+                )}
+
                 {/* Islemler */}
                 <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
@@ -353,8 +368,8 @@ const ExpandableRequestRow = ({
                         {/* Claim Potential */}
                         {claimPotentialRenderer && claimPotentialRenderer(req)}
 
-                        {/* Incoming mode: Approve / Reject */}
-                        {mode === 'incoming' && isPending && onApprove && !isReadOnlyType && (
+                        {/* Incoming mode: Approve / Reject (only if actionable) */}
+                        {mode === 'incoming' && isPending && onApprove && !isReadOnlyType && req.is_actionable !== false && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onApprove(req, 'Hızlı Onay'); }}
                                 className="w-7 h-7 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
@@ -363,7 +378,7 @@ const ExpandableRequestRow = ({
                                 <Check size={14} />
                             </button>
                         )}
-                        {mode === 'incoming' && isPending && onReject && !isReadOnlyType && (
+                        {mode === 'incoming' && isPending && onReject && !isReadOnlyType && req.is_actionable !== false && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -381,6 +396,13 @@ const ExpandableRequestRow = ({
                         {mode === 'incoming' && isReadOnlyType && (
                             <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap">
                                 {req.type === 'MEAL' ? 'Bilgi amaçlı' : 'Muhasebe onayı'}
+                            </span>
+                        )}
+
+                        {/* Non-actionable (another manager's request): view-only badge */}
+                        {mode === 'incoming' && isPending && !isReadOnlyType && req.is_actionable === false && (
+                            <span className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                                Goruntuleme
                             </span>
                         )}
 
@@ -415,8 +437,8 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
-                                onApprove={isReadOnlyType ? null : onApprove}
-                                onReject={isReadOnlyType ? null : onReject}
+                                onApprove={isReadOnlyType || req.is_actionable === false ? null : onApprove}
+                                onReject={isReadOnlyType || req.is_actionable === false ? null : onReject}
                             />
                         </div>
                     </td>
