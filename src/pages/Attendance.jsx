@@ -32,6 +32,7 @@ const Attendance = () => {
     const [logs, setLogs] = useState([]);
     const [periodSummary, setPeriodSummary] = useState(null);
     const [todaySummary, setTodaySummary] = useState(null);
+    const [leaveCoverageMap, setLeaveCoverageMap] = useState({});
 
     // Filters
     const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
@@ -128,6 +129,24 @@ const Attendance = () => {
             ]);
             setLogs(logsRes.data.results || logsRes.data);
             setPeriodSummary(sumRes.data);
+
+            // Fetch leave coverage for the period
+            if (selectedEmployeeId && startDate && endDate) {
+                try {
+                    const coverageRes = await api.get('/attendance/leave-coverage/', {
+                        params: {
+                            employee_ids: String(selectedEmployeeId),
+                            start_date: startDate,
+                            end_date: endDate,
+                        }
+                    });
+                    const empCoverage = coverageRes.data?.coverages?.[String(selectedEmployeeId)] || {};
+                    setLeaveCoverageMap(empCoverage);
+                } catch (err) {
+                    console.error('Leave coverage fetch error:', err);
+                    setLeaveCoverageMap({});
+                }
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -392,7 +411,7 @@ const Attendance = () => {
                                     {viewScope === 'DAILY' && <span className="text-xs text-slate-400 font-medium ml-2">({selectedDate})</span>}
                                 </h3>
                             </div>
-                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === selectedDate) : logs} />
+                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === selectedDate) : logs} leaveCoverageMap={leaveCoverageMap} />
                         </div>
 
                     </div>

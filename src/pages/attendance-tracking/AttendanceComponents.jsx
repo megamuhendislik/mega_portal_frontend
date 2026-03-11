@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon,
-    CalendarCheck, AlertTriangle
+    CalendarCheck, AlertTriangle, Palmtree, HeartPulse, Hospital
 } from 'lucide-react';
 import moment from 'moment';
 import api from '../../services/api';
@@ -17,6 +17,73 @@ export const formatMinutes = (minutes) => {
 const round2 = (v) => Math.round((v || 0) * 100) / 100;
 
 const Dash = () => <span className="text-slate-200 select-none">—</span>;
+
+/* ─────────────────────────────────────────────
+   LeaveBadge — İzin etiketi + hover tooltip
+   ───────────────────────────────────────────── */
+const LEAVE_BADGE_CONFIG = {
+    leave: {
+        icon: Palmtree,
+        bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200',
+        tooltipBg: 'bg-orange-700', headerColor: 'text-orange-200',
+    },
+    health_report: {
+        icon: HeartPulse,
+        bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200',
+        tooltipBg: 'bg-red-800', headerColor: 'text-red-200',
+    },
+    hospital_visit: {
+        icon: Hospital,
+        bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200',
+        tooltipBg: 'bg-purple-800', headerColor: 'text-purple-200',
+    },
+};
+
+const formatLeaveDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', timeZone: 'Europe/Istanbul' });
+};
+
+export const LeaveBadge = ({ leave, size = 'sm' }) => {
+    if (!leave?.is_on_leave) return null;
+    const configKey = leave.type === 'health_report' && leave.type_code === 'HOSPITAL_VISIT'
+        ? 'hospital_visit'
+        : leave.type === 'health_report' ? 'health_report' : 'leave';
+    const cfg = LEAVE_BADGE_CONFIG[configKey];
+    const Icon = cfg.icon;
+    const isSmall = size === 'sm';
+
+    return (
+        <span className={`group/leave relative inline-flex items-center gap-1 ${isSmall ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]'} rounded-full font-bold ${cfg.bg} ${cfg.text} border ${cfg.border} shrink-0 cursor-default`}>
+            <Icon size={isSmall ? 11 : 13} />
+            {leave.type_name}
+            <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/leave:block w-64 p-3 ${cfg.tooltipBg} text-white text-[11px] font-medium rounded-lg shadow-xl z-50 pointer-events-none`}>
+                <span className={`block font-bold ${cfg.headerColor} mb-1.5`}>{leave.type_name}</span>
+                <span className="block">
+                    Tarih: {formatLeaveDate(leave.start_date)}
+                    {leave.start_date !== leave.end_date && ` – ${formatLeaveDate(leave.end_date)}`}
+                </span>
+                {leave.is_hourly && leave.start_time && leave.end_time && (
+                    <span className="block mt-0.5">Saat: {leave.start_time} – {leave.end_time}</span>
+                )}
+                {leave.total_days > 0 && (
+                    <span className="block mt-0.5">Süre: {leave.total_days} gün</span>
+                )}
+                {leave.reason && (
+                    <span className="block mt-0.5">Neden: {leave.reason.length > 60 ? leave.reason.slice(0, 60) + '…' : leave.reason}</span>
+                )}
+                {leave.approved_by_name && (
+                    <span className="block mt-1">Onaylayan: {leave.approved_by_name}</span>
+                )}
+                {leave.approved_at && (
+                    <span className="block mt-0.5">Onay: {new Date(leave.approved_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</span>
+                )}
+                <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-current" />
+            </span>
+        </span>
+    );
+};
 
 /* ─────────────────────────────────────────────
    EmployeeAttendanceRow
@@ -88,6 +155,9 @@ export const EmployeeAttendanceRow = ({
                                         <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-slate-800" />
                                     </span>
                                 </span>
+                            )}
+                            {s.today_leave?.is_on_leave && (
+                                <LeaveBadge leave={s.today_leave} />
                             )}
                         </div>
                         {s.weekly_ot_limit_hours > 0 && (() => {

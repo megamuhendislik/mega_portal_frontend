@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
+import { LeaveBadge } from '../pages/attendance-tracking/AttendanceComponents';
 
 const formatTime = (isoString) => {
     if (!isoString) return '-';
@@ -91,7 +92,7 @@ const getStatusBadge = (log) => {
     );
 };
 
-const AttendanceLogTable = ({ logs }) => {
+const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
     return (
         <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -155,6 +156,9 @@ const AttendanceLogTable = ({ logs }) => {
                                 </td>
                                 <td className="p-2 md:p-3 lg:p-5">
                                     <div className="flex flex-col items-start gap-1">
+                                        {leaveCoverageMap[log.work_date] && (
+                                            <LeaveBadge leave={{ is_on_leave: true, ...leaveCoverageMap[log.work_date] }} size="sm" />
+                                        )}
                                         {getStatusBadge(log)}
                                         {log.overtime_minutes > 0 && (
                                             <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 pl-1">
