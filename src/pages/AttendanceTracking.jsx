@@ -160,11 +160,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 setSecondaryTeam(secData);
             }
 
-            // Auto-switch to secondary tab if no primary team but secondary exists
-            const hasPrimary = data.some(d => d.relationship_type !== 'SECONDARY');
-            if (!hasPrimary && secData.length > 0) {
+            // Auto-switch to secondary tab if no primary subordinates but secondary exists
+            // hData (hierarchy) only contains PRIMARY subordinates — use it instead of
+            // stats-based check which always includes self as PRIMARY
+            const hasPrimarySubordinates = hData.length > 0;
+            if (!hasPrimarySubordinates && secData.length > 0) {
                 setTeamTab('secondary');
-            } else if (hasPrimary && teamTab === 'secondary' && secData.length === 0) {
+            } else if (hasPrimarySubordinates && teamTab === 'secondary' && secData.length === 0) {
                 setTeamTab('primary');
             }
 
@@ -692,7 +694,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             {/* Ana Tab'lar — show when secondary exists OR both exist */}
             {secondaryTeam.length > 0 && (
                 <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 w-fit">
-                    {primaryStats.length > 0 && (
+                    {hierarchyData.length > 0 && (
                         <button
                             onClick={() => setTeamTab('primary')}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
