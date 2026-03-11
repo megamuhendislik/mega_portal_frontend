@@ -29,6 +29,8 @@ const CATEGORY_LABELS = {
     fiscal_integrity: 'Mali Dönem Bütünlüğü',
     timezone_diagnostics: 'Saat Dilimi Tanılama',
     leave_ot_conflict: 'İzin-OT Konflikti',
+    multiple_primary_managers: 'Çoklu Birincil Yönetici',
+    notification_gap: 'Eksik Bildirim',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -723,7 +725,11 @@ export default function DataIntegrityAuditTab() {
         : 0;
 
     const categoriesWithIssues = results
-        ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count > 0)
+        ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count > 0 && !cat.info_only)
+        : [];
+
+    const categoriesInfoOnly = results
+        ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count > 0 && cat.info_only)
         : [];
 
     const categoriesClean = results
@@ -878,7 +884,7 @@ export default function DataIntegrityAuditTab() {
                             label="Manuel İnceleme"
                             value={results.summary?.manual_review || 0}
                             color="bg-slate-50 border-slate-100 text-slate-700"
-                            sub="elle kontrol gerekir"
+                            sub={results.summary?.info_only ? `+ ${results.summary.info_only} bilgilendirme` : 'elle kontrol gerekir'}
                         />
                         <StatCard
                             label="Düzeltilen"
@@ -926,6 +932,25 @@ export default function DataIntegrityAuditTab() {
                                 </button>
                             </div>
                             {categoriesWithIssues
+                                .sort(
+                                    (a, b) =>
+                                        ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[a[1].severity] || 3) -
+                                        ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[b[1].severity] || 3)
+                                )
+                                .map(([key, data]) => (
+                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} onFixCategory={fixCategory} fixLoading={fixLoading} />
+                                ))}
+                        </div>
+                    )}
+
+                    {/* Info-only Categories (diagnostics, not counted as issues) */}
+                    {categoriesInfoOnly.length > 0 && (
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-bold text-gray-500 flex items-center gap-2">
+                                <DocumentMagnifyingGlassIcon className="w-4 h-4 text-slate-400" />
+                                Bilgilendirme ({categoriesInfoOnly.reduce((s, [, c]) => s + c.count, 0)} kayıt — sorun sayılmaz)
+                            </h3>
+                            {categoriesInfoOnly
                                 .sort(
                                     (a, b) =>
                                         ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[a[1].severity] || 3) -
