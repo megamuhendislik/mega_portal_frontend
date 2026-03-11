@@ -413,7 +413,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
 
                                     {/* Actions */}
                                     <td className="p-4 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-2">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onViewDetails(req, req.type); }}
                                                 className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"

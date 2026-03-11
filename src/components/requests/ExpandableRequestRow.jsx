@@ -330,11 +330,7 @@ const ExpandableRequestRow = ({
 
                 {/* Islemler */}
                 <td className="px-3 py-3 text-right">
-                    <div className={`flex items-center justify-end gap-1.5 transition-opacity ${
-                        mode === 'incoming' && isPending
-                            ? 'opacity-100'
-                            : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
-                    }`}>
+                    <div className="flex items-center justify-end gap-1.5">
                         {/* View Details */}
                         {onViewDetails && (
                             <button
