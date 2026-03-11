@@ -605,6 +605,19 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         } catch (err) {
             console.error('Error creating request:', err);
             const data = err.response?.data;
+            // Çoklu yönetici → approver seçimi zorunlu
+            if (data?.requires_approver_selection) {
+                setError('Birden fazla yöneticiniz var. Lütfen onaylayıcı listesinden bir yönetici seçin.');
+                if (selectedType) {
+                    const typeMap = { LEAVE: 'LEAVE', OVERTIME: 'OVERTIME', EXTERNAL_DUTY: 'EXTERNAL_DUTY', CARDLESS_ENTRY: 'CARDLESS_ENTRY' };
+                    try {
+                        const res = await api.get(`/available-approvers/?type=${typeMap[selectedType] || 'LEAVE'}`);
+                        setAvailableApprovers(res.data || []);
+                    } catch {}
+                }
+                setLoading(false);
+                return;
+            }
             // Extract error from all possible backend field names
             const errorMsg = data?.detail || data?.error || data?.non_field_errors?.[0]
                 || data?.check_in_time?.[0] || data?.check_out_time?.[0]
@@ -794,6 +807,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             </span>
                         ))}
                     </div>
+                )}
+                {availableApprovers.length > 1 && !selectedApproverId && (
+                    <p className="text-xs text-amber-600 font-medium mt-1">
+                        Birden fazla yöneticiniz var. Lütfen bir onaylayıcı seçin.
+                    </p>
                 )}
             </div>
         );
