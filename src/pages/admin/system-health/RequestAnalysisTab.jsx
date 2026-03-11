@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import api from '../../../services/api';
 
 export default function RequestAnalysisTab() {
@@ -7,6 +8,20 @@ export default function RequestAnalysisTab() {
     const [range, setRange] = useState(6);
     const [error, setError] = useState(null);
     const [expandedSection, setExpandedSection] = useState(null);
+
+    // Yaşam Döngüsü Analizi state'leri
+    const [lifecycleData, setLifecycleData] = useState(null);
+    const [lifecycleLoading, setLifecycleLoading] = useState(false);
+    const [lifecycleError, setLifecycleError] = useState(null);
+    const [lcDateFrom, setLcDateFrom] = useState(() => {
+        const d = new Date(); d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+    });
+    const [lcDateTo, setLcDateTo] = useState(() => new Date().toISOString().split('T')[0]);
+    const [lcRequestType, setLcRequestType] = useState('ALL');
+    const [lcIssuesOnly, setLcIssuesOnly] = useState(false);
+    const [lcSearch, setLcSearch] = useState('');
+    const [lcExpandedId, setLcExpandedId] = useState(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -22,6 +37,24 @@ export default function RequestAnalysisTab() {
     }, [range]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const fetchLifecycle = async () => {
+        setLifecycleLoading(true);
+        setLifecycleError(null);
+        try {
+            const res = await api.post('/system/health-check/request-lifecycle-audit/', {
+                date_from: lcDateFrom,
+                date_to: lcDateTo,
+                request_type: lcRequestType,
+                issues_only: lcIssuesOnly,
+            });
+            setLifecycleData(res.data);
+        } catch (e) {
+            setLifecycleError(e.response?.data?.error || 'Hata oluştu');
+        } finally {
+            setLifecycleLoading(false);
+        }
+    };
 
     const toggleSection = (key) => {
         setExpandedSection(prev => prev === key ? null : key);
@@ -421,6 +454,102 @@ export default function RequestAnalysisTab() {
                     {JSON.stringify(data, null, 2)}
                 </pre>
             </Section>
+
+            {/* ── Talep Yaşam Döngüsü Analizi ── */}
+            <div className="bg-white rounded-xl shadow-sm border p-4 space-y-4">
+                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <AlertTriangle size={18} className="text-amber-500" />
+                    Talep Yaşam Döngüsü Analizi
+                </h2>
+
+                {/* Filtreler */}
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1">Başlangıç</label>
+                        <input type="date" value={lcDateFrom} onChange={e => setLcDateFrom(e.target.value)}
+                            className="px-2 py-1.5 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1">Bitiş</label>
+                        <input type="date" value={lcDateTo} onChange={e => setLcDateTo(e.target.value)}
+                            className="px-2 py-1.5 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1">Tür</label>
+                        <select value={lcRequestType} onChange={e => setLcRequestType(e.target.value)}
+                            className="px-2 py-1.5 border rounded-lg text-xs">
+                            <option value="ALL">Hepsi</option>
+                            <option value="OVERTIME">Ek Mesai</option>
+                            <option value="LEAVE">İzin</option>
+                            <option value="CARDLESS_ENTRY">Kartsız Giriş</option>
+                            <option value="HEALTH_REPORT">Sağlık Raporu</option>
+                        </select>
+                    </div>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <input type="checkbox" checked={lcIssuesOnly} onChange={e => setLcIssuesOnly(e.target.checked)}
+                            className="rounded" />
+                        Sadece sorunlu
+                    </label>
+                    <button onClick={fetchLifecycle} disabled={lifecycleLoading}
+                        className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50">
+                        {lifecycleLoading ? 'Taranıyor...' : 'Tara'}
+                    </button>
+                </div>
+
+                {lifecycleError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs">{lifecycleError}</div>
+                )}
+
+                {lifecycleData && (
+                    <>
+                        {/* Özet kartları */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                            <SummaryBadge label="Toplam" count={lifecycleData.summary.total} color="slate" />
+                            <SummaryBadge label="Sorunlu" count={lifecycleData.summary.with_issues} color="red" />
+                            <SummaryBadge label="Yön. Yok" count={lifecycleData.summary.issue_breakdown.no_approver} color="rose" />
+                            <SummaryBadge label="Pasif Yön." count={lifecycleData.summary.issue_breakdown.inactive_approver} color="orange" />
+                            <SummaryBadge label="Bld. Yok" count={lifecycleData.summary.issue_breakdown.no_notification} color="amber" />
+                            <SummaryBadge label="Görünmez" count={lifecycleData.summary.issue_breakdown.not_visible} color="purple" />
+                            <SummaryBadge label="Eski PEND" count={lifecycleData.summary.issue_breakdown.stale_pending} color="yellow" />
+                        </div>
+
+                        {/* Arama */}
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input type="text" value={lcSearch} onChange={e => setLcSearch(e.target.value)}
+                                placeholder="Çalışan adı veya talep ID ile ara..."
+                                className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs" />
+                        </div>
+
+                        {/* Talep Listesi */}
+                        <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                            {lifecycleData.requests
+                                .filter(r => {
+                                    if (!lcSearch) return true;
+                                    const s = lcSearch.toLowerCase();
+                                    return r.employee_name?.toLowerCase().includes(s) ||
+                                        String(r.id).includes(s);
+                                })
+                                .map(req => (
+                                    <LifecycleRow
+                                        key={`${req.type}-${req.id}`}
+                                        req={req}
+                                        expanded={lcExpandedId === `${req.type}-${req.id}`}
+                                        onToggle={() => setLcExpandedId(prev =>
+                                            prev === `${req.type}-${req.id}` ? null : `${req.type}-${req.id}`
+                                        )}
+                                    />
+                                ))
+                            }
+                            {lifecycleData.requests.length === 0 && (
+                                <div className="text-center py-8 text-slate-400 text-sm">
+                                    Seçili kriterlere uygun talep bulunamadı.
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 }
@@ -496,6 +625,178 @@ function Section({ title, sectionKey, expanded, toggle, children }) {
                 </svg>
             </button>
             {isOpen && <div className="px-4 pb-4">{children}</div>}
+        </div>
+    );
+}
+
+/* ─── Yaşam Döngüsü Analizi Helpers ─── */
+
+function SummaryBadge({ label, count, color }) {
+    const colors = {
+        slate: 'bg-slate-50 text-slate-700 border-slate-200',
+        red: 'bg-red-50 text-red-700 border-red-200',
+        rose: 'bg-rose-50 text-rose-700 border-rose-200',
+        orange: 'bg-orange-50 text-orange-700 border-orange-200',
+        amber: 'bg-amber-50 text-amber-700 border-amber-200',
+        purple: 'bg-purple-50 text-purple-700 border-purple-200',
+        yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    };
+    return (
+        <div className={`rounded-lg border px-3 py-2 text-center ${colors[color] || colors.slate}`}>
+            <div className="text-lg font-extrabold">{count || 0}</div>
+            <div className="text-[10px] font-bold opacity-70">{label}</div>
+        </div>
+    );
+}
+
+const TYPE_LABELS = { OVERTIME: 'Ek Mesai', LEAVE: 'İzin', CARDLESS_ENTRY: 'Kartsız', HEALTH_REPORT: 'Sağlık R.' };
+const TYPE_COLORS = { OVERTIME: 'bg-violet-100 text-violet-700', LEAVE: 'bg-blue-100 text-blue-700', CARDLESS_ENTRY: 'bg-teal-100 text-teal-700', HEALTH_REPORT: 'bg-pink-100 text-pink-700' };
+const STATUS_LABELS = { PENDING: 'Bekliyor', APPROVED: 'Onaylı', REJECTED: 'Red', CANCELLED: 'İptal', ESCALATED: 'Üst Yön.' };
+const STATUS_COLORS = { PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-emerald-100 text-emerald-700', REJECTED: 'bg-red-100 text-red-700', CANCELLED: 'bg-slate-100 text-slate-500', ESCALATED: 'bg-purple-100 text-purple-700' };
+const SEVERITY_COLORS = { CRITICAL: 'bg-red-600 text-white', HIGH: 'bg-orange-500 text-white', MEDIUM: 'bg-amber-400 text-amber-900', LOW: 'bg-blue-100 text-blue-700' };
+
+function LifecycleRow({ req, expanded, onToggle }) {
+    const hasIssues = req.issues && req.issues.length > 0;
+    const borderColor = hasIssues
+        ? (req.issues.some(i => i.severity === 'CRITICAL') ? 'border-l-red-600' :
+           req.issues.some(i => i.severity === 'HIGH') ? 'border-l-orange-500' : 'border-l-amber-400')
+        : 'border-l-emerald-400';
+
+    return (
+        <div className={`border rounded-lg border-l-4 ${borderColor} bg-white`}>
+            <button onClick={onToggle} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50">
+                {expanded ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${TYPE_COLORS[req.type] || ''}`}>
+                    {TYPE_LABELS[req.type] || req.type}
+                </span>
+                <span className="text-xs font-medium text-slate-700 truncate flex-1">{req.employee_name}</span>
+                <span className="text-[10px] text-slate-400">{req.date}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[req.status] || ''}`}>
+                    {STATUS_LABELS[req.status] || req.status}
+                </span>
+                {req.target_approver && (
+                    <span className="text-[10px] text-slate-500 truncate max-w-[120px]">→ {req.target_approver.name}</span>
+                )}
+                {hasIssues ? (
+                    <span className="flex gap-0.5">
+                        {req.issues.map((issue, i) => (
+                            <span key={i} className={`px-1 py-0.5 rounded text-[9px] font-bold ${SEVERITY_COLORS[issue.severity]}`}>
+                                {issue.code.replace(/_/g, ' ').substring(0, 8)}
+                            </span>
+                        ))}
+                    </span>
+                ) : (
+                    <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                )}
+            </button>
+
+            {expanded && (
+                <div className="px-4 pb-3 pt-1 border-t border-slate-100 space-y-2 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                            <span className="text-[10px] text-slate-400 font-bold block">Talep ID</span>
+                            <span className="font-medium">#{req.id}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] text-slate-400 font-bold block">Süre / Detay</span>
+                            <span className="font-medium">{req.duration_display || '-'}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] text-slate-400 font-bold block">Kaynak</span>
+                            <span className="font-medium">{req.source_type || '-'}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] text-slate-400 font-bold block">Oluşturulma</span>
+                            <span className="font-medium">{req.created_at ? new Date(req.created_at).toLocaleString('tr-TR') : '-'}</span>
+                        </div>
+                    </div>
+
+                    {/* Yönetici */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold">Yönetici:</span>
+                        {req.target_approver ? (
+                            <span className="text-xs">
+                                {req.target_approver.name}
+                                {req.target_approver.relationship && (
+                                    <span className="ml-1 px-1 py-0.5 bg-slate-100 rounded text-[10px]">{req.target_approver.relationship}</span>
+                                )}
+                                {req.target_approver.is_active === false && (
+                                    <span className="ml-1 px-1 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">PASİF</span>
+                                )}
+                            </span>
+                        ) : (
+                            <span className="text-red-600 font-bold">ATANMAMIŞ</span>
+                        )}
+                    </div>
+
+                    {/* Bildirim */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold">Bildirim:</span>
+                        {req.notification?.sent === true ? (
+                            <span className="text-emerald-600 flex items-center gap-1">
+                                <CheckCircle size={12} /> Gönderildi
+                                {req.notification.sent_at && <span className="text-slate-400 ml-1">({new Date(req.notification.sent_at).toLocaleString('tr-TR')})</span>}
+                                {req.notification.is_read && <span className="px-1 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] ml-1">Okundu</span>}
+                            </span>
+                        ) : req.notification?.sent === false ? (
+                            <span className="text-red-600 flex items-center gap-1">
+                                <XCircle size={12} /> Gönderilmemiş
+                            </span>
+                        ) : (
+                            <span className="text-slate-400">—</span>
+                        )}
+                    </div>
+
+                    {/* Görünürlük */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold">Görünürlük:</span>
+                        {req.visibility?.in_pending_approvals === true ? (
+                            <span className="text-emerald-600 flex items-center gap-1">
+                                <CheckCircle size={12} /> Yöneticide görünür
+                            </span>
+                        ) : req.visibility?.in_pending_approvals === false ? (
+                            <span className="text-red-600 flex items-center gap-1">
+                                <XCircle size={12} /> {req.visibility.reason || 'Görünmüyor'}
+                            </span>
+                        ) : (
+                            <span className="text-slate-400">—</span>
+                        )}
+                    </div>
+
+                    {/* Onay bilgisi */}
+                    {req.approval_info?.approved_by && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-bold">Onay/Red:</span>
+                            <span>{req.approval_info.approved_by}</span>
+                            {req.approval_info.approved_at && (
+                                <span className="text-slate-400">({new Date(req.approval_info.approved_at).toLocaleString('tr-TR')})</span>
+                            )}
+                            {req.approval_info.rejection_reason && (
+                                <span className="text-red-500 ml-1">Sebep: {req.approval_info.rejection_reason}</span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Sorunlar */}
+                    {hasIssues && (
+                        <div className="space-y-1 mt-2">
+                            <span className="text-[10px] text-slate-400 font-bold block">Tespit Edilen Sorunlar:</span>
+                            {req.issues.map((issue, i) => (
+                                <div key={i} className={`flex items-center gap-2 px-2 py-1 rounded ${
+                                    issue.severity === 'CRITICAL' ? 'bg-red-50' :
+                                    issue.severity === 'HIGH' ? 'bg-orange-50' :
+                                    issue.severity === 'MEDIUM' ? 'bg-amber-50' : 'bg-blue-50'
+                                }`}>
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${SEVERITY_COLORS[issue.severity]}`}>
+                                        {issue.severity}
+                                    </span>
+                                    <span className="text-xs">{issue.description}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
