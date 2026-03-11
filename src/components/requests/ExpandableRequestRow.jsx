@@ -214,6 +214,7 @@ const ExpandableRequestRow = ({
     const isPending = req.status === 'PENDING';
     const colCount = 7 + (showEmployeeColumn ? 1 : 0);
     const isHealthType = req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT';
+    const isReadOnlyType = isHealthType || req.type === 'MEAL';
 
     return (
         <>
@@ -353,7 +354,7 @@ const ExpandableRequestRow = ({
                         {claimPotentialRenderer && claimPotentialRenderer(req)}
 
                         {/* Incoming mode: Approve / Reject */}
-                        {mode === 'incoming' && isPending && onApprove && !isHealthType && (
+                        {mode === 'incoming' && isPending && onApprove && !isReadOnlyType && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onApprove(req, 'Hızlı Onay'); }}
                                 className="w-7 h-7 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
@@ -362,7 +363,7 @@ const ExpandableRequestRow = ({
                                 <Check size={14} />
                             </button>
                         )}
-                        {mode === 'incoming' && isPending && onReject && !isHealthType && (
+                        {mode === 'incoming' && isPending && onReject && !isReadOnlyType && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -376,10 +377,10 @@ const ExpandableRequestRow = ({
                             </button>
                         )}
 
-                        {/* Sağlık raporu: muhasebe onayı badge */}
-                        {mode === 'incoming' && isHealthType && (
+                        {/* Sağlık raporu / yemek: bilgi badge */}
+                        {mode === 'incoming' && isReadOnlyType && (
                             <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap">
-                                Muhasebe onayı
+                                {req.type === 'MEAL' ? 'Bilgi amaçlı' : 'Muhasebe onayı'}
                             </span>
                         )}
 
@@ -414,8 +415,8 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
-                                onApprove={isHealthType ? null : onApprove}
-                                onReject={isHealthType ? null : onReject}
+                                onApprove={isReadOnlyType ? null : onApprove}
+                                onReject={isReadOnlyType ? null : onReject}
                             />
                         </div>
                     </td>
