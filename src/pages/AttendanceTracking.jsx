@@ -74,6 +74,11 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         efficiency: 0
     });
 
+    // PRIMARY-only stats: backend marks each employee with relationship_type
+    const primaryStats = useMemo(() => {
+        return stats.filter(s => s.relationship_type !== 'SECONDARY');
+    }, [stats]);
+
     const secondaryStats = useMemo(() => {
         const secIds = new Set(secondaryTeam.map(e => e.id));
         return stats.filter(s => secIds.has(s.employee_id));
@@ -126,18 +131,20 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             }
             setStats(data);
 
-            const worked = data.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
-            const overtime = data.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
-            const missing = data.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
-            const balance = data.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
-            const online = data.filter(d => d.is_online).length;
+            // Summary: only count PRIMARY employees (exclude SECONDARY-only)
+            const primaryData = data.filter(d => d.relationship_type !== 'SECONDARY');
+            const worked = primaryData.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
+            const overtime = primaryData.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
+            const missing = primaryData.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
+            const balance = primaryData.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
+            const online = primaryData.filter(d => d.is_online).length;
 
             setSummary({
                 totalWorked: worked,
                 totalOvertime: overtime,
                 totalMissing: missing,
                 netBalance: balance,
-                activeCount: data.length,
+                activeCount: primaryData.length,
                 onlineCount: online
             });
 
@@ -195,10 +202,11 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     // Turkish-aware normalize for search: lowercase + strip diacritics (ışık → isik)
     const trNorm = (s) => (s || '').toLocaleLowerCase('tr').replace(/[şçöüğı]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i' })[c]);
 
-    // Filter Logic (Common for List)
-    const avgOT = stats.length > 0 ? stats.reduce((a, c) => a + (c.total_overtime || 0), 0) / stats.length : 0;
+    // Filter Logic (Common for List) — use primaryStats for primary tab
+    const activeStats = teamTab === 'secondary' ? secondaryStats : primaryStats;
+    const avgOT = activeStats.length > 0 ? activeStats.reduce((a, c) => a + (c.total_overtime || 0), 0) / activeStats.length : 0;
 
-    const filteredStats = stats.filter(item => {
+    const filteredStats = activeStats.filter(item => {
         const matchesSearch = trNorm(item.employee_name).includes(trNorm(searchTerm)) ||
             trNorm(item.department).includes(trNorm(searchTerm));
 
@@ -686,7 +694,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <Users size={16} />
                         Ana Ekibim
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold tabular-nums">
-                            {stats.length}
+                            {primaryStats.length}
                         </span>
                     </button>
                     <button
@@ -707,7 +715,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             )}
 
             {/* View Toggle: Liste / Analiz / Ek Mesai */}
-            {stats.length > 0 && (
+            {activeStats.length > 0 && (
                 <div className={`flex items-center gap-1 bg-white p-1 rounded-xl border w-fit ${
                     teamTab === 'secondary' ? 'border-amber-200/80' : 'border-slate-200/80'
                 }`}>
@@ -754,9 +762,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             )}
 
             {/* Analytics View */}
-            {viewMode === 'analytics' && stats.length > 0 && teamTab === 'primary' && (
+            {viewMode === 'analytics' && primaryStats.length > 0 && teamTab === 'primary' && (
                 <TeamAttendanceAnalytics
-                    stats={stats}
+                    stats={primaryStats}
                     year={year}
                     month={month}
                     secondaryTeam={secondaryTeam}
@@ -770,7 +778,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             {/* Overtime Management View */}
             {viewMode === 'overtime' && teamTab === 'primary' && (
                 <OvertimeManagementTab
-                    employees={stats.map(s => ({
+                    employees={primaryStats.map(s => ({
                         id: s.employee_id,
                         name: s.employee_name,
                         department: s.department,
@@ -814,7 +822,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <option value="NET_WORST">Net: En Çok Eksik</option>
                         <option value="NET_BEST">Net: En Çok Fazla</option>
                     </select>
-                    <span className="text-[11px] text-slate-400 ml-auto tabular-nums">{stats.length} kişi</span>
+                    <span className="text-[11px] text-slate-400 ml-auto tabular-nums">{primaryStats.length} kişi</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
