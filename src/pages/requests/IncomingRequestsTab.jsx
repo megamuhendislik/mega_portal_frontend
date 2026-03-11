@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-    Search, Users, Shield, UserCheck, UserCog, Clock, FileText
+    Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Calendar
 } from 'lucide-react';
 import api from '../../services/api';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
-import EmployeeRequestGroup from '../../components/requests/EmployeeRequestGroup';
 import RequestDetailModal from '../../components/RequestDetailModal';
 
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType }) => {
@@ -24,6 +23,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [typeFilter, setTypeFilter] = useState(filterType === 'overtime' ? 'OVERTIME' : 'ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [searchText, setSearchText] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [personFilter, setPersonFilter] = useState('ALL');
 
     // Detail modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -32,9 +34,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // Expandable row state (flat table)
     const [expandedId, setExpandedId] = useState(null);
-
-    // Open groups state (employee accordion)
-    const [openGroups, setOpenGroups] = useState(new Set());
 
     // Compute directSubordinateIds (PRIMARY subordinates)
     const directSubordinateIds = useMemo(() => {
@@ -319,6 +318,18 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         secondaryTeamItems.filter(r => r.status === 'PENDING').length
     , [secondaryTeamItems]);
 
+    // Unique employees for person filter dropdown
+    const uniqueEmployees = useMemo(() => {
+        const empMap = new Map();
+        currentItems.forEach(r => {
+            const empId = String(r.employee_id || r.employee || '');
+            if (empId && empId !== 'null' && empId !== 'undefined' && !empMap.has(empId)) {
+                empMap.set(empId, r.employee_name || 'Bilinmiyor');
+            }
+        });
+        return Array.from(empMap.entries()).sort((a, b) => a[1].localeCompare(b[1], 'tr'));
+    }, [currentItems]);
+
     // Apply filters
     const filtered = useMemo(() => {
         return currentItems.filter(r => {
@@ -333,9 +344,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 const s = searchText.toLowerCase();
                 if (!r.employee_name?.toLowerCase().includes(s)) return false;
             }
+            // Date range filter
+            if (dateFrom) {
+                const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr < dateFrom) return false;
+            }
+            if (dateTo) {
+                const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr > dateTo) return false;
+            }
+            // Person filter
+            if (personFilter !== 'ALL') {
+                const empId = String(r.employee_id || r.employee || '');
+                if (empId !== personFilter) return false;
+            }
             return true;
         });
-    }, [currentItems, typeFilter, statusFilter, searchText]);
+    }, [currentItems, typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter]);
 
     // Split filtered into pending and history
     const pendingItems = useMemo(() =>
@@ -345,28 +370,6 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const historyItems = useMemo(() =>
         filtered.filter(r => r.status !== 'PENDING' && !r._isSubstitute)
     , [filtered]);
-
-    // Group history items by employee
-    const groupedHistory = useMemo(() => {
-        const groups = {};
-        historyItems.forEach(r => {
-            const empKey = r.employee_id || r.employee || r.employee_name || 'unknown';
-            const name = r.employee_name || 'Bilinmiyor';
-            if (!groups[empKey]) {
-                groups[empKey] = {
-                    employeeKey: String(empKey),
-                    employeeName: name,
-                    employeeDepartment: r.employee_department || '',
-                    employeePosition: r.employee_position || '',
-                    requests: [],
-                };
-            }
-            groups[empKey].requests.push(r);
-        });
-        return Object.values(groups).sort((a, b) =>
-            a.employeeName.localeCompare(b.employeeName, 'tr')
-        );
-    }, [historyItems]);
 
     // Type filter options
     const typeFilterOptions = filterType
@@ -460,8 +463,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     )}
                 </div>
 
-                {/* Type + Status + Search */}
-                <div className="flex flex-col xl:flex-row gap-3 justify-between items-start xl:items-center">
+                {/* Filters row 1: Search + Person + Date Range */}
+                <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input
@@ -469,36 +472,73 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                             placeholder="İsim ile ara..."
                             value={searchText}
                             onChange={(e) => setSearchText(e.target.value)}
-                            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold w-full sm:w-52 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {/* Type filter */}
-                        {typeFilterOptions.length > 0 && (
-                            <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg gap-0.5">
-                                {typeFilterOptions.map(t => (
-                                    <button key={t.key} onClick={() => setTypeFilter(t.key)}
-                                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                            typeFilter === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                    >
-                                        {t.label}
-                                    </button>
-                                ))}
-                            </div>
+                    <select
+                        value={personFilter}
+                        onChange={(e) => setPersonFilter(e.target.value)}
+                        className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full sm:w-48"
+                    >
+                        <option value="ALL">Tüm Personel</option>
+                        {uniqueEmployees.map(([id, name]) => (
+                            <option key={id} value={id}>{name}</option>
+                        ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-slate-400 shrink-0" />
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            placeholder="Başlangıç"
+                        />
+                        <span className="text-slate-400 text-xs font-bold">—</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            placeholder="Bitiş"
+                        />
+                        {(dateFrom || dateTo) && (
+                            <button
+                                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                                className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+                            >
+                                Temizle
+                            </button>
                         )}
-                        {/* Status filter */}
-                        <div className="flex bg-slate-100 p-1 rounded-lg">
-                            {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
-                                <button key={s} onClick={() => setStatusFilter(s)}
+                    </div>
+                </div>
+                {/* Filters row 2: Type + Status */}
+                <div className="flex flex-wrap gap-2 items-center">
+                    {/* Type filter */}
+                    {typeFilterOptions.length > 0 && (
+                        <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg gap-0.5">
+                            {typeFilterOptions.map(t => (
+                                <button key={t.key} onClick={() => setTypeFilter(t.key)}
                                     className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                        statusFilter === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                        typeFilter === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                                     }`}
                                 >
-                                    {s === 'ALL' ? 'Hepsi' : s === 'PENDING' ? 'Bekleyen' : s === 'APPROVED' ? 'Onaylı' : 'Red'}
+                                    {t.label}
                                 </button>
                             ))}
                         </div>
+                    )}
+                    {/* Status filter */}
+                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                        {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
+                            <button key={s} onClick={() => setStatusFilter(s)}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                                    statusFilter === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                            >
+                                {s === 'ALL' ? 'Hepsi' : s === 'PENDING' ? 'Bekleyen' : s === 'APPROVED' ? 'Onaylı' : 'Red'}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -562,35 +602,48 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         </div>
                     )}
 
-                    {/* History — grouped by employee */}
-                    {groupedHistory.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2">
-                                <FileText size={14} />
-                                Geçmiş Talepler
-                            </h3>
-                            <div className="space-y-3">
-                                {groupedHistory.map(group => (
-                                    <EmployeeRequestGroup
-                                        key={group.employeeKey}
-                                        employeeName={group.employeeName}
-                                        employeeDepartment={group.employeeDepartment}
-                                        employeePosition={group.employeePosition}
-                                        requests={group.requests}
-                                        isOpen={openGroups.has(group.employeeKey)}
-                                        onToggle={() => {
-                                            setOpenGroups(prev => {
-                                                const next = new Set(prev);
-                                                if (next.has(group.employeeKey)) next.delete(group.employeeKey);
-                                                else next.add(group.employeeKey);
-                                                return next;
-                                            });
-                                        }}
-                                        onViewDetails={handleViewDetails}
-                                        onApprove={wrapApprove}
-                                        onReject={wrapReject}
-                                    />
-                                ))}
+                    {/* History — flat chronological table */}
+                    {historyItems.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
+                                <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                                    <FileText size={14} />
+                                    Geçmiş Talepler ({historyItems.length})
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
+                                            <th className="pl-3 pr-1 py-2 w-8"></th>
+                                            <th className="px-3 py-2 font-bold">Talep Eden</th>
+                                            <th className="px-3 py-2 font-bold">Tür</th>
+                                            <th className="px-3 py-2 font-bold">Tarih</th>
+                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                            <th className="px-3 py-2 font-bold">Süre</th>
+                                            <th className="px-3 py-2 font-bold">Durum</th>
+                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {historyItems.map(req => (
+                                            <ExpandableRequestRow
+                                                key={`${req.type}-${req.id}`}
+                                                req={req}
+                                                isExpanded={expandedId === `hist-${req.type}-${req.id}`}
+                                                onToggle={() => {
+                                                    const key = `hist-${req.type}-${req.id}`;
+                                                    setExpandedId(prev => prev === key ? null : key);
+                                                }}
+                                                onViewDetails={handleViewDetails}
+                                                onApprove={wrapApprove}
+                                                onReject={wrapReject}
+                                                showEmployeeColumn={true}
+                                                mode="incoming"
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}

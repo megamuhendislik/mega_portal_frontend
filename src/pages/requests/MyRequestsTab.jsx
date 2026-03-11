@@ -86,9 +86,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
     const [expandedRowId, setExpandedRowId] = useState(null);
 
-    // Month/year filter
-    const [filterYear, setFilterYear] = useState(new Date().getFullYear());
-    const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+    // Date range filter
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     // Fetch all data
     const fetchData = useCallback(async () => {
@@ -283,12 +283,14 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
-            // Month/year filter
-            const reqDate = new Date(r._sortDate || r.start_date || r.date || r.created_at);
-            if (!isNaN(reqDate.getTime())) {
-                if (reqDate.getFullYear() !== filterYear || (reqDate.getMonth() + 1) !== filterMonth) {
-                    return false;
-                }
+            // Date range filter
+            if (dateFrom) {
+                const reqDateStr = (r._sortDate || r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr < dateFrom) return false;
+            }
+            if (dateTo) {
+                const reqDateStr = (r._sortDate || r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr > dateTo) return false;
             }
             if (typeFilter !== 'ALL' && r._type !== typeFilter) return false;
             if (statusFilter !== 'ALL') {
@@ -299,17 +301,21 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             if (!showPotential && r.status === 'POTENTIAL') return false;
             return true;
         });
-    }, [allMyRequests, typeFilter, statusFilter, showPotential, filterYear, filterMonth]);
+    }, [allMyRequests, typeFilter, statusFilter, showPotential, dateFrom, dateTo]);
 
     const counts = useMemo(() => {
-        const monthFiltered = allMyRequests.filter(r => {
-            const reqDate = new Date(r._sortDate || r.start_date || r.date || r.created_at);
-            if (!isNaN(reqDate.getTime())) {
-                return reqDate.getFullYear() === filterYear && (reqDate.getMonth() + 1) === filterMonth;
+        const dateFiltered = allMyRequests.filter(r => {
+            if (dateFrom) {
+                const ds = (r._sortDate || r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (ds && ds < dateFrom) return false;
+            }
+            if (dateTo) {
+                const ds = (r._sortDate || r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (ds && ds > dateTo) return false;
             }
             return true;
         });
-        const actual = monthFiltered.filter(r => r.status !== 'POTENTIAL');
+        const actual = dateFiltered.filter(r => r.status !== 'POTENTIAL');
         return {
             all: actual.length,
             leave: actual.filter(r => r._type === 'LEAVE').length,
@@ -322,7 +328,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
             rejected: actual.filter(r => r.status === 'REJECTED').length,
         };
-    }, [allMyRequests, filterYear, filterMonth]);
+    }, [allMyRequests, dateFrom, dateTo]);
 
     // Custom onEdit that routes OVERTIME to edit modal, others to view
     const handleEdit = useCallback((req) => {
@@ -393,29 +399,30 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
             </div>
 
-            {/* Ay/Yıl Seçici */}
-            <div className="flex items-center gap-2 mb-4">
-                <Calendar size={16} className="text-slate-400" />
-                <select
-                    value={filterMonth}
-                    onChange={(e) => setFilterMonth(Number(e.target.value))}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                >
-                    {['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-                      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-                    ].map((name, i) => (
-                        <option key={i + 1} value={i + 1}>{name}</option>
-                    ))}
-                </select>
-                <select
-                    value={filterYear}
-                    onChange={(e) => setFilterYear(Number(e.target.value))}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                >
-                    {[2024, 2025, 2026, 2027].map(y => (
-                        <option key={y} value={y}>{y}</option>
-                    ))}
-                </select>
+            {/* Tarih Aralığı Filtresi */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <Calendar size={16} className="text-slate-400 shrink-0" />
+                <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                <span className="text-slate-400 text-xs font-bold">—</span>
+                <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                {(dateFrom || dateTo) && (
+                    <button
+                        onClick={() => { setDateFrom(''); setDateTo(''); }}
+                        className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+                    >
+                        Temizle
+                    </button>
+                )}
             </div>
 
             {/* Filter Chips */}

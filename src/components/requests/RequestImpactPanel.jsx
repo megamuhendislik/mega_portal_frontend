@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     Clock, Calendar, FileText, Utensils, CreditCard,
     ArrowRight, LogIn, LogOut, Check, X,
-    Info, TrendingUp, AlertTriangle
+    Info, AlertTriangle, Shield
 } from 'lucide-react';
 
 // ─── Static Tailwind color lookup (avoids dynamic class purging) ──────────
@@ -196,6 +196,81 @@ const isExcuseLeave = (req) => {
     return typeName.includes('mazeret') || code === 'EXCUSE_LEAVE';
 };
 
+// ─── Approval Info Section (replaces "Onaylanınca Ne Olur?") ─────────────
+const ApprovalInfoSection = ({ req }) => {
+    const statusLabels = {
+        PENDING: 'Beklemede', APPROVED: 'Onaylandı', REJECTED: 'Reddedildi',
+        CANCELLED: 'İptal Edildi', POTENTIAL: 'Potansiyel', ORDERED: 'Sipariş Verildi',
+        DELIVERED: 'Teslim Edildi', ESCALATED: 'Yönlendirildi',
+    };
+    const statusColors = {
+        APPROVED: 'text-emerald-700 bg-emerald-50', REJECTED: 'text-red-700 bg-red-50',
+        PENDING: 'text-amber-700 bg-amber-50', CANCELLED: 'text-slate-500 bg-slate-50',
+        ESCALATED: 'text-purple-700 bg-purple-50',
+    };
+
+    const approverName = req.target_approver_name
+        || req.target_approver_detail?.full_name
+        || req.target_approver_detail?.first_name
+        || null;
+    const approvedByName = req.approved_by_name
+        || req.approval_manager_name
+        || req.approved_by_detail?.full_name
+        || null;
+    const approvedAt = req.approved_at || req.approval_date || null;
+    const escalatedTo = req.escalated_to_detail?.full_name || req.escalated_to_detail?.first_name || null;
+
+    return (
+        <Section title="Onay Bilgisi" icon={<Info size={14} className="text-blue-600" />} color="blue">
+            <InfoRow label="Durum" value={
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${statusColors[req.status] || 'text-slate-600 bg-slate-50'}`}>
+                    {statusLabels[req.status] || req.status}
+                </span>
+            } />
+            <InfoRow label="Oluşturulma" value={formatDateTime(req.created_at)} />
+            {approverName && <InfoRow label="Gönderildiği Kişi" value={approverName} />}
+
+            {approvedByName && (
+                <InfoRow label={req.status === 'REJECTED' ? 'Reddeden' : 'Onaylayan'} value={approvedByName} />
+            )}
+            {approvedAt && (
+                <InfoRow label={req.status === 'REJECTED' ? 'Red Tarihi' : 'Onay Tarihi'} value={formatDateTime(approvedAt)} />
+            )}
+
+            {req.rejection_reason && (
+                <div className="mt-1.5 flex items-start gap-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 font-medium">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span><strong>Red Sebebi:</strong> {req.rejection_reason}</span>
+                </div>
+            )}
+
+            {escalatedTo && (
+                <>
+                    <InfoRow label="Yönlendirildi" value={escalatedTo} />
+                    {req.escalated_at && <InfoRow label="Yönlendirme Tarihi" value={formatDateTime(req.escalated_at)} />}
+                    {req.escalation_reason && <InfoRow label="Yönlendirme Sebebi" value={req.escalation_reason} />}
+                </>
+            )}
+
+            {req.last_decision_level && req.last_decision_level !== 'DIRECT' && (
+                <div className="mt-1.5 flex items-center gap-2 text-xs bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-purple-700 font-medium">
+                    <Shield size={12} />
+                    <span><strong>Müdahale:</strong> {
+                        req.last_decision_level === 'ADMIN' ? 'Admin tarafından işlem yapıldı'
+                        : req.last_decision_level === 'SUBSTITUTE' ? 'Vekil tarafından işlem yapıldı'
+                        : req.last_decision_level === 'ESCALATED' ? 'Üst yöneticiye yönlendirildi'
+                        : req.last_decision_level
+                    }</span>
+                </div>
+            )}
+
+            {req.updated_at && req.created_at && req.updated_at !== req.created_at && (
+                <InfoRow label="Son Güncelleme" value={formatDateTime(req.updated_at)} />
+            )}
+        </Section>
+    );
+};
+
 // ─── Overtime Panel ───────────────────────────────────────────────────────
 const OvertimePanel = ({ req, mode }) => {
     const duration = calcDurationFromSeconds(req.duration_seconds)
@@ -253,37 +328,7 @@ const OvertimePanel = ({ req, mode }) => {
                 )}
             </Section>
 
-            {mode === 'incoming' && (
-                <Section title="Onaylanınca Ne Olur?" icon={<TrendingUp size={14} className="text-emerald-600" />} color="emerald">
-                    <ImpactItem text={`+${addHours} saat fazla mesai eklenir`} positive />
-                    <ImpactItem text={`Aylık Fazla Mesai: ${currentOtHours}sa → ${newOtHours}sa`} />
-                    <ImpactItem text={`Onaylı Fazla Mesai sayısı: ${currentApprovedCount} → ${currentApprovedCount + 1}`} />
-
-                    <div className="pt-2">
-                        <ProgressBar
-                            value={parseFloat(currentOtHours) + parseFloat(addHours)}
-                            max={weeklyOtLimit}
-                            label="Aylık Fazla Mesai Toplamı"
-                            color={parseFloat(currentOtHours) + parseFloat(addHours) > weeklyOtLimit ? 'red' : 'amber'}
-                        />
-                    </div>
-
-                    {req.employee_meal_info && (
-                        <div className="mt-2 flex items-center gap-2 text-xs bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700 font-medium">
-                            <Utensils size={12} />
-                            Aynı gün yemek talebi var — otomatik bağlanacak
-                        </div>
-                    )}
-                </Section>
-            )}
-
-            {mode === 'personal' && (
-                <Section title="Talep Detayı" icon={<Info size={14} className="text-blue-600" />} color="blue">
-                    <InfoRow label="Onay Bekleyen" value={req.target_approver_name || '-'} />
-                    <InfoRow label="Oluşturulma" value={formatDateTime(req.created_at)} />
-                    {req.approved_by_name && <InfoRow label="İşlem Yapan" value={req.approved_by_name} />}
-                </Section>
-            )}
+            <ApprovalInfoSection req={req} />
         </>
     );
 };
@@ -313,73 +358,7 @@ const LeavePanel = ({ req, mode }) => {
                 {req.reason && <InfoRow label="Sebep" value={req.reason} />}
             </Section>
 
-            {mode === 'incoming' && (
-                <Section title="Onaylanınca Ne Olur?" icon={<TrendingUp size={14} className="text-emerald-600" />} color="emerald">
-                    {isAnnualLeave(req) && (
-                        <>
-                            {balance.remaining != null && (
-                                <ImpactItem
-                                    text={`İzin bakiyesi: ${balance.remaining} gün → ${(balance.remaining - totalDays).toFixed(1)} gün`}
-                                    negative={(balance.remaining - totalDays) < 0}
-                                />
-                            )}
-                            {balance.used != null && (
-                                <ImpactItem text={`Kullanılan: ${balance.used} gün → ${(parseFloat(balance.used) + totalDays).toFixed(1)} gün`} />
-                            )}
-                            {balance.entitlement_tier != null && (
-                                <InfoRow label="Hak edilen" value={`${balance.entitlement_tier} gün/yıl`} />
-                            )}
-                            {balance.years_of_service != null && (
-                                <InfoRow label="Kıdem" value={`${balance.years_of_service} yıl`} />
-                            )}
-                            {balance.last_leave_date && (
-                                <InfoRow label="Son izin" value={formatDate(balance.last_leave_date)} />
-                            )}
-
-                            {balance.remaining != null && (balance.remaining - totalDays) < 0 && (
-                                <div className="mt-2 flex items-start gap-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 font-bold">
-                                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                                    Bakiye negatife düşecek — avans izin kullanılacak
-                                </div>
-                            )}
-
-                            {balance.remaining != null && balance.entitlement_tier != null && (
-                                <div className="pt-2">
-                                    <ProgressBar
-                                        value={parseFloat(balance.used || 0) + totalDays}
-                                        max={balance.entitlement_tier}
-                                        label="İzin Kullanımı"
-                                        color={
-                                            (parseFloat(balance.used || 0) + totalDays) > balance.entitlement_tier
-                                                ? 'red'
-                                                : 'blue'
-                                        }
-                                    />
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {isExcuseLeave(req) && (
-                        <ImpactItem text="Mazeret izni bakiyesinden düşülecek" />
-                    )}
-
-                    {!isAnnualLeave(req) && !isExcuseLeave(req) && (
-                        <ImpactItem text={`${req.leave_type_name || 'İzin'} olarak kaydedilecek`} positive />
-                    )}
-                </Section>
-            )}
-
-            {mode === 'personal' && (
-                <Section title="Talep Detayı" icon={<Info size={14} className="text-blue-600" />} color="blue">
-                    <InfoRow label="Onay Bekleyen" value={req.target_approver_name || '-'} />
-                    <InfoRow label="Oluşturulma" value={formatDateTime(req.created_at)} />
-                    {req.approved_by_name && <InfoRow label="İşlem Yapan" value={req.approved_by_name} />}
-                    {isAnnualLeave(req) && balance.remaining != null && (
-                        <InfoRow label="Mevcut Bakiye" value={`${balance.remaining} gün`} highlight />
-                    )}
-                </Section>
-            )}
+            <ApprovalInfoSection req={req} />
         </>
     );
 };
@@ -397,24 +376,7 @@ const CardlessEntryPanel = ({ req, mode }) => {
                 {req.reason && <InfoRow label="Sebep" value={req.reason} />}
             </Section>
 
-            {mode === 'incoming' && (
-                <Section title="Onaylanınca Ne Olur?" icon={<TrendingUp size={14} className="text-emerald-600" />} color="emerald">
-                    <ImpactItem text="Devamsızlık kaydı kaldırılır" positive />
-                    <ImpactItem
-                        text={`Normal çalışma kaydı oluşturulur: ${formatTime(req.check_in_time) || '--:--'} — ${formatTime(req.check_out_time) || '--:--'}`}
-                        positive
-                    />
-                    {workDuration && <InfoRow label="Çalışma süresi" value={workDuration} highlight />}
-                </Section>
-            )}
-
-            {mode === 'personal' && (
-                <Section title="Talep Detayı" icon={<Info size={14} className="text-blue-600" />} color="blue">
-                    <InfoRow label="Onay Bekleyen" value={req.target_approver_name || '-'} />
-                    <InfoRow label="Oluşturulma" value={formatDateTime(req.created_at)} />
-                    {req.approved_by_name && <InfoRow label="İşlem Yapan" value={req.approved_by_name} />}
-                </Section>
-            )}
+            <ApprovalInfoSection req={req} />
         </>
     );
 };
@@ -429,18 +391,7 @@ const MealPanel = ({ req, mode }) => (
             )}
         </Section>
 
-        {mode === 'incoming' && (
-            <Section title="Onaylanınca Ne Olur?" icon={<TrendingUp size={14} className="text-emerald-600" />} color="emerald">
-                <ImpactItem text="Yemek siparişi onaylanır" positive />
-            </Section>
-        )}
-
-        {mode === 'personal' && (
-            <Section title="Talep Detayı" icon={<Info size={14} className="text-blue-600" />} color="blue">
-                <InfoRow label="Onay Bekleyen" value={req.target_approver_name || '-'} />
-                <InfoRow label="Oluşturulma" value={formatDateTime(req.created_at)} />
-            </Section>
-        )}
+        <ApprovalInfoSection req={req} />
     </>
 );
 
