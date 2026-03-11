@@ -3,7 +3,7 @@ import { Clock, CalendarPlus, ArrowDownLeft, BarChart3 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import OvertimeCalendarView from '../../components/overtime/OvertimeCalendarView';
-import OvertimeManagementTab from '../attendance-tracking/OvertimeManagementTab';
+import OTAssignmentCreator from '../../components/overtime/OTAssignmentCreator';
 import IncomingRequestsTab from './IncomingRequestsTab';
 import TeamOvertimeAnalytics from '../../components/TeamOvertimeAnalytics';
 
@@ -53,14 +53,6 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
   }
 
   // Yönetici — 4 alt sekme
-  const employees = subordinates.map(s => ({
-    id: s.id,
-    name: s.first_name && s.last_name
-      ? `${s.first_name} ${s.last_name}`
-      : s.full_name || s.name || `Çalışan #${s.id}`,
-    department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
-  }));
-
   return (
     <div className="space-y-6">
       {/* Alt sekme navigasyonu */}
@@ -101,10 +93,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
       )}
 
       {activeSubTab === 'assign' && (
-        <OvertimeManagementTab
-          employees={employees}
-          onRefresh={onDataChange}
-        />
+        <OTAssignmentCreator onAssignmentCreated={onDataChange} />
       )}
 
       {activeSubTab === 'incoming' && (

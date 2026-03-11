@@ -17,7 +17,7 @@ import {
 } from './attendance-tracking/AttendanceComponents';
 import TeamAnalyticsDashboard from './attendance-tracking/TeamAnalyticsDashboard';
 import TeamAttendanceAnalytics from '../components/TeamAttendanceAnalytics';
-import OvertimeManagementTab from './attendance-tracking/OvertimeManagementTab';
+import OTAssignmentCreator from '../components/overtime/OTAssignmentCreator';
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -787,25 +787,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             )}
 
             {/* Overtime Management View */}
-            {viewMode === 'overtime' && teamTab === 'primary' && (
-                <OvertimeManagementTab
-                    employees={primaryStats.map(s => ({
-                        id: s.employee_id,
-                        name: s.employee_name,
-                        department: s.department,
-                    }))}
-                    onRefresh={handleRefresh}
-                />
-            )}
-            {viewMode === 'overtime' && teamTab === 'secondary' && (
-                <OvertimeManagementTab
-                    employees={secondaryTeam.map(e => ({
-                        id: e.id,
-                        name: `${e.first_name} ${e.last_name}`,
-                        department: typeof e.department === 'object' ? e.department?.name : (e.department || ''),
-                    }))}
-                    onRefresh={handleRefresh}
-                />
+            {viewMode === 'overtime' && (
+                <OTAssignmentCreator onAssignmentCreated={handleRefresh} />
             )}
 
             {/* Main Table */}
