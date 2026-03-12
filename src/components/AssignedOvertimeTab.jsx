@@ -264,8 +264,6 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                                 <Send size={10} /> Tekrar Talep
                             </button>
                         </>
-                    ) : type === 'intended' && !(item.actual_overtime_hours > 0) ? (
-                        <Pill color="slate">Bekleniyor</Pill>
                     ) : (
                         <button onClick={onClaim}
                             className={`px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 ${
@@ -768,11 +766,9 @@ const AssignedOvertimeTab = () => {
     };
 
     // ── Computed ──
-    // Sadece çalışılmış (fazla mesaisi olan) veya talep edilmiş intended'ları göster
+    // Tüm atanmış intended'ları göster (mesai henüz yapılmamış olsa bile atama görünmeli)
     const visibleIntended = useMemo(() => {
-        return claimableData.intended.filter(item =>
-            item.actual_overtime_hours > 0 || item.claim_status
-        );
+        return claimableData.intended;
     }, [claimableData.intended]);
 
     const pendingCount = myRequests.filter(r => r.status === 'PENDING').length;
