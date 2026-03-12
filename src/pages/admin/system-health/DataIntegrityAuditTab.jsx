@@ -31,6 +31,7 @@ const CATEGORY_LABELS = {
     leave_ot_conflict: 'İzin-OT Konflikti',
     multiple_primary_managers: 'Çoklu Birincil Yönetici',
     notification_gap: 'Eksik Bildirim',
+    ot_card_verification: 'OT-Kart Doğrulama',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
