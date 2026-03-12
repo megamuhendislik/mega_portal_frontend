@@ -1,550 +1,377 @@
-import React, { useState, useEffect, useRef } from 'react';
-import api from '../../../services/api';
+/**
+ * SpecTestsTab — Domain-bazlı Spec Test UI
+ *
+ * 8 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
+ * Eski 56 stage sistemi yerine kullanılır.
+ */
+import { useState, useRef, useCallback } from 'react';
 import {
-    PlayCircleIcon,
-    CheckCircleIcon,
-    XCircleIcon,
-    ArrowPathIcon,
-    ShieldCheckIcon,
-    ClipboardDocumentCheckIcon,
-    ClockIcon,
-    CalendarDaysIcon,
-    CalendarIcon,
-    DocumentChartBarIcon,
-    TrashIcon,
-    MagnifyingGlassIcon,
-    WrenchScrewdriverIcon,
-    PauseCircleIcon,
-    CloudArrowDownIcon,
-    ExclamationCircleIcon,
-    MapPinIcon,
-    BellIcon,
-    CogIcon,
-    ServerIcon,
-    ArchiveBoxIcon,
-    UserGroupIcon,
-    ChartBarIcon,
-    BoltIcon,
-    ExclamationTriangleIcon,
-    RocketLaunchIcon,
-    CreditCardIcon,
-    GiftIcon,
-    HeartIcon,
-} from '@heroicons/react/24/outline';
+  Card, Button, Tag, Space, Typography, Progress, Collapse,
+  Table, Tooltip, Row, Col, Statistic,
+} from 'antd';
+import {
+  PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
+  ClockCircleOutlined, LoadingOutlined,
+  FieldTimeOutlined, CalendarOutlined, FileTextOutlined,
+  LockOutlined, ScheduleOutlined, TeamOutlined,
+  SafetyCertificateOutlined, ExclamationCircleOutlined,
+} from '@ant-design/icons';
+import api from '../../../services/api';
 
-const STAGES = [
-    { id: 1, name: 'RBAC & Yetkiler', icon: ShieldCheckIcon, color: 'indigo', description: '72 test — Yetki kalıtımı, yönetici hiyerarşisi, IsSystemAdmin, ViewSet koruması, audit fix doğrulamaları' },
-    { id: 2, name: 'Talepler Sistemi', icon: ClipboardDocumentCheckIcon, color: 'emerald', description: '68 test — İzin/mesai/kartsız/yemek talepleri, DOCX export, AUTO_APPROVE, mali kilit, MealRequest statüleri' },
-    { id: 3, name: 'Mesai Sistemi', icon: ClockIcon, color: 'amber', description: '95 test — Hesaplama motoru, öğle/mola, tolerans, takvim, Celery görevleri, race condition, dead zone' },
-    { id: 4, name: 'Ek Mesai Atama', icon: CalendarDaysIcon, color: 'rose', description: '79 test — OvertimeAssignment CRUD, bulk_create, cancel, claim (auto-fill), claimable API, claim-potential, manual_entry, source_type, calendar, team_analytics, expire task (2 mali ay), geriye dönük onay & kümülatif bakiye cascade, 2 mali ay pencere doğrulaması (Fazla Mesai/kartsız giriş), yetki kontrolü' },
-    { id: 5, name: 'İzin Sistemi', icon: CalendarIcon, color: 'violet', description: '37 test — FIFO sıralı düşüm, avans izin takibi, hak koruma, iade mantığı, legacy bakiye senkronizasyonu' },
-    { id: 6, name: 'Rapor Bug Fix', icon: DocumentChartBarIcon, color: 'cyan', description: '29 test — rules_cache date key, çoklu attendance aggregation, takvim tatil filtresi, Celery mutabakat, izin duty get_day_rules, tüm izin türleri sayımı' },
-    { id: 7, name: 'Sistem & Kritik Fix', icon: WrenchScrewdriverIcon, color: 'slate', description: '15 test — Şifre sıfırlama endpoint (XLSX, yetki), dept/pozisyon otomatik türetme, avans izin kısıtlama kaldırma, advance tracking' },
-    { id: 8, name: 'Potansiyel Mola', icon: PauseCircleIcon, color: 'teal', description: '16 test — potential_break_seconds model alanı, tek/çoklu mola hesaplama, hak aşımı, break vs potential farkı, live-status endpoint mola bilgileri' },
-    { id: 9, name: 'Yedekleme & Geri Yükleme', icon: CloudArrowDownIcon, color: 'sky', description: '32 test — JSON/CSV export, import yetki kontrolleri, dry-run simülasyon, UPSERT davranışı, round-trip veri bütünlüğü, validasyon kuralları' },
-    { id: 10, name: 'Tolerans & Normal Mesai', icon: ClockIcon, color: 'orange', description: '33 test — Geç kalma toleransı (uzatma bölgesi), servis toleransı (snap), mola entegrasyonu (break credit, potential_break), normal mesai hesaplama (bucket dağılımı, öğle kesintisi, fazla mesai ayrışımı)' },
-    { id: 11, name: 'Mazeret İzni', icon: ExclamationCircleIcon, color: 'amber', description: '47 test — ExcuseLeaveEntitlement model (lazy init, unique, defaults), EXCUSE_LEAVE validasyon (4.5sa/gün, 18sa/yıl kota, aynı gün engeli), onay/red/iptal bakiye akışı, excuse-balance API, Dashboard stats, Celery yıllık reset, saat hesaplama edge case\'leri' },
-    { id: 12, name: 'Kart Okuyucu & Gate Service', icon: ShieldCheckIcon, color: 'blue', description: '75 test — Temel giriş/çıkış, duplicate detection, GateEventLog, fallback mekanizması (race condition), refresh_from_db, shift split entegrasyonu, midnight split, E2E senaryolar, Veri İnceleme endpoint (yetki, filtreler, attendance/gate/fazla mesai/izin/yemek/kartsız/aylık özet veri dökümü)' },
-    { id: 13, name: 'İzin Formu Validasyon & Preview', icon: ClipboardDocumentCheckIcon, color: 'violet', description: '40 test — İzin türü filtreleme (ANNUAL_LEAVE + EXCUSE_LEAVE), mazeret izni tarih validasyonu (yıl içi + 2 mali dönem geriye), mali dönem sınır testleri (26/25 geçişi), excuse-balance API (recent_requests, bakiye preview, sıralama), oluşturma validasyonları, yıllık izin bakiye kontrolleri' },
-    { id: 14, name: 'Mola Off-Day & Parçalı Mesai', icon: PauseCircleIcon, color: 'rose', description: '63 test — Off-day/tatil mola kuralları (break=0, potential=0), live-status is_off_day doğruluğu (hafta sonu/tatil/normal gün), parçalı fazla mesai segment gruplama (≤30dk merge, >30dk ayrı), POTENTIAL net süre, claim-potential V3 (overtime_request_id, overlap kontrolü), claimable endpoint V3 (bireysel POTENTIAL, segments), today_summary endpoint off-day break_allowance=0 & is_off_day flag' },
-    { id: 15, name: 'Şirket Dışı Görev v2', icon: MapPinIcon, color: 'purple', description: '45 test — Model yeni alanlar (lokasyon, ulaşım, konaklama), onay sonrası mesai (vardiya içi=DUTY, dışı=Fazla Mesai PENDING), off-day görev→Fazla Mesai, çok günlü görev, fazla mesai ilişkilendirme, serializer/API, tarih validasyonları' },
-    { id: 16, name: 'Mali Dönem Fazla Mesai Eşlemesi', icon: CalendarDaysIcon, color: 'indigo', description: '15 test — get_cumulative_stats() fazla mesai breakdown mali dönem eşlemesi (26-25 kuralı), mali ay sınır testleri (25 Şub→ay 2, 26 Şub→ay 3), çoklu statü (APPROVED/PENDING/POTENTIAL), boş veri güvenliği, Stats endpoint YEARLY/MONTHLY scope mali dönem filtresi' },
-    { id: 17, name: 'Bildirim & Dashboard & Canlı Durum', icon: BellIcon, color: 'pink', description: '44 test — Bildirim CRUD (listeleme, okundu işaretle, toplu okundu, IDOR koruması), Dashboard endpoint (özet, takım analizi, mazeret izni, diag-monthly), Live Status (vardiya bilgisi, mola, off-day, IDOR), Sistem Ayarları (CRUD, attendance_start_date, apply-start-date, yetki kontrolü)' },
-    { id: 18, name: 'Takvim & Mali Dönem Yönetimi', icon: CalendarIcon, color: 'lime', description: '35 test — FiscalCalendar CRUD (oluşturma, güncelleme, silme, çalışan atama, dönem üretme, kilitleme, yeniden hesaplama), ScheduleTemplate (CRUD, haftalık program, öğle saati, varsayılan şablon), DayTemplateAssignment (tekli/toplu atama, silme, filtre), Mali Dönem Kilitleme (Attendance/Fazla Mesai immutability, API lock/unlock, 26-25 tarih doğruluğu)' },
-    { id: 19, name: 'Yemek Sipariş & Program & Geri Bildirim', icon: ClipboardDocumentCheckIcon, color: 'fuchsia', description: '35 test — MealRequest (CRUD, sipariş verme, iptal, admin işlemleri, tarih filtresi, statü akışı), Program Yönetimi (CRUD, üye ekleme/çıkarma, erişim listesi, cihaz toggle), Geri Bildirim (gönderme, admin yanıt/çözüm/silme, kategori, statü akışı, IDOR koruması)' },
-    { id: 20, name: 'Celery Görev Mantığı', icon: CogIcon, color: 'stone', description: '30 test — Gece yarısı sıfırlama (açık vardiya kapatma, hesaplanmış/onaylı koruma, midnight split), Devamsızlık kontrolü (gelmeme=ABSENT, giriş var=değil, tatil/izin=değil), Fazla Mesai Atama Expire (2 mali ay kuralı, CLAIMED koruması, sınır testleri), Talep Zaman Kilidi (kilitli dönemde immutability, Fazla Mesai/Attendance/CardlessEntry)' },
-    { id: 21, name: 'Aylık Özet & Arşiv & Vekalet', icon: ArchiveBoxIcon, color: 'emerald', description: '35 test — MonthlyWorkSummary (arşivlenmiş kayıt dahil etme, completed/overtime/missing/remaining hesaplama, kümülatif bakiye zinciri, DB persist, izin günü sayımı), Toplu Yeniden Hesaplama endpoint (yetki, response formatı), Vekalet Sistemi (CRUD, aktif/expired filtreleme, tarih validasyonu, kendine vekalet engeli, çakışma kontrolü), Onay Hiyerarşisi (PRIMARY/SECONDARY bulucu, eskalayon, circular koruma, departman/reports_to fallback)' },
-    { id: 22, name: 'Ekip Analizi v3.0', icon: UserGroupIcon, color: 'cyan', description: '30 test — Dashboard stats endpoint yeni alanlar (attendance_rate, absent_days, ot_weekend/weekday minutes, meal_total/ordered, ot_meal_overlap, ot_days_total), katılım oranı hesaplama, hafta sonu/içi fazla mesai ayrımı, yemek korelasyonu, PENDING/CANCELLED filtreleme, multi-department izolasyon, veri tutarlılığı, E2E detaylı loglama' },
-    { id: 23, name: 'Bug Fix Validasyonları', icon: WrenchScrewdriverIcon, color: 'red', description: '36 test — TC maskeleme (KVKK), yetki gizleme, FiscalPeriod read-only, Fazla Mesai durum geçişleri (VALID_TRANSITIONS, override), izin workflow (çift onay engeli, atomik rollback, avans limit, 2 mali ay iptal), employee freeze/unfreeze, mali dönem config (SystemSettings, fallback, takvim kilidi), özet tutarlılığı (tek sync, fiscal eşleme), misc fix (singleton pk, DRF hata, self-manager engeli, yemek geçişleri, auto_close status), cross manager (SECONDARY görünürlük)' },
-    { id: 24, name: 'Kapsamlı Entegrasyon & Performans', icon: RocketLaunchIcon, color: 'blue', description: '42 test — Rapor üretimi (XLSX/PDF export, yetki, parametre validasyonu), Talep Analitiği (kişisel/ekip/kapsamlı analytics, aylık trend, onay oranı), Ekip Talepleri (pending list, tür dağılımı), Çalışan API (company directory, me endpoint, freeze/unfreeze, managers/subordinates), Departman (hiyerarşi, CRUD, full-debug), Performans (bulk query, tutarlılık)' },
-    { id: 25, name: 'Rapor & Analitik Üretimi', icon: ChartBarIcon, color: 'fuchsia', description: '35 test — Kapsamlı analitik (overview, aylık trend, ekip/departman/rol kırılımı, Fazla Mesai-yemek korelasyonu, haftalık pattern), Gelen talepler (admin/manager scope, tür sayıları, POTENTIAL hariç), Ekip genel bakışı (çalışan bazlı onay oranı), Dashboard stats ileri seviye (katılım oranı, fazla mesai hafta sonu/içi, mali dönem scope), Takvim etkinlikleri' },
-    { id: 26, name: 'Toplu İşlem & Async Görevler', icon: BoltIcon, color: 'yellow', description: '45 test — Toplu fazla mesai atama (bulk_create, yetki, duplicate, validasyon), Toplu yeniden hesaplama (tarih aralığı, çalışan filtresi, kilitli dönem), Fazla mesai planlama (oluşturma, onay/red, my-pending, yetki), Uygun onaylayıcılar API, Günlük program override (CRUD, recalc trigger, kilitli dönem), Servis logları (erişim, sayfalama, filtre)' },
-    { id: 27, name: 'Sınır Durumları & Uç Senaryolar', icon: ExclamationTriangleIcon, color: 'rose', description: '35 test — Mali dönem sınır (25/26 geçişi, kilit, Fazla Mesai/izin period eşleme), Çalışan edge cases (takvim yok, departman yok, manager yok, frozen, inactive), Devam kaydı edge cases (çıkış yok, aynı gün çoklu, sıfır süre, uzun vardiya, tatil günü, kilitli dönem, durum geçişi), Fazla Mesai-İzin çakışma senaryoları, Veri bütünlüğü (aylık özet tutarlılığı, süre doğruluğu, cascade koruma, unique constraint)' },
-    { id: 28, name: 'Yemek Talebi Kapsamlı Güncelleme', icon: ClipboardDocumentCheckIcon, color: 'emerald', description: '25 test — Status guard (PENDING-only update/delete, ORDERED/DELIVERED/CANCELLED engeli), Fazla Mesai-Yemek otomatik bağlantı (FK, onay sonrası eşleme, iptal hariç, farklı gün hariç, serializer, readonly), Birleşik bildirim (PAGE_MEAL_ORDERS, consolidation, self-bildirim engeli, link/type), Incoming tab izolasyon (meal kaldırma, Fazla Mesai korunma), Tarih validasyonu (bugün, +1/+2 gün, +3 engel, -1 gün, uzak geçmiş engel)' },
-    { id: 29, name: 'Kartsız Giriş Kapsamlı Güncelleme', icon: CreditCardIcon, color: 'purple', description: '25 test — Off-day/tatil reddi (Cumartesi, Pazar, resmi tatil), Vardiya sınır kontrolü (erken giriş, geç çıkış engeli, tam/kısmi mesai), Saat validasyonu (çıkış>giriş), Duplikat engeli (PENDING bloklar, REJECTED serbest), Tarih limiti (gelecek engel, 2 mali dönem geriye), Onay→Attendance override+recalculate (oluşturma, güncelleme, alanlar, durum, sadece PENDING), Red→Attendance yok, Kendi onay engeli, AUTO_APPROVE, schedule-info endpoint (mesai/off-day/tatil), Bildirim (oluşturma+onay)' },
-    { id: 30, name: 'Ek Mesai Kapsamlı Güncelleme', icon: ClockIcon, color: 'amber', description: '17 test — INTENDED+POTENTIAL çakışma engeli (aynı gün tek yol), Manuel giriş atama çakışması (planlı gün bloklama), Manuel saat overlap (çakışan/çakışmayan), busy-days endpoint (listeleme, iptal hariç, diğer yönetici, yetki), Multi-manager conflict (update_or_create), Serializer attendance_logs (giriş/çıkış logları, boş durum), Vardiya içi engel (shift saatleri), Bulk-create bugün izni' },
-    { id: 31, name: 'Yönetici Değişimi Talep Devri', icon: UserGroupIcon, color: 'sky', description: '15 test — Yeni PRIMARY atanınca Fazla Mesai/İzin/Kartsız talepler devir (3 tür ayrı + toplu), NULL target_approver yakalama, APPROVED/REJECTED/CANCELLED korunması (3 test), Deaktivasyon→yeni PRIMARY devri, Silme→yeni PRIMARY devri, SECONDARY değişiklikte devir yok, Bildirimler (yeni yönetici, eski yönetici, çalışan, boş talep=bildirim yok)' },
-    { id: 32, name: 'Ek Mesai Takvim Entegrasyonu', icon: CalendarDaysIcon, color: 'violet', description: '17 test — Dashboard stats today_ot_assignment (badge, atama bilgisi, geçmiş tarih, CANCELLED hariç, CLAIMED dahil), Calendar OVERTIME_ASSIGNMENT events (toggle kontrol, CANCELLED hariç, ekip görünürlüğü, event alanları), Calendar OVERTIME_REQUEST events (toggle kontrol, PENDING amber/APPROVED yeşil, REJECTED/POTENTIAL hariç, zaman bilgisi), Birleşik toggle (her iki tip birlikte, çalışan kendi verileri)' },
-    { id: 33, name: 'Veri Bütünlüğü Denetimi', icon: ShieldCheckIcon, color: 'indigo', description: '18 test — Yetki (SYSTEM_FULL_ACCESS zorunlu, yetkisiz 403), Fazla Mesai çakışması (POTENTIAL+PENDING tespit, fix siler, false positive yok), Mesai yeniden hesaplama (süre uyumsuzluğu tespit, doğru kayıt flaglenmez), Sahipsiz talepler (inactive approver, NULL approver), Süre uyumsuzluğu (Fazla Mesai start/end vs duration, fix düzeltir), Durum anomalisi (manual POTENTIAL, APPROVED manager yok), Scan/fix mod (scan readonly, fix veri değiştirir), Kategori filtresi, Fazla Mesai bug fix doğrulama (race condition, claim cleanup)' },
-    { id: 34, name: 'Haftalık Ek Mesai Limiti', icon: ClockIcon, color: 'rose', description: '29 test — Sabit Pzt-Paz hafta penceresi (window_start=Pazartesi, window_end=Pazar), Statü filtreleme (APPROVED+PENDING sayılır, POTENTIAL/CANCELLED/REJECTED sayılmaz), Limit aşımı bayrağı (is_over_limit), Sınırsız mod (limit=0 → is_unlimited), Limit kontrol servisi (check_weekly_ot_limit: izin/engel/tam sınır), Retroaktif tarih penceresi, Çalışan bazlı özel limit, Çoklu gün toplam hesaplaması, weekly-ot-status API endpoint (parametre, IDOR koruması, auth), today_summary haftalık fazla mesai alanları' },
-    { id: 35, name: 'Sınır Durumları & Uç Senaryolar v2', icon: ExclamationTriangleIcon, color: 'orange', description: 'Ölü bölge & mola hakkı testleri — total_seconds mola hakkı dahil etmeme, pre-shift overtime hesaplama, mola hakkı bucket dağılımı, off-day/tatil sınır durumları' },
-    { id: 36, name: 'Potansiyel Mesai Düzeltmeleri', icon: ClockIcon, color: 'purple', description: '16 test — Pre-shift Fazla Mesai POTENTIAL yakalama (vardiya öncesi erken giriş), claim_potential cleanup düzeltmesi (diğer POTENTIAL korunması), has_active_request overlap-based cleanup (çakışmayan POTENTIAL korunması), claimable endpoint ot_type alanı (PRE_SHIFT/POST_SHIFT/OFF_DAY), off-day davranış koruması' },
-    { id: 37, name: 'Çoklu Yönetici Senaryoları', icon: UserGroupIcon, color: 'indigo', description: '35 test — Çoklu PRIMARY property (manager/all_primary/all_secondary/all_managers/is_manager_of), Model validation (aynı kişi PRIMARY+SECONDARY engeli, self-management, duplicate engeli, çoklu atama izni), Talep devri (tüm eski PRIMARY\'lerden toplu devir, NULL target, tek PRIMARY deaktif/silinme), Fallback (tüm PRIMARY silinince dept_mgr fallback, property None/boş), Bildirimler (tüm eski PRIMARY\'lere bildirim, çalışan bildirimi), SECONDARY davranış (devir yok, silme devir yok), ApproverService (find_approver/find_all_approvers çoklu), Permission (is_manager_of tüm tipler)' },
-    { id: 38, name: 'İkincil Yönetici', icon: UserGroupIcon, color: 'amber', description: 'İkincil yönetici yetki kısıtlamaları' },
-    { id: 39, name: 'PDKS Tam Sıfırlama', icon: ShieldCheckIcon, color: 'slate', description: '26 test — PDKS CSV yükleme preview (eşleşen/eşleşmeyen personel, mevcut attendance, POTENTIAL Fazla Mesai, izinler), Execute (eski attendance+POTENTIAL silme, CSV\'den oluşturma, APPROVED/PENDING Fazla Mesai koruma), İzin atlama (onaylı izin→CSV attendance skip), Kartsız giriş (onaylı→MANUAL attendance), Şirket dışı görev (onaylı→DUTY attendance+APPROVED Fazla Mesai)' },
-    { id: 40, name: 'Ek Mesai Atama İyileştirmeleri', icon: CalendarDaysIcon, color: 'teal', description: '33 test — Sabit Pzt-Paz hafta penceresi (8 test: Pazartesi/Cuma/Pazar aynı hafta, farklı hafta ayrı, hafta geçişi, cumartesi-pazar cross-week, Pazar reset, weekly-ot-status hafta bilgisi), Mali dönem endpoint (3 test: mevcut+sonraki dönem, yetki), Sticky max saat (3 test: son atama değeri, birden fazla çalışan, hiç atama yok), Atama düzenleme (6 test: ASSIGNED düzenleme, CLAIMED/EXPIRED reddi, tarih unique kontrolü, haftalık limit, yetki), Geçmiş atama düzenleme (4 test: max arttırma limit, azaltma serbest, geçmiş tarih değişikliği engeli, CLAIMED uyum), Bulk-create haftalık limit (4 test: limit aşımı engeli, kısmi başarı, limit içi izin, sınır değer), Entegrasyon (5 test: tam akış oluştur→düzenle→haftalık limit, mali dönem sınır, sticky+edit birleşik)' },
-    { id: 41, name: 'Haftalık Fazla Mesai Limit Uyarı v2', icon: ExclamationTriangleIcon, color: 'orange', description: '19 test — Eşik bildirim (check_and_notify_weekly_ot_threshold: %80/%90/%100 bildirim, duplicate engeli, farklı haftalar ayrı, eşik altı bildirim yok, %100 aşımı, birden fazla çalışan), Claimable weekly_ot_status (kullanım/limit/yüzde/uyarı alanları), Endpoint tetikleme (manual-entry/claim-potential/claim sonrası bildirim), POTENTIAL limit bildirim (recalculate sırasında eşik kontrolü)' },
-    { id: 42, name: 'Çalışan Fazla Mesai Takvim Endpoint', icon: CalendarDaysIcon, color: 'cyan', description: 'Çalışan Fazla Mesai takvim endpoint testleri — mali dönem bazlı Fazla Mesai takvim görünümü (talepler, atamalar, potansiyeller), yetkilendirme (kendi verisi veya yönetici/superuser)' },
-    { id: 43, name: 'Fazla Mesai Kayıt Bölme & Başlangıç Saati', icon: BoltIcon, color: 'violet', description: '16 test — Model alanları (is_overtime_record, parent_attendance, SOURCE_CHOICES), _compute_ot_start deficit-fill hesaplaması (eksik=0/30dk/60dk, off-day), claim_potential start_time fix (POTENTIAL\'den okuma, fallback deficit-fill), claim INTENDED fix, today_map Sum aggregate (çoklu kayıt toplama), worked_days fazla mesai filtresi, split senaryoları (no-deficit/deficit/pre-shift bölme, is_overtime_record tracking)' },
-    { id: 44, name: 'Takvim Zenginleştirme & Ekip Timeline', icon: CalendarDaysIcon, color: 'lime', description: 'Takvim zenginleştirme ve ekip timeline testleri' },
-    { id: 45, name: 'Birleşik Fazla Mesai Paneli', icon: ClockIcon, color: 'stone', description: 'Geçmiş tarihli assignment iptal kontrolü, PENDING request saat düzenleme (yönetici)' },
-    { id: 46, name: 'Ek Mesai Talep Yolları', icon: ClipboardDocumentCheckIcon, color: 'rose', description: '28 test — create_from_attendance (POTENTIAL→PENDING dönüşüm, duplikat engeli, CANCELLED/REJECTED tekrar talep, Fazla Mesai yoksa engel, başka çalışan engeli, çift tıklama koruması), claim-potential (ID/attendance bazlı, overlap çakışma, farklı çalışan engeli, atama çakışma), claim INTENDED (başarılı talep, aktif talep engeli, EXPIRED/CANCELLED engeli), Cross-path edge cases (son POTENTIAL seçimi, auth kontrolü, parametre validasyonu, reason fallback)' },
-    { id: 47, name: 'Retroaktif Kayıt Bölme', icon: BoltIcon, color: 'violet', description: '16 test — _retroactive_split_records fonksiyonu, pre-shift/post-shift/3-yönlü bölme, SKIP_SOURCES kontrolü, deficit-fill ile post_split_dt hesaplama' },
-    { id: 48, name: 'Doğum Günü İzni', icon: GiftIcon, color: 'pink', description: '20 test — BirthdayLeaveEntitlement model, doğum ayı validasyonu, onay/red/iptal entitlement sync, birthday-balance endpoint, edge case (29 Şubat, birth_date yok)' },
-    { id: 49, name: 'Şirket Rehberi & İzin Durumu', icon: UserGroupIcon, color: 'sky', description: '16 test — Şirket rehberi izin durumu (yıllık/mazeret/doğum günü İzinde gösterimi), live-status ON_LEAVE entegrasyonu, saatli izin sona erdiğinde gerçek duruma geçiş, izin önceliği attendance üzerinde, PENDING izin filtreleme' },
-    { id: 50, name: 'Bildirim Sistemi & Şifre Değiştirme', icon: BellIcon, color: 'amber', description: '13 test — create_notification tercih kontrolü (Employee→User resolve, preference_key zorunlu/açık/kapalı/eksik), şifre değiştirme kısıtlama kaldırma (must_change_password=False/True, yanlış şifre, kısa şifre), HealthReport bildirim düzeltmeleri (approve type=SUCCESS, reject type=ERROR, recipient=User)' },
-    { id: 51, name: 'İkincil Yönetici Yetki Kısıtlaması', icon: ShieldCheckIcon, color: 'rose', description: '24 test — SECONDARY yönetici sadece fazla mesai yetkisi (is_secondary_manager_of_employee guard), izin/kartsız giriş onay-red engeli, Fazla Mesai check-in guard (override/cancel), my-managers endpoint, claim_potential target_approver, SECONDARY Fazla Mesai→PRIMARY bildirim, SECONDARY değişim/deaktif/silme devir (sadece fazla mesai), fallback PRIMARY\'ye devir, CardlessEntry reject SECONDARY guard' },
-    { id: 52, name: 'İkincil Yönetici Sadeleştirme', icon: WrenchScrewdriverIcon, color: 'slate', description: '5 test — SECONDARY yönetici dept/pos null enforce (kayıt+okuma), PRIMARY dept/pos korunma, DepartmentAssignment sync yok, mevcut kayıt API güncelleme temizliği' },
-    { id: 53, name: 'Hastane Ziyareti Yeniden Tasarım', icon: HeartIcon, color: 'rose', description: '11 test — HOSPITAL_VISIT tam gün kaldırıldı (start_time/end_time zorunlu), ayrı attendance kaydı oluşturma kaldırıldı, recalculate_daily_attendance hastane ziyareti saatlerini eksikten düşer (hospital_visit_seconds), onay/red/iptal deficit akışı, MonthlyWorkSummary hospital_visit_hours' },
-    { id: 54, name: 'Mazeret İzni Bakiye Koruma', icon: ExclamationCircleIcon, color: 'orange', description: '4 test — Onay anında bakiye kontrolü (yetersiz→ValueError), PENDING talep saatlerini kota hesabına dahil etme, çoklu PENDING ikinci onay reddi, yeterli bakiyede normal onay' },
-    { id: 55, name: 'E2E API Onay Akışı Entegrasyon', icon: ShieldCheckIcon, color: 'emerald', description: '25 test — OT/İzin/Kartsız giriş onay-red API akışı, SECONDARY yönetici kısıtlamaları (izin/kartsız red, OT OK), Employee profili olmayan kullanıcı guard (hasattr), kendi talebini onaylama engeli, zaten onaylı talep tekrar onay, mazeret izni bakiye kontrolü, bildirim doğrulama, Attendance oluşturma, transaction.atomic atomiklik' },
-    { id: 56, name: 'Manuel OT Girişi İyileştirmesi', icon: ClockIcon, color: 'teal', description: '14 test — MANUAL_OT source tipi (SKIP_SOURCES dahil, retroaktif bölme muafiyeti), atama eşleştirme (tarih+çalışan match, assignment_id FK), kart okuyucu çakışma kontrolü (check_in/check_out overlap engeli), onay sonrası MANUAL_OT Attendance oluşturma (source=MANUAL_OT, mola muafiyeti), edge case (tatil günü, geçmiş tarih, limit aşımı)' },
+const { Text, Title } = Typography;
+
+const DOMAINS = [
+  {
+    key: 'attendance',
+    label: 'Devamsızlık & Giriş/Çıkış',
+    icon: <ClockCircleOutlined />,
+    color: '#1890ff',
+    description: 'Kart okuyucu, vardiya hesaplama, tolerans, mola, OT algılama',
+  },
+  {
+    key: 'overtime',
+    label: 'Ek Mesai',
+    icon: <FieldTimeOutlined />,
+    color: '#722ed1',
+    description: '3 yol (INTENDED/POTENTIAL/MANUAL), haftalık limit, onay akışı',
+  },
+  {
+    key: 'leave',
+    label: 'İzin Sistemi',
+    icon: <CalendarOutlined />,
+    color: '#13c2c2',
+    description: 'FIFO, mazeret izni, sağlık raporu, bakiye hesaplama',
+  },
+  {
+    key: 'requests',
+    label: 'Talep Yaşam Döngüsü',
+    icon: <FileTextOutlined />,
+    color: '#fa8c16',
+    description: 'Kartsız giriş, yemek, dış görev, onay/red/iptal akışı',
+  },
+  {
+    key: 'rbac',
+    label: 'Yetki & Güvenlik',
+    icon: <LockOutlined />,
+    color: '#f5222d',
+    description: 'Permission gate, IDOR, self-approval engeli, rol mirası',
+  },
+  {
+    key: 'calendar',
+    label: 'Takvim & Vardiya',
+    icon: <ScheduleOutlined />,
+    color: '#52c41a',
+    description: 'FiscalCalendar, ScheduleTemplate, tatil, fiscal period kilitleme',
+  },
+  {
+    key: 'managers',
+    label: 'Yönetici & Organizasyon',
+    icon: <TeamOutlined />,
+    color: '#eb2f96',
+    description: 'PRIMARY/SECONDARY yetki, yönetici değişim devri, onay zinciri',
+  },
+  {
+    key: 'integrity',
+    label: 'Veri Bütünlüğü',
+    icon: <SafetyCertificateOutlined />,
+    color: '#faad14',
+    description: 'MonthlyWorkSummary, overlap tespiti, data integrity audit',
+  },
 ];
 
+const STATUS_CONFIG = {
+  PASS: { color: '#52c41a', icon: <CheckCircleOutlined />, text: 'Geçti' },
+  FAIL: { color: '#f5222d', icon: <CloseCircleOutlined />, text: 'Başarısız' },
+  TIMEOUT: { color: '#fa8c16', icon: <ExclamationCircleOutlined />, text: 'Zaman Aşımı' },
+  ERROR: { color: '#f5222d', icon: <ExclamationCircleOutlined />, text: 'Hata' },
+  RUNNING: { color: '#1890ff', icon: <LoadingOutlined spin />, text: 'Çalışıyor' },
+  IDLE: { color: '#d9d9d9', icon: <ClockCircleOutlined />, text: 'Bekliyor' },
+};
+
 export default function SpecTestsTab() {
-    const [loading, setLoading] = useState(false);
-    const [runningStage, setRunningStage] = useState(null);
-    const [results, setResults] = useState(null);
-    const [error, setError] = useState(null);
-    const [elapsed, setElapsed] = useState(0);
-    const [currentStageInfo, setCurrentStageInfo] = useState(null);
-    const timerRef = useRef(null);
-    const pollRef = useRef(null);
+  const [results, setResults] = useState({});
+  const [runningDomains, setRunningDomains] = useState(new Set());
+  const [globalRunning, setGlobalRunning] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [expandedDomains, setExpandedDomains] = useState([]);
+  const pollingRef = useRef(null);
 
-    useEffect(() => {
-        if (loading) {
-            setElapsed(0);
-            timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+  const pollStatus = useCallback((taskId, targetDomains) => {
+    const poll = async () => {
+      try {
+        const resp = await api.get(`/system/health-check/get-spec-test-status/?task_id=${taskId}`);
+        const data = resp.data;
+
+        if (data.status === 'PROGRESS') {
+          // Update running domain
+          if (data.results) {
+            const newResults = {};
+            data.results.forEach(r => { newResults[r.domain] = r; });
+            setResults(prev => ({ ...prev, ...newResults }));
+          }
+          // Continue polling
+          pollingRef.current = setTimeout(poll, 3000);
+        } else if (data.status === 'SUCCESS') {
+          // Final results
+          const newResults = {};
+          (data.results || []).forEach(r => { newResults[r.domain] = r; });
+          setResults(prev => ({ ...prev, ...newResults }));
+          setSummary(data.summary);
+          setRunningDomains(new Set());
+          setGlobalRunning(false);
+          // Auto-expand failed domains
+          const failedKeys = (data.results || [])
+            .filter(r => r.status !== 'PASS')
+            .map(r => r.domain);
+          if (failedKeys.length > 0) setExpandedDomains(failedKeys);
+        } else if (data.status === 'FAILURE') {
+          setRunningDomains(new Set());
+          setGlobalRunning(false);
         } else {
-            if (timerRef.current) clearInterval(timerRef.current);
+          pollingRef.current = setTimeout(poll, 3000);
         }
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [loading]);
-
-    // Cleanup polling on unmount
-    useEffect(() => {
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, []);
-
-    const formatTime = (s) => {
-        const m = Math.floor(s / 60);
-        const sec = s % 60;
-        return m > 0 ? `${m}dk ${sec}sn` : `${sec}sn`;
+      } catch {
+        setRunningDomains(new Set());
+        setGlobalRunning(false);
+      }
     };
+    poll();
+  }, []);
 
-    const [scanResult, setScanResult] = useState(null);
-    const [scanning, setScanning] = useState(false);
-    const [purging, setPurging] = useState(false);
-    const [purgeResult, setPurgeResult] = useState(null);
+  const runTests = async (domain = 'all') => {
+    try {
+      if (domain === 'all') {
+        setGlobalRunning(true);
+        setRunningDomains(new Set(DOMAINS.map(d => d.key)));
+        setResults({});
+        setSummary(null);
+      } else {
+        setRunningDomains(prev => new Set([...prev, domain]));
+      }
 
-    const scanTestData = async () => {
-        setScanning(true);
-        setPurgeResult(null);
-        setError(null);
-        try {
-            const res = await api.get('/system/health-check/scan-test-data/');
-            setScanResult(res.data);
-        } catch (e) {
-            setError(e.response?.data?.error || e.message);
-        } finally {
-            setScanning(false);
-        }
-    };
+      const resp = await api.post('/system/health-check/run-spec-tests/', { domain });
+      if (resp.data.task_id) {
+        pollStatus(resp.data.task_id, domain === 'all' ? DOMAINS.map(d => d.key) : [domain]);
+      }
+    } catch (err) {
+      setRunningDomains(new Set());
+      setGlobalRunning(false);
+    }
+  };
 
-    const purgeTestData = async () => {
-        if (!confirm('TÜM test verilerini (SEC_, PRT_, STR_, TST_, TRBAC_ prefix\'li) silmek istediğinize emin misiniz?')) return;
-        setPurging(true);
-        setPurgeResult(null);
-        setError(null);
-        try {
-            const res = await api.post('/system/health-check/purge-all-test-data/');
-            setPurgeResult(res.data);
-            setScanResult(null);
-        } catch (e) {
-            setError(e.response?.data?.error || e.message);
-        } finally {
-            setPurging(false);
-        }
-    };
+  const getDomainStatus = (domainKey) => {
+    if (runningDomains.has(domainKey)) return 'RUNNING';
+    const r = results[domainKey];
+    if (!r) return 'IDLE';
+    return r.status;
+  };
 
-    const pollTaskStatus = (taskId) => {
-        if (pollRef.current) clearInterval(pollRef.current);
+  const detailColumns = [
+    {
+      title: 'Test',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name) => <Text code style={{ fontSize: 12 }}>{name}</Text>,
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (s) => (
+        <Tag color={s === 'PASS' ? 'success' : 'error'}>
+          {s === 'PASS' ? 'Geçti' : 'Başarısız'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Mesaj',
+      dataIndex: 'message',
+      key: 'message',
+      render: (m) => m ? <Text type="danger" style={{ fontSize: 12 }}>{m}</Text> : '-',
+    },
+  ];
 
-        pollRef.current = setInterval(async () => {
-            try {
-                const res = await api.get(`/system/health-check/get-test-status/?task_id=${taskId}`);
-                const data = res.data;
+  const totalPassed = Object.values(results).reduce((s, r) => s + (r.passed || 0), 0);
+  const totalFailed = Object.values(results).reduce((s, r) => s + (r.failed || 0) + (r.errors || 0), 0);
+  const totalTests = Object.values(results).reduce((s, r) => s + (r.tests_ran || 0), 0);
+  const totalDuration = Object.values(results).reduce((s, r) => s + (r.duration || 0), 0);
 
-                if (data.state === 'PROGRESS') {
-                    setCurrentStageInfo({
-                        current: data.current_stage,
-                        name: data.current_stage_name,
-                        completed: data.completed_stages || [],
-                        total: data.total_stages,
-                    });
-                    // Show intermediate results as they complete
-                    if (data.completed_stages?.length > 0) {
-                        setResults(prev => {
-                            const totalRan = data.completed_stages.reduce((s, r) => s + (r.tests_ran || 0), 0);
-                            const totalPassed = data.completed_stages.reduce((s, r) => s + (r.passed || 0), 0);
-                            const totalFailed = data.completed_stages.reduce((s, r) => s + (r.failures || 0) + (r.errors || 0), 0);
-                            return {
-                                success: data.completed_stages.every(r => r.success),
-                                total_tests: totalRan,
-                                total_passed: totalPassed,
-                                total_failed: totalFailed,
-                                stages: data.completed_stages,
-                                _partial: true,
-                            };
-                        });
-                    }
-                } else if (data.state === 'SUCCESS') {
-                    clearInterval(pollRef.current);
-                    pollRef.current = null;
-                    setResults(data.result);
-                    setCurrentStageInfo(null);
-                    setLoading(false);
-                    setRunningStage(null);
-                } else if (data.state === 'FAILURE') {
-                    clearInterval(pollRef.current);
-                    pollRef.current = null;
-                    setError(data.error || 'Task failed');
-                    setCurrentStageInfo(null);
-                    setLoading(false);
-                    setRunningStage(null);
-                }
-                // PENDING state = task not started yet, keep polling
-            } catch (e) {
-                // Don't stop polling on transient network errors, but show a warning
-                console.warn('Polling error:', e.message);
-            }
-        }, 3000);
-    };
-
-    const runTests = async (stage = 'all') => {
-        setLoading(true);
-        setRunningStage(stage);
-        setError(null);
-        setResults(null);
-        setCurrentStageInfo(null);
-        try {
-            const res = await api.post('/system/health-check/run-stage-tests/', { stage });
-            const taskId = res.data.task_id;
-            if (taskId) {
-                pollTaskStatus(taskId);
-            } else {
-                // Fallback: if response has direct results (shouldn't happen with new API)
-                setResults(res.data);
-                setLoading(false);
-                setRunningStage(null);
-            }
-        } catch (e) {
-            setError(e.response?.data?.error || e.message || 'Test başlatılamadı');
-            setLoading(false);
-            setRunningStage(null);
-        }
-    };
-
-    return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800">Target Spec Uyumluluk Testleri</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                        21 aşamalı otomatik test — target_spec.md gereksinimlerini doğrular
-                    </p>
-                </div>
-                <button
-                    onClick={() => runTests('all')}
-                    disabled={loading}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-white shadow-sm transition-all ${
-                        loading ? 'bg-gray-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
-                    }`}
-                >
-                    {loading && runningStage === 'all' ? (
-                        <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                    ) : (
-                        <PlayCircleIcon className="w-5 h-5" />
-                    )}
-                    {loading && runningStage === 'all' ? `Çalışıyor... (${formatTime(elapsed)})` : 'Tümünü Çalıştır'}
-                </button>
-            </div>
-
-            {/* Test Data Cleanup Section */}
-            <div className="mb-6 p-4 border border-orange-200 bg-orange-50/50 rounded-xl">
-                <div className="flex items-center justify-between mb-3">
-                    <div>
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                            <TrashIcon className="w-5 h-5 text-orange-600" />
-                            Test Verisi Temizleme
-                        </h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                            Testlerin oluşturduğu artık kayıtları (SEC_, PRT_, STR_, TST_ prefix'li) tarar ve siler
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={scanTestData}
-                            disabled={scanning || purging}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                scanning ? 'bg-gray-200 text-gray-400' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                            }`}
-                        >
-                            {scanning ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <MagnifyingGlassIcon className="w-4 h-4" />}
-                            {scanning ? 'Taranıyor...' : 'Tara'}
-                        </button>
-                        <button
-                            onClick={purgeTestData}
-                            disabled={scanning || purging}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-all ${
-                                purging ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700 active:scale-95'
-                            }`}
-                        >
-                            {purging ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <TrashIcon className="w-4 h-4" />}
-                            {purging ? 'Siliniyor...' : 'Tümünü Sil'}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Scan Results */}
-                {scanResult && (
-                    <div className="mt-3 pt-3 border-t border-orange-200">
-                        <div className="flex items-center gap-2 mb-2">
-                            {scanResult.total > 0 ? (
-                                <span className="text-sm font-bold text-orange-700">
-                                    {scanResult.total} artık test kaydı bulundu
-                                </span>
-                            ) : (
-                                <span className="text-sm font-bold text-green-700">
-                                    Artık test verisi bulunamadı
-                                </span>
-                            )}
-                        </div>
-                        {scanResult.total > 0 && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                                {Object.entries(scanResult.counts).filter(([, v]) => v > 0).map(([key, count]) => (
-                                    <div key={key} className="bg-white px-2 py-1 rounded border border-orange-200 flex justify-between">
-                                        <span className="text-gray-600">{key.replace(/_/g, ' ')}</span>
-                                        <span className="font-bold text-orange-700">{count}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Purge Results */}
-                {purgeResult && (
-                    <div className={`mt-3 pt-3 border-t border-orange-200`}>
-                        <div className={`p-3 rounded-lg text-sm ${
-                            purgeResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                        }`}>
-                            <strong>{purgeResult.success ? 'Temizlik tamamlandı' : 'Hata'}:</strong> {purgeResult.message || purgeResult.error}
-                            {purgeResult.details && Object.keys(purgeResult.details).length > 0 && (
-                                <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-1 text-xs">
-                                    {Object.entries(purgeResult.details).map(([key, count]) => (
-                                        <span key={key} className="opacity-80">{key}: {count}</span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Loading indicator with progress */}
-            {loading && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
-                    <div className="flex items-center gap-3">
-                        <ArrowPathIcon className="w-5 h-5 animate-spin flex-shrink-0" />
-                        <div className="flex-1">
-                            <strong>Testler çalışıyor...</strong> ({formatTime(elapsed)})
-                            <p className="text-xs opacity-75 mt-0.5">
-                                {currentStageInfo ? (
-                                    <>Aşama {currentStageInfo.current}: {currentStageInfo.name} çalışıyor ({currentStageInfo.completed?.length || 0}/{currentStageInfo.total} tamamlandı)</>
-                                ) : runningStage === 'all' ? (
-                                    'Celery task başlatılıyor...'
-                                ) : (
-                                    `Aşama ${runningStage} başlatılıyor...`
-                                )}
-                            </p>
-                        </div>
-                    </div>
-                    {/* Progress bar */}
-                    {currentStageInfo && currentStageInfo.total > 1 && (
-                        <div className="mt-3 w-full bg-blue-200 rounded-full h-2">
-                            <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${((currentStageInfo.completed?.length || 0) / currentStageInfo.total) * 100}%` }}
-                            />
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Error */}
-            {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                    <strong>Hata:</strong> {error}
-                </div>
-            )}
-
-            {/* Overall Result */}
-            {results && !results._partial && (
-                <div className={`mb-6 p-4 rounded-lg border ${
-                    results.success
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
-                }`}>
-                    <div className="flex items-center gap-3">
-                        {results.success ? (
-                            <CheckCircleIcon className="w-8 h-8 text-green-600" />
-                        ) : (
-                            <XCircleIcon className="w-8 h-8 text-red-600" />
-                        )}
-                        <div>
-                            <h3 className={`text-lg font-bold ${results.success ? 'text-green-700' : 'text-red-700'}`}>
-                                {results.success ? 'TÜM TESTLER BAŞARILI' : 'BAŞARISIZ TESTLER VAR'}
-                            </h3>
-                            <p className="text-sm opacity-80">
-                                {results.total_passed}/{results.total_tests} test başarılı
-                                {results.total_failed > 0 && ` — ${results.total_failed} başarısız`}
-                            </p>
-                            {results.cleanup && Object.keys(results.cleanup.deleted || {}).length > 0 && (
-                                <p className="text-xs text-amber-600 mt-1">
-                                    Temizlik: {Object.entries(results.cleanup.deleted).map(([k, v]) => `${k}: ${v}`).join(', ')}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Stage Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                {STAGES.map((stage) => {
-                    const stageResult = results?.stages?.find(s => s.stage === stage.id);
-                    const hasResult = !!stageResult;
-                    const isRunning = loading && (runningStage === stage.id || (runningStage === 'all' && currentStageInfo?.current === stage.id));
-
-                    return (
-                        <div
-                            key={stage.id}
-                            className={`border rounded-xl p-5 transition-all ${
-                                isRunning
-                                    ? 'border-blue-300 bg-blue-50/50 ring-2 ring-blue-200'
-                                    : hasResult
-                                        ? stageResult.success
-                                            ? 'border-green-200 bg-green-50/50'
-                                            : 'border-red-200 bg-red-50/50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <stage.icon className={`w-5 h-5 ${{ blue: 'text-blue-600', amber: 'text-amber-600', emerald: 'text-emerald-600', purple: 'text-purple-600', red: 'text-red-600', indigo: 'text-indigo-600', cyan: 'text-cyan-600', orange: 'text-orange-600', green: 'text-green-600', violet: 'text-violet-600', rose: 'text-rose-600', teal: 'text-teal-600', pink: 'text-pink-600', slate: 'text-slate-600', yellow: 'text-yellow-600', lime: 'text-lime-600' }[stage.color] || 'text-gray-600'}`} />
-                                    <h3 className="font-bold text-gray-800">Aşama {stage.id}</h3>
-                                </div>
-                                <button
-                                    onClick={() => runTests(stage.id)}
-                                    disabled={loading}
-                                    className={`text-xs px-3 py-1 rounded-md font-medium transition-all ${
-                                        loading
-                                            ? 'bg-gray-100 text-gray-400'
-                                            : `${{ blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200', amber: 'bg-amber-100 text-amber-700 hover:bg-amber-200', emerald: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200', purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200', red: 'bg-red-100 text-red-700 hover:bg-red-200', indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200', cyan: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200', orange: 'bg-orange-100 text-orange-700 hover:bg-orange-200', green: 'bg-green-100 text-green-700 hover:bg-green-200', violet: 'bg-violet-100 text-violet-700 hover:bg-violet-200', rose: 'bg-rose-100 text-rose-700 hover:bg-rose-200', teal: 'bg-teal-100 text-teal-700 hover:bg-teal-200', pink: 'bg-pink-100 text-pink-700 hover:bg-pink-200', slate: 'bg-slate-100 text-slate-700 hover:bg-slate-200', yellow: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200', lime: 'bg-lime-100 text-lime-700 hover:bg-lime-200' }[stage.color] || 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
-                                    }`}
-                                >
-                                    {isRunning ? (
-                                        <ArrowPathIcon className="w-4 h-4 animate-spin inline" />
-                                    ) : 'Çalıştır'}
-                                </button>
-                            </div>
-                            <h4 className="font-semibold text-gray-700 text-sm mb-1">{stage.name}</h4>
-                            <p className="text-xs text-gray-500 mb-3">{stage.description}</p>
-
-                            {hasResult && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        {stageResult.success ? (
-                                            <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                                        ) : (
-                                            <XCircleIcon className="w-5 h-5 text-red-600" />
-                                        )}
-                                        <span className={`text-sm font-bold ${
-                                            stageResult.success ? 'text-green-700' : 'text-red-700'
-                                        }`}>
-                                            {stageResult.passed}/{stageResult.tests_ran} BAŞARILI
-                                        </span>
-                                    </div>
-                                    {stageResult.failures + stageResult.errors > 0 && (
-                                        <p className="text-xs text-red-600">
-                                            {stageResult.failures} başarısız, {stageResult.errors} hata
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Detailed Test Results */}
-            {results?.stages?.map((stageResult) => {
-                const stage = STAGES.find(s => s.id === stageResult.stage);
-                if (!stageResult.tests?.length && !stageResult.log) return null;
-
-                return (
-                    <div key={stageResult.stage} className="mb-6">
-                        <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                            {stage && <stage.icon className="w-5 h-5" />}
-                            Aşama {stageResult.stage}: {stageResult.stage_name}
-                        </h3>
-                        {stageResult.tests?.length > 0 && (
-                            <div className="border rounded-lg overflow-hidden">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 border-b">
-                                        <tr>
-                                            <th className="text-left px-4 py-2 text-gray-600 font-medium">Test</th>
-                                            <th className="text-center px-4 py-2 text-gray-600 font-medium w-24">Durum</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {stageResult.tests.map((test, idx) => (
-                                            <tr key={idx} className={test.status === 'FAIL' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}>
-                                                <td className="px-4 py-2 text-gray-700 font-mono text-xs">
-                                                    {test.name}
-                                                </td>
-                                                <td className="px-4 py-2 text-center">
-                                                    {test.status === 'PASS' ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">
-                                                            <CheckCircleIcon className="w-3.5 h-3.5" />
-                                                            PASS
-                                                        </span>
-                                                    ) : test.status === 'FAIL' ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">
-                                                            <XCircleIcon className="w-3.5 h-3.5" />
-                                                            FAIL
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
-                                                            {test.status}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {/* Log output — auto-open if stage failed */}
-                        {stageResult.log && (
-                            <details className="mt-2" open={!stageResult.success}>
-                                <summary className={`text-xs cursor-pointer hover:text-gray-700 font-medium ${
-                                    stageResult.success ? 'text-gray-500' : 'text-red-600'
-                                }`}>
-                                    {stageResult.success ? 'Konsol çıktısını göster' : `Konsol çıktısı (${stageResult.failures} başarısız, ${stageResult.errors} hata)`}
-                                </summary>
-                                <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg text-xs overflow-x-auto max-h-[600px] overflow-y-auto whitespace-pre-wrap break-words">
-{stageResult.log}
-                                </pre>
-                            </details>
-                        )}
-                    </div>
-                );
-            })}
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <Title level={5} style={{ margin: 0 }}>Spec Testleri</Title>
+          <Text type="secondary">8 domain, gerçek davranış testleri</Text>
         </div>
-    );
+        <Button
+          type="primary"
+          icon={globalRunning ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+          onClick={() => runTests('all')}
+          disabled={globalRunning}
+          size="large"
+        >
+          {globalRunning ? 'Çalışıyor...' : 'Tümünü Çalıştır'}
+        </Button>
+      </div>
+
+      {/* Summary Stats */}
+      {totalTests > 0 && (
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Toplam Test" value={totalTests} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Geçen" value={totalPassed} valueStyle={{ color: '#52c41a' }} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Başarısız" value={totalFailed} valueStyle={{ color: totalFailed > 0 ? '#f5222d' : '#52c41a' }} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Süre" value={`${totalDuration.toFixed(1)}s`} />
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Domain Cards */}
+      <Row gutter={[16, 16]}>
+        {DOMAINS.map(domain => {
+          const domainStatus = getDomainStatus(domain.key);
+          const r = results[domain.key];
+          const cfg = STATUS_CONFIG[domainStatus];
+
+          return (
+            <Col xs={24} sm={12} lg={6} key={domain.key}>
+              <Card
+                size="small"
+                style={{
+                  borderLeft: `4px solid ${cfg.color}`,
+                  cursor: r?.details?.length ? 'pointer' : 'default',
+                }}
+                onClick={() => {
+                  if (r?.details?.length) {
+                    setExpandedDomains(prev =>
+                      prev.includes(domain.key)
+                        ? prev.filter(k => k !== domain.key)
+                        : [...prev, domain.key]
+                    );
+                  }
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <Space size={4}>
+                      <span style={{ color: domain.color, fontSize: 18 }}>{domain.icon}</span>
+                      <Text strong style={{ fontSize: 13 }}>{domain.label}</Text>
+                    </Space>
+                    <div style={{ marginTop: 4 }}>
+                      <Text type="secondary" style={{ fontSize: 11 }}>{domain.description}</Text>
+                    </div>
+                  </div>
+                  {!globalRunning && (
+                    <Tooltip title="Çalıştır">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={domainStatus === 'RUNNING' ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+                        onClick={(e) => { e.stopPropagation(); runTests(domain.key); }}
+                        disabled={runningDomains.size > 0}
+                      />
+                    </Tooltip>
+                  )}
+                </div>
+
+                {/* Status Bar */}
+                <div style={{ marginTop: 8 }}>
+                  {domainStatus === 'RUNNING' ? (
+                    <Progress percent={50} showInfo={false} status="active" size="small" />
+                  ) : r ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Tag color={cfg.color} icon={cfg.icon}>
+                        {r.passed}/{r.tests_ran} {cfg.text}
+                      </Tag>
+                      <Text type="secondary" style={{ fontSize: 11 }}>{r.duration?.toFixed(1)}s</Text>
+                    </div>
+                  ) : (
+                    <Tag color={cfg.color}>{cfg.text}</Tag>
+                  )}
+                </div>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+
+      {/* Expanded Domain Details */}
+      {expandedDomains.map(domainKey => {
+        const r = results[domainKey];
+        if (!r?.details?.length) return null;
+        const domain = DOMAINS.find(d => d.key === domainKey);
+
+        return (
+          <Card
+            key={domainKey}
+            size="small"
+            title={
+              <Space>
+                <span style={{ color: domain.color }}>{domain.icon}</span>
+                {domain.label}
+                <Tag color={r.status === 'PASS' ? 'success' : 'error'}>
+                  {r.passed}/{r.tests_ran}
+                </Tag>
+              </Space>
+            }
+            extra={
+              <Button
+                type="text"
+                size="small"
+                onClick={() => setExpandedDomains(prev => prev.filter(k => k !== domainKey))}
+              >
+                Kapat
+              </Button>
+            }
+            style={{ marginTop: 16 }}
+          >
+            <Table
+              dataSource={r.details.map((d, i) => ({ ...d, key: i }))}
+              columns={detailColumns}
+              pagination={false}
+              size="small"
+            />
+            {r.raw_output && r.status !== 'PASS' && (
+              <Collapse
+                items={[{
+                  key: 'log',
+                  label: 'Ham Çıktı',
+                  children: (
+                    <pre style={{
+                      fontSize: 11,
+                      maxHeight: 300,
+                      overflow: 'auto',
+                      background: '#f5f5f5',
+                      padding: 8,
+                      borderRadius: 4,
+                    }}>
+                      {r.raw_output}
+                    </pre>
+                  ),
+                }]}
+                size="small"
+                style={{ marginTop: 8 }}
+              />
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
 }
