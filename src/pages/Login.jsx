@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, ArrowRight, Loader2, Info, X } from 'lucide-react';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -159,36 +160,34 @@ const Login = () => {
             </div>
 
             {/* Şifremi Unuttum Popup */}
-            {showForgotPassword && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4 animate-fade-in">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Info className="h-5 w-5 text-blue-600" />
-                                <h3 className="text-lg font-semibold text-slate-900">Şifre Sıfırlama</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowForgotPassword(false)}
-                                className="text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
+            <ModalOverlay open={showForgotPassword} onClose={() => setShowForgotPassword(false)}>
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                            <Info className="h-5 w-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold text-slate-900">Şifre Sıfırlama</h3>
                         </div>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                            Şifrenizi yalnızca yetkili bir kişi değiştirebilir. Lütfen yöneticiniz veya sistem yöneticisi ile iletişime geçin.
-                        </p>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                            Yeni şifrenizi aldıktan sonra <span className="font-medium text-slate-800">Profil</span> sayfanızdan şifrenizi güncelleyebilirsiniz.
-                        </p>
                         <button
                             onClick={() => setShowForgotPassword(false)}
-                            className="w-full btn-primary"
+                            className="text-slate-400 hover:text-slate-600 transition-colors"
                         >
-                            Anladım
+                            <X className="h-5 w-5" />
                         </button>
                     </div>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                        Şifrenizi yalnızca yetkili bir kişi değiştirebilir. Lütfen yöneticiniz veya sistem yöneticisi ile iletişime geçin.
+                    </p>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                        Yeni şifrenizi aldıktan sonra <span className="font-medium text-slate-800">Profil</span> sayfanızdan şifrenizi güncelleyebilirsiniz.
+                    </p>
+                    <button
+                        onClick={() => setShowForgotPassword(false)}
+                        className="w-full btn-primary"
+                    >
+                        Anladım
+                    </button>
                 </div>
-            )}
+            </ModalOverlay>
         </div>
     );
 };

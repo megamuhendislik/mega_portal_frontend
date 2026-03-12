@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import moment from 'moment';
 import api from '../../services/api';
+import ModalOverlay from '../../components/ui/ModalOverlay';
 
 export const formatMinutes = (minutes) => {
     if (!minutes) return '0s 0dk';
@@ -379,10 +380,8 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
     if (!employee) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-
-            <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 max-h-[85vh] overflow-y-auto">
+        <ModalOverlay open={!!employee} onClose={onClose}>
+            <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 max-h-[85vh] overflow-y-auto">
                 {/* Header */}
                 <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-slate-100 bg-white/95 backdrop-blur-sm rounded-t-2xl">
                     <div className="flex items-center gap-3">
@@ -546,6 +545,6 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };

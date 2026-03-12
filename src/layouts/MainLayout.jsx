@@ -36,6 +36,7 @@ import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling';
 import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const MainLayout = () => {
     const { user, logout, hasPermission } = useAuth();
@@ -196,57 +197,55 @@ const MainLayout = () => {
             />
 
             {/* Profile Reminder Popup */}
-            {showProfileReminder && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                                    <UserCog size={24} className="text-white" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-bold text-lg">Profil Bilgilerinizi Güncelleyin</h3>
-                                    <p className="text-blue-100 text-sm">Hoş geldiniz!</p>
-                                </div>
+            <ModalOverlay open={showProfileReminder} onClose={() => setShowProfileReminder(false)} closeOnOverlayClick={false}>
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <UserCog size={24} className="text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-white font-bold text-lg">Profil Bilgilerinizi Güncelleyin</h3>
+                                <p className="text-blue-100 text-sm">Hoş geldiniz!</p>
                             </div>
                         </div>
-                        {/* Body */}
-                        <div className="px-6 py-5">
-                            <p className="text-slate-700 text-sm leading-relaxed">
-                                E-posta adresinizi, şifrenizi ve iletişim bilgilerinizi lütfen <strong>Profil</strong> sayfasından güncelleyiniz.
-                            </p>
-                        </div>
-                        {/* Footer */}
-                        <div className="px-6 pb-5 flex items-center justify-between gap-3">
-                            <button
-                                onClick={async () => {
-                                    setShowProfileReminder(false);
-                                    try {
-                                        await api.patch('/employees/me/', {
-                                            ui_preferences: { ...user?.ui_preferences, profile_reminder_dismissed: true }
-                                        });
-                                    } catch (e) {
-                                        console.error('Failed to save preference:', e);
-                                    }
-                                }}
-                                className="px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
-                            >
-                                Bir Daha Gösterme
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowProfileReminder(false);
-                                    navigate('/profile');
-                                }}
-                                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all"
-                            >
-                                Profil'e Git
-                            </button>
-                        </div>
+                    </div>
+                    {/* Body */}
+                    <div className="px-6 py-5">
+                        <p className="text-slate-700 text-sm leading-relaxed">
+                            E-posta adresinizi, şifrenizi ve iletişim bilgilerinizi lütfen <strong>Profil</strong> sayfasından güncelleyiniz.
+                        </p>
+                    </div>
+                    {/* Footer */}
+                    <div className="px-6 pb-5 flex items-center justify-between gap-3">
+                        <button
+                            onClick={async () => {
+                                setShowProfileReminder(false);
+                                try {
+                                    await api.patch('/employees/me/', {
+                                        ui_preferences: { ...user?.ui_preferences, profile_reminder_dismissed: true }
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to save preference:', e);
+                                }
+                            }}
+                            className="px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+                        >
+                            Bir Daha Gösterme
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowProfileReminder(false);
+                                navigate('/profile');
+                            }}
+                            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all"
+                        >
+                            Profil'e Git
+                        </button>
                     </div>
                 </div>
-            )}
+            </ModalOverlay>
 
             {/* Mobile Overlay */}
             {isMobile && isSidebarOpen && (

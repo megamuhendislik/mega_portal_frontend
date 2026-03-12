@@ -15,6 +15,7 @@ import {
     Eye, EyeOff, GitCompare
 } from 'lucide-react';
 import { formatMinutes } from './AttendanceComponents';
+import ModalOverlay from '../../components/ui/ModalOverlay';
 
 const DEPT_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -158,11 +159,9 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
     const projected = elapsedWorkDays > 0 ? Math.round(deviation + (deviation / elapsedWorkDays) * remainingWorkDays) : 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+        <ModalOverlay open onClose={onClose} className="!justify-end">
             <div
-                className="relative w-full max-w-lg bg-white shadow-2xl overflow-y-auto animate-in slide-in-from-right"
-                onClick={e => e.stopPropagation()}
+                className="w-full max-w-lg bg-white shadow-2xl overflow-y-auto animate-in slide-in-from-right h-full"
             >
                 {/* Header */}
                 <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10">
@@ -916,7 +915,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     )}
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };
 
@@ -954,9 +953,8 @@ const ComparisonDrawer = ({ persons, onClose }) => {
     }));
 
     return (
-        <div className="fixed inset-0 z-50 flex justify-end">
-            <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-            <div className="relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto animate-in slide-in-from-right">
+        <ModalOverlay open onClose={onClose} className="!justify-end">
+            <div className="w-full max-w-2xl bg-white shadow-2xl overflow-y-auto animate-in slide-in-from-right h-full">
                 <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <GitCompare size={18} className="text-indigo-600" />
@@ -1042,7 +1040,7 @@ const ComparisonDrawer = ({ persons, onClose }) => {
                     </div>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
 import api from '../../../services/api';
+import ModalOverlay from '../../../components/ui/ModalOverlay';
 
 export default function RequestAnalysisTab() {
     const [data, setData] = useState(null);
@@ -639,9 +640,8 @@ export default function RequestAnalysisTab() {
                 )}
 
                 {/* Onay Modalı */}
-                {showFixConfirm && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowFixConfirm(false)}>
-                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
+                <ModalOverlay open={showFixConfirm} onClose={() => setShowFixConfirm(false)}>
+                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
                                     <Wrench size={20} className="text-amber-600" />
@@ -686,13 +686,11 @@ export default function RequestAnalysisTab() {
                                 </button>
                             </div>
                         </div>
-                    </div>
-                )}
+                </ModalOverlay>
 
                 {/* Düzeltme Raporu Modalı */}
-                {bulkFixReport && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setBulkFixReport(null)}>
-                        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <ModalOverlay open={!!bulkFixReport} onClose={() => setBulkFixReport(null)}>
+                        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
                             <div className="p-5 border-b flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -794,8 +792,7 @@ export default function RequestAnalysisTab() {
                                 )}
                             </div>
                         </div>
-                    </div>
-                )}
+                </ModalOverlay>
             </div>
         </div>
     );

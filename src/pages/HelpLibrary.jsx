@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, AlertTriangle, CheckCircle2, ZoomIn, ArrowRight, Hash, X } from 'lucide-react';
+import ModalOverlay from '../components/ui/ModalOverlay';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import helpContent from '../data/helpContent';
@@ -58,13 +58,7 @@ const HelpLibrary = () => {
     };
 
     // hover artık lightbox açmıyor — sadece tıklama ile açılır
-
-    useEffect(() => {
-        if (!lightboxImage) return;
-        const handler = (e) => { if (e.key === 'Escape') closeLightbox(); };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [lightboxImage]);
+    // Escape key handled by ModalOverlay
 
     const checkPerm = (perm) => {
         if (!perm) return true;
@@ -126,38 +120,33 @@ const HelpLibrary = () => {
                 <div className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
             )}
 
-            {/* Image Lightbox - rendered via portal to escape overflow parent */}
-            {lightboxImage && createPortal(
-                <div
-                    className={`fixed inset-0 z-[9999] flex items-center justify-center p-6 md:p-12 cursor-pointer transition-all duration-300 ${
-                        lightboxVisible ? 'bg-black/85 backdrop-blur-sm' : 'bg-black/0'
-                    }`}
-                    onClick={closeLightbox}
-                >
-                    <button
-                        className={`absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 z-10 ${
-                            lightboxVisible ? 'opacity-100' : 'opacity-0'
-                        }`}
-                        onClick={closeLightbox}
-                    >
-                        <X size={22} className="text-white" />
-                    </button>
-                    <img
-                        src={lightboxImage.src}
-                        alt={lightboxImage.caption}
-                        className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl transition-all duration-300 ease-out ${
-                            lightboxVisible ? 'scale-100 opacity-100' : 'scale-75 opacity-0'
-                        }`}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                    <p className={`absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium bg-black/50 px-4 py-2 rounded-lg backdrop-blur-sm max-w-lg text-center transition-all duration-300 delay-100 ${
-                        lightboxVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                    }`}>
-                        {lightboxImage.caption}
-                    </p>
-                </div>,
-                document.body
-            )}
+            {/* Image Lightbox */}
+            <ModalOverlay open={!!lightboxImage} onClose={closeLightbox} className="!bg-black/85 cursor-pointer p-6 md:p-12">
+                {lightboxImage && (
+                    <>
+                        <button
+                            className={`absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 z-10 ${
+                                lightboxVisible ? 'opacity-100' : 'opacity-0'
+                            }`}
+                            onClick={closeLightbox}
+                        >
+                            <X size={22} className="text-white" />
+                        </button>
+                        <img
+                            src={lightboxImage.src}
+                            alt={lightboxImage.caption}
+                            className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl transition-all duration-300 ease-out ${
+                                lightboxVisible ? 'scale-100 opacity-100' : 'scale-75 opacity-0'
+                            }`}
+                        />
+                        <p className={`absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium bg-black/50 px-4 py-2 rounded-lg backdrop-blur-sm max-w-lg text-center transition-all duration-300 delay-100 ${
+                            lightboxVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                        }`}>
+                            {lightboxImage.caption}
+                        </p>
+                    </>
+                )}
+            </ModalOverlay>
 
             {/* Sidebar */}
             <div className={`
