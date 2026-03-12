@@ -219,17 +219,23 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                                 Toplam: <strong className="text-slate-700">{item.total_work_hours} sa</strong>
                             </span>
                         )}
-                        <span className="text-slate-500">
-                            Fazla Mesai: <strong className={`${type === 'potential' ? 'text-purple-700' : 'text-blue-700'}`}>
-                                {item.actual_overtime_hours} sa
-                            </strong>
-                        </span>
+                        {type === 'intended' && item.actual_overtime_hours === 0 ? (
+                            <span className="text-blue-600 font-medium">
+                                Atanan: {item.max_duration_hours} sa
+                            </span>
+                        ) : (
+                            <span className="text-slate-500">
+                                Fazla Mesai: <strong className={`${type === 'potential' ? 'text-purple-700' : 'text-blue-700'}`}>
+                                    {item.actual_overtime_hours} sa
+                                </strong>
+                            </span>
+                        )}
                         {item.total_break_seconds > 0 && (
                             <span className="flex items-center gap-0.5 text-slate-400">
                                 <Coffee size={10} /> {formatDuration(item.total_break_seconds)}
                             </span>
                         )}
-                        {type === 'intended' && (
+                        {type === 'intended' && item.actual_overtime_hours > 0 && (
                             <span className="text-slate-500">
                                 Maks: <strong className="text-slate-700">{item.max_duration_hours} sa</strong>
                             </span>
@@ -264,6 +270,8 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                                 <Send size={10} /> Tekrar Talep
                             </button>
                         </>
+                    ) : type === 'intended' && !item.can_claim && !(item.actual_overtime_hours > 0) ? (
+                        <Pill color="blue">Atandı</Pill>
                     ) : (
                         <button onClick={onClaim}
                             className={`px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 ${
