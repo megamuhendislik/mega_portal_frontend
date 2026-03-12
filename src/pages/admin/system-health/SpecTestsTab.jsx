@@ -2,12 +2,12 @@
  * SpecTestsTab — Domain-bazlı Spec Test UI
  *
  * 8 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
- * Eski 56 stage sistemi yerine kullanılır.
+ * Tüm domain loglarını detaylı gösterir (eski stage sistemi gibi).
  */
 import { useState, useRef, useCallback } from 'react';
 import {
   Card, Button, Tag, Space, Typography, Progress, Collapse,
-  Table, Tooltip, Row, Col, Statistic,
+  Table, Tooltip, Row, Col, Statistic, Alert, Badge,
 } from 'antd';
 import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -15,6 +15,7 @@ import {
   FieldTimeOutlined, CalendarOutlined, FileTextOutlined,
   LockOutlined, ScheduleOutlined, TeamOutlined,
   SafetyCertificateOutlined, ExclamationCircleOutlined,
+  CodeOutlined, DownOutlined, RightOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -94,6 +95,10 @@ export default function SpecTestsTab() {
   const [globalRunning, setGlobalRunning] = useState(false);
   const [summary, setSummary] = useState(null);
   const [expandedDomains, setExpandedDomains] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [currentDomain, setCurrentDomain] = useState(null);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [showLogs, setShowLogs] = useState(true);
   const pollingRef = useRef(null);
 
   const pollStatus = useCallback((taskId, targetDomains) => {
@@ -103,50 +108,77 @@ export default function SpecTestsTab() {
         const data = resp.data;
 
         if (data.status === 'PROGRESS') {
-          // Update running domain
+          // Update current domain info
+          if (data.current_domain) setCurrentDomain(data.current_domain);
+          if (data.progress != null) setProgressPercent(data.progress);
+          // Update completed domain results
           if (data.results) {
             const newResults = {};
             data.results.forEach(r => { newResults[r.domain] = r; });
             setResults(prev => ({ ...prev, ...newResults }));
+            // Mark completed domains as no longer running
+            const completedKeys = data.results.map(r => r.domain);
+            setRunningDomains(prev => {
+              const next = new Set(prev);
+              completedKeys.forEach(k => next.delete(k));
+              return next;
+            });
           }
-          // Continue polling
-          pollingRef.current = setTimeout(poll, 3000);
+          pollingRef.current = setTimeout(poll, 2000);
         } else if (data.status === 'SUCCESS') {
-          // Final results
           const newResults = {};
           (data.results || []).forEach(r => { newResults[r.domain] = r; });
           setResults(prev => ({ ...prev, ...newResults }));
           setSummary(data.summary);
           setRunningDomains(new Set());
           setGlobalRunning(false);
-          // Auto-expand failed domains
-          const failedKeys = (data.results || [])
-            .filter(r => r.status !== 'PASS')
-            .map(r => r.domain);
-          if (failedKeys.length > 0) setExpandedDomains(failedKeys);
+          setCurrentDomain(null);
+          setProgressPercent(100);
+          // Auto-expand ALL domains with results
+          const allKeys = (data.results || []).map(r => r.domain);
+          setExpandedDomains(allKeys);
         } else if (data.status === 'FAILURE') {
+          // Show the error message!
+          setErrorMessage(data.error || 'Celery task başarısız oldu. Detaylar için Railway loglarını kontrol edin.');
           setRunningDomains(new Set());
           setGlobalRunning(false);
+          setCurrentDomain(null);
+          // Auto-expand any domains that have results (from PROGRESS updates)
+          setExpandedDomains(prev => {
+            const existingKeys = Object.keys(results);
+            return [...new Set([...prev, ...existingKeys])];
+          });
         } else {
-          pollingRef.current = setTimeout(poll, 3000);
+          pollingRef.current = setTimeout(poll, 2000);
         }
-      } catch {
+      } catch (err) {
+        setErrorMessage(`Polling hatası: ${err?.message || 'Bilinmeyen hata'}`);
         setRunningDomains(new Set());
         setGlobalRunning(false);
+        setCurrentDomain(null);
       }
     };
     poll();
-  }, []);
+  }, [results]);
 
   const runTests = async (domain = 'all') => {
     try {
+      setErrorMessage(null);
       if (domain === 'all') {
         setGlobalRunning(true);
         setRunningDomains(new Set(DOMAINS.map(d => d.key)));
         setResults({});
         setSummary(null);
+        setExpandedDomains([]);
+        setProgressPercent(0);
+        setCurrentDomain(null);
       } else {
         setRunningDomains(prev => new Set([...prev, domain]));
+        setResults(prev => {
+          const next = { ...prev };
+          delete next[domain];
+          return next;
+        });
       }
 
       const resp = await api.post('/system/health-check/run-spec-tests/', { domain });
@@ -154,6 +186,7 @@ export default function SpecTestsTab() {
         pollStatus(resp.data.task_id, domain === 'all' ? DOMAINS.map(d => d.key) : [domain]);
       }
     } catch (err) {
+      setErrorMessage(`Test başlatma hatası: ${err?.response?.data?.error || err?.message || 'Bilinmeyen hata'}`);
       setRunningDomains(new Set());
       setGlobalRunning(false);
     }
@@ -164,6 +197,14 @@ export default function SpecTestsTab() {
     const r = results[domainKey];
     if (!r) return 'IDLE';
     return r.status;
+  };
+
+  const toggleDomain = (domainKey) => {
+    setExpandedDomains(prev =>
+      prev.includes(domainKey)
+        ? prev.filter(k => k !== domainKey)
+        : [...prev, domainKey]
+    );
   };
 
   const detailColumns = [
@@ -196,6 +237,7 @@ export default function SpecTestsTab() {
   const totalFailed = Object.values(results).reduce((s, r) => s + (r.failed || 0) + (r.errors || 0), 0);
   const totalTests = Object.values(results).reduce((s, r) => s + (r.tests_ran || 0), 0);
   const totalDuration = Object.values(results).reduce((s, r) => s + (r.duration || 0), 0);
+  const completedDomains = Object.keys(results).length;
 
   return (
     <div>
@@ -205,16 +247,63 @@ export default function SpecTestsTab() {
           <Title level={5} style={{ margin: 0 }}>Spec Testleri</Title>
           <Text type="secondary">8 domain, gerçek davranış testleri</Text>
         </div>
-        <Button
-          type="primary"
-          icon={globalRunning ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
-          onClick={() => runTests('all')}
-          disabled={globalRunning}
-          size="large"
-        >
-          {globalRunning ? 'Çalışıyor...' : 'Tümünü Çalıştır'}
-        </Button>
+        <Space>
+          <Button
+            type={showLogs ? 'primary' : 'default'}
+            ghost={showLogs}
+            icon={<CodeOutlined />}
+            onClick={() => setShowLogs(v => !v)}
+            size="small"
+          >
+            {showLogs ? 'Logları Gizle' : 'Logları Göster'}
+          </Button>
+          <Button
+            type="primary"
+            icon={globalRunning ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+            onClick={() => runTests('all')}
+            disabled={globalRunning}
+            size="large"
+          >
+            {globalRunning ? 'Çalışıyor...' : 'Tümünü Çalıştır'}
+          </Button>
+        </Space>
       </div>
+
+      {/* Error Alert */}
+      {errorMessage && (
+        <Alert
+          message="Test Hatası"
+          description={errorMessage}
+          type="error"
+          showIcon
+          closable
+          onClose={() => setErrorMessage(null)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {/* Running Progress */}
+      {globalRunning && (
+        <Card size="small" style={{ marginBottom: 16, borderLeft: '4px solid #1890ff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <LoadingOutlined spin style={{ fontSize: 18, color: '#1890ff' }} />
+            <div style={{ flex: 1 }}>
+              <Text strong>
+                {currentDomain
+                  ? `Çalışıyor: ${DOMAINS.find(d => d.key === currentDomain)?.label || currentDomain}`
+                  : 'Testler başlatılıyor...'
+                }
+              </Text>
+              <Progress
+                percent={progressPercent}
+                size="small"
+                style={{ marginBottom: 0, marginTop: 4 }}
+                format={() => `${completedDomains}/8 domain`}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Summary Stats */}
       {totalTests > 0 && (
@@ -248,6 +337,7 @@ export default function SpecTestsTab() {
           const domainStatus = getDomainStatus(domain.key);
           const r = results[domain.key];
           const cfg = STATUS_CONFIG[domainStatus];
+          const isExpanded = expandedDomains.includes(domain.key);
 
           return (
             <Col xs={24} sm={12} lg={6} key={domain.key}>
@@ -255,17 +345,9 @@ export default function SpecTestsTab() {
                 size="small"
                 style={{
                   borderLeft: `4px solid ${cfg.color}`,
-                  cursor: r?.details?.length ? 'pointer' : 'default',
+                  cursor: r ? 'pointer' : 'default',
                 }}
-                onClick={() => {
-                  if (r?.details?.length) {
-                    setExpandedDomains(prev =>
-                      prev.includes(domain.key)
-                        ? prev.filter(k => k !== domain.key)
-                        : [...prev, domain.key]
-                    );
-                  }
-                }}
+                onClick={() => r && toggleDomain(domain.key)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
@@ -277,17 +359,24 @@ export default function SpecTestsTab() {
                       <Text type="secondary" style={{ fontSize: 11 }}>{domain.description}</Text>
                     </div>
                   </div>
-                  {!globalRunning && (
-                    <Tooltip title="Çalıştır">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={domainStatus === 'RUNNING' ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
-                        onClick={(e) => { e.stopPropagation(); runTests(domain.key); }}
-                        disabled={runningDomains.size > 0}
-                      />
-                    </Tooltip>
-                  )}
+                  <Space size={4}>
+                    {r && (
+                      <span style={{ fontSize: 10, color: '#999' }}>
+                        {isExpanded ? <DownOutlined /> : <RightOutlined />}
+                      </span>
+                    )}
+                    {!globalRunning && (
+                      <Tooltip title="Çalıştır">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={domainStatus === 'RUNNING' ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+                          onClick={(e) => { e.stopPropagation(); runTests(domain.key); }}
+                          disabled={runningDomains.size > 0}
+                        />
+                      </Tooltip>
+                    )}
+                  </Space>
                 </div>
 
                 {/* Status Bar */}
@@ -311,10 +400,10 @@ export default function SpecTestsTab() {
         })}
       </Row>
 
-      {/* Expanded Domain Details */}
+      {/* Expanded Domain Details + Logs */}
       {expandedDomains.map(domainKey => {
         const r = results[domainKey];
-        if (!r?.details?.length) return null;
+        if (!r) return null;
         const domain = DOMAINS.find(d => d.key === domainKey);
 
         return (
@@ -328,6 +417,7 @@ export default function SpecTestsTab() {
                 <Tag color={r.status === 'PASS' ? 'success' : 'error'}>
                   {r.passed}/{r.tests_ran}
                 </Tag>
+                <Text type="secondary" style={{ fontSize: 11 }}>{r.duration?.toFixed(1)}s</Text>
               </Space>
             }
             extra={
@@ -341,31 +431,64 @@ export default function SpecTestsTab() {
             }
             style={{ marginTop: 16 }}
           >
-            <Table
-              dataSource={r.details.map((d, i) => ({ ...d, key: i }))}
-              columns={detailColumns}
-              pagination={false}
-              size="small"
-            />
-            {r.raw_output && r.status !== 'PASS' && (
+            {/* Test Detail Table */}
+            {r.details?.length > 0 && (
+              <Table
+                dataSource={r.details.map((d, i) => ({ ...d, key: i }))}
+                columns={detailColumns}
+                pagination={false}
+                size="small"
+              />
+            )}
+
+            {/* Raw Output — always shown when showLogs is true */}
+            {showLogs && r.raw_output && (
               <Collapse
+                defaultActiveKey={r.status !== 'PASS' ? ['log'] : []}
                 items={[{
                   key: 'log',
-                  label: 'Ham Çıktı',
+                  label: (
+                    <Space>
+                      <CodeOutlined />
+                      <span>Ham Çıktı</span>
+                      <Badge
+                        count={r.status === 'PASS' ? 'OK' : 'HATA'}
+                        style={{
+                          backgroundColor: r.status === 'PASS' ? '#52c41a' : '#f5222d',
+                          fontSize: 10,
+                        }}
+                      />
+                    </Space>
+                  ),
                   children: (
                     <pre style={{
                       fontSize: 11,
-                      maxHeight: 300,
+                      maxHeight: 400,
                       overflow: 'auto',
-                      background: '#f5f5f5',
-                      padding: 8,
+                      background: '#1a1a2e',
+                      color: '#e0e0e0',
+                      padding: 12,
                       borderRadius: 4,
+                      fontFamily: 'Consolas, Monaco, monospace',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
                     }}>
                       {r.raw_output}
                     </pre>
                   ),
                 }]}
                 size="small"
+                style={{ marginTop: 8 }}
+              />
+            )}
+
+            {/* Error message for failed domains */}
+            {r.status !== 'PASS' && !r.raw_output && (
+              <Alert
+                message={`${domain.label} testi başarısız oldu`}
+                description={`Durum: ${r.status}, Hata sayısı: ${r.errors || 0}, Başarısız: ${r.failed || 0}`}
+                type="error"
+                showIcon
                 style={{ marginTop: 8 }}
               />
             )}

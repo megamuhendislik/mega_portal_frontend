@@ -10,7 +10,15 @@ const EffortDetailPopover = ({ stats }) => {
         { type: 'divider' },
         { label: 'Normal Çalışma', value: `${stats.completedHours} sa` },
         { label: 'Onaylı OT', value: `${stats.overtimeHours} sa` },
-        { label: 'Onaylı Toplam', value: `${stats.netWorkHours} sa`, bold: true },
+    ];
+    if (parseFloat(stats.leaveHours) > 0) {
+        rows.push({ label: 'İzin', value: `${stats.leaveHours} sa`, color: 'text-cyan-600' });
+    }
+    if (parseFloat(stats.healthReportHours) > 0) {
+        rows.push({ label: 'Rapor', value: `${stats.healthReportHours} sa`, color: 'text-sky-600' });
+    }
+    rows.push(
+        { label: stats.hasCredited ? 'Toplam Efor' : 'Onaylı Toplam', value: `${stats.hasCredited ? stats.displayTotalHours : stats.netWorkHours} sa`, bold: true },
         { type: 'divider' },
         {
             label: stats.isNetNeutral ? 'Durum' : (stats.isNetSurplus ? 'Net Fazla' : 'Net Eksik'),
@@ -20,7 +28,7 @@ const EffortDetailPopover = ({ stats }) => {
             bold: true,
             color: stats.isNetNeutral ? 'text-slate-600' : (stats.isNetSurplus ? 'text-emerald-600' : 'text-rose-600')
         },
-    ];
+    );
 
     if (parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) {
         rows.push({ type: 'divider' });
@@ -75,6 +83,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
             // Fix: Backend sends 'total_work_seconds', not 'net_work_seconds'
             const netWorkSec = periodSummary.total_work_seconds || periodSummary.net_work_seconds || 0; // Normal + OT
+
+            // Leave & Health Report credited seconds
+            const leaveSec = periodSummary.leave_seconds || 0;
+            const healthReportSec = periodSummary.health_report_seconds || 0;
+            const creditedSec = leaveSec + healthReportSec; // Total credited (İzin + Rapor)
 
             // True Balance: cari ay için past_target_balance kullan (gelecek günler dahil değil)
             const netBalanceReal = periodSummary.past_target_balance_seconds ?? periodSummary.net_balance_seconds ?? (netWorkSec - targetSec);
@@ -156,6 +169,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 otPendingPct: otBreakdownTotal > 0 ? (otPendingSec / otBreakdownTotal) * 100 : 0,
                 otPotentialPct: otBreakdownTotal > 0 ? (otPotentialSec / otBreakdownTotal) * 100 : 0,
                 hasOtBreakdown: otBreakdownTotal > 0,
+
+                // Leave & Health Report credits
+                leaveHours: (leaveSec / 3600).toFixed(1),
+                healthReportHours: (healthReportSec / 3600).toFixed(1),
+                creditedHours: (creditedSec / 3600).toFixed(1),
+                hasCredited: creditedSec > 0,
+                // Display total = actual work + OT + leave/report credits
+                displayTotalHours: ((netWorkSec + creditedSec) / 3600).toFixed(1),
 
                 // Projected totals (approved + pending + potential)
                 projectedWorkHours: ((netWorkSec + otPendingSec + otPotentialSec) / 3600).toFixed(1),
@@ -389,10 +410,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         {/* Header row */}
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
-                                Toplam Efor (Onaylı Mesai Dahil)
+                                Toplam Efor {stats.hasCredited ? '(İzin/Rapor Dahil)' : '(Onaylı Mesai Dahil)'}
                                 {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                             </span>
-                            <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.netWorkHours} / {stats.targetHours} sa</span>
+                            <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.hasCredited ? stats.displayTotalHours : stats.netWorkHours} / {stats.targetHours} sa</span>
                         </div>
 
                         {/* Progress Bar */}
@@ -415,8 +436,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                         {/* Summary row below bar */}
                         <div className="flex items-center justify-between mt-2 px-1">
-                            <div className="flex items-center gap-3 text-[10px] font-bold">
+                            <div className="flex items-center gap-3 text-[10px] font-bold flex-wrap">
                                 <span className="text-slate-600">Onaylı: <span className="font-black">{stats.netWorkHours} sa</span></span>
+                                {parseFloat(stats.leaveHours) > 0 && (
+                                    <span className="text-cyan-600">+ İzin: <span className="font-black">{stats.leaveHours} sa</span></span>
+                                )}
+                                {parseFloat(stats.healthReportHours) > 0 && (
+                                    <span className="text-sky-600">+ Rapor: <span className="font-black">{stats.healthReportHours} sa</span></span>
+                                )}
                                 {parseFloat(stats.otPendingHours) > 0 && (
                                     <span className="text-amber-600">+ Bekleyen: <span className="font-black">{stats.otPendingHours} sa</span></span>
                                 )}
@@ -553,6 +580,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                         <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PUANTAJ GRAFİĞİ</span>
                                         <div className="flex flex-wrap gap-3 text-[9px] font-bold uppercase tracking-wide">
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span><span className="text-slate-500">Normal</span></span>
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 inline-block"></span><span className="text-slate-500">İzin</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block"></span><span className="text-slate-500">Onaylı</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 1px, #f59e0b 1px, #f59e0b 2px)' }}></span><span className="text-slate-500">Bekleyen</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 1px, #94a3b8 1px, #94a3b8 2px)' }}></span><span className="text-slate-500">Potansiyel</span></span>
@@ -570,7 +598,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             const otA = m.ot_approved || 0, otP = m.ot_pending || 0;
                                             let otPot = m.ot_potential || 0;
                                             if (!otA && !otP && !otPot && m.overtime > 0) otPot = m.overtime;
-                                            return Math.max(mx, Math.max(m.target || 0, (m.completed || 0) + otA + otP + otPot));
+                                            const lvSec = (m.leave_seconds || 0) + (m.health_report_seconds || 0);
+                                            return Math.max(mx, Math.max(m.target || 0, (m.completed || 0) + lvSec + otA + otP + otPot));
                                         }, 1);
                                         return (
                                     <div className="flex w-full h-32 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50/50 shadow-inner items-end">
@@ -593,9 +622,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             }
                                             const otTotalSec = otApprovedSec + otPendingSec + otPotentialSec;
 
+                                            // Leave/Health Report credited seconds
+                                            const leaveCreditSec = (m.leave_seconds || 0) + (m.health_report_seconds || 0);
+
                                             // Bar percentages using global scale for cross-month comparison
                                             const totalForBar = globalMax;
                                             let pctNormal = 0;
+                                            let pctLeave = 0;
                                             let pctMissing = 0;
                                             let pctOtApproved = 0;
                                             let pctOtPending = 0;
@@ -603,6 +636,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                             if (target > 0) {
                                                 pctNormal = (Math.min(completed, target) / totalForBar) * 100;
+                                                pctLeave = (leaveCreditSec / totalForBar) * 100;
                                                 pctMissing = completed < target ? ((target - completed) / totalForBar) * 100 : 0;
                                                 if (otTotalSec > 0) {
                                                     pctOtApproved = (otApprovedSec / totalForBar) * 100;
@@ -636,22 +670,28 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             style={{ height: `${pctNormal}%` }} />
                                                     )}
 
+                                                    {/* Leave/Report Credit Bar (Cyan) — sadece gecmis + mevcut */}
+                                                    {(isPast || isCurrentMonth) && pctLeave > 0 && (
+                                                        <div className="absolute left-0 w-full bg-cyan-400 transition-all duration-1000 group-hover:bg-cyan-500"
+                                                            style={{ bottom: `${pctNormal}%`, height: `${pctLeave}%` }} />
+                                                    )}
+
                                                     {/* OT Approved (Emerald) — sadece gecmis + mevcut */}
                                                     {(isPast || isCurrentMonth) && pctOtApproved > 0 && (
                                                         <div className="absolute left-0 w-full bg-emerald-400 transition-all duration-1000 group-hover:bg-emerald-500"
-                                                            style={{ bottom: `${pctNormal}%`, height: `${pctOtApproved}%` }} />
+                                                            style={{ bottom: `${pctNormal + pctLeave}%`, height: `${pctOtApproved}%` }} />
                                                     )}
 
                                                     {/* OT Pending (Amber striped) — sadece gecmis + mevcut */}
                                                     {(isPast || isCurrentMonth) && pctOtPending > 0 && (
                                                         <div className="absolute left-0 w-full transition-all duration-1000"
-                                                            style={{ bottom: `${pctNormal + pctOtApproved}%`, height: `${pctOtPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 2px, #f59e0b 2px, #f59e0b 4px)' }} />
+                                                            style={{ bottom: `${pctNormal + pctLeave + pctOtApproved}%`, height: `${pctOtPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 2px, #f59e0b 2px, #f59e0b 4px)' }} />
                                                     )}
 
                                                     {/* OT Potential (Gray striped) — sadece gecmis + mevcut */}
                                                     {(isPast || isCurrentMonth) && pctOtPotential > 0 && (
                                                         <div className="absolute left-0 w-full transition-all duration-1000"
-                                                            style={{ bottom: `${pctNormal + pctOtApproved + pctOtPending}%`, height: `${pctOtPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 2px, #94a3b8 2px, #94a3b8 4px)' }} />
+                                                            style={{ bottom: `${pctNormal + pctLeave + pctOtApproved + pctOtPending}%`, height: `${pctOtPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 2px, #94a3b8 2px, #94a3b8 4px)' }} />
                                                     )}
 
                                                     {/* Target dashed reference line */}
@@ -665,7 +705,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     {(isPast || isCurrentMonth) && pctMissing > 0 && (
                                                         <div className="absolute left-0 w-full bg-rose-400/20 transition-all duration-1000"
                                                             style={{
-                                                                bottom: `${pctNormal + pctOtApproved + pctOtPending + pctOtPotential}%`,
+                                                                bottom: `${pctNormal + pctLeave + pctOtApproved + pctOtPending + pctOtPotential}%`,
                                                                 height: `${pctMissing}%`,
                                                                 backgroundImage: 'linear-gradient(45deg, rgba(244, 63, 94, 0.1) 25%, transparent 25%, transparent 50%, rgba(244, 63, 94, 0.1) 50%, rgba(244, 63, 94, 0.1) 75%, transparent 75%, transparent)',
                                                                 backgroundSize: '4px 4px'
@@ -717,6 +757,18 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     <span className="text-slate-400">Gerçekleşen:</span>
                                                                     <span className="font-mono font-bold text-indigo-400">{((Math.min(completed, target)) / 3600).toFixed(1)} sa</span>
                                                                 </div>
+                                                                {(m.leave_seconds || 0) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span><span className="text-cyan-400">İzin:</span></span>
+                                                                        <span className="font-mono font-bold text-cyan-300">{((m.leave_seconds || 0) / 3600).toFixed(1)} sa</span>
+                                                                    </div>
+                                                                )}
+                                                                {(m.health_report_seconds || 0) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block"></span><span className="text-sky-400">Rapor:</span></span>
+                                                                        <span className="font-mono font-bold text-sky-300">{((m.health_report_seconds || 0) / 3600).toFixed(1)} sa</span>
+                                                                    </div>
+                                                                )}
                                                                 {(otApprovedSec > 0 || otPendingSec > 0 || otPotentialSec > 0) && (
                                                                     <div className="space-y-1.5 pt-1">
                                                                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Ek Mesai Detayı</div>
