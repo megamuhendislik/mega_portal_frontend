@@ -7,7 +7,7 @@ import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 
 const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate }) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideAction, setOverrideAction] = useState('approve');
   const [overrideReason, setOverrideReason] = useState('');
@@ -112,11 +112,18 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     setError('');
 
     try {
-      const endpoint = requestType === 'LEAVE'
-        ? `/leave/requests/${request.id}/override_decision/`
-        : requestType === 'OVERTIME'
-          ? `/overtime-requests/${request.id}/override_decision/`
-          : `/cardless-entry-requests/${request.id}/override_decision/`;
+      const endpointMap = {
+        'LEAVE': `/leave/requests/${request.id}/override_decision/`,
+        'OVERTIME': `/overtime-requests/${request.id}/override_decision/`,
+        'CARDLESS_ENTRY': `/cardless-entry-requests/${request.id}/override_decision/`,
+        'HEALTH_REPORT': `/health-reports/${request.id}/override_decision/`,
+        'HOSPITAL_VISIT': `/health-reports/${request.id}/override_decision/`,
+      };
+      const endpoint = endpointMap[requestType];
+      if (!endpoint) {
+        setError('Bu talep türü için karar değiştirme desteklenmiyor.');
+        return;
+      }
 
       await api.post(endpoint, {
         action: overrideAction,
@@ -180,9 +187,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
   if (!isOpen || !request) return null;
 
-  const canOverride = hasPermission('SYSTEM_FULL_ACCESS') &&
-    !timeLockInfo?.is_locked &&
-    request.status !== 'PENDING';
+  const canOverride = request?.can_override === true;
 
   const getContentTypeId = () => {
     return request?.content_type_id || null;
@@ -812,15 +817,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
           )}
 
           {/* Override Button */}
-          {canOverride && (
-            <button
-              onClick={() => setShowOverrideModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-            >
-              <Shield size={20} />
-              Üst Yönetici Müdahalesi
-            </button>
-          )}
+          {canOverride && (() => {
+            const isOwnDecision = request?.approval_manager_name === user?.employee?.full_name
+              || request?.approved_by_name === user?.employee?.full_name
+              || request?.approved_by_detail?.full_name === user?.employee?.full_name;
+            return (
+              <button
+                onClick={() => setShowOverrideModal(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+              >
+                <Shield size={20} />
+                {isOwnDecision ? 'Kararımı Değiştir' : 'Karar Değiştir'}
+              </button>
+            );
+          })()}
 
           {/* Decision History */}
           {getContentTypeId() && (
@@ -859,7 +869,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">Üst Yönetici Müdahalesi</h3>
+              <h3 className="text-lg font-bold text-slate-800">Karar Değiştir</h3>
               <button
                 onClick={() => {
                   setShowOverrideModal(false);

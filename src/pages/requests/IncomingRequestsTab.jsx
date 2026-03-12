@@ -188,6 +188,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         setShowDetailModal(true);
     };
 
+    // Override detail modal (from ExpandableRequestRow "Karar Değiştir" button)
+    const handleViewDetail = (req) => {
+        setSelectedRequest(req);
+        setSelectedRequestType(req.type);
+        setShowDetailModal(true);
+    };
+
     // --- Normalize helper ---
     const normalizeRequest = (r, source, isSubstitute = false, principalName = '') => ({
         ...r,
@@ -703,6 +710,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                     setExpandedId(prev => prev === key ? null : key);
                                                 }}
                                                 onViewDetails={handleViewDetails}
+                                                onViewDetail={handleViewDetail}
                                                 onApprove={wrapApprove}
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}
@@ -750,6 +758,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                                     setExpandedId(prev => prev === key ? null : key);
                                                 }}
                                                 onViewDetails={handleViewDetails}
+                                                onViewDetail={handleViewDetail}
                                                 onApprove={wrapApprove}
                                                 onReject={wrapReject}
                                                 showEmployeeColumn={true}

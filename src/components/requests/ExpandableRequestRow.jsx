@@ -2,7 +2,7 @@ import React from 'react';
 import {
     ChevronDown, ChevronRight, Clock, FileText, Utensils,
     CreditCard, CheckCircle2, XCircle, AlertCircle, User, ArrowRight,
-    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope
+    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
 
@@ -200,6 +200,7 @@ const ExpandableRequestRow = ({
     isExpanded,
     onToggle,
     onViewDetails,
+    onViewDetail,
     onApprove,
     onReject,
     onEdit,
@@ -404,6 +405,20 @@ const ExpandableRequestRow = ({
                             <span className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500 whitespace-nowrap">
                                 Goruntuleme
                             </span>
+                        )}
+
+                        {/* Karar Değiştir: APPROVED/REJECTED + can_override */}
+                        {mode === 'incoming' && !isPending && req.can_override && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onViewDetail) onViewDetail(req);
+                                }}
+                                className="px-2 py-1 flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-lg text-purple-600 hover:bg-purple-100 transition-colors text-[10px] font-bold whitespace-nowrap"
+                                title="Karar Değiştir"
+                            >
+                                <Shield size={12} /> Değiştir
+                            </button>
                         )}
 
                         {/* Personal mode: Edit / Delete */}
