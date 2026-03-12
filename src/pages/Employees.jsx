@@ -1266,11 +1266,8 @@ const Employees = () => {
                         return false;
                     }
                 }
-                // İkincil yönetici satırlarında sadece manager_id zorunlu (Stage 52: dept/pos kaldırıldı)
-                const sm = formData.secondary_managers || [];
-                if (sm.length > 0 && sm.some(e => !e.manager_id)) {
-                    return false;
-                }
+                // İkincil yönetici: boş satırlar handleNext'te temizlenir, burada sadece dolu olanları kontrol et
+                // (Stage 52: dept/pos kaldırıldı, sadece manager_id zorunlu)
                 return true;
             }
             case 3: // Contact
@@ -1285,6 +1282,14 @@ const Employees = () => {
     };
 
     const handleNext = () => {
+        // Step 2: boş ikincil yönetici satırlarını otomatik temizle
+        if (currentStep === 2) {
+            const sm = formData.secondary_managers || [];
+            const cleaned = sm.filter(e => e.manager_id);
+            if (cleaned.length !== sm.length) {
+                handleInputChange('secondary_managers', cleaned);
+            }
+        }
         if (validateStep(currentStep)) {
             if (currentStep === 2) setShowManagerValidation(false);
             setCompletedSteps(prev => [...new Set([...prev, currentStep])]);
