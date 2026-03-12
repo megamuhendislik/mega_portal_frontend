@@ -34,6 +34,7 @@ function getCurrentFiscalPeriod() {
 // Generate days for a fiscal period (26th of prev month to 25th of target month)
 function generateFiscalDays(fiscalMonth, fiscalYear) {
   const days = [];
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
 
   // Start: 26th of previous month
   let startMonth = fiscalMonth - 1;
@@ -56,7 +57,7 @@ function generateFiscalDays(fiscalMonth, fiscalYear) {
       year: current.getFullYear(),
       // Monday=0, Sunday=6
       dayOfWeek: (current.getDay() + 6) % 7,
-      isToday: current.toLocaleDateString('en-CA') === new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }),
+      isToday: current.toLocaleDateString('en-CA') === todayStr,
     });
     current.setDate(current.getDate() + 1);
   }

@@ -74,7 +74,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const fetchTimeLockInfo = async () => {
     if (!request) return;
 
-    const today = new Date();
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+    const today = new Date(todayStr + 'T23:59:59');
     // Use lock_date from backend (fiscal period based) if available
     const lockDateStr = request.lock_date || request.immutable_date;
     let lockDate;
@@ -82,7 +83,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
     if (lockDateStr) {
       lockDate = new Date(lockDateStr + 'T23:59:59');
-      if (today >= lockDate) isLocked = true;
+      if (todayStr >= lockDateStr) isLocked = true;
     } else {
       // Fallback: event_date + 60 days (eski mantik, backend lock_date yoksa)
       const eventDate = new Date(request.start_date || request.date);
@@ -95,8 +96,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
     setTimeLockInfo({
       is_locked: isLocked,
-      event_date: new Date(request.start_date || request.date).toLocaleDateString('tr-TR'),
-      lock_date: lockDate.toLocaleDateString('tr-TR'),
+      event_date: new Date(request.start_date || request.date).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' }),
+      lock_date: lockDate.toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' }),
       days_until_lock: daysUntilLock > 0 ? daysUntilLock : 0
     });
   };

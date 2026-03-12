@@ -94,7 +94,10 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
 
     // New year addition
     const [showAddYear, setShowAddYear] = useState(false);
-    const [newYear, setNewYear] = useState(new Date().getFullYear());
+    const [newYear, setNewYear] = useState(() => {
+        const parts = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }).split('-');
+        return Number(parts[0]);
+    });
     const [newYearDays, setNewYearDays] = useState(14);
     const [newYearReason, setNewYearReason] = useState('');
 

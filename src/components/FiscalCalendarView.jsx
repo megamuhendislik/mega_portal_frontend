@@ -17,7 +17,10 @@ const FiscalCalendarView = ({
     year: externalYear,        // optional controlled year
     onYearChange,              // optional year change callback
 }) => {
-    const [internalYear, setInternalYear] = useState(new Date().getFullYear());
+    const [internalYear, setInternalYear] = useState(() => {
+        const parts = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }).split('-');
+        return Number(parts[0]);
+    });
     const year = externalYear || internalYear;
     const setYear = onYearChange || setInternalYear;
 
