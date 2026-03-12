@@ -55,10 +55,10 @@ export default function WeeklyHeatmap({ data }) {
                   {day.day || day.day_short}
                 </p>
                 <div className="space-y-0.5 text-xs text-gray-600">
-                  {day.leave > 0 && <p>Izin: {day.leave}</p>}
+                  {day.leave > 0 && <p>İzin: {day.leave}</p>}
                   {day.overtime > 0 && <p>Mesai: {day.overtime}</p>}
                   {day.meal > 0 && <p>Yemek: {day.meal}</p>}
-                  {day.cardless > 0 && <p>Kartsiz: {day.cardless}</p>}
+                  {day.cardless > 0 && <p>Kartsız: {day.cardless}</p>}
                   <p className="font-semibold text-gray-700 pt-0.5 border-t border-gray-100">
                     Toplam: {day.total}
                   </p>

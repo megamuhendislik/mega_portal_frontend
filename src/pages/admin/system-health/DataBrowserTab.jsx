@@ -65,7 +65,7 @@ const CATEGORY_CONFIG = {
         summaryValue: 'text-orange-900',
     },
     suspicious_content: {
-        label: 'Supheli Icerik',
+        label: 'Şüpheli İçerik',
         icon: ShieldExclamationIcon,
         badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         summaryBg: 'bg-yellow-50 border-yellow-200',
@@ -142,11 +142,11 @@ export default function DataBrowserTab() {
             const response = await api.get('/system/health-check/scan-test-data-detailed/');
             setData(response.data);
             if (response.data.summary?.total === 0) {
-                setMessage({ type: 'success', text: 'Sistemde test verisi bulunamadi. Her sey temiz!' });
+                setMessage({ type: 'success', text: 'Sistemde test verisi bulunamadı. Her şey temiz!' });
             }
         } catch (err) {
             const detail = err.response?.data?.error || err.response?.data?.detail || err.message;
-            setMessage({ type: 'error', text: `Tarama hatasi: ${detail}` });
+            setMessage({ type: 'error', text: `Tarama hatası: ${detail}` });
             setData(null);
         } finally {
             setLoading(false);
@@ -220,7 +220,7 @@ export default function DataBrowserTab() {
         if (selectedIds.size === 0) return;
 
         const confirmed = window.confirm(
-            `${selectedIds.size} kayit kalici olarak silinecek. Bu islem geri alinamaz!\n\nDevam etmek istiyor musunuz?`
+            `${selectedIds.size} kayıt kalıcı olarak silinecek. Bu işlem geri alınamaz!\n\nDevam etmek istiyor musunuz?`
         );
         if (!confirmed) return;
 
@@ -246,10 +246,10 @@ export default function DataBrowserTab() {
                 }
             }
 
-            const warningsText = allWarnings.length > 0 ? ` Uyarilar: ${allWarnings.join(', ')}` : '';
+            const warningsText = allWarnings.length > 0 ? ` Uyarılar: ${allWarnings.join(', ')}` : '';
             setMessage({
                 type: 'success',
-                text: `${totalDeleted} kayit basariyla silindi.${warningsText}`,
+                text: `${totalDeleted} kayıt başarıyla silindi.${warningsText}`,
             });
             setSelectedIds(new Map());
 
@@ -257,7 +257,7 @@ export default function DataBrowserTab() {
             await handleScan();
         } catch (err) {
             const detail = err.response?.data?.error || err.response?.data?.detail || err.message;
-            setMessage({ type: 'error', text: `Silme hatasi: ${detail}` });
+            setMessage({ type: 'error', text: `Silme hatası: ${detail}` });
         } finally {
             setDeleting(false);
         }
@@ -331,7 +331,7 @@ export default function DataBrowserTab() {
                         `}
                     >
                         {loading ? <Spinner /> : <MagnifyingGlassIcon className="w-4 h-4" />}
-                        {loading ? 'Taraniyor...' : 'Sistemi Tara'}
+                        {loading ? 'Taranıyor...' : 'Sistemi Tara'}
                     </button>
                 </div>
             </div>
@@ -348,9 +348,9 @@ export default function DataBrowserTab() {
             {!data && !loading && (
                 <div className="bg-white p-16 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-400">
                     <MagnifyingGlassIcon className="w-16 h-16 mb-4 text-gray-300" />
-                    <p className="text-lg font-medium text-gray-500">Tarama Baslatilmadi</p>
+                    <p className="text-lg font-medium text-gray-500">Tarama Başlatılmadı</p>
                     <p className="text-sm mt-1">
-                        Test verilerini bulmak icin <span className="font-semibold text-indigo-600">&quot;Sistemi Tara&quot;</span> butonuna basin.
+                        Test verilerini bulmak için <span className="font-semibold text-indigo-600">&quot;Sistemi Tara&quot;</span> butonuna basın.
                     </p>
                 </div>
             )}
@@ -360,11 +360,11 @@ export default function DataBrowserTab() {
                 <>
                     {/* ── Summary Cards ───────────────────────────────────── */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Ozet</h4>
+                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Özet</h4>
                         <div className="flex flex-wrap gap-4">
                             <SummaryCard
                                 value={summary?.total || 0}
-                                label="Toplam Kayit"
+                                label="Toplam Kayıt"
                                 bgClass="bg-gray-50 border-gray-200"
                                 textClass="text-gray-600"
                                 valueClass="text-gray-900"
@@ -384,7 +384,7 @@ export default function DataBrowserTab() {
                         {/* Model breakdown */}
                         {summary?.by_model && Object.keys(summary.by_model).length > 0 && (
                             <div className="mt-4 pt-4 border-t border-gray-100">
-                                <p className="text-xs font-medium text-gray-500 mb-2">Model Dagilimi:</p>
+                                <p className="text-xs font-medium text-gray-500 mb-2">Model Dağılımı:</p>
                                 <div className="flex flex-wrap gap-2">
                                     {Object.entries(summary.by_model)
                                         .sort((a, b) => b[1] - a[1])
@@ -484,7 +484,7 @@ export default function DataBrowserTab() {
                                     `}
                                 >
                                     {deleting ? <Spinner /> : <TrashIcon className="w-4 h-4" />}
-                                    Secili {selectedIds.size} kaydi sil
+                                    Seçili {selectedIds.size} kaydı sil
                                 </button>
                             </div>
                         )}
@@ -497,13 +497,13 @@ export default function DataBrowserTab() {
                                 <MagnifyingGlassIcon className="w-12 h-12 mb-3" />
                                 <p className="text-sm font-medium">
                                     {data.summary?.total === 0
-                                        ? 'Test verisi bulunamadi'
-                                        : 'Secili filtrelere uygun kayit yok'}
+                                        ? 'Test verisi bulunamadı'
+                                        : 'Seçili filtrelere uygun kayıt yok'}
                                 </p>
                                 <p className="text-xs mt-1 text-gray-400">
                                     {data.summary?.total === 0
-                                        ? 'Sistem temiz gorunuyor.'
-                                        : 'Filtreleri degistirip tekrar deneyin.'}
+                                        ? 'Sistem temiz görünüyor.'
+                                        : 'Filtreleri değiştirip tekrar deneyin.'}
                                 </p>
                             </div>
                         ) : (
@@ -523,7 +523,7 @@ export default function DataBrowserTab() {
                                                 />
                                             </th>
                                             <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Model</th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Calisan</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Çalışan</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tarih</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sebep</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Detay</th>
@@ -633,7 +633,7 @@ export default function DataBrowserTab() {
                                 </span>
                                 {selectedIds.size > 0 && (
                                     <span className="font-medium text-indigo-600">
-                                        {selectedIds.size} kayit secili
+                                        {selectedIds.size} kayıt seçili
                                     </span>
                                 )}
                             </div>

@@ -690,13 +690,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                         <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
                                             <th className="pl-3 pr-1 py-2 w-8"></th>
                                             <th className="px-3 py-2 font-bold">Talep Eden</th>
-                                            <th className="px-3 py-2 font-bold">Tur</th>
+                                            <th className="px-3 py-2 font-bold">Tür</th>
                                             <th className="px-3 py-2 font-bold">Tarih</th>
-                                            <th className="px-3 py-2 font-bold">Saat Araligi</th>
-                                            <th className="px-3 py-2 font-bold">Sure</th>
+                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                            <th className="px-3 py-2 font-bold">Süre</th>
                                             <th className="px-3 py-2 font-bold">Durum</th>
                                             <th className="px-3 py-2 font-bold">Talep Edilen</th>
-                                            <th className="px-3 py-2 font-bold text-right">Islem</th>
+                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -729,7 +729,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
                                 <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">
                                     <Users size={14} />
-                                    {activeSubTab === 'primary_team' ? 'Ekip Talepleri' : 'Gecmis Talepler'} ({allTeamFiltered.length})
+                                    {activeSubTab === 'primary_team' ? 'Ekip Talepleri' : 'Geçmiş Talepler'} ({allTeamFiltered.length})
                                 </h3>
                             </div>
                             <div className="overflow-x-auto">
@@ -738,13 +738,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                         <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
                                             <th className="pl-3 pr-1 py-2 w-8"></th>
                                             <th className="px-3 py-2 font-bold">Talep Eden</th>
-                                            <th className="px-3 py-2 font-bold">Tur</th>
+                                            <th className="px-3 py-2 font-bold">Tür</th>
                                             <th className="px-3 py-2 font-bold">Tarih</th>
-                                            <th className="px-3 py-2 font-bold">Saat Araligi</th>
-                                            <th className="px-3 py-2 font-bold">Sure</th>
+                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                            <th className="px-3 py-2 font-bold">Süre</th>
                                             <th className="px-3 py-2 font-bold">Durum</th>
                                             <th className="px-3 py-2 font-bold">Talep Edilen</th>
-                                            <th className="px-3 py-2 font-bold text-right">Islem</th>
+                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">

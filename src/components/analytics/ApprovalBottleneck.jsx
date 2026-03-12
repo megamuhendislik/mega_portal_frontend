@@ -9,10 +9,10 @@ function getSpeedColor(hours) {
 }
 
 const COLUMNS = [
-  { key: 'approver_name', label: 'Yonetici', sortable: true },
+  { key: 'approver_name', label: 'Yönetici', sortable: true },
   { key: 'pending_count', label: 'Bekleyen', sortable: true },
   { key: 'avg_decision_hours', label: 'Ort. Karar (saat)', sortable: true },
-  { key: 'slowest_request_hours', label: 'En Yavas (saat)', sortable: true },
+  { key: 'slowest_request_hours', label: 'En Yavaş (saat)', sortable: true },
 ];
 
 export default function ApprovalBottleneck({ data }) {

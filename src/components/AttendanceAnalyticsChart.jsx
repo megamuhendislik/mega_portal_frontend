@@ -107,7 +107,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             const otApproved = dayLogs.reduce((acc, l) => acc + (l.ot_approved_seconds || 0), 0);
             const otPending = dayLogs.reduce((acc, l) => acc + (l.pending_overtime_seconds || 0), 0);
             const totalCalcOt = dayLogs.reduce((acc, l) => acc + (l.calculated_overtime_seconds || 0), 0);
-            const otPotential = Math.max(0, totalCalcOt - otApproved - otPending);
+            // İzin günlerinde potansiyel OT gösterme (DUTY kaydından stale calc_ot)
+            const isDutyOnly = dayLogs.length > 0 && dayLogs.every(l => l.source === 'DUTY');
+            const otPotential = isDutyOnly ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
             const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
             const dayTarget = dayLogs.length > 0
                 ? Math.max(...dayLogs.map(l => l.day_target_seconds || 0))

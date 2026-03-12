@@ -4,7 +4,7 @@ import clsx from 'clsx';
 const TYPES = [
   {
     key: 'leave',
-    label: 'Izin',
+    label: 'İzin',
     icon: Calendar,
     color: '#3B82F6',
     bg: 'bg-blue-50',
@@ -28,7 +28,7 @@ const TYPES = [
   },
   {
     key: 'cardless',
-    label: 'Kartsiz Giris',
+    label: 'Kartsız Giriş',
     icon: CreditCard,
     color: '#8B5CF6',
     bg: 'bg-purple-50',
@@ -36,7 +36,7 @@ const TYPES = [
   },
   {
     key: 'health_report',
-    label: 'Saglik Raporu',
+    label: 'Sağlık Raporu',
     icon: HeartPulse,
     color: '#EC4899',
     bg: 'bg-pink-50',
@@ -129,7 +129,7 @@ export default function TypeBreakdownCards({ summary, healthReport }) {
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              %{approvalRate} onay orani
+              %{approvalRate} onay oranı
             </p>
           </div>
         );

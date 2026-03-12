@@ -4,13 +4,13 @@ import clsx from 'clsx';
 
 const COLUMNS = [
   { key: 'department', label: 'Departman' },
-  { key: 'leave', label: 'Izin' },
+  { key: 'leave', label: 'İzin' },
   { key: 'overtime', label: 'Mesai' },
   { key: 'meal', label: 'Yemek' },
-  { key: 'cardless', label: 'Kartsiz' },
-  { key: 'health_report', label: 'Saglik R.' },
+  { key: 'cardless', label: 'Kartsız' },
+  { key: 'health_report', label: 'Sağlık R.' },
   { key: 'total', label: 'Toplam' },
-  { key: 'employee_count', label: 'Calisan Sayisi' },
+  { key: 'employee_count', label: 'Çalışan Sayısı' },
 ];
 
 export default function DepartmentBreakdown({ data }) {

@@ -229,7 +229,7 @@ export default function OTEmployeeAnalysisTab() {
             ),
         },
         {
-            title: 'Onayli',
+            title: 'Onaylı',
             key: 'approved',
             width: 100,
             render: (_, r) => (
@@ -471,7 +471,7 @@ export default function OTEmployeeAnalysisTab() {
                         }}
                         size="small"
                         scroll={{ x: 900 }}
-                        locale={{ emptyText: <Empty description="Calisan bulunamadi" /> }}
+                        locale={{ emptyText: <Empty description="Çalışan bulunamadı" /> }}
                     />
                 </div>
             )}

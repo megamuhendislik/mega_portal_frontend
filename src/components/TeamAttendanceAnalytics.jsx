@@ -426,9 +426,9 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                         gradient="bg-gradient-to-br from-amber-500 to-orange-500"
                     />
                     <KPICard
-                        label="Aktif Calisan"
+                        label="Aktif Çalışan"
                         value={teamKPIs.activeCount}
-                        suffix="kisi"
+                        suffix="kişi"
                         icon={<Users size={56} />}
                         gradient="bg-gradient-to-br from-slate-800 to-slate-900"
                     />
@@ -527,7 +527,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                         </table>
                     </div>
                 ) : (
-                    <div className="py-12 text-center text-slate-400 text-sm">Calisan verisi bulunamadi.</div>
+                    <div className="py-12 text-center text-slate-400 text-sm">Çalışan verisi bulunamadı.</div>
                 )}
             </div>
 
@@ -587,7 +587,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                 {otLoading && (
                     <div className="flex items-center justify-center py-12">
                         <Loader2 size={24} className="animate-spin text-violet-500 mr-2" />
-                        <span className="text-sm text-slate-500">Mesai verileri yukleniyor...</span>
+                        <span className="text-sm text-slate-500">Mesai verileri yükleniyor...</span>
                     </div>
                 )}
 
@@ -631,7 +631,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                                     <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center">
                                         <Info size={16} />
                                     </div>
-                                    Kaynak Dagilimi
+                                    Kaynak Dağılımı
                                 </h4>
                                 {otPieData.length > 0 ? (
                                     <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -737,7 +737,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                                     <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                                         <Users size={16} />
                                     </div>
-                                    Calisan Bazli OT Tablo
+                                    Çalışan Bazlı OT Tablo
                                 </h4>
                             </div>
                             {sortedOtEmployees.length > 0 ? (
@@ -745,14 +745,14 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-slate-50">
-                                                <th className="text-left py-3 px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Calisan</th>
+                                                <th className="text-left py-3 px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Çalışan</th>
                                                 <th className="text-left py-3 px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Departman</th>
                                                 {[
                                                     { key: 'assignments', label: 'Atama' },
                                                     { key: 'requests', label: 'Talep' },
                                                     { key: 'approved', label: 'Onay' },
                                                     { key: 'rejected', label: 'Red' },
-                                                    { key: 'expired', label: 'Suresi Dolmus' },
+                                                    { key: 'expired', label: 'Süresi Dolmuş' },
                                                     { key: 'total_hours', label: 'Saat' },
                                                 ].map(col => (
                                                     <th
@@ -795,7 +795,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                                     </table>
                                 </div>
                             ) : (
-                                <div className="py-12 text-center text-slate-400 text-sm">Calisan verisi bulunamadi.</div>
+                                <div className="py-12 text-center text-slate-400 text-sm">Çalışan verisi bulunamadı.</div>
                             )}
                         </div>
                     </>
@@ -805,7 +805,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                 {!otLoading && !otError && !otData?.summary && (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Zap size={28} className="text-slate-300 mb-2" />
-                        <p className="text-sm text-slate-500">Ek mesai verisi bulunamadi.</p>
+                        <p className="text-sm text-slate-500">Ek mesai verisi bulunamadı.</p>
                     </div>
                 )}
             </CollapsibleSection>
@@ -815,8 +815,8 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                ═══════════════════════════════════════════════════ */}
             {secondaryTeam?.length > 0 && (
                 <CollapsibleSection
-                    title="Ikincil Yonetici Oldugum Kisiler"
-                    subtitle="Sadece ek mesai yetkiniz olan calisanlar"
+                    title="İkincil Yönetici Olduğum Kişiler"
+                    subtitle="Sadece ek mesai yetkiniz olan çalışanlar"
                     icon={Briefcase}
                     badge={`${secondaryTeam.length} Kisi`}
                     defaultOpen={false}
@@ -850,7 +850,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                         <div className="p-4 border-b border-slate-100">
                             <h4 className="font-bold text-sm text-slate-700 flex items-center gap-2">
                                 <Users size={14} className="text-slate-400" />
-                                Calisan Detaylari
+                                Çalışan Detayları
                             </h4>
                         </div>
                         {sortedSecEmployees.length > 0 ? (
@@ -865,7 +865,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                                                 { key: 'requests', label: 'Talep' },
                                                 { key: 'approved', label: 'Onay' },
                                                 { key: 'rejected', label: 'Red' },
-                                                { key: 'expired', label: 'Suresi Dolmus' },
+                                                { key: 'expired', label: 'Süresi Dolmuş' },
                                                 { key: 'total_hours', label: 'Saat' },
                                             ].map(col => (
                                                 <th
@@ -909,7 +909,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                             </div>
                         ) : (
                             <div className="py-10 text-center text-slate-400 text-sm">
-                                {otLoading ? 'Veriler yukleniyor...' : 'Ikincil yonetimi altindaki calisanlar icin ek mesai verisi bulunamadi.'}
+                                {otLoading ? 'Veriler yükleniyor...' : 'İkincil yönetimi altındaki çalışanlar için ek mesai verisi bulunamadı.'}
                             </div>
                         )}
                     </div>

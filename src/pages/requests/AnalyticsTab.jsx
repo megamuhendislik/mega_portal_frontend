@@ -67,17 +67,17 @@ function buildTrendData(monthlyTrend) {
 
 /** Standard trend bars config (5 types) */
 const TREND_BARS = [
-    { key: 'leave', label: 'Izin', color: '#3B82F6' },
+    { key: 'leave', label: 'İzin', color: '#3B82F6' },
     { key: 'overtime', label: 'Ek Mesai', color: '#F59E0B' },
     { key: 'meal', label: 'Yemek', color: '#10B981' },
-    { key: 'cardless', label: 'Kartsiz Giris', color: '#8B5CF6' },
-    { key: 'health_report', label: 'Saglik Raporu', color: '#EC4899' },
+    { key: 'cardless', label: 'Kartsız Giriş', color: '#8B5CF6' },
+    { key: 'health_report', label: 'Sağlık Raporu', color: '#EC4899' },
 ];
 
 /** Composed lines for secondary chart */
 const COMPOSED_LINES = [
     { key: 'overtime_hours', label: 'Mesai (saat)', color: '#F59E0B', type: 'area', yAxisId: 'left' },
-    { key: 'leave_days', label: 'Izin (gun)', color: '#3B82F6', type: 'line', yAxisId: 'right' },
+    { key: 'leave_days', label: 'İzin (gün)', color: '#3B82F6', type: 'line', yAxisId: 'right' },
 ];
 
 /** Range option buttons */
@@ -129,7 +129,7 @@ const ErrorState = ({ icon: Icon = PieChartIcon, message, onRetry }) => (
 const EmptyState = ({ icon: Icon = PieChartIcon }) => (
     <div className="text-center py-16 text-slate-400">
         <Icon size={48} className="mx-auto mb-4 opacity-20" />
-        <p className="text-lg font-medium">Veri bulunamadi</p>
+        <p className="text-lg font-medium">Veri bulunamadı</p>
     </div>
 );
 
@@ -224,9 +224,9 @@ const PersonalAnalyticsContent = ({ data, range }) => {
             deltaSuffix: '%',
         },
         {
-            title: 'Izin Gunleri',
+            title: 'İzin Günleri',
             value: data.total_leave_days || 0,
-            suffix: 'gun',
+            suffix: 'gün',
             gradient: 'from-blue-500 to-blue-600',
             icon: Calendar,
             delta: makeDelta(data.comparison, 'leave'),
@@ -266,28 +266,28 @@ const PersonalAnalyticsContent = ({ data, range }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <SectionCard
-                    title="Tur Dagilimi"
+                    title="Tür Dağılımı"
                     icon={PieChartIcon}
                     iconGradient="from-indigo-500 to-indigo-600"
                     collapsible={false}
                 >
                     <StatusDonut
                         data={typeDistData}
-                        title="Talep Turleri"
+                        title="Talep Türleri"
                         centerLabel={data.total_requests}
                         centerSubLabel="Toplam"
                     />
                 </SectionCard>
 
                 <SectionCard
-                    title="Durum Dagilimi"
+                    title="Durum Dağılımı"
                     icon={BarChart3}
                     iconGradient="from-purple-500 to-purple-600"
                     collapsible={false}
                 >
                     <StatusDonut
                         data={statusDistData}
-                        title="Talep Durumlari"
+                        title="Talep Durumları"
                         centerLabel={data.total_requests}
                         centerSubLabel="Toplam"
                     />
@@ -296,7 +296,7 @@ const PersonalAnalyticsContent = ({ data, range }) => {
 
             {leaveTypeData.length > 0 && (
                 <SectionCard
-                    title="Izin Turu Dagilimi"
+                    title="İzin Türü Dağılımı"
                     icon={Calendar}
                     iconGradient="from-blue-500 to-blue-600"
                     collapsible={true}
@@ -308,7 +308,7 @@ const PersonalAnalyticsContent = ({ data, range }) => {
 
             {data.health_report && data.health_report.total > 0 && (
                 <SectionCard
-                    title="Saglik Raporu"
+                    title="Sağlık Raporu"
                     icon={HeartPulse}
                     iconGradient="from-pink-500 to-pink-600"
                     collapsible={true}
@@ -419,10 +419,10 @@ const IncomingAnalyticsContent = ({ data, range }) => {
     // Inline type distribution bars (not a separate component)
     const byType = data.by_type || {};
     const typeBarItems = [
-        { key: 'leave', label: 'Izin', color: 'bg-blue-400' },
+        { key: 'leave', label: 'İzin', color: 'bg-blue-400' },
         { key: 'overtime', label: 'Ek Mesai', color: 'bg-amber-400' },
-        { key: 'cardless', label: 'Kartsiz Giris', color: 'bg-purple-400' },
-        { key: 'health_report', label: 'Saglik Raporu', color: 'bg-pink-400' },
+        { key: 'cardless', label: 'Kartsız Giriş', color: 'bg-purple-400' },
+        { key: 'health_report', label: 'Sağlık Raporu', color: 'bg-pink-400' },
     ];
     const maxTypeTotal = Math.max(
         ...typeBarItems.map(t => byType[t.key]?.total || 0), 1
@@ -436,7 +436,7 @@ const IncomingAnalyticsContent = ({ data, range }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <SectionCard
-                    title="Onay Orani"
+                    title="Onay Oranı"
                     icon={CheckCircle2}
                     iconGradient="from-emerald-500 to-emerald-600"
                     collapsible={false}
@@ -449,7 +449,7 @@ const IncomingAnalyticsContent = ({ data, range }) => {
                 </SectionCard>
 
                 <SectionCard
-                    title="Tur Dagilimi"
+                    title="Tür Dağılımı"
                     icon={BarChart3}
                     iconGradient="from-indigo-500 to-indigo-600"
                     collapsible={false}
@@ -490,17 +490,17 @@ const IncomingAnalyticsContent = ({ data, range }) => {
                 <TrendChart
                     data={trendData}
                     bars={[
-                        { key: 'leave', label: 'Izin', color: '#3B82F6' },
+                        { key: 'leave', label: 'İzin', color: '#3B82F6' },
                         { key: 'overtime', label: 'Ek Mesai', color: '#F59E0B' },
-                        { key: 'cardless', label: 'Kartsiz Giris', color: '#8B5CF6' },
-                        { key: 'health_report', label: 'Saglik Raporu', color: '#EC4899' },
+                        { key: 'cardless', label: 'Kartsız Giriş', color: '#8B5CF6' },
+                        { key: 'health_report', label: 'Sağlık Raporu', color: '#EC4899' },
                     ]}
                 />
             </SectionCard>
 
             {data.top_requesters && data.top_requesters.length > 0 && (
                 <SectionCard
-                    title="En Cok Talep Eden Calisanlar"
+                    title="En Çok Talep Eden Çalışanlar"
                     icon={Users}
                     iconGradient="from-purple-500 to-purple-600"
                     collapsible={true}
@@ -664,16 +664,16 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
             deltaSuffix: '%',
         },
         {
-            title: 'Izin Gunleri',
+            title: 'İzin Günleri',
             value: data.leave_days || comp?.overview?.total_leave_days || 0,
-            suffix: 'gun',
+            suffix: 'gün',
             gradient: 'from-blue-500 to-blue-600',
             icon: Calendar,
             delta: makeDelta(comp?.comparison, 'leave'),
             deltaSuffix: '%',
         },
         {
-            title: 'Saglik Raporu',
+            title: 'Sağlık Raporu',
             value: data.health_report_count || 0,
             gradient: 'from-pink-500 to-pink-600',
             icon: HeartPulse,
@@ -681,7 +681,7 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
             deltaSuffix: '%',
         },
         {
-            title: 'Ekip Uyeleri',
+            title: 'Ekip Üyeleri',
             value: data.managed_count || comp?.overview?.managed_employee_count || 0,
             gradient: 'from-violet-500 to-violet-600',
             icon: Users,
@@ -713,7 +713,7 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
             </SectionCard>
 
             <SectionCard
-                title="Calisan Bazli Talep Dagilimi"
+                title="Çalışan Bazlı Talep Dağılımı"
                 icon={User}
                 iconGradient="from-blue-500 to-blue-600"
                 collapsible={true}
@@ -727,7 +727,7 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
 
             {deptBreakdown.length > 0 && (
                 <SectionCard
-                    title="Departman Dagilimi"
+                    title="Departman Dağılımı"
                     icon={Users}
                     iconGradient="from-cyan-500 to-cyan-600"
                     collapsible={true}
@@ -739,7 +739,7 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
 
             {comp?.health_report_stats && comp.health_report_stats.total > 0 && (
                 <SectionCard
-                    title="Saglik Raporu"
+                    title="Sağlık Raporu"
                     icon={HeartPulse}
                     iconGradient="from-pink-500 to-pink-600"
                     collapsible={true}
@@ -752,7 +752,7 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {otSourceData.length > 0 && (
                     <SectionCard
-                        title="Ek Mesai Kaynak Dagilimi"
+                        title="Ek Mesai Kaynak Dağılımı"
                         icon={Zap}
                         iconGradient="from-amber-500 to-amber-600"
                         collapsible={false}
@@ -775,7 +775,7 @@ const TeamAnalyticsContent = ({ teamData, compData, range }) => {
 
             {leaveTypeData.length > 0 && (
                 <SectionCard
-                    title="Izin Turu Dagilimi"
+                    title="İzin Türü Dağılımı"
                     icon={Calendar}
                     iconGradient="from-blue-500 to-blue-600"
                     collapsible={true}

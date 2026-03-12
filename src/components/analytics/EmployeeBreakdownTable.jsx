@@ -3,15 +3,15 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 
 const BASE_COLUMNS = [
-  { key: 'name', label: 'Calisan' },
+  { key: 'name', label: 'Çalışan' },
   { key: 'department', label: 'Departman' },
-  { key: 'leave', label: 'Izin' },
+  { key: 'leave', label: 'İzin' },
   { key: 'overtime', label: 'Mesai' },
   { key: 'meal', label: 'Yemek' },
-  { key: 'cardless', label: 'Kartsiz' },
+  { key: 'cardless', label: 'Kartsız' },
 ];
 
-const HEALTH_COL = { key: 'health_report', label: 'Saglik R.' };
+const HEALTH_COL = { key: 'health_report', label: 'Sağlık R.' };
 const TOTAL_COL = { key: 'total', label: 'Toplam' };
 
 function getInitial(name) {

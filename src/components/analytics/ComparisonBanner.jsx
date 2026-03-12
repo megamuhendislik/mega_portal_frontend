@@ -3,9 +3,9 @@ import clsx from 'clsx';
 
 const CHIPS = [
   { key: 'delta_total', label: 'Toplam Talep', suffix: '' },
-  { key: 'delta_approval_rate', label: 'Onay Orani', suffix: '%' },
+  { key: 'delta_approval_rate', label: 'Onay Oranı', suffix: '%' },
   { key: 'delta_overtime_hours', label: 'Mesai Saati', suffix: 's' },
-  { key: 'delta_leave_days', label: 'Izin Gunu', suffix: 'g' },
+  { key: 'delta_leave_days', label: 'İzin Günü', suffix: 'g' },
 ];
 
 export default function ComparisonBanner({ comparison }) {
@@ -20,7 +20,7 @@ export default function ComparisonBanner({ comparison }) {
   return (
     <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
       <span className="text-xs font-medium text-gray-500 mr-1">
-        Onceki Doneme Gore
+        Önceki Döneme Göre
       </span>
       {chips.map((chip) => {
         const val = comparison[chip.key];

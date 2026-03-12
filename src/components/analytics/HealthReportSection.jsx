@@ -79,7 +79,7 @@ export default function HealthReportSection({ stats }) {
         {hasDeptData && (
           <div>
             <p className="text-xs font-medium text-gray-500 mb-2">
-              Departman Dagilimi
+              Departman Dağılımı
             </p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart
