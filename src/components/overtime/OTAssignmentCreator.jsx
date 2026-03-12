@@ -132,9 +132,9 @@ function getDefaultHours(dates) {
 //  MAIN COMPONENT
 // ═══════════════════════════════════════════════════
 
-export default function OTAssignmentCreator({ onAssignmentCreated }) {
-  // Team data state
-  const [teamTab, setTeamTab] = useState('primary');
+export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab }) {
+  // Team data state — sync with parent if provided
+  const [teamTab, setTeamTab] = useState(parentTeamTab || 'primary');
   const [primaryTeam, setPrimaryTeam] = useState([]);
   const [secondaryTeam, setSecondaryTeam] = useState([]);
   const [teamLoading, setTeamLoading] = useState(true);
@@ -165,6 +165,14 @@ export default function OTAssignmentCreator({ onAssignmentCreated }) {
   // Assignments table state
   const [assignments, setAssignments] = useState([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+
+  // Sync with parent team tab when it changes
+  useEffect(() => {
+    if (parentTeamTab) {
+      setTeamTab(parentTeamTab);
+      setSelectedEmployeeId(null);
+    }
+  }, [parentTeamTab]);
 
   // --- Fetch team data on mount ---
   useEffect(() => {
@@ -511,31 +519,33 @@ export default function OTAssignmentCreator({ onAssignmentCreated }) {
     <div className="space-y-6">
       {/* ===== TEAM TABS + EMPLOYEE SELECTOR ===== */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
-        {/* Team Tabs */}
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
-          <button
-            onClick={() => { setTeamTab('primary'); setSelectedEmployeeId(null); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              teamTab === 'primary'
-                ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Users size={14} className="inline mr-1.5" />
-            Ana Ekip ({primaryTeam.length})
-          </button>
-          <button
-            onClick={() => { setTeamTab('secondary'); setSelectedEmployeeId(null); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              teamTab === 'secondary'
-                ? 'bg-white text-amber-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Users size={14} className="inline mr-1.5" />
-            {'\u0130kincil'} Ekip ({secondaryTeam.length})
-          </button>
-        </div>
+        {/* Team Tabs — hide when parent already controls team selection */}
+        {!parentTeamTab && (
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
+            <button
+              onClick={() => { setTeamTab('primary'); setSelectedEmployeeId(null); }}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                teamTab === 'primary'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Users size={14} className="inline mr-1.5" />
+              Ana Ekip ({primaryTeam.length})
+            </button>
+            <button
+              onClick={() => { setTeamTab('secondary'); setSelectedEmployeeId(null); }}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                teamTab === 'secondary'
+                  ? 'bg-white text-amber-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Users size={14} className="inline mr-1.5" />
+              {'\u0130kincil'} Ekip ({secondaryTeam.length})
+            </button>
+          </div>
+        )}
 
         {/* Team loading state */}
         {teamLoading && (

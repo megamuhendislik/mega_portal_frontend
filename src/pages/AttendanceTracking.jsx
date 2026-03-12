@@ -166,6 +166,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             const hasPrimarySubordinates = hData.length > 0;
             if (!hasPrimarySubordinates && secData.length > 0) {
                 setTeamTab('secondary');
+                setViewMode('overtime');
             } else if (hasPrimarySubordinates && teamTab === 'secondary' && secData.length === 0) {
                 setTeamTab('primary');
             }
@@ -711,7 +712,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         </button>
                     )}
                     <button
-                        onClick={() => setTeamTab('secondary')}
+                        onClick={() => { setTeamTab('secondary'); setViewMode('overtime'); }}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
                             teamTab === 'secondary'
                                 ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
@@ -732,19 +733,19 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 <div className={`flex items-center gap-1 bg-white p-1 rounded-xl border w-fit ${
                     teamTab === 'secondary' ? 'border-amber-200/80' : 'border-slate-200/80'
                 }`}>
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                            viewMode === 'list'
-                                ? teamTab === 'secondary'
-                                    ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
-                                    : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                        <List size={14} />
-                        Liste
-                    </button>
+                    {teamTab !== 'secondary' && (
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                viewMode === 'list'
+                                    ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                            <List size={14} />
+                            Liste
+                        </button>
+                    )}
                     <button
                         onClick={() => setViewMode('analytics')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -790,7 +791,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             {/* Overtime Management View */}
             {viewMode === 'overtime' && (
-                <OTAssignmentCreator onAssignmentCreated={handleRefresh} />
+                <OTAssignmentCreator onAssignmentCreated={handleRefresh} parentTeamTab={teamTab} />
             )}
 
             {/* Main Table */}
