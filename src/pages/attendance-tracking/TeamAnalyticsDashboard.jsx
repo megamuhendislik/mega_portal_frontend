@@ -175,7 +175,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                 <h3 className="text-sm font-bold text-slate-800">{person.employee_name}</h3>
                                 {isSecondary && (
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600">
-                                        Ikincil
+                                        İkincil
                                     </span>
                                 )}
                             </div>
@@ -200,7 +200,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {detailLoading && (
                         <div className="flex items-center justify-center py-4">
                             <div className="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full" />
-                            <span className="ml-2 text-xs text-slate-400">Detayli analiz yukleniyor...</span>
+                            <span className="ml-2 text-xs text-slate-400">Detaylı analiz yükleniyor...</span>
                         </div>
                     )}
 
@@ -366,7 +366,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ SECONDARY-SPECIFIC: Aylık OT Trendi ═══ */}
                     {isSecondary && otDetail?.monthly_trend && otDetail.monthly_trend.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aylik OT Trendi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aylık OT Trendi</h4>
                             <div className="h-40">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={otDetail.monthly_trend}>
@@ -405,7 +405,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ SECONDARY-SPECIFIC: Haftalık OT Dağılımı ═══ */}
                     {isSecondary && otDetail?.weekly_distribution && otDetail.weekly_distribution.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Haftalik OT Dagilimi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Haftalık OT Dağılımı</h4>
                             <div className="h-40">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={otDetail.weekly_distribution}>
@@ -413,7 +413,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                         <XAxis dataKey="week_start" tick={{ fontSize: 9 }} tickFormatter={v => v ? v.substring(5) : ''} />
                                         <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatMinutes(v)} />
                                         <Tooltip content={<CustomTooltip formatter={v => formatMinutes(v)} />} />
-                                        <Bar dataKey="weekday_minutes" stackId="a" fill="#6366f1" name="H.Ici" radius={[0, 0, 0, 0]} />
+                                        <Bar dataKey="weekday_minutes" stackId="a" fill="#6366f1" name="H.İçi" radius={[0, 0, 0, 0]} />
                                         <Bar dataKey="weekend_minutes" stackId="a" fill="#f59e0b" name="H.Sonu" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -424,7 +424,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ SECONDARY-SPECIFIC: Gün Bazlı OT Paterni ═══ */}
                     {isSecondary && otDetail?.day_of_week_pattern && otDetail.day_of_week_pattern.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Gun Bazli OT Paterni</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Gün Bazlı OT Paterni</h4>
                             {(() => {
                                 const dayLabels = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
                                 const maxMinutes = Math.max(...otDetail.day_of_week_pattern.map(d => d.total_minutes || 0), 1);
@@ -460,14 +460,14 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ SECONDARY-SPECIFIC: OT Talep İstatistikleri ═══ */}
                     {isSecondary && otDetail?.approval_stats && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">OT Talep Istatistikleri</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">OT Talep İstatistikleri</h4>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-slate-50 rounded-xl p-3 text-center">
                                     <p className="text-[10px] text-slate-400 font-semibold">Toplam Talep</p>
                                     <p className="text-lg font-bold text-slate-700">{otDetail.approval_stats.total_requests || 0}</p>
                                 </div>
                                 <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                                    <p className="text-[10px] text-emerald-400 font-semibold">Onay Orani</p>
+                                    <p className="text-[10px] text-emerald-400 font-semibold">Onay Oranı</p>
                                     <p className="text-lg font-bold text-emerald-600">
                                         %{otDetail.approval_stats.total_requests > 0
                                             ? Math.round((otDetail.approval_stats.approved_count || 0) / otDetail.approval_stats.total_requests * 100)
@@ -475,13 +475,13 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                     </p>
                                 </div>
                                 <div className="bg-amber-50 rounded-xl p-3 text-center">
-                                    <p className="text-[10px] text-amber-400 font-semibold">Ort. FM Suresi</p>
+                                    <p className="text-[10px] text-amber-400 font-semibold">Ort. FM Süresi</p>
                                     <p className="text-lg font-bold text-amber-600">
                                         {formatMinutes(otDetail.approval_stats.avg_duration_minutes || 0)}
                                     </p>
                                 </div>
                                 <div className="bg-blue-50 rounded-xl p-3 text-center">
-                                    <p className="text-[10px] text-blue-400 font-semibold">Ort. Onay Suresi</p>
+                                    <p className="text-[10px] text-blue-400 font-semibold">Ort. Onay Süresi</p>
                                     <p className="text-lg font-bold text-blue-600">
                                         {otDetail.approval_stats.avg_approval_hours != null
                                             ? `${Math.round(otDetail.approval_stats.avg_approval_hours)} saat`
@@ -495,7 +495,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ SECONDARY-SPECIFIC: Haftalık Limit Durumu ═══ */}
                     {isSecondary && otDetail?.current_week_status && (otDetail.current_week_status.limit_minutes || 0) > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Haftalik Limit Durumu</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Haftalık Limit Durumu</h4>
                             {(() => {
                                 const used = otDetail.current_week_status.used_minutes || 0;
                                 const limit = otDetail.current_week_status.limit_minutes || 1;
@@ -603,7 +603,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ PRIMARY-SPECIFIC: Günlük Çalışma Trendi ═══ */}
                     {!isSecondary && dailyTrend && dailyTrend.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Gunluk Calisma Trendi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Günlük Çalışma Trendi</h4>
                             <div className="h-44">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={dailyTrend}>
@@ -622,7 +622,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                         <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatMinutes(v)} />
                                         <Tooltip content={<CustomTooltip formatter={v => formatMinutes(v)} />} />
                                         <ReferenceLine y={480} stroke="#94a3b8" strokeDasharray="5 5" label={{ value: 'Hedef', position: 'right', fontSize: 10, fill: '#94a3b8' }} />
-                                        <Area type="monotone" dataKey="worked_minutes" stroke="#6366f1" fill="url(#indigoGradDrawer)" name="Calisma" />
+                                        <Area type="monotone" dataKey="worked_minutes" stroke="#6366f1" fill="url(#indigoGradDrawer)" name="Çalışma" />
                                         <Area type="monotone" dataKey="overtime_minutes" stroke="#f59e0b" fill="url(#amberGradDrawer2)" name="Fazla Mesai" />
                                     </AreaChart>
                                 </ResponsiveContainer>
@@ -633,7 +633,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ PRIMARY-SPECIFIC: Aylık OT Performans Trendi ═══ */}
                     {!isSecondary && otDetail?.monthly_trend && otDetail.monthly_trend.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aylik OT Performans Trendi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aylık OT Performans Trendi</h4>
                             <div className="h-40">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={otDetail.monthly_trend}>
@@ -641,8 +641,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                         <XAxis dataKey="month" tick={{ fontSize: 9 }} tickFormatter={v => v ? v.substring(0, 3) : ''} />
                                         <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatMinutes(v)} />
                                         <Tooltip content={<CustomTooltip formatter={v => formatMinutes(v)} />} />
-                                        <Bar dataKey="intended_minutes" stackId="a" fill="#6366f1" name="Planli" radius={[0, 0, 0, 0]} />
-                                        <Bar dataKey="potential_minutes" stackId="a" fill="#f59e0b" name="Algilanan" radius={[0, 0, 0, 0]} />
+                                        <Bar dataKey="intended_minutes" stackId="a" fill="#6366f1" name="Planlı" radius={[0, 0, 0, 0]} />
+                                        <Bar dataKey="potential_minutes" stackId="a" fill="#f59e0b" name="Algılanan" radius={[0, 0, 0, 0]} />
                                         <Bar dataKey="manual_minutes" stackId="a" fill="#8b5cf6" name="Manuel" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -650,11 +650,11 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                             <div className="flex items-center justify-center gap-4 mt-2">
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                                    <span className="text-[10px] text-slate-500">Planli</span>
+                                    <span className="text-[10px] text-slate-500">Planlı</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                                    <span className="text-[10px] text-slate-500">Algilanan</span>
+                                    <span className="text-[10px] text-slate-500">Algılanan</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-full bg-violet-500" />
@@ -667,7 +667,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ PRIMARY-SPECIFIC: Departman Karşılaştırması ═══ */}
                     {!isSecondary && deptAvg && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Departman Karsilastirmasi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Departman Karşılaştırması</h4>
                             {(() => {
                                 const personEfficiency = efficiency;
                                 const personOTNormalPct = otNormalRatio;
@@ -675,8 +675,8 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                 const personDailyNormal = dailyAvgNormal;
                                 const metrics = [
                                     { label: 'Verimlilik', personVal: personEfficiency, deptVal: deptAvg.efficiency, unit: '%' },
-                                    { label: 'FM Yogunlugu', personVal: personOTNormalPct, deptVal: deptAvg.otNormalPct, unit: '%' },
-                                    { label: 'Katilim', personVal: personAttendance, deptVal: deptAvg.attendanceRateAvg, unit: '%' },
+                                    { label: 'FM Yoğunluğu', personVal: personOTNormalPct, deptVal: deptAvg.otNormalPct, unit: '%' },
+                                    { label: 'Katılım', personVal: personAttendance, deptVal: deptAvg.attendanceRateAvg, unit: '%' },
                                     { label: 'Gnl. Normal', personVal: personDailyNormal, deptVal: deptAvg.dailyNormal, unit: 'dk' },
                                 ];
                                 return (
@@ -732,7 +732,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                     {/* ═══ PRIMARY-SPECIFIC: Risk Değerlendirmesi ═══ */}
                     {!isSecondary && (
                         <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Risk Degerlendirmesi</h4>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Risk Değerlendirmesi</h4>
                             {(() => {
                                 const missingRisk = Math.min(33, Math.round((missing / Math.max(pastTarget, 1)) * 100));
                                 const attendanceRisk = Math.min(33, Math.round((100 - (person.attendance_rate || 100)) * 3.3));
@@ -740,9 +740,9 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                 const totalRisk = missingRisk + attendanceRisk + otRisk;
 
                                 const riskFactors = [
-                                    { label: 'Kayip Zamani', score: missingRisk, max: 33 },
-                                    { label: 'Devamsizlik', score: attendanceRisk, max: 33 },
-                                    { label: 'FM Yogunlugu', score: otRisk, max: 33 },
+                                    { label: 'Kayıp Zamanı', score: missingRisk, max: 33 },
+                                    { label: 'Devamsızlık', score: attendanceRisk, max: 33 },
+                                    { label: 'FM Yoğunluğu', score: otRisk, max: 33 },
                                 ];
 
                                 return (
@@ -757,7 +757,7 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                                 totalRisk >= 61 ? 'bg-red-100 text-red-700' : totalRisk >= 31 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
                                             }`}>
-                                                {totalRisk >= 61 ? 'Yuksek' : totalRisk >= 31 ? 'Orta' : 'Dusuk'}
+                                                {totalRisk >= 61 ? 'Yüksek' : totalRisk >= 31 ? 'Orta' : 'Düşük'}
                                             </span>
                                         </div>
                                         <div className="space-y-2">
@@ -926,31 +926,31 @@ const PersonDetailDrawer = ({ person, onClose, elapsedWorkDays, deptAvg, hierarc
 const ComparisonDrawer = ({ persons, onClose }) => {
     if (!persons || persons.length < 2) return null;
 
-    const maxOT = Math.max(...persons.map(p => (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0)), 1);
-    const maxMissing = Math.max(...persons.map(p => p.total_missing_minutes || 0), 1);
+    const maxOT = Math.max(...persons.map(p => (p.ot_intended_minutes || 0) + (p.ot_potential_minutes || 0) + (p.ot_manual_minutes || 0)), 1);
+    const maxMissing = Math.max(...persons.map(p => p.total_missing || 0), 1);
 
     const radarData = [
         { axis: 'Verimlilik', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, p.efficiency || 0])) },
         { axis: 'Katılım', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, p.attendance_rate || 0])) },
-        { axis: 'FM Yoğunluğu', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, Math.min(100, Math.round(((p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0)) / maxOT * 100))])) },
-        { axis: 'Düşük Eksik', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, maxMissing > 0 ? Math.round(100 - (p.total_missing_minutes || 0) / maxMissing * 100) : 100])) },
-        { axis: 'İzin Dengesi', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, Math.min(100, Math.max(0, 100 - (p.leave_used_days || 0) * 5))])) },
+        { axis: 'FM Yoğunluğu', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, Math.min(100, Math.round(((p.ot_intended_minutes || 0) + (p.ot_potential_minutes || 0) + (p.ot_manual_minutes || 0)) / maxOT * 100))])) },
+        { axis: 'Düşük Eksik', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, maxMissing > 0 ? Math.round(100 - (p.total_missing || 0) / maxMissing * 100) : 100])) },
+        { axis: 'İzin Dengesi', ...Object.fromEntries(persons.map((p, i) => [`p${i}`, Math.min(100, Math.max(0, 100 - (p.annual_leave_used || 0) * 5))])) },
     ];
 
     const kpiMetrics = [
-        { label: 'Çalışma (dk)', key: 'total_worked_minutes' },
-        { label: 'Hedef (dk)', key: 'target_minutes' },
+        { label: 'Çalışma (dk)', key: 'total_worked' },
+        { label: 'Hedef (dk)', key: 'monthly_required' },
         { label: 'Verimlilik %', key: 'efficiency' },
-        { label: 'Kayıp (dk)', key: 'total_missing_minutes' },
-        { label: 'FM Toplam (dk)', getValue: p => (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0) },
+        { label: 'Kayıp (dk)', key: 'total_missing' },
+        { label: 'FM Toplam (dk)', getValue: p => (p.ot_intended_minutes || 0) + (p.ot_potential_minutes || 0) + (p.ot_manual_minutes || 0) },
         { label: 'Katılım %', key: 'attendance_rate' },
     ];
 
     const barData = persons.map((p, i) => ({
         name: (p.employee_name || '').split(' ')[0] || `Kişi ${i+1}`,
-        'Çalışma': Math.round((p.total_worked_minutes || 0) / 60),
-        'Kayıp': Math.round((p.total_missing_minutes || 0) / 60),
-        'FM': Math.round(((p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0)) / 60),
+        'Çalışma': Math.round((p.total_worked || 0) / 60),
+        'Kayıp': Math.round((p.total_missing || 0) / 60),
+        'FM': Math.round(((p.ot_intended_minutes || 0) + (p.ot_potential_minutes || 0) + (p.ot_manual_minutes || 0)) / 60),
     }));
 
     return (
@@ -1112,8 +1112,14 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
         return stats.filter(s => s.department === activeTab);
     }, [stats, activeTab]);
 
-    // Reset role filter when department changes
-    useEffect(() => { setActiveRole('all'); }, [activeTab]);
+    // Reset filters when department changes
+    useEffect(() => {
+        setActiveRole('all');
+        setComparisonIds(new Set());
+        setShowComparison(false);
+        setActiveSubTeam(null);
+        setHiddenIds(new Set());
+    }, [activeTab]);
 
     // ── ROLE FILTER ──
     const roleList = useMemo(() => {
@@ -1640,13 +1646,13 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {subTeams.map((team, i) => {
                             const avgEff = team.stats.length > 0
-                                ? Math.round(team.stats.reduce((s, p) => s + (p.efficiency || 0), 0) / team.stats.length)
+                                ? Math.round(team.stats.reduce((s, p) => s + (p.total_worked || 0), 0) / Math.max(1, team.stats.reduce((s, p) => s + (p.monthly_required || 0), 0)) * 100)
                                 : 0;
                             const avgOT = team.stats.length > 0
-                                ? Math.round(team.stats.reduce((s, p) => s + (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0), 0) / team.stats.length / 60)
+                                ? Math.round(team.stats.reduce((s, p) => s + (p.ot_intended_minutes || 0) + (p.ot_potential_minutes || 0) + (p.ot_manual_minutes || 0), 0) / team.stats.length / 60)
                                 : 0;
                             const avgMissing = team.stats.length > 0
-                                ? Math.round(team.stats.reduce((s, p) => s + (p.total_missing_minutes || 0), 0) / team.stats.length / 60)
+                                ? Math.round(team.stats.reduce((s, p) => s + (p.total_missing || 0), 0) / team.stats.length / 60)
                                 : 0;
                             const isActive = activeSubTeam?.managerId === team.managerId;
                             return (
@@ -1687,8 +1693,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                             <ResponsiveContainer width="100%" height={Math.max(150, subTeams.length * 40)}>
                                 <BarChart data={subTeams.map(t => ({
                                     name: (t.managerName || '').split(' ')[0],
-                                    Verimlilik: t.stats.length > 0 ? Math.round(t.stats.reduce((s, p) => s + (p.efficiency || 0), 0) / t.stats.length) : 0,
-                                    'FM (s)': t.stats.length > 0 ? Math.round(t.stats.reduce((s, p) => s + (p.intended_ot_minutes || 0) + (p.potential_ot_minutes || 0) + (p.manual_ot_minutes || 0), 0) / t.stats.length / 60) : 0,
+                                    Verimlilik: t.stats.length > 0 ? Math.round(t.stats.reduce((s, p) => s + (p.total_worked || 0), 0) / Math.max(1, t.stats.reduce((s, p) => s + (p.monthly_required || 0), 0)) * 100) : 0,
+                                    'FM (s)': t.stats.length > 0 ? Math.round(t.stats.reduce((s, p) => s + (p.ot_intended_minutes || 0) + (p.ot_potential_minutes || 0) + (p.ot_manual_minutes || 0), 0) / t.stats.length / 60) : 0,
                                 }))} layout="vertical">
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                     <XAxis type="number" tick={{ fontSize: 10 }} />
@@ -1917,7 +1923,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                             {/* Team average footer */}
                             <tfoot>
                                 <tr className="border-t-2 border-slate-200 bg-slate-50/70">
-                                    <td className="px-3 py-2.5 font-bold text-slate-800">Ekip Ortalamasi</td>
+                                    <td className="px-3 py-2.5 font-bold text-slate-800">Ekip Ortalaması</td>
                                     <td className="px-3 py-2.5 text-right font-bold text-slate-800">{analytics.count}</td>
                                     <td className="px-3 py-2.5 text-right font-bold text-indigo-600">%{analytics.efficiency}</td>
                                     <td className="px-3 py-2.5 text-right font-bold text-slate-800">{formatMinutes(analytics.avgWorked)}</td>
@@ -2194,8 +2200,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                 {/* ═══════ SECTION 7: Time Distribution Pies ═══════ */}
                 <div className="space-y-5">
                     <AnalyticsCard
-                        title="Zaman Dagilimi"
-                        subtitle="Ekip toplami"
+                        title="Zaman Dağılımı"
+                        subtitle="Ekip toplamı"
                         icon={Activity}
                     >
                         <div className="h-[140px]">
@@ -2232,8 +2238,8 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                     </AnalyticsCard>
 
                     <AnalyticsCard
-                        title="Bakiye Dagilimi"
-                        subtitle="Pozitif / Negatif orani"
+                        title="Bakiye Dağılımı"
+                        subtitle="Pozitif / Negatif oranı"
                         icon={TrendingUp}
                     >
                         <div className="flex items-center gap-3">
@@ -2269,7 +2275,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                     {analytics.comparisonData.length > 0 && (
                         <AnalyticsCard
                             title="Fazla Mesai ve Kayıp Karşılaştırması"
-                            subtitle="Kisi bazli fazla mesai vs eksik zaman"
+                            subtitle="Kişi bazlı fazla mesai vs eksik zaman"
                             icon={Zap}
                             className="lg:col-span-2"
                         >
@@ -2316,7 +2322,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                     {analytics.otSourceDistribution.length > 0 && (
                         <AnalyticsCard
                             title="Fazla Mesai Kaynak Dağılımı"
-                            subtitle="Onaylanmis ek mesai kaynaklari"
+                            subtitle="Onaylanmış ek mesai kaynakları"
                             icon={Activity}
                         >
                             <div className="h-[180px]">
@@ -2445,7 +2451,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
 
             {/* ═══════ SECTION 9: Performance Ranking Table ═══════ */}
             <AnalyticsCard
-                title={isSecondaryMode ? "Ek Mesai Sıralaması" : "Performans Siralamasi"}
+                title={isSecondaryMode ? "Ek Mesai Sıralaması" : "Performans Sıralaması"}
                 subtitle={isSecondaryMode
                     ? `Ek mesai süresine göre sıralama (${analytics.ranked.length} kişi)`
                     : `Eksik süreye göre sıralama — en az eksik en üstte (${analytics.ranked.length} kişi)`}
@@ -2541,7 +2547,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                                 <span className="font-bold text-slate-700">{person.employee_name}</span>
                                                 {isSecondary && (
                                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600">
-                                                        Ikincil
+                                                        İkincil
                                                     </span>
                                                 )}
                                             </div>
@@ -2650,7 +2656,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                     <Flame size={14} className="text-amber-600" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-xs font-bold text-amber-800">Yuksek Fazla Mesai</p>
+                                    <p className="text-xs font-bold text-amber-800">Yüksek Fazla Mesai</p>
                                     <p className="text-[10px] text-amber-600">&gt;15 saat fazla mesai</p>
                                 </div>
                             </div>
@@ -2685,7 +2691,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                 </div>
                                 <div className="text-left">
                                     <p className="text-xs font-bold text-red-800">Yüksek Eksik Zaman</p>
-                                    <p className="text-[10px] text-red-600">&gt;%20 hedef kaybi</p>
+                                    <p className="text-[10px] text-red-600">&gt;%20 hedef kaybı</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -2797,7 +2803,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <AnalyticsCard
                         title="Departman Bazlı İzin Kullanım Oranı"
-                        subtitle="Her departmanin yillik izin kullanim yuzdesi"
+                        subtitle="Her departmanın yıllık izin kullanım yüzdesi"
                         icon={Palmtree}
                     >
                         <div className="h-[280px]">
@@ -2829,7 +2835,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                         contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 11 }}
                                         formatter={(v) => `%${v}`}
                                     />
-                                    <Bar dataKey="usage" name="Kullanim %" radius={[0, 4, 4, 0]}>
+                                    <Bar dataKey="usage" name="Kullanım %" radius={[0, 4, 4, 0]}>
                                         {analytics.leaveByDept.map((entry, i) => (
                                             <Cell
                                                 key={i}
@@ -2844,9 +2850,9 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
 
                     <div className="space-y-3">
                         <div className="bg-violet-50 border border-violet-100 rounded-xl p-5">
-                            <p className="text-[10px] text-violet-400 font-semibold uppercase">Ort. Kullanim</p>
+                            <p className="text-[10px] text-violet-400 font-semibold uppercase">Ort. Kullanım</p>
                             <p className="text-2xl font-bold text-violet-600">%{analytics.avgLeaveUsage}</p>
-                            <p className="text-[10px] text-violet-400 mt-1">Ekip geneli ortalama izin kullanim orani</p>
+                            <p className="text-[10px] text-violet-400 mt-1">Ekip geneli ortalama izin kullanım oranı</p>
                         </div>
                         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
                             <p className="text-[10px] text-indigo-400 font-semibold uppercase">Toplam Kullanılan</p>
@@ -2894,7 +2900,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                             <Zap size={48} />
                         </div>
                         <div className="relative">
-                            <p className="text-amber-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Cok Fazla Mesai</p>
+                            <p className="text-amber-100 text-[10px] font-bold uppercase tracking-wider mb-1">En Çok Fazla Mesai</p>
                             <p className="text-lg font-bold truncate">{analytics.mostOT.employee_name}</p>
                             <p className="text-amber-200 text-xs mt-0.5">{analytics.mostOT.department || '-'}</p>
                             <div className="mt-3 flex items-center gap-2">
@@ -2957,7 +2963,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
             {!isSecondaryMode && showDeptComparison && (
                 <AnalyticsCard
                     title="Departman Özeti"
-                    subtitle="Her departmanin kompakt ozet karti (tikla: o departmana gec)"
+                    subtitle="Her departmanın kompakt özet kartı (tıkla: o departmana geç)"
                     icon={Users}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -3014,7 +3020,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
 
             {/* ═══════ SECTION 14: Individual Performance Cards ═══════ */}
             {!isSecondaryMode && <AnalyticsCard
-                title="Bireysel Performans Kartlari"
+                title="Bireysel Performans Kartları"
                 subtitle={`Eksik süreye göre sıralama (${analytics.ranked.length} kişi)`}
                 icon={UserCheck}
             >
@@ -3048,7 +3054,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                             <p className="text-xs font-bold text-slate-800 truncate">{person.employee_name}</p>
                                             {_isSecondary && (
                                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600 flex-shrink-0">
-                                                    Ikincil
+                                                    İkincil
                                                 </span>
                                             )}
                                         </div>
