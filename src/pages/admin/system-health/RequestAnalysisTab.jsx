@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
 import api from '../../../services/api';
 
 export default function RequestAnalysisTab() {
@@ -23,6 +23,11 @@ export default function RequestAnalysisTab() {
     const [lcSearch, setLcSearch] = useState('');
     const [lcExpandedId, setLcExpandedId] = useState(null);
     const [lcExpandAll, setLcExpandAll] = useState(false);
+
+    // Toplu Düzelt state'leri
+    const [bulkFixLoading, setBulkFixLoading] = useState(false);
+    const [bulkFixReport, setBulkFixReport] = useState(null);
+    const [showFixConfirm, setShowFixConfirm] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -56,6 +61,34 @@ export default function RequestAnalysisTab() {
             setLifecycleLoading(false);
         }
     };
+
+    const performBulkFix = async () => {
+        setShowFixConfirm(false);
+        setBulkFixLoading(true);
+        setBulkFixReport(null);
+        try {
+            const res = await api.post('/system/health-check/request-lifecycle-bulk-fix/', {
+                date_from: lcDateFrom,
+                date_to: lcDateTo,
+                request_type: lcRequestType,
+            });
+            setBulkFixReport(res.data);
+            // Düzeltme sonrası tekrar tara
+            fetchLifecycle();
+        } catch (e) {
+            setBulkFixReport({ error: e.response?.data?.error || 'Toplu düzeltme hatası' });
+        } finally {
+            setBulkFixLoading(false);
+        }
+    };
+
+    const fixableCount = lifecycleData
+        ? (lifecycleData.summary?.issue_breakdown?.no_notification || 0) +
+          (lifecycleData.summary?.issue_breakdown?.no_approver || 0) +
+          (lifecycleData.summary?.issue_breakdown?.wrong_approver || 0) +
+          (lifecycleData.summary?.issue_breakdown?.inactive_approver || 0) +
+          (lifecycleData.summary?.issue_breakdown?.stale_pending || 0)
+        : 0;
 
     const exportLifecycleTxt = () => {
         if (!lifecycleData) return;
@@ -564,6 +597,16 @@ export default function RequestAnalysisTab() {
                                 className="px-3 py-2 bg-slate-700 text-white rounded-lg text-xs font-bold hover:bg-slate-800 whitespace-nowrap">
                                 TXT İndir
                             </button>
+                            {fixableCount > 0 && (
+                                <button
+                                    onClick={() => setShowFixConfirm(true)}
+                                    disabled={bulkFixLoading}
+                                    className="px-3 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 disabled:opacity-50 whitespace-nowrap flex items-center gap-1"
+                                >
+                                    <Wrench size={13} />
+                                    {bulkFixLoading ? 'Düzeltiliyor...' : `Toplu Düzelt (${fixableCount})`}
+                                </button>
+                            )}
                         </div>
 
                         {/* Talep Listesi */}
@@ -593,6 +636,165 @@ export default function RequestAnalysisTab() {
                             )}
                         </div>
                     </>
+                )}
+
+                {/* Onay Modalı */}
+                {showFixConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowFixConfirm(false)}>
+                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                    <Wrench size={20} className="text-amber-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-800">Toplu Düzeltme Onayı</h3>
+                                    <p className="text-xs text-gray-500">{lcDateFrom} → {lcDateTo}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm">
+                                <p className="text-amber-800 font-medium mb-2">
+                                    {fixableCount} düzeltilebilir sorun tespit edildi:
+                                </p>
+                                <ul className="text-xs text-amber-700 space-y-1">
+                                    {(lifecycleData?.summary?.issue_breakdown?.no_notification || 0) > 0 && (
+                                        <li>• Bildirim gönderilmemiş: <b>{lifecycleData.summary.issue_breakdown.no_notification}</b> talep → bildirim gönderilecek</li>
+                                    )}
+                                    {(lifecycleData?.summary?.issue_breakdown?.no_approver || 0) > 0 && (
+                                        <li>• Onaylayıcı yok: <b>{lifecycleData.summary.issue_breakdown.no_approver}</b> talep → yönetici atanacak</li>
+                                    )}
+                                    {(lifecycleData?.summary?.issue_breakdown?.wrong_approver || 0) > 0 && (
+                                        <li>• Yanlış yönetici: <b>{lifecycleData.summary.issue_breakdown.wrong_approver}</b> talep → doğru yönetici atanacak</li>
+                                    )}
+                                    {(lifecycleData?.summary?.issue_breakdown?.inactive_approver || 0) > 0 && (
+                                        <li>• Pasif yönetici: <b>{lifecycleData.summary.issue_breakdown.inactive_approver}</b> talep → aktif yönetici atanacak</li>
+                                    )}
+                                    {(lifecycleData?.summary?.issue_breakdown?.stale_pending || 0) > 0 && (
+                                        <li>• Eski PENDING: <b>{lifecycleData.summary.issue_breakdown.stale_pending}</b> talep → hatırlatma gönderilecek</li>
+                                    )}
+                                </ul>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setShowFixConfirm(false)}
+                                    className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                                    İptal
+                                </button>
+                                <button onClick={performBulkFix}
+                                    className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700">
+                                    Düzelt
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Düzeltme Raporu Modalı */}
+                {bulkFixReport && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setBulkFixReport(null)}>
+                        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                            <div className="p-5 border-b flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        bulkFixReport.error ? 'bg-red-100' : 'bg-emerald-100'
+                                    }`}>
+                                        {bulkFixReport.error
+                                            ? <XCircle size={20} className="text-red-600" />
+                                            : <CheckCircle size={20} className="text-emerald-600" />
+                                        }
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-800">Düzeltme Raporu</h3>
+                                        {!bulkFixReport.error && (
+                                            <p className="text-xs text-gray-500">
+                                                {bulkFixReport.fixed} düzeltildi / {bulkFixReport.failed} başarısız — {bulkFixReport.elapsed_seconds}s
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <button onClick={() => setBulkFixReport(null)} className="text-gray-400 hover:text-gray-600">
+                                    <XCircle size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-5 overflow-y-auto flex-1">
+                                {bulkFixReport.error ? (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                                        {bulkFixReport.error}
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Özet kartlar */}
+                                        <div className="grid grid-cols-3 gap-3 mb-4">
+                                            <div className="bg-slate-50 rounded-lg border p-3 text-center">
+                                                <div className="text-lg font-bold text-slate-700">{bulkFixReport.total_issues}</div>
+                                                <div className="text-[10px] text-slate-500 font-bold">Toplam İşlem</div>
+                                            </div>
+                                            <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3 text-center">
+                                                <div className="text-lg font-bold text-emerald-700">{bulkFixReport.fixed}</div>
+                                                <div className="text-[10px] text-emerald-600 font-bold">Düzeltildi</div>
+                                            </div>
+                                            <div className="bg-red-50 rounded-lg border border-red-200 p-3 text-center">
+                                                <div className="text-lg font-bold text-red-700">{bulkFixReport.failed}</div>
+                                                <div className="text-[10px] text-red-600 font-bold">Başarısız</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Kod bazlı özet */}
+                                        {bulkFixReport.by_code && Object.keys(bulkFixReport.by_code).length > 0 && (
+                                            <div className="mb-4">
+                                                <h4 className="text-xs font-bold text-slate-500 mb-2">Kategori Bazlı</h4>
+                                                <div className="space-y-1">
+                                                    {Object.entries(bulkFixReport.by_code).map(([code, stats]) => (
+                                                        <div key={code} className="flex items-center gap-2 text-xs">
+                                                            <span className="font-mono text-slate-600 w-40">{code}</span>
+                                                            <span className="text-emerald-600 font-bold">{stats.fixed} ✓</span>
+                                                            {stats.failed > 0 && <span className="text-red-600 font-bold">{stats.failed} ✗</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Detay log */}
+                                        {bulkFixReport.action_log && bulkFixReport.action_log.length > 0 && (
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-500 mb-2">Detaylı İşlem Logu</h4>
+                                                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                                                    {bulkFixReport.action_log.map((a, i) => (
+                                                        <div key={i} className={`flex items-start gap-2 px-3 py-2 rounded-lg text-xs ${
+                                                            a.fixed ? 'bg-emerald-50' : 'bg-red-50'
+                                                        }`}>
+                                                            {a.fixed
+                                                                ? <CheckCircle size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                                                                : <XCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                                                            }
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="font-medium text-slate-700">{a.employee_name}</span>
+                                                                    <span className="text-slate-400">#{a.request_id}</span>
+                                                                    <span className="px-1 py-0.5 bg-slate-200 rounded text-[10px] font-bold">{a.request_type}</span>
+                                                                    <span className="text-slate-400">{a.date}</span>
+                                                                    <span className={`px-1 py-0.5 rounded text-[10px] font-bold ${
+                                                                        a.severity === 'CRITICAL' ? 'bg-red-600 text-white' :
+                                                                        a.severity === 'HIGH' ? 'bg-orange-500 text-white' :
+                                                                        'bg-amber-400 text-amber-900'
+                                                                    }`}>{a.issue_code}</span>
+                                                                </div>
+                                                                <div className={`mt-0.5 ${a.fixed ? 'text-emerald-700' : 'text-red-700'}`}>
+                                                                    {a.detail}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
