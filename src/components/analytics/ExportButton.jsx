@@ -62,7 +62,7 @@ export default function ExportButton({ type, range }) {
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors"
       >
         <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">Disari Aktar</span>
+        <span className="hidden sm:inline">Dışarı Aktar</span>
       </button>
 
       {open && (

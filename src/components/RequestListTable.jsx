@@ -5,6 +5,7 @@ import {
     Check, X, Eye, Edit2, Trash2, ArrowRight, ArrowRightLeft, Users,
     LogIn, LogOut
 } from 'lucide-react';
+import ModalOverlay from './ui/ModalOverlay';
 
 const SourceBadge = ({ source, principalName }) => {
     const config = {
@@ -474,9 +475,8 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
             </div>
 
             {/* Reject Modal */}
-            {showRejectModal && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <ModalOverlay open={showRejectModal} onClose={() => setShowRejectModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
                         <h3 className="text-lg font-bold text-slate-900">Reddetme Sebebi</h3>
                         <textarea
                             className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500/20 outline-none text-sm min-h-[100px]"
@@ -507,8 +507,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+            </ModalOverlay>
         </div>
     );
 };

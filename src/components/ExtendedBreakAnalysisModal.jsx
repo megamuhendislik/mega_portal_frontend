@@ -5,6 +5,7 @@ import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth, startOfY
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
+import ModalOverlay from './ui/ModalOverlay';
 
 const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, initialViewMode = 'MONTHLY' }) => {
     const isMobile = useIsMobile();
@@ -188,10 +189,8 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
         return null;
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in zoom-in duration-200">
+        <ModalOverlay open={isOpen} onClose={onClose}>
             <div className="bg-white w-full max-w-[calc(100vw-2rem)] md:max-w-5xl h-[70vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white z-10 shrink-0">
@@ -449,7 +448,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
                     )}
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };
 

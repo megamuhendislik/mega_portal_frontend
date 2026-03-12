@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard, Users } from 'lucide-react';
+import ModalOverlay from './ui/ModalOverlay';
 
 const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming, onViewDetails }) => {
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -321,11 +322,7 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
             </div>
 
             {/* Reject Reason Modal */}
-            {showRejectModal && (
-                <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-                    onClick={(e) => { e.stopPropagation(); setShowRejectModal(false); setRejectReason(''); }}
-                >
+            <ModalOverlay open={showRejectModal} onClose={() => { setShowRejectModal(false); setRejectReason(''); }}>
                     <div
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
                         onClick={(e) => e.stopPropagation()}
@@ -384,8 +381,7 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+            </ModalOverlay>
         </div >
     );
 };

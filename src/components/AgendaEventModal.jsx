@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Clock, AlignLeft, Users, Building, Building2, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight, MapPin } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
 import toast, { Toaster } from 'react-hot-toast';
+import ModalOverlay from './ui/ModalOverlay';
 
 const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null }) => {
     const [loading, setLoading] = useState(false);
@@ -191,8 +191,8 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
         }
     };
 
-    return createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in">
+    return (
+        <ModalOverlay open={true} onClose={onClose}>
             <Toaster position="top-center" reverseOrder={false} />
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -618,8 +618,7 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

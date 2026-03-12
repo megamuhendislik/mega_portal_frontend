@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar, Clock, Coffee, Trash2, Save } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
+import ModalOverlay from './ui/ModalOverlay';
 
 const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initialHolidayData, onClose, onSuccess }) => {
     // date can be null → "new override" mode with date picker
@@ -59,8 +60,8 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
     const displayDate = selectedDateStr ? moment(selectedDateStr).format('DD MMMM YYYY') : null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <ModalOverlay open={true} onClose={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2">
                         <Calendar size={18} className="text-indigo-600" />
@@ -228,7 +229,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
                     </button>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };
 

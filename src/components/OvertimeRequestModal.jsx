@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
+import ModalOverlay from './ui/ModalOverlay';
 
 const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) => {
     const [reason, setReason] = useState('');
@@ -30,7 +31,7 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+        <ModalOverlay open={isOpen} onClose={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 {/* Header */}
                 <div className="bg-blue-600 p-6 text-white flex justify-between items-start">
@@ -104,7 +105,7 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
                     </form>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };
 
