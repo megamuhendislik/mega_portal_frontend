@@ -138,7 +138,7 @@ const LogContent = ({ log }) => {
         <div className="space-y-1">
             <Section title="Analiz Sonucu">
                 {(analysis || []).map((a, i) => (
-                    <div key={i} className={`py-1 ${a.startsWith('\u26A0') ? 'text-red-700 font-bold' : a.startsWith('\u2713') ? 'text-green-700' : 'text-gray-800'}`}>{a}</div>
+                    <div key={i} className={`py-1 ${a.startsWith('⚠') ? 'text-red-700 font-bold' : a.startsWith('✓') ? 'text-green-700' : 'text-gray-800'}`}>{a}</div>
                 ))}
             </Section>
 
@@ -275,7 +275,7 @@ const DetailLogModal = ({ data, logs, onClose }) => {
                     <div className="border-b border-gray-200 bg-white px-5 py-2 shrink-0 overflow-x-auto">
                         <div className="flex gap-1.5">
                             {items.map((item, i) => {
-                                const hasWarning = (item.analysis || []).some(a => typeof a === 'string' && a.startsWith('\u26A0'));
+                                const hasWarning = (item.analysis || []).some(a => typeof a === 'string' && a.startsWith('⚠'));
                                 return (
                                     <button
                                         key={i}

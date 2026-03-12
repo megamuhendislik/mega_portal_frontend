@@ -67,7 +67,7 @@ const IncomingAnalytics = () => {
                 </div>
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                     <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-1">Ort. Karar Süresi</p>
-                    <h3 className="text-2xl font-black">{data.avg_decision_hours ?? '\u2014'}<span className="text-sm ml-1 font-bold opacity-80">saat</span></h3>
+                    <h3 className="text-2xl font-black">{data.avg_decision_hours ?? '—'}<span className="text-sm ml-1 font-bold opacity-80">saat</span></h3>
                     <div className="absolute -right-3 -bottom-3 opacity-10"><Timer size={56} /></div>
                 </div>
             </div>

@@ -58,7 +58,7 @@ function organizeIntoWeeks(days) {
   return weeks;
 }
 
-const DAY_HEADERS = ['Pt', 'Sa', '\u00c7a', 'Pe', 'Cu', 'Ct', 'Pa'];
+const DAY_HEADERS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 
 function formatShortDate(dateStr) {
   try {
@@ -82,11 +82,11 @@ const STATUS_STYLES = {
 };
 
 const STATUS_LABELS = {
-  APPROVED: 'Onayl\u0131',
+  APPROVED: 'Onaylı',
   PENDING: 'Bekliyor',
   POTENTIAL: 'Potansiyel',
   REJECTED: 'Reddedildi',
-  CANCELLED: '\u0130ptal',
+  CANCELLED: 'İptal',
 };
 
 const SOURCE_STYLES = {
@@ -96,8 +96,8 @@ const SOURCE_STYLES = {
 };
 
 const SOURCE_LABELS = {
-  INTENDED: 'Planl\u0131',
-  POTENTIAL: 'Alg\u0131lanan',
+  INTENDED: 'Planlı',
+  POTENTIAL: 'Algılanan',
   MANUAL: 'Manuel',
 };
 
@@ -187,7 +187,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           const data = Array.isArray(primaryRes.value.data) ? primaryRes.value.data : primaryRes.value.data.results || [];
           setPrimaryTeam(data.map(s => ({
             id: s.id,
-            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `\u00c7al\u0131\u015fan #${s.id}`,
+            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
             department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
           })));
         }
@@ -195,7 +195,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           const data = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : secondaryRes.value.data.results || [];
           setSecondaryTeam(data.map(s => ({
             id: s.id,
-            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `\u00c7al\u0131\u015fan #${s.id}`,
+            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
             department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
           })));
         }
@@ -366,15 +366,15 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     setError('');
 
     if (selectedDates.length === 0) {
-      setError('En az bir g\u00fcn se\u00e7iniz.');
+      setError('En az bir gün seçiniz.');
       return;
     }
     if (!taskDescription.trim()) {
-      setError('G\u00f6rev a\u00e7\u0131klamas\u0131 zorunludur.');
+      setError('Görev açıklaması zorunludur.');
       return;
     }
     if (taskDescription.trim().length > 500) {
-      setError('G\u00f6rev a\u00e7\u0131klamas\u0131 en fazla 500 karakter olabilir.');
+      setError('Görev açıklaması en fazla 500 karakter olabilir.');
       return;
     }
 
@@ -417,7 +417,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       if (data?.errors?.length) {
         setError(data.errors.map(e => e.error || e.detail || JSON.stringify(e)).join('; '));
       } else {
-        setError(data?.error || data?.detail || 'Bir hata olu\u015ftu.');
+        setError(data?.error || data?.detail || 'Bir hata oluştu.');
       }
     } finally {
       setSubmitting(false);
@@ -426,7 +426,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
 
   // --- Total calculation text ---
   const totalCalcText = selectedDates.length > 1
-    ? `${selectedDates.length} g\u00fcn \u00d7 ${hoursPerDay} sa = ${newHours} sa toplam`
+    ? `${selectedDates.length} gün × ${hoursPerDay} sa = ${newHours} sa toplam`
     : null;
 
   // --- Submit button style logic ---
@@ -481,12 +481,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         onClick={() => toggleDate(day.date)}
         title={
           isBusy
-            ? `Dolu \u2014 ${busyInfo?.manager_name || 'Atanm\u0131\u015f'}`
+            ? `Dolu — ${busyInfo?.manager_name || 'Atanmış'}`
             : day.isPast
-            ? 'Ge\u00e7mi\u015f tarih'
+            ? 'Geçmiş tarih'
             : isSelected
-            ? 'Se\u00e7imi kald\u0131r'
-            : 'Se\u00e7'
+            ? 'Seçimi kaldır'
+            : 'Seç'
         }
       >
         <span>{day.day}</span>
@@ -507,7 +507,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     if (!employees?.length) return [];
     return employees.map(e => ({
       value: e.id,
-      label: `${e.name}${e.department ? ` \u2014 ${typeof e.department === 'object' ? e.department.name : e.department}` : ''}`,
+      label: `${e.name}${e.department ? ` — ${typeof e.department === 'object' ? e.department.name : e.department}` : ''}`,
     }));
   }, [employees]);
 
@@ -542,7 +542,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               }`}
             >
               <Users size={14} className="inline mr-1.5" />
-              {'\u0130kincil'} Ekip ({secondaryTeam.length})
+              İkincil Ekip ({secondaryTeam.length})
             </button>
           </div>
         )}
@@ -551,7 +551,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         {teamLoading && (
           <div className="flex items-center gap-2 py-4">
             <Loader2 size={16} className="text-violet-500 animate-spin" />
-            <span className="text-sm text-slate-500">Ekip y{'\u00fc'}kleniyor...</span>
+            <span className="text-sm text-slate-500">Ekip yükleniyor...</span>
           </div>
         )}
 
@@ -559,8 +559,8 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         {!teamLoading && teamTab === 'secondary' && secondaryTeam.length === 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
             <Users size={24} className="mx-auto text-amber-400 mb-2" />
-            <p className="text-sm font-bold text-amber-700">Hen{'\u00fc'}z ikincil ekibiniz bulunmamaktad{'\u0131'}r</p>
-            <p className="text-xs text-amber-500 mt-1">{'\u0130'}kincil y{'\u00f6'}netici olarak atand{'\u0131\u011f\u0131'}n{'\u0131'}zda burada {'\u00e7'}al{'\u0131\u015f'}anlar g{'\u00f6'}r{'\u00fc'}necektir</p>
+            <p className="text-sm font-bold text-amber-700">Henüz ikincil ekibiniz bulunmamaktadır</p>
+            <p className="text-xs text-amber-500 mt-1">İkincil yönetici olarak atandığınızda burada çalışanlar görünecektir</p>
           </div>
         )}
 
@@ -569,13 +569,13 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           <div>
             <FieldLabel
               text="Personel"
-              tooltip={`Ek mesai atamas\u0131 yap\u0131lacak ekip \u00fcyesini se\u00e7in`}
+              tooltip={`Ek mesai ataması yapılacak ekip üyesini seçin`}
             />
             <Select
               showSearch
               allowClear
               size="large"
-              placeholder="Personel se\u00e7iniz..."
+              placeholder="Personel seçiniz..."
               optionFilterProp="label"
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -597,10 +597,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
             <Users size={28} className="text-slate-400" />
           </div>
           <p className="text-sm font-bold text-slate-500">
-            Ek mesai atamak i{'\u00e7'}in bir personel se{'\u00e7'}in
+            Ek mesai atamak için bir personel seçin
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            Yukar{'\u0131'}daki dropdown'dan bir {'\u00e7'}al{'\u0131\u015f'}an{'\u0131'} arayabilirsiniz
+            Yukarıdaki dropdown'dan bir çalışanı arayabilirsiniz
           </p>
         </div>
       )}
@@ -613,7 +613,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           </div>
           <p className="text-lg font-bold text-slate-900">Atamalar kaydedildi!</p>
           <p className="text-sm text-slate-500 mt-1">
-            {selectedDates.length} g{'\u00fc'}n i{'\u00e7'}in ek mesai atand{'\u0131'}.
+            {selectedDates.length} gün için ek mesai atandı.
           </p>
         </div>
       )}
@@ -625,7 +625,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           {loading && (
             <div className="bg-white rounded-2xl border border-slate-200/80 py-16 flex items-center justify-center">
               <Loader2 size={24} className="text-violet-500 animate-spin" />
-              <span className="ml-2 text-sm text-slate-500">Y{'\u00fc'}kleniyor...</span>
+              <span className="ml-2 text-sm text-slate-500">Yükleniyor...</span>
             </div>
           )}
 
@@ -643,9 +643,9 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <div className="flex items-center gap-1.5">
                             <Clock size={12} className="text-slate-400" />
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              Haftal{'\u0131'}k Ek Mesai
+                              Haftalık Ek Mesai
                             </span>
-                            <Tooltip title={`Bu \u00e7al\u0131\u015fan\u0131n son 7 g\u00fcnl\u00fck ek mesai toplam\u0131 ve kalan limiti`} placement="top">
+                            <Tooltip title={`Bu çalışanın son 7 günlük ek mesai toplamı ve kalan limiti`} placement="top">
                               <Info size={11} className="text-slate-400 cursor-help" />
                             </Tooltip>
                           </div>
@@ -686,10 +686,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       <CalendarPlus size={14} className="text-violet-500" />
                       <span className="text-xs font-bold text-slate-700">
                         {fiscalPeriod?.current
-                          ? `${formatShortDate(fiscalPeriod.current.start)} \u2014 ${formatShortDate(fiscalPeriod.current.end)}`
-                          : `Mali D\u00f6nem`}
+                          ? `${formatShortDate(fiscalPeriod.current.start)} — ${formatShortDate(fiscalPeriod.current.end)}`
+                          : `Mali Dönem`}
                       </span>
-                      <Tooltip title={`Ek mesai yap\u0131lacak g\u00fcnleri se\u00e7in. Mavi g\u00fcnler zaten atanm\u0131\u015f g\u00fcnlerdir`} placement="top">
+                      <Tooltip title={`Ek mesai yapılacak günleri seçin. Mavi günler zaten atanmış günlerdir`} placement="top">
                         <Info size={12} className="text-slate-400 cursor-help" />
                       </Tooltip>
                     </div>
@@ -720,7 +720,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     {/* Legend */}
                     <div className="flex flex-wrap items-center gap-3 pt-1">
                       <div className="flex items-center gap-1 text-[9px] text-slate-400">
-                        <div className="w-2 h-2 rounded-sm bg-violet-500" /> Se{'\u00e7'}ili
+                        <div className="w-2 h-2 rounded-sm bg-violet-500" /> Seçili
                       </div>
                       <div className="flex items-center gap-1 text-[9px] text-slate-400">
                         <div className="w-2 h-2 rounded-sm bg-blue-200 ring-1 ring-blue-300" /> Dolu
@@ -729,7 +729,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <div className="w-2 h-2 rounded-sm bg-amber-50 border border-amber-200" /> Hafta sonu
                       </div>
                       <div className="flex items-center gap-1 text-[9px] text-slate-400">
-                        <div className="w-2 h-2 rounded-sm bg-slate-100" /> Ge{'\u00e7'}mi{'\u015f'}
+                        <div className="w-2 h-2 rounded-sm bg-slate-100" /> Geçmiş
                       </div>
                     </div>
                   </div>
@@ -739,7 +739,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-violet-700">
-                          {selectedDates.length} g{'\u00fc'}n se{'\u00e7'}ildi
+                          {selectedDates.length} gün seçildi
                         </span>
                         <button
                           onClick={clearSelection}
@@ -780,7 +780,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-bold text-slate-900 truncate">
-                          {selectedEmployee?.name || `\u00c7al\u0131\u015fan`}
+                          {selectedEmployee?.name || `Çalışan`}
                         </h3>
                         <p className="text-[11px] text-slate-500 truncate">
                           {typeof selectedEmployee?.department === 'object' ? selectedEmployee.department.name : (selectedEmployee?.department || '')}
@@ -791,8 +791,8 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     {/* Hours per day */}
                     <div>
                       <FieldLabel
-                        text={`Saat / G\u00fcn`}
-                        tooltip={`\u00c7al\u0131\u015fan\u0131n bu g\u00fcn en fazla kalabilece\u011fi ek mesai s\u00fcresi. Hafta i\u00e7i: 6 sa, hafta sonu: 12 sa \u00f6nerilir`}
+                        text={`Saat / Gün`}
+                        tooltip={`Çalışanın bu gün en fazla kalabileceği ek mesai süresi. Hafta içi: 6 sa, hafta sonu: 12 sa önerilir`}
                       />
                       <input
                         type="number"
@@ -815,8 +815,8 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     {/* Task description (required) */}
                     <div>
                       <FieldLabel
-                        text={`G\u00f6rev A\u00e7\u0131klamas\u0131`}
-                        tooltip={`Ek mesai s\u0131ras\u0131nda yap\u0131lacak i\u015fin k\u0131sa a\u00e7\u0131klamas\u0131 (zorunlu)`}
+                        text={`Görev Açıklaması`}
+                        tooltip={`Ek mesai sırasında yapılacak işin kısa açıklaması (zorunlu)`}
                         required
                       />
                       <textarea
@@ -824,7 +824,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         maxLength={500}
                         value={taskDescription}
                         onChange={e => setTaskDescription(e.target.value)}
-                        placeholder={`Yap\u0131lacak i\u015fin a\u00e7\u0131klamas\u0131...`}
+                        placeholder={`Yapılacak işin açıklaması...`}
                         className="w-full p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300 outline-none transition-all"
                       />
                       <p className="text-[9px] text-slate-400 text-right mt-0.5">
@@ -854,11 +854,11 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <div className="flex items-center gap-2">
                           <ShieldAlert size={16} className="text-red-600 flex-shrink-0" />
                           <span className="text-xs font-bold text-red-700">
-                            Haftal{'\u0131'}k limit a{'\u015f\u0131'}lacak! {projectedTotal.toFixed(1)} / {weeklyLimit} sa ({Math.round(progressPercent)}%)
+                            Haftalık limit aşılacak! {projectedTotal.toFixed(1)} / {weeklyLimit} sa ({Math.round(progressPercent)}%)
                           </span>
                         </div>
                         <p className="text-[10px] text-red-600 ml-6">
-                          Haftal{'\u0131'}k fazla {'\u00e7'}al{'\u0131\u015f'}ma s{'\u0131'}n{'\u0131'}r{'\u0131'} a{'\u015f\u0131'}lacak
+                          Haftalık fazla çalışma sınırı aşılacak
                         </p>
                       </div>
                     )}
@@ -881,7 +881,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       {submitting ? (
                         <>
                           <Loader2 size={14} className="animate-spin" />
-                          <span>Atan{'\u0131'}yor...</span>
+                          <span>Atanıyor...</span>
                         </>
                       ) : isOverLimit && confirmOverLimit ? (
                         <>
@@ -891,12 +891,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       ) : isOverLimit && !confirmOverLimit ? (
                         <>
                           <AlertTriangle size={14} />
-                          <span>{selectedDates.length} G{'\u00fc'}n {'\u0130\u00e7'}in Ata</span>
+                          <span>{selectedDates.length} Gün İçin Ata</span>
                         </>
                       ) : (
                         <>
                           <Save size={14} />
-                          <span>{selectedDates.length > 0 ? `${selectedDates.length} G\u00fcn \u0130\u00e7in Ata` : `Tarih Se\u00e7in`}</span>
+                          <span>{selectedDates.length > 0 ? `${selectedDates.length} Gün İçin Ata` : `Tarih Seçin`}</span>
                         </>
                       )}
                     </button>
@@ -912,7 +912,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">Mevcut Atamalar ve Talepler</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Bu d{'\u00f6'}nem i{'\u00e7'}in kay{'\u0131'}tl{'\u0131'} ek mesai i{'\u015f'}lemleri</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Bu dönem için kayıtlı ek mesai işlemleri</p>
                   </div>
                 </div>
 
@@ -920,14 +920,14 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                   {assignmentsLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 size={20} className="text-violet-500 animate-spin" />
-                      <span className="ml-2 text-sm text-slate-500">Y{'\u00fc'}kleniyor...</span>
+                      <span className="ml-2 text-sm text-slate-500">Yükleniyor...</span>
                     </div>
                   ) : assignments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10">
                       <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
                         <Clock size={20} className="text-slate-400" />
                       </div>
-                      <p className="text-sm font-medium text-slate-500">Bu d{'\u00f6'}nemde hen{'\u00fc'}z atama/talep yok</p>
+                      <p className="text-sm font-medium text-slate-500">Bu dönemde henüz atama/talep yok</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -935,10 +935,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <thead>
                           <tr className="border-b border-slate-100">
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Tarih</th>
-                            <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">S{'\u00fc'}re</th>
+                            <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Süre</th>
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Durum</th>
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Kaynak</th>
-                            <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">G{'\u00f6'}rev</th>
+                            <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Görev</th>
                           </tr>
                         </thead>
                         <tbody>

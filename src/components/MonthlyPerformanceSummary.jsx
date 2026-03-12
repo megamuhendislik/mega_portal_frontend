@@ -804,7 +804,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                 {filteredBreakdown
                                                     .slice(monthScrollIndex, monthScrollIndex + 3)
                                                     .map((m, idx) => {
-                                                        const monthNames = ["Ocak", "\u015eubat", "Mart", "Nisan", "May\u0131s", "Haziran", "Temmuz", "A\u011fustos", "Eyl\u00fcl", "Ekim", "Kas\u0131m", "Aral\u0131k"];
+                                                        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
                                                         const currentFiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
                                                         const isPast = m.month < currentFiscalMonth;
                                                         const isCurrent = m.month === currentFiscalMonth;

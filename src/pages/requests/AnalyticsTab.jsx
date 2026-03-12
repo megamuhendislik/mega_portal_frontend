@@ -409,7 +409,7 @@ const IncomingAnalyticsContent = ({ data, range }) => {
         },
         {
             title: 'Ort. Karar Suresi',
-            value: data.avg_decision_hours ?? '\u2014',
+            value: data.avg_decision_hours ?? '—',
             suffix: 'saat',
             gradient: 'from-blue-500 to-blue-600',
             icon: Timer,

@@ -547,7 +547,7 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
                         >
                             {managers.map(m => (
                                 <option key={m.id} value={m.id}>
-                                    {m.relationship_type === 'PRIMARY' ? '\u2B50 ' : '\uD83D\uDD39 '}
+                                    {m.relationship_type === 'PRIMARY' ? '⭐ ' : '🔹 '}
                                     {m.full_name}
                                     {m.relationship_type === 'PRIMARY' ? ' (Birincil)' : ' (İkincil)'}
                                 </option>

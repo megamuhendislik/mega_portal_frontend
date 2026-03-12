@@ -1071,7 +1071,7 @@ const KpiCard = ({ label, value, subValue, icon: Icon, color, trend }) => {
                 {trend !== undefined && trend !== null && (
                     <span className={`text-[10px] font-bold flex items-center gap-0.5 ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-500' : 'text-slate-400'}`}>
                         {trend > 0 ? <TrendingUp size={10} /> : trend < 0 ? <TrendingDown size={10} /> : <Minus size={10} />}
-                        {trend !== 0 ? `${Math.abs(trend)}%` : '\u2014'}
+                        {trend !== 0 ? `${Math.abs(trend)}%` : '—'}
                     </span>
                 )}
             </div>
@@ -3002,7 +3002,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-slate-400">Ort. F.M.</span>
-                                            <span className="font-bold text-amber-600">{dAvgOT > 0 ? formatMinutes(dAvgOT) : '\u2014'}</span>
+                                            <span className="font-bold text-amber-600">{dAvgOT > 0 ? formatMinutes(dAvgOT) : '—'}</span>
                                         </div>
                                         <div className="flex justify-between col-span-2 pt-1 border-t border-slate-200/50">
                                             <span className="text-slate-400">Net Bakiye</span>
@@ -3113,19 +3113,19 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] mb-2">
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">Çalışma</span>
-                                        <span className="font-bold text-indigo-600 tabular-nums">{_isSecondary ? '\u2014' : formatMinutes(person.total_worked || 0)}</span>
+                                        <span className="font-bold text-indigo-600 tabular-nums">{_isSecondary ? '—' : formatMinutes(person.total_worked || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">F. Mesai</span>
-                                        <span className="font-bold text-amber-600 tabular-nums">{(person.total_overtime || 0) > 0 ? formatMinutes(person.total_overtime) : '\u2014'}</span>
+                                        <span className="font-bold text-amber-600 tabular-nums">{(person.total_overtime || 0) > 0 ? formatMinutes(person.total_overtime) : '—'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-red-400 font-semibold">Kayıp</span>
-                                        <span className={`font-bold tabular-nums ${_isSecondary ? 'text-slate-300' : missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{_isSecondary ? '\u2014' : missing > 0 ? formatMinutes(missing) : '0'}</span>
+                                        <span className={`font-bold tabular-nums ${_isSecondary ? 'text-slate-300' : missing > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{_isSecondary ? '—' : missing > 0 ? formatMinutes(missing) : '0'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-slate-400">FM/Normal</span>
-                                        <span className="font-bold text-amber-500 tabular-nums">{_isSecondary ? '\u2014' : `%${personOTNormalRatio}`}</span>
+                                        <span className="font-bold text-amber-500 tabular-nums">{_isSecondary ? '—' : `%${personOTNormalRatio}`}</span>
                                     </div>
                                 </div>
 

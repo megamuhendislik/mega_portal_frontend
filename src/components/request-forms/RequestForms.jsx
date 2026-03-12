@@ -1530,7 +1530,7 @@ export const ExternalDutyForm = ({
                             ))}
                         </div>
                         <div className="mt-2 text-[10px] text-slate-400 text-center">
-                            Toplam {dutyHoursPreview.totals.total_days} {"\u0067\u00fc\u006e"} ({dutyHoursPreview.totals.working_days} {"\u0069\u015f"} {"\u0067\u00fc\u006e\u00fc"}, {dutyHoursPreview.totals.off_days} tatil)
+                            Toplam {dutyHoursPreview.totals.total_days} {"\u0067ü\u006e"} ({dutyHoursPreview.totals.working_days} {"\u0069ş"} {"\u0067ü\u006eü"}, {dutyHoursPreview.totals.off_days} tatil)
                         </div>
                     </div>
                 ) : dutyHoursLoading ? (

@@ -296,9 +296,9 @@ export default function ManagerPermissionTab() {
                     <div className="p-4 max-h-[400px] overflow-y-auto font-mono text-xs text-green-400 space-y-0.5">
                         {data.logs.map((log, i) => (
                             <div key={i} className={`
-                                ${typeof log === 'object' && log.message?.includes('\u274C') ? 'text-red-400' : ''}
-                                ${typeof log === 'object' && log.message?.includes('\u26A0') ? 'text-yellow-400' : ''}
-                                ${typeof log === 'object' && log.message?.includes('\u2550\u2550\u2550') ? 'text-cyan-400 font-bold' : ''}
+                                ${typeof log === 'object' && log.message?.includes('❌') ? 'text-red-400' : ''}
+                                ${typeof log === 'object' && log.message?.includes('⚠') ? 'text-yellow-400' : ''}
+                                ${typeof log === 'object' && log.message?.includes('═══') ? 'text-cyan-400 font-bold' : ''}
                             `}>
                                 {typeof log === 'object'
                                     ? `[${log.time}] ${log.message}${log.details ? ' (' + log.details + ')' : ''}`

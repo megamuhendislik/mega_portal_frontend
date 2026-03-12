@@ -428,7 +428,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                     refresh();
                                 } catch (e) {
                                     const errMsg = e.response?.data?.error || e.message;
-                                    setRecalcLogs(prev => [...prev, `> \u274C HATA: ${errMsg}`, '> Endpoint 404 ise: Backend deploy edilmemiş olabilir.']);
+                                    setRecalcLogs(prev => [...prev, `> ❌ HATA: ${errMsg}`, '> Endpoint 404 ise: Backend deploy edilmemiş olabilir.']);
                                 } finally {
                                     setRecalcLoading(false);
                                 }
@@ -446,9 +446,9 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                     setRecalcConsoleOpen(true);
                                     setRecalcLoading(true);
                                     setRecalcLogs([
-                                        '> \uD83D\uDE80 Temizlik İşlemi Başlatılıyor...',
-                                        '> \uD83D\uDD0C Redis Sunucusuna Bağlanılıyor...',
-                                        '> \u2622\uFE0F FLUSHALL komutu hazırlanıyor...'
+                                        '> 🚀 Temizlik İşlemi Başlatılıyor...',
+                                        '> 🔌 Redis Sunucusuna Bağlanılıyor...',
+                                        '> ☢️ FLUSHALL komutu hazırlanıyor...'
                                     ]);
 
                                     // Artificial delay for UX
@@ -458,16 +458,16 @@ export default function DashboardTab({ stats, refresh, loading }) {
 
                                     setRecalcLogs(prev => [
                                         ...prev,
-                                        '> \u2622\uFE0F KOMUT GÖNDERİLDİ: FLUSHALL',
-                                        `> \u2705 SUNUCU YANITI: ${res.data.status.toUpperCase()}`,
-                                        `> \uD83D\uDCC4 MESAJ: ${res.data.message}`,
-                                        `> \uD83D\uDDD1\uFE0F Silinen (Soft) Görev: ${res.data.purged_count}`,
-                                        '> \uD83C\uDFC1 İŞLEM TAMAMLANDI.'
+                                        '> ☢️ KOMUT GÖNDERİLDİ: FLUSHALL',
+                                        `> ✅ SUNUCU YANITI: ${res.data.status.toUpperCase()}`,
+                                        `> 📄 MESAJ: ${res.data.message}`,
+                                        `> 🗑️ Silinen (Soft) Görev: ${res.data.purged_count}`,
+                                        '> 🏁 İŞLEM TAMAMLANDI.'
                                     ]);
                                 } catch (e) {
                                     setRecalcLogs(prev => [
                                         ...prev,
-                                        `> \u274C HATA: ${e.response?.data?.error || e.message}`
+                                        `> ❌ HATA: ${e.response?.data?.error || e.message}`
                                     ]);
                                 } finally {
                                     setRecalcLoading(false);

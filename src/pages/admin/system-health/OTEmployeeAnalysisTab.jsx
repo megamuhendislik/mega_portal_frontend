@@ -178,7 +178,7 @@ export default function OTEmployeeAnalysisTab() {
             dataIndex: 'approval_manager',
             key: 'approval_manager',
             width: 120,
-            render: v => v || '\u2014',
+            render: v => v || '—',
         },
     ];
 
@@ -206,7 +206,7 @@ export default function OTEmployeeAnalysisTab() {
             dataIndex: 'department',
             key: 'department',
             width: 130,
-            render: v => <span className="text-xs">{v || '\u2014'}</span>,
+            render: v => <span className="text-xs">{v || '—'}</span>,
         },
         {
             title: 'Potansiyel',
@@ -321,7 +321,7 @@ export default function OTEmployeeAnalysisTab() {
                         </h2>
                         {period && (
                             <p className="text-xs text-gray-500 mt-1">
-                                Donem: {period.label || `${period.start_date} \u2014 ${period.end_date}`}
+                                Donem: {period.label || `${period.start_date} — ${period.end_date}`}
                             </p>
                         )}
                     </div>
