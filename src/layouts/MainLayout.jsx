@@ -54,8 +54,8 @@ const MainLayout = () => {
     const [isOvertimeModalOpen, setIsOvertimeModalOpen] = useState(false);
     const [lastAttendanceData, setLastAttendanceData] = useState(null);
 
-    // Live Status for break indicator
-    const [liveStatus, setLiveStatus] = useState(null);
+    // Break summary from today_summary (same source as Dashboard KALAN MOLA)
+    const [breakSummary, setBreakSummary] = useState(null);
 
     // Profile Reminder Popup (DB-backed via ui_preferences)
     const [showProfileReminder, setShowProfileReminder] = useState(false);
@@ -96,21 +96,18 @@ const MainLayout = () => {
         }
     }, [location.pathname, isMobile]);
 
-    // Poll live-status for break indicator
-    const employeeId = user?.employee?.id || user?.id;
-
-    const fetchLiveStatus = useCallback(async () => {
-        if (!employeeId) return;
+    // Poll today_summary for break indicator (same API as Dashboard KALAN MOLA)
+    const fetchBreakSummary = useCallback(async () => {
         try {
-            const res = await api.get(`/attendance/live-status/${employeeId}/status/`);
-            setLiveStatus(res.data);
+            const res = await api.get('/attendance/today_summary/');
+            setBreakSummary(res.data);
         } catch (e) {
             // Silently ignore - non-critical UI feature
         }
-    }, [employeeId]);
+    }, []);
 
-    useEffect(() => { fetchLiveStatus(); }, [fetchLiveStatus]);
-    useSmartPolling(fetchLiveStatus, 30000, !!employeeId);
+    useEffect(() => { fetchBreakSummary(); }, [fetchBreakSummary]);
+    useSmartPolling(fetchBreakSummary, 30000, true);
 
     const checkShiftStatus = async () => {
         try {
@@ -421,10 +418,11 @@ const MainLayout = () => {
                             </button>
                         )}
 
-                        {/* Mola Göstergesi — aktif vardiyası olan herkes (off-day'de gizle) */}
-                        {liveStatus?.status === 'INSIDE' && !liveStatus?.is_off_day && (liveStatus?.daily_break_allowance_seconds > 0) && (() => {
-                            const used = Math.round((liveStatus.potential_break_seconds || 0) / 60);
-                            const allowed = Math.round((liveStatus.daily_break_allowance_seconds || 1800) / 60);
+                        {/* Mola Göstergesi — Dashboard KALAN MOLA ile aynı kaynak (today_summary) */}
+                        {breakSummary && !breakSummary.is_off_day && (breakSummary.break_allowance > 0) && (() => {
+                            const used = Math.round((breakSummary.break_used || 0) / 60);
+                            const allowed = Math.round((breakSummary.break_allowance || 1800) / 60);
+                            const remaining = Math.max(0, allowed - used);
                             const isOver = used > allowed;
                             const isFull = used === allowed;
                             return (
