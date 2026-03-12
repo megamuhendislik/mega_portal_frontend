@@ -159,7 +159,8 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                         {leaveCoverageMap[log.work_date] && (
                                             <LeaveBadge leave={{ is_on_leave: true, ...leaveCoverageMap[log.work_date] }} size="sm" />
                                         )}
-                                        {getStatusBadge(log)}
+                                        {/* Tam gün izin/rapor varsa attendance status badge gösterme — izin zaten onaylı */}
+                                        {!(leaveCoverageMap[log.work_date] && !leaveCoverageMap[log.work_date].is_hourly) && getStatusBadge(log)}
                                         {log.overtime_minutes > 0 && (
                                             <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 pl-1">
                                                 <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
