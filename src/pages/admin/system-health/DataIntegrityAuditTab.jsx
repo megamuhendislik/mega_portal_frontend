@@ -32,6 +32,7 @@ const CATEGORY_LABELS = {
     multiple_primary_managers: 'Çoklu Birincil Yönetici',
     notification_gap: 'Eksik Bildirim',
     ot_card_verification: 'OT-Kart Doğrulama',
+    leave_credit_mismatch: 'İzin Kredi Uyumsuzluğu',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
