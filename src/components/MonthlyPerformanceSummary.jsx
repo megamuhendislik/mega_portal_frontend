@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale, ChevronUp, ChevronDown } from 'lucide-react';
-import { Popover } from 'antd';
+import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale, ChevronUp, ChevronDown, Info } from 'lucide-react';
+import { Popover, Tooltip } from 'antd';
 
 const EffortDetailPopover = ({ stats }) => {
     if (!stats) return null;
@@ -106,14 +106,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pRemaining = (remainingSec / targetSec) * 100;
             }
 
-            // --- NET SURPLUS LOGIC ---
-            // Formula: max(0, (Normal + OT) - Target)
-            const surplusSec = Math.max(0, netWorkSec - targetSec);
-            const isSurplus = surplusSec > 0;
+            // Bar 2: Total Progress (Normal + OT + Leave + Report)
+            const totalEforSec = netWorkSec + creditedSec;
 
-            // Bar 2: Total Progress (Normal + OT)
-            // If Net Work > Target, bar is full (100%) + Overtime indicator
-            const pTotal = targetSec > 0 ? Math.min(100, (netWorkSec / targetSec) * 100) : 0;
+            // --- NET SURPLUS LOGIC ---
+            // Formula: max(0, (Normal + OT + Credits) - Target)
+            const surplusSec = Math.max(0, totalEforSec - targetSec);
+            const isSurplus = surplusSec > 0;
+            const pTotal = targetSec > 0 ? Math.min(100, (totalEforSec / targetSec) * 100) : 0;
+
+            // Segment percentages for stacked bar (relative to target)
+            const pNormal = targetSec > 0 ? Math.min(100, (realizedSec / targetSec) * 100) : 0;
+            const pOtApproved = targetSec > 0 ? Math.min(100 - pNormal, (overtimeSec / targetSec) * 100) : 0;
+            const pLeave = targetSec > 0 ? Math.min(100 - pNormal - pOtApproved, (leaveSec / targetSec) * 100) : 0;
+            const pHealthReport = targetSec > 0 ? Math.min(100 - pNormal - pOtApproved - pLeave, (healthReportSec / targetSec) * 100) : 0;
 
 
             let lateCount = 0;
@@ -157,7 +163,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pCompleted,
                 pMissing,
                 pRemaining,
-                pTotal, // For Bar 2
+                pTotal, pNormal, pOtApproved, pLeave, pHealthReport, // For Bar 2 stacked segments
+                normalHours: (realizedSec / 3600).toFixed(1),
                 lateCount,
 
                 // OT Breakdown
@@ -181,8 +188,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 // Projected totals (approved + pending + potential)
                 projectedWorkHours: ((netWorkSec + otPendingSec + otPotentialSec) / 3600).toFixed(1),
                 pProjected: targetSec > 0 ? Math.min(100, ((netWorkSec + otPendingSec + otPotentialSec) / targetSec) * 100) : 0,
-                pPending: targetSec > 0 ? Math.min(100 - (Math.min(100, (netWorkSec / targetSec) * 100)), (otPendingSec / targetSec) * 100) : 0,
-                pPotential: targetSec > 0 ? Math.min(100 - (Math.min(100, ((netWorkSec + otPendingSec) / targetSec) * 100)), (otPotentialSec / targetSec) * 100) : 0,
+                pPending: targetSec > 0 ? Math.min(100 - pTotal, (otPendingSec / targetSec) * 100) : 0,
+                pPotential: targetSec > 0 ? Math.min(100 - Math.min(100, ((totalEforSec + otPendingSec) / targetSec) * 100), (otPotentialSec / targetSec) * 100) : 0,
 
                 // Past target = completed + missing = what should have been done by today
                 pastTargetSec: realizedSec + missingSec,
@@ -410,45 +417,101 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         {/* Header row */}
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
-                                Toplam Efor {stats.hasCredited ? '(İzin/Rapor Dahil)' : '(Onaylı Mesai Dahil)'}
+                                Toplam Efor
+                                <Tooltip title="Toplam Efor = Normal Mesai + Onaylı Ek Mesai + İzin Saatleri + Sağlık Raporu saatlerinin toplamıdır." placement="top">
+                                    <Info className="w-3.5 h-3.5 text-slate-400 cursor-help" />
+                                </Tooltip>
                                 {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                             </span>
                             <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.hasCredited ? stats.displayTotalHours : stats.netWorkHours} / {stats.targetHours} sa</span>
                         </div>
 
-                        {/* Progress Bar */}
-                        <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
-                            <div
-                                className={`h-full transition-all duration-1000 relative z-10 ${stats.isSurplus ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.5)]'}`}
-                                style={{ width: `${stats.pTotal}%` }}
-                            >
-                                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent"></div>
-                            </div>
-                            {stats.pPending > 0 && (
-                                <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-50"
-                                    style={{ left: `${stats.pTotal}%`, width: `${stats.pPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 3px, #f59e0b 3px, #f59e0b 6px)' }} />
+                        {/* Legend */}
+                        <div className="flex gap-3 mb-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
+                            <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Normal</span>
+                            <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Ek Mesai</span>
+                            {parseFloat(stats.leaveHours) > 0 && (
+                                <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>İzin</span>
                             )}
+                            {parseFloat(stats.healthReportHours) > 0 && (
+                                <span className="flex items-center gap-1.5 text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>Rapor</span>
+                            )}
+                            {parseFloat(stats.otPendingHours) > 0 && (
+                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>Bekleyen</span>
+                            )}
+                            {parseFloat(stats.otPotentialHours) > 0 && (
+                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span>Potansiyel</span>
+                            )}
+                        </div>
+
+                        {/* Stacked Progress Bar */}
+                        <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50 flex">
+                            {/* Normal Mesai — Mavi */}
+                            {stats.pNormal > 0 && (
+                                <Tooltip title={`Normal Mesai: ${stats.normalHours} sa`}>
+                                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.4)] relative group"
+                                        style={{ width: `${stats.pNormal}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
+                            {/* Onaylı Ek Mesai — Yeşil */}
+                            {stats.pOtApproved > 0 && (
+                                <Tooltip title={`Onaylı Ek Mesai: ${stats.overtimeHours} sa`}>
+                                    <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.4)] relative group"
+                                        style={{ width: `${stats.pOtApproved}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
+                            {/* İzin — Cyan */}
+                            {stats.pLeave > 0 && (
+                                <Tooltip title={`İzin: ${stats.leaveHours} sa`}>
+                                    <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(6,182,212,0.4)] relative group"
+                                        style={{ width: `${stats.pLeave}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
+                            {/* Sağlık Raporu — Turuncu */}
+                            {stats.pHealthReport > 0 && (
+                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportHours} sa`}>
+                                    <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(249,115,22,0.4)] relative group"
+                                        style={{ width: `${stats.pHealthReport}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
+                            {/* Bekleyen OT — Çizgili amber */}
+                            {stats.pPending > 0 && (
+                                <div className="h-full transition-all duration-1000 opacity-50"
+                                    style={{ width: `${stats.pPending}%`, background: 'repeating-linear-gradient(45deg, #fef3c7, #fef3c7 3px, #f59e0b 3px, #f59e0b 6px)' }} />
+                            )}
+                            {/* Potansiyel OT — Çizgili gri */}
                             {stats.pPotential > 0 && (
-                                <div className="absolute top-0 h-full z-[5] transition-all duration-1000 opacity-40"
-                                    style={{ left: `${stats.pTotal + stats.pPending}%`, width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #94a3b8 3px, #94a3b8 6px)' }} />
+                                <div className="h-full transition-all duration-1000 opacity-40"
+                                    style={{ width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #94a3b8 3px, #94a3b8 6px)' }} />
                             )}
                         </div>
 
                         {/* Summary row below bar */}
                         <div className="flex items-center justify-between mt-2 px-1">
                             <div className="flex items-center gap-3 text-[10px] font-bold flex-wrap">
-                                <span className="text-slate-600">Onaylı: <span className="font-black">{stats.netWorkHours} sa</span></span>
+                                <span className="text-blue-600">{stats.normalHours} sa</span>
+                                {parseFloat(stats.overtimeHours) > 0 && (
+                                    <span className="text-emerald-600">+ {stats.overtimeHours} sa</span>
+                                )}
                                 {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="text-cyan-600">+ İzin: <span className="font-black">{stats.leaveHours} sa</span></span>
+                                    <span className="text-cyan-600">+ {stats.leaveHours} sa</span>
                                 )}
                                 {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="text-sky-600">+ Rapor: <span className="font-black">{stats.healthReportHours} sa</span></span>
+                                    <span className="text-orange-600">+ {stats.healthReportHours} sa</span>
                                 )}
                                 {parseFloat(stats.otPendingHours) > 0 && (
-                                    <span className="text-amber-600">+ Bekleyen: <span className="font-black">{stats.otPendingHours} sa</span></span>
+                                    <span className="text-amber-600">+ {stats.otPendingHours} sa <span className="text-[9px] font-normal">(bekleyen)</span></span>
                                 )}
                                 {parseFloat(stats.otPotentialHours) > 0 && (
-                                    <span className="text-slate-500">+ Potansiyel: <span className="font-black">{stats.otPotentialHours} sa</span></span>
+                                    <span className="text-slate-500">+ {stats.otPotentialHours} sa <span className="text-[9px] font-normal">(potansiyel)</span></span>
                                 )}
                             </div>
                             {(parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) && (
