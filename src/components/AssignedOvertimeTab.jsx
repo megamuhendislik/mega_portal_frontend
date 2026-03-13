@@ -542,6 +542,14 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>
                 {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+                {managers.length === 0 && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-xs font-bold text-red-700 flex items-center gap-1.5">
+                            <AlertTriangle size={14} />
+                            Yöneticiniz tanımlanmamış. İK ile iletişime geçin. Talep oluşturulamaz.
+                        </p>
+                    </div>
+                )}
                 {showManagerSelect && (
                     <div>
                         <label className="block text-xs font-bold text-slate-500 mb-1.5">Onay Yöneticisi</label>
@@ -564,7 +572,7 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
                     placeholder="Açıklama (opsiyonel)..." className="input-field resize-none" />
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
-                    <button onClick={() => { onSubmit(reason, selectedManagerId); setReason(''); }} disabled={loading}
+                    <button onClick={() => { onSubmit(reason, selectedManagerId); setReason(''); }} disabled={loading || managers.length === 0}
                         className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all">
                         {loading ? 'Gönderiliyor...' : 'Talep Et'}
                     </button>
