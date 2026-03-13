@@ -3,7 +3,7 @@ import {
     Clock, Calendar, XCircle, Users, Plus, Loader2, CheckCircle2,
     ChevronDown, ChevronRight, Zap, PenLine, FileText, Send, TrendingUp,
     ClipboardList, CalendarCheck, X, LayoutList, UserCheck,
-    LogIn, LogOut, Coffee, Briefcase, Sun, Moon, Pencil
+    LogIn, LogOut, Coffee, Briefcase, Sun, Moon, Pencil, AlertTriangle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -632,6 +632,7 @@ const AssignedOvertimeTab = () => {
     const [manualForm, setManualForm] = useState({ date: '', start_time: '', end_time: '', reason: '' });
     const [manualError, setManualError] = useState('');
     const [manualSubmitting, setManualSubmitting] = useState(false);
+    const [selectedManualManagerId, setSelectedManualManagerId] = useState(null);
 
     useEffect(() => {
         if (!manualForm.date) {
@@ -663,6 +664,16 @@ const AssignedOvertimeTab = () => {
         };
         checkAssignment();
     }, [manualForm.date, claimableData.intended]);
+
+    // Auto-select manager for manual entry form
+    useEffect(() => {
+        if (managers.length === 1) {
+            setSelectedManualManagerId(managers[0].id);
+        } else if (managers.length > 1) {
+            const primary = managers.find(m => m.relationship_type === 'PRIMARY');
+            setSelectedManualManagerId(primary ? primary.id : managers[0]?.id);
+        }
+    }, [managers]);
 
     // ── Filters ──
     const [requestFilter, setRequestFilter] = useState({ status: 'ALL', source: 'ALL', date_from: '', date_to: '' });
@@ -748,6 +759,11 @@ const AssignedOvertimeTab = () => {
             };
             if (manualMatchMode === 'match' && manualAssignment) {
                 payload.assignment_id = manualAssignment.id;
+            }
+            if (selectedManualManagerId) {
+                payload.target_approver_id = selectedManualManagerId;
+            } else if (managers.length === 1) {
+                payload.target_approver_id = managers[0].id;
             }
             await api.post('/overtime-requests/manual-entry/', payload);
             setManualForm({ date: '', start_time: '', end_time: '', reason: '' });
@@ -1044,7 +1060,45 @@ const AssignedOvertimeTab = () => {
                                         <textarea rows="2" value={manualForm.reason} onChange={e => setManualForm({ ...manualForm, reason: e.target.value })}
                                             placeholder="Yapılan işin açıklaması..." className="input-field resize-none" required />
                                     </div>
-                                    <button type="submit" disabled={manualSubmitting}
+                                    {/* Manager selection for manual OT */}
+                                    {managers.length === 0 && (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                                            <p className="text-xs font-bold text-red-700 flex items-center gap-1.5">
+                                                <AlertTriangle size={14} />
+                                                Yöneticiniz tanımlanmamış. İK ile iletişime geçin.
+                                            </p>
+                                        </div>
+                                    )}
+                                    {managers.length === 1 && (
+                                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Onaya Gidecek Kişi</p>
+                                            <p className="text-sm font-bold text-slate-800">
+                                                {managers[0].relationship_type === 'PRIMARY' ? '⭐ ' : '🔹 '}
+                                                {managers[0].full_name}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {managers.length > 1 && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                                                Onay Yöneticisi <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                value={selectedManualManagerId || ''}
+                                                onChange={e => setSelectedManualManagerId(Number(e.target.value))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 outline-none"
+                                            >
+                                                {managers.map(m => (
+                                                    <option key={m.id} value={m.id}>
+                                                        {m.relationship_type === 'PRIMARY' ? '⭐ ' : '🔹 '}
+                                                        {m.full_name}
+                                                        {m.relationship_type === 'PRIMARY' ? ' (Birincil)' : ' (İkincil)'}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    <button type="submit" disabled={manualSubmitting || managers.length === 0}
                                         className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center gap-2">
                                         {manualSubmitting ? <Loader2 size={14} className="animate-spin" /> : <PenLine size={14} />}
                                         {manualSubmitting ? 'Gönderiliyor...' : 'Talep Oluştur'}
