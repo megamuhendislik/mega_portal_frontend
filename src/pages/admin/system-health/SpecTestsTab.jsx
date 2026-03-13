@@ -99,6 +99,8 @@ export default function SpecTestsTab() {
   const [currentDomain, setCurrentDomain] = useState(null);
   const [progressPercent, setProgressPercent] = useState(0);
   const [showLogs, setShowLogs] = useState(true);
+  const [runningDetails, setRunningDetails] = useState([]);
+  const [runningOutput, setRunningOutput] = useState('');
   const pollingRef = useRef(null);
 
   const pollStatus = useCallback((taskId, targetDomains) => {
@@ -111,6 +113,9 @@ export default function SpecTestsTab() {
           // Update current domain info
           if (data.current_domain) setCurrentDomain(data.current_domain);
           if (data.progress != null) setProgressPercent(data.progress);
+          // Live running test details
+          setRunningDetails(data.running_details || []);
+          setRunningOutput(data.running_output || '');
           // Update completed domain results
           if (data.results) {
             const newResults = {};
@@ -134,6 +139,8 @@ export default function SpecTestsTab() {
           setGlobalRunning(false);
           setCurrentDomain(null);
           setProgressPercent(100);
+          setRunningDetails([]);
+          setRunningOutput('');
           // Auto-expand ALL domains with results
           const allKeys = (data.results || []).map(r => r.domain);
           setExpandedDomains(allKeys);
@@ -282,7 +289,7 @@ export default function SpecTestsTab() {
         />
       )}
 
-      {/* Running Progress */}
+      {/* Running Progress + Live Details */}
       {globalRunning && (
         <Card size="small" style={{ marginBottom: 16, borderLeft: '4px solid #1890ff' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -302,6 +309,63 @@ export default function SpecTestsTab() {
               />
             </div>
           </div>
+
+          {/* Live test results for currently running domain */}
+          {runningDetails.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>
+                Canlı Sonuçlar ({runningDetails.length} test tamamlandı)
+              </Text>
+              <div style={{
+                maxHeight: 200, overflow: 'auto',
+                background: '#fafafa', borderRadius: 4, padding: 8,
+              }}>
+                {runningDetails.map((t, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    padding: '2px 4px', fontSize: 12,
+                    borderBottom: '1px solid #f0f0f0',
+                  }}>
+                    <Text code style={{ fontSize: 11 }}>{t.name}</Text>
+                    <Tag
+                      color={t.status === 'PASS' ? 'success' : 'error'}
+                      style={{ margin: 0, fontSize: 10, lineHeight: '18px' }}
+                    >
+                      {t.status === 'PASS' ? 'OK' : 'FAIL'}
+                    </Tag>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px', color: '#1890ff' }}>
+                  <LoadingOutlined spin style={{ fontSize: 10 }} />
+                  <Text type="secondary" style={{ fontSize: 11 }}>Sonraki test çalışıyor...</Text>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Live raw output */}
+          {showLogs && runningOutput && (
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                <CodeOutlined /> Canlı Log
+              </Text>
+              <pre style={{
+                fontSize: 10,
+                maxHeight: 200,
+                overflow: 'auto',
+                background: '#1a1a2e',
+                color: '#e0e0e0',
+                padding: 8,
+                borderRadius: 4,
+                fontFamily: 'Consolas, Monaco, monospace',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                margin: 0,
+              }}>
+                {runningOutput}
+              </pre>
+            </div>
+          )}
         </Card>
       )}
 
