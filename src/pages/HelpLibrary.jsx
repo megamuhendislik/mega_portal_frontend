@@ -302,6 +302,25 @@ const HelpLibrary = () => {
                                                 <div className="bg-white rounded-xl border border-slate-200/80 p-4 flex-1 hover:shadow-sm transition-shadow mb-1">
                                                     <h3 className="text-sm font-bold text-slate-700 mb-1">{step.title}</h3>
                                                     <p className="text-sm text-slate-500 leading-relaxed">{step.description}</p>
+                                                    {step.image && (
+                                                        <div
+                                                            className="mt-3 rounded-lg border border-slate-200/80 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 group/img"
+                                                            onClick={() => openLightbox(step.image)}
+                                                        >
+                                                            <div className="relative aspect-video overflow-hidden">
+                                                                <img src={step.image.src} alt={step.image.caption} className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover/img:scale-105" loading="lazy" />
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                                                                    <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-lg">
+                                                                        <ZoomIn size={13} className="text-indigo-600" />
+                                                                        <span className="text-indigo-600 text-[11px] font-semibold">Büyüt</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="px-3 py-2 bg-slate-50 border-t border-slate-100">
+                                                                <p className="text-[11px] text-slate-500 font-medium leading-snug line-clamp-2">{step.image.caption}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

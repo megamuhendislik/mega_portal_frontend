@@ -13,11 +13,7 @@ const helpContent = [
         description: 'Kart okutma ile giriş/çıkış, tolerans kuralları, mola takibi ve canlı durum bilgisi',
         permission: null,
         link: '/',
-        images: [
-            { src: '/help-images/02-dashboard-top.png', caption: 'Ana sayfa — özet kartları (çalışma süresi, mola, fazla mesai, izin durumu), haftalık OT limiti ilerleme çubuğu' },
-            { src: '/help-images/02-dashboard-full.png', caption: 'Ana sayfa (devamı) — devam analiz grafiği, son aktiviteler, yaklaşan etkinlikler ve aylık performans özeti' },
-            { src: '/help-images/07-attendance.png', caption: 'Mesai Takibi — ekip listesi, çalışma/fazla mesai/eksik süre sütunları, çevrimiçi durum göstergeleri', permission: 'APPROVAL_OVERTIME' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Giriş Yapma (Kart Okutma)',
@@ -25,7 +21,8 @@ const helpContent = [
             },
             {
                 title: 'Canlı Durum Takibi',
-                description: 'Dashboard\'daki 5 özet kartında anlık durumunuzu görebilirsiniz: (1) Bugün Çalışma — toplam çalışılan saat ve hedef, (2) Kalan Mola — kullanılan/hak mola dakikası, (3) Fazla Mesai — onaylanan/bekleyen/potansiyel dakikalar, (4) İzin Durumu — yıllık izin bakiyesi (gün) + mazeret izni (saat), (5) Doğum Günü İzni — sadece doğum ayınızda görünür. Bu veriler her 60 saniyede bir otomatik güncellenir. Sekmeyi kapattığınızda güncelleme durur, geri açtığınızda otomatik yenilenir.'
+                description: 'Dashboard\'daki 5 özet kartında anlık durumunuzu görebilirsiniz: (1) Bugün Çalışma — toplam çalışılan saat ve hedef, (2) Kalan Mola — kullanılan/hak mola dakikası, (3) Fazla Mesai — onaylanan/bekleyen/potansiyel dakikalar, (4) İzin Durumu — yıllık izin bakiyesi (gün) + mazeret izni (saat), (5) Doğum Günü İzni — sadece doğum ayınızda görünür. Bu veriler her 60 saniyede bir otomatik güncellenir. Sekmeyi kapattığınızda güncelleme durur, geri açtığınızda otomatik yenilenir.',
+                image: { src: '/help-images/02-dashboard-top.png', caption: 'Ana sayfa — özet kartları (çalışma süresi, mola, fazla mesai, izin durumu), haftalık OT limiti ilerleme çubuğu' }
             },
             {
                 title: 'Haftalık Fazla Mesai Limiti',
@@ -41,7 +38,8 @@ const helpContent = [
             },
             {
                 title: 'Son Aktiviteler ve Yaklaşan Etkinlikler',
-                description: 'Dashboard\'un sağ panelinde son talep durumlarınız (onay/red/bekleyen) ve önümüzdeki 14 güne ait etkinlikler (tatiller, izinler, mesai atamaları, sağlık raporları) listelenir. Ardışık tatiller otomatik birleştirilir (örn: "Ramazan Bayramı, 3 gün"). Etkinlikler renk kodludur: kırmızı=tatil, yeşil=izin, mor=mesai ataması, amber=mesai talebi, pembe=sağlık raporu.'
+                description: 'Dashboard\'un sağ panelinde son talep durumlarınız (onay/red/bekleyen) ve önümüzdeki 14 güne ait etkinlikler (tatiller, izinler, mesai atamaları, sağlık raporları) listelenir. Ardışık tatiller otomatik birleştirilir (örn: "Ramazan Bayramı, 3 gün"). Etkinlikler renk kodludur: kırmızı=tatil, yeşil=izin, mor=mesai ataması, amber=mesai talebi, pembe=sağlık raporu.',
+                image: { src: '/help-images/02-dashboard-full.png', caption: 'Ana sayfa (devamı) — devam analiz grafiği, son aktiviteler, yaklaşan etkinlikler ve aylık performans özeti' }
             }
         ],
         tips: [
@@ -66,17 +64,12 @@ const helpContent = [
         description: 'Kişisel bilgiler, iletişim, bildirim tercihleri ve şifre yönetimi',
         permission: null,
         link: '/profile',
-        images: [
-            { src: '/help-images/03-profile-personal.png', caption: 'Profilim sekmesi — kişisel bilgiler (ad, soyad, e-posta, TC, doğum tarihi, telefon), sol panelde avatar ve sicil numarası' },
-            { src: '/help-images/03-profile-contact.png', caption: 'İletişim sekmesi — ikinci telefon, adres, acil durum kişisi bilgileri' },
-            { src: '/help-images/03-profile-notifications.png', caption: 'Bildirimler sekmesi — 7 bildirim tercih toggle\'ı (izin onay/red, mesai onay/red, vekalet, eskalasyon, sistem duyuruları)' },
-            { src: '/help-images/03-profile-security.png', caption: 'Güvenlik sekmesi — eski şifre, yeni şifre ve şifre onay alanları ile şifre değiştirme formu' }
-        ],
+        images: [],
         steps: [
-            { title: 'Kişisel Bilgiler (Profilim Sekmesi)', description: 'Sol panelde büyük avatar (adınızın baş harfleri), ad-soyad, departman ve sicil numaranız görünür. Sağ panelde e-posta, TC kimlik no, doğum tarihi ve telefon alanlarını düzenleyebilirsiniz. Ad, soyad, departman ve pozisyon bilgileri yönetici tarafından atandığı için salt okunurdur.' },
-            { title: 'İletişim Bilgileri', description: '"İletişim" sekmesinde ikinci telefon numarası, adres (metin alanı) ve acil durum iletişim bilgilerinizi (kişi adı + telefon) güncelleyebilirsiniz. Bu bilgiler Şirket Rehberi\'nde görünür.' },
-            { title: 'Bildirim Tercihleri', description: '"Bildirimler" sekmesinde 7 farklı bildirim türünü açıp kapatabilirsiniz: İzin Onaylandı (yeşil), İzin Reddedildi (kırmızı), Mesai Onaylandı (yeşil), Mesai Reddedildi (kırmızı), Vekâlet Talepleri (amber), Eskalasyon Uyarıları (turuncu), Sistem Duyuruları (mavi). Her toggle\'ın yanında açıklama metni bulunur.' },
-            { title: 'Şifre Değiştirme', description: '"Güvenlik" sekmesinden eski şifrenizi girip yeni şifre belirleyebilirsiniz. Şifre alanlarında göz ikonu ile şifreyi göster/gizle yapabilirsiniz. Yeni şifre en az 6 karakter olmalıdır. Şifre onayı eşleşmelidir. Sistem yöneticisi şifrenizi sıfırladıysa, ilk girişte otomatik olarak Güvenlik sekmesine yönlendirilirsiniz.' }
+            { title: 'Kişisel Bilgiler (Profilim Sekmesi)', description: 'Sol panelde büyük avatar (adınızın baş harfleri), ad-soyad, departman ve sicil numaranız görünür. Sağ panelde e-posta, TC kimlik no, doğum tarihi ve telefon alanlarını düzenleyebilirsiniz. Ad, soyad, departman ve pozisyon bilgileri yönetici tarafından atandığı için salt okunurdur.', image: { src: '/help-images/03-profile-personal.png', caption: 'Profilim sekmesi — kişisel bilgiler (ad, soyad, e-posta, TC, doğum tarihi, telefon), sol panelde avatar ve sicil numarası' } },
+            { title: 'İletişim Bilgileri', description: '"İletişim" sekmesinde ikinci telefon numarası, adres (metin alanı) ve acil durum iletişim bilgilerinizi (kişi adı + telefon) güncelleyebilirsiniz. Bu bilgiler Şirket Rehberi\'nde görünür.', image: { src: '/help-images/03-profile-contact.png', caption: 'İletişim sekmesi — ikinci telefon, adres, acil durum kişisi bilgileri' } },
+            { title: 'Bildirim Tercihleri', description: '"Bildirimler" sekmesinde 7 farklı bildirim türünü açıp kapatabilirsiniz: İzin Onaylandı (yeşil), İzin Reddedildi (kırmızı), Mesai Onaylandı (yeşil), Mesai Reddedildi (kırmızı), Vekâlet Talepleri (amber), Eskalasyon Uyarıları (turuncu), Sistem Duyuruları (mavi). Her toggle\'ın yanında açıklama metni bulunur.', image: { src: '/help-images/03-profile-notifications.png', caption: 'Bildirimler sekmesi — 7 bildirim tercih toggle\'ı (izin onay/red, mesai onay/red, vekalet, eskalasyon, sistem duyuruları)' } },
+            { title: 'Şifre Değiştirme', description: '"Güvenlik" sekmesinden eski şifrenizi girip yeni şifre belirleyebilirsiniz. Şifre alanlarında göz ikonu ile şifreyi göster/gizle yapabilirsiniz. Yeni şifre en az 6 karakter olmalıdır. Şifre onayı eşleşmelidir. Sistem yöneticisi şifrenizi sıfırladıysa, ilk girişte otomatik olarak Güvenlik sekmesine yönlendirilirsiniz.', image: { src: '/help-images/03-profile-security.png', caption: 'Güvenlik sekmesi — eski şifre, yeni şifre ve şifre onay alanları ile şifre değiştirme formu' } }
         ],
         tips: [
             { type: 'info', text: 'Profil sayfanızdaki departman, pozisyon ve sicil numarası bilgileri yönetici tarafından atanır. Bu alanları kendiniz değiştiremezsiniz.' },
@@ -97,14 +90,12 @@ const helpContent = [
         description: 'Yıllık izin, mazeret izni, avans izin başvurusu, sıralı düşüm sistemi ve bakiye takibi',
         permission: null,
         link: '/requests',
-        images: [
-            { src: '/help-images/10-requests-my.png', caption: 'Kendi Taleplerim sekmesi — izin/mesai/kartsız giriş talep listesi, durum filtreleri ve yeni talep oluşturma' },
-            { src: '/help-images/10-requests.png', caption: 'Talepler sayfası — 4 sekmeli yapı (Kendi Taleplerim, Gelen Talepler, Ek Mesai, Analiz), talep detay görünümü' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'İzin Bakiyesi Kontrolü',
-                description: 'Dashboard\'daki "İzin Durumu" kartında yıllık izin bakiyenizi (gün olarak) ve mazeret izni bakiyenizi (saat olarak, yıllık 18 saat) görebilirsiniz. Talepler sayfasında daha detaylı bilgi: toplam hak ediş, kullanılan gün, avans kullanımı ve kalan bakiye. Bakiye "İlk Hak Edilen → İlk Düşülür" yöntemiyle hesaplanır.'
+                description: 'Dashboard\'daki "İzin Durumu" kartında yıllık izin bakiyenizi (gün olarak) ve mazeret izni bakiyenizi (saat olarak, yıllık 18 saat) görebilirsiniz. Talepler sayfasında daha detaylı bilgi: toplam hak ediş, kullanılan gün, avans kullanımı ve kalan bakiye. Bakiye "İlk Hak Edilen → İlk Düşülür" yöntemiyle hesaplanır.',
+                image: { src: '/help-images/10-requests-my.png', caption: 'Kendi Taleplerim sekmesi — izin/mesai/kartsız giriş talep listesi, durum filtreleri ve yeni talep oluşturma' }
             },
             {
                 title: 'Yeni İzin Talebi Oluşturma',
@@ -139,13 +130,12 @@ const helpContent = [
         description: 'Üç kaynaklı ek mesai sistemi (Planlı/Algılanan/Manuel), haftalık limit, talep akışı ve 2 mali ay kuralı',
         permission: null,
         link: '/requests',
-        images: [
-            { src: '/help-images/10-requests.png', caption: 'Ek Mesai sekmesi — planlı/algılanan/manuel mesai listesi, gün bazlı gruplama, segment bazlı talep butonları ve durum rozetleri' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Üç Mesai Kaynağını Anlama',
-                description: 'Sistem 3 farklı kaynaktan ek mesai yönetir: (1) Planlı Mesai (INTENDED) — yöneticiniz tarafından size atanan, önceden planlanmış mesai. (2) Algılanan Mesai (POTENTIAL) — vardiya saatinizi aştığınızda sistem tarafından otomatik tespit edilen mesai. Vardiya öncesi erken giriş de algılanır. (3) Manuel Giriş (MANUAL) — geçmiş bir tarih için sizin elle girdiğiniz mesai talebi.'
+                description: 'Sistem 3 farklı kaynaktan ek mesai yönetir: (1) Planlı Mesai (INTENDED) — yöneticiniz tarafından size atanan, önceden planlanmış mesai. (2) Algılanan Mesai (POTENTIAL) — vardiya saatinizi aştığınızda sistem tarafından otomatik tespit edilen mesai. Vardiya öncesi erken giriş de algılanır. (3) Manuel Giriş (MANUAL) — geçmiş bir tarih için sizin elle girdiğiniz mesai talebi.',
+                image: { src: '/help-images/10-requests.png', caption: 'Ek Mesai sekmesi — planlı/algılanan/manuel mesai listesi, gün bazlı gruplama, segment bazlı talep butonları ve durum rozetleri' }
             },
             {
                 title: 'Planlı Mesai (Yönetici Ataması)',
@@ -188,13 +178,12 @@ const helpContent = [
         description: 'Günlük yemek siparişi verme, sipariş durumu, personel adına talep ve toplu yönetim',
         permission: 'PAGE_MEAL_ORDERS',
         link: '/meal-orders',
-        images: [
-            { src: '/help-images/15-meal-orders.png', caption: 'Yemek Sipariş Yönetimi — tarih navigatörü, durum kartları (toplam/sipariş verilen/bekleyen/iptal), personel listesi ve işlemler' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Tarih Seçimi ve Genel Bakış',
-                description: 'Sayfanın üst kısmındaki tarih navigatöründen (ok butonları ile önceki/sonraki gün) hedef tarihi seçin. Özet kartlarında o güne ait toplam talep, sipariş verilen, bekleyen ve iptal edilen sayıları gösterilir.'
+                description: 'Sayfanın üst kısmındaki tarih navigatöründen (ok butonları ile önceki/sonraki gün) hedef tarihi seçin. Özet kartlarında o güne ait toplam talep, sipariş verilen, bekleyen ve iptal edilen sayıları gösterilir.',
+                image: { src: '/help-images/15-meal-orders.png', caption: 'Yemek Sipariş Yönetimi — tarih navigatörü, durum kartları (toplam/sipariş verilen/bekleyen/iptal), personel listesi ve işlemler' }
             },
             {
                 title: 'Sipariş Durumu ve İşlemler',
@@ -227,11 +216,9 @@ const helpContent = [
         description: 'Kişisel takvim, etkinlik filtreleri, ekip Gantt görünümü, mesai atamaları ve renk kodlu gün detayları',
         permission: null,
         link: '/calendar',
-        images: [
-            { src: '/help-images/08-calendar.png', caption: 'Takvim — aylık görünüm, sol panelde filtre toggle\'ları, sağda gün detay paneli, renk kodlu etkinlik noktacıkları' }
-        ],
+        images: [],
         steps: [
-            { title: 'Takvim Gezinme', description: 'Sol paneldeki mini takvimden ay/yıl seçin. Önceki/sonraki ay okları ve "Bugün" butonu ile hızlı gezinme yapabilirsiniz. Haftasonu günleri amber/sarı, tatiller kırmızı, yarım gün tatiller diagonal çizgili arka planla gösterilir. Bugün mor çerçeve ile vurgulanır.' },
+            { title: 'Takvim Gezinme', description: 'Sol paneldeki mini takvimden ay/yıl seçin. Önceki/sonraki ay okları ve "Bugün" butonu ile hızlı gezinme yapabilirsiniz. Haftasonu günleri amber/sarı, tatiller kırmızı, yarım gün tatiller diagonal çizgili arka planla gösterilir. Bugün mor çerçeve ile vurgulanır.', image: { src: '/help-images/08-calendar.png', caption: 'Takvim — aylık görünüm, sol panelde filtre toggle\'ları, sağda gün detay paneli, renk kodlu etkinlik noktacıkları' } },
             { title: 'Etkinlik Filtreleri', description: 'Sol paneldeki toggle butonlarıyla hangi etkinlik türlerini göreceğinizi seçin: Ek Mesai Görevleri (mor), Ek Mesai Talepleri (amber), İzinler (cyan, varsayılan açık), Sağlık Raporları (pembe, varsayılan açık), Kartsız Girişler (turuncu), Ekip Görünümü (yöneticilere özel). Her filtre ayrı ayrı açılıp kapatılabilir.' },
             { title: 'Gün Detay Paneli', description: 'Herhangi bir güne tıkladığınızda sağ panelde o günün detayları görünür: tarih başlığı, etkinlik listesi (tip gruplarına ayrılmış), her etkinliğin başlık, saat aralığı, konum ve durum bilgileri. Kişisel etkinlikleriniz üzerinde hover yaparak düzenle/sil butonlarına erişebilirsiniz.' },
             { title: 'Etkinlik Oluşturma', description: '"Yeni Etkinlik" butonuna tıklayarak kişisel etkinlik oluşturun. Başlık, tarih/saat, tüm gün seçeneği, etkinlik türü (Kişisel/Toplantı/Hatırlatma), konum, görünürlük (Özel/Departman/Herkese Açık) ve renk ayarlarını yapın.' },
@@ -256,13 +243,12 @@ const helpContent = [
         description: 'Çalışan arama, anlık durum göstergesi, departman filtresi, kart/liste görünümü',
         permission: null,
         link: '/company-directory',
-        images: [
-            { src: '/help-images/05-company-directory.png', caption: 'Şirket Rehberi — çalışan kartları, durum göstergesi (Ofiste/İzinde/Dışarıda), 3 özet kartı, arama ve görünüm toggle\'ı' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Özet Kartları ve Hızlı Filtreleme',
-                description: 'Sayfanın üstünde 3 tıklanabilir özet kartı bulunur: Ofiste (yeşil), İzinde (turuncu), Dışarıda (gri). Karta tıklayarak o kategorideki çalışanları filtreleyebilirsiniz. Ayrıca alt kısımdaki pill butonlarla (Tümü/Ofiste/İzinde/Dışarıda) filtreleme yapılabilir.'
+                description: 'Sayfanın üstünde 3 tıklanabilir özet kartı bulunur: Ofiste (yeşil), İzinde (turuncu), Dışarıda (gri). Karta tıklayarak o kategorideki çalışanları filtreleyebilirsiniz. Ayrıca alt kısımdaki pill butonlarla (Tümü/Ofiste/İzinde/Dışarıda) filtreleme yapılabilir.',
+                image: { src: '/help-images/05-company-directory.png', caption: 'Şirket Rehberi — çalışan kartları, durum göstergesi (Ofiste/İzinde/Dışarıda), 3 özet kartı, arama ve görünüm toggle\'ı' }
             },
             {
                 title: 'Çalışan Arama',
@@ -294,9 +280,7 @@ const helpContent = [
         description: 'Şikâyet, öneri ve teşekkür gönderme, dosya ekleme, takip etme ve yönetim yanıt paneli',
         permission: null,
         link: '/feedback',
-        images: [
-            { src: '/help-images/11-feedback.png', caption: 'Dilek ve Şikayetler — geri bildirim listesi, kategori rozetleri (Şikâyet/Öneri/Teşekkür), durum kartları ve yönetim sekmesi' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Yeni Geri Bildirim Oluşturma',
@@ -304,7 +288,8 @@ const helpContent = [
             },
             {
                 title: 'Durum Takibi',
-                description: '"Geri Bildirimlerim" sekmesinde gönderdiğiniz tüm geri bildirimlerin durumunu takip edebilirsiniz. Durum akışı: Beklemede (gri) → İnceleniyor (mavi) → Cevaplandı (yeşil) / Reddedildi (kırmızı) / Kapatıldı (gri). Her geri bildirimde kategori badge\'i ve durum badge\'i görünür.'
+                description: '"Geri Bildirimlerim" sekmesinde gönderdiğiniz tüm geri bildirimlerin durumunu takip edebilirsiniz. Durum akışı: Beklemede (gri) → İnceleniyor (mavi) → Cevaplandı (yeşil) / Reddedildi (kırmızı) / Kapatıldı (gri). Her geri bildirimde kategori badge\'i ve durum badge\'i görünür.',
+                image: { src: '/help-images/11-feedback.png', caption: 'Dilek ve Şikayetler — geri bildirim listesi, kategori rozetleri (Şikâyet/Öneri/Teşekkür), durum kartları ve yönetim sekmesi' }
             },
             {
                 title: 'Detay ve Cevap Görüntüleme',
@@ -334,9 +319,7 @@ const helpContent = [
         description: 'Yönetici vekâlet tanımlama, kapsamlı yetki devri, süre takibi ve otomatik sonlandırma',
         permission: null,
         link: '/substitute-management',
-        images: [
-            { src: '/help-images/12-substitute.png', caption: 'Vekâlet Yönetimi — 4 özet kartı (Toplam/Aktif/Gelecek/Süresi Dolmuş), verilen/vekil olunan sekmeler, durum renk kodları' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Özet Kartları',
@@ -348,7 +331,8 @@ const helpContent = [
             },
             {
                 title: 'Vekâlet Kartı Bilgileri',
-                description: 'Her vekâlet kartında: Asıl yönetici (mavi avatar) ve vekil (yeşil avatar) bilgileri, tarih aralığı ile ilerleme çubuğu (aktif vekâletlerde geçen süre yüzdesi), toplam gün sayısı, kalan gün göstergesi ve durum badge\'i gösterilir. Sol bordür rengi duruma göre değişir: yeşil=aktif, mavi=gelecek, amber=süresi dolmuş, gri=pasif.'
+                description: 'Her vekâlet kartında: Asıl yönetici (mavi avatar) ve vekil (yeşil avatar) bilgileri, tarih aralığı ile ilerleme çubuğu (aktif vekâletlerde geçen süre yüzdesi), toplam gün sayısı, kalan gün göstergesi ve durum badge\'i gösterilir. Sol bordür rengi duruma göre değişir: yeşil=aktif, mavi=gelecek, amber=süresi dolmuş, gri=pasif.',
+                image: { src: '/help-images/12-substitute.png', caption: 'Vekâlet Yönetimi — 4 özet kartı (Toplam/Aktif/Gelecek/Süresi Dolmuş), verilen/vekil olunan sekmeler, durum renk kodları' }
             },
             {
                 title: 'Verdiğim / Vekil Olduğum Sekmeler',
@@ -373,13 +357,12 @@ const helpContent = [
         description: 'Talep onaylama/reddetme, gelen talepler sekmesi, onay hiyerarşisi ve toplu işlemler',
         permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'APPROVAL_CARDLESS_ENTRY'],
         link: '/requests',
-        images: [
-            { src: '/help-images/10-requests.png', caption: 'Gelen Talepler sekmesi — bekleyen onay sayısı badge, talep listesi, onay/red butonları ve filtreler' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Gelen Talepler Sekmesi',
-                description: 'Talepler sayfasında "Gelen Talepler" sekmesine tıklayın (sekme yanındaki kırmızı badge bekleyen talep sayısını gösterir). Ekibinizden gelen bekleyen tüm talepler burada listelenir: izin talepleri, mesai talepleri, kartsız giriş talepleri ve dış görev talepleri.'
+                description: 'Talepler sayfasında "Gelen Talepler" sekmesine tıklayın (sekme yanındaki kırmızı badge bekleyen talep sayısını gösterir). Ekibinizden gelen bekleyen tüm talepler burada listelenir: izin talepleri, mesai talepleri, kartsız giriş talepleri ve dış görev talepleri.',
+                image: { src: '/help-images/10-requests.png', caption: 'Gelen Talepler sekmesi — bekleyen onay sayısı badge, talep listesi, onay/red butonları ve filtreler' }
             },
             {
                 title: 'Onay Hiyerarşisi',
@@ -413,13 +396,12 @@ const helpContent = [
         description: 'Aylık mutabakat raporu, mali dönem bazlı filtreleme, çalışma takvimi seçimi ve Excel/PDF dışa aktarma',
         permission: 'PAGE_REPORTS',
         link: '/reports',
-        images: [
-            { src: '/help-images/13-reports.png', caption: 'Raporlar — çalışma takvimi seçici, mali dönem filtresi, personel seçimi, rapor aralığı bilgi kutusu, Excel ve PDF indirme' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Çalışma Takvimi Seçimi',
-                description: 'Sayfanın üst kısmındaki dropdown\'dan çalışma takvimini (FiscalCalendar) seçin. Varsayılan takvim yıldız (★) ile işaretlenir. Seçtiğiniz takvim rapordaki hedef saatleri ve mali dönem sınırlarını belirler.'
+                description: 'Sayfanın üst kısmındaki dropdown\'dan çalışma takvimini (FiscalCalendar) seçin. Varsayılan takvim yıldız (★) ile işaretlenir. Seçtiğiniz takvim rapordaki hedef saatleri ve mali dönem sınırlarını belirler.',
+                image: { src: '/help-images/13-reports.png', caption: 'Raporlar — çalışma takvimi seçici, mali dönem filtresi, personel seçimi, rapor aralığı bilgi kutusu, Excel ve PDF indirme' }
             },
             {
                 title: 'Mali Dönem ve Personel Filtresi',
@@ -451,9 +433,7 @@ const helpContent = [
         description: 'Mali takvim, vardiya şablonları, yıllık takvim boyama, tatil tanımlama, dönem ayarları ve personel ataması',
         permission: 'PAGE_WORK_SCHEDULES',
         link: '/work-schedules',
-        images: [
-            { src: '/help-images/09-work-schedules.png', caption: 'Çalışma Programları — 5 sekmeli panel (Şablonlar/Yıllık Takvim/Tatiller/Dönemler & Ayarlar/Personel), şablon düzenleyici' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Takvim Seçimi',
@@ -461,7 +441,8 @@ const helpContent = [
             },
             {
                 title: 'Şablonlar Sekmesi',
-                description: 'Sol panelde şablon listesi, sağ panelde seçili şablon düzenleyici (TemplateEditor) bulunur. "Yeni Şablon" butonu ile isim girerek yeni şablon oluşturun. Düzenleyicide: şablon adı, renk seçici, haftalık program (Pzt-Paz her gün başlangıç/bitiş veya "Tatil" toggle), öğle molası saatleri, günlük mola hakkı (dk), normal tolerans (dk), servis toleransı (dk), minimum OT eşiği (dk) ayarlarını yapın. "Varsayılan Yap" toggle\'ı ile bu şablonu varsayılan olarak atayın.'
+                description: 'Sol panelde şablon listesi, sağ panelde seçili şablon düzenleyici (TemplateEditor) bulunur. "Yeni Şablon" butonu ile isim girerek yeni şablon oluşturun. Düzenleyicide: şablon adı, renk seçici, haftalık program (Pzt-Paz her gün başlangıç/bitiş veya "Tatil" toggle), öğle molası saatleri, günlük mola hakkı (dk), normal tolerans (dk), servis toleransı (dk), minimum OT eşiği (dk) ayarlarını yapın. "Varsayılan Yap" toggle\'ı ile bu şablonu varsayılan olarak atayın.',
+                image: { src: '/help-images/09-work-schedules.png', caption: 'Çalışma Programları — 5 sekmeli panel (Şablonlar/Yıllık Takvim/Tatiller/Dönemler & Ayarlar/Personel), şablon düzenleyici' }
             },
             {
                 title: 'Yıllık Takvim (Boyama)',
@@ -502,13 +483,12 @@ const helpContent = [
         description: 'Sistem sağlığı, 30+ yönetim sekmesi, yetki denetimi, puantaj denetimi, testler ve şifre sıfırlama',
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/admin/system-health',
-        images: [
-            { src: '/help-images/17-system-health.png', caption: 'Sistem Kontrol Merkezi — 30+ sekmeli panel (Genel Bakış, Yetki Kontrolü, Stres Testi, Sistem Testleri, Loglar, Güvenlik vb.)' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Genel Bakış',
-                description: 'Canlı sistem ölçümleri: toplam çalışan, aktif mesai, devamsızlık oranı, bekleyen talepler. Sistem ayarları, veritabanı sağlığı, servis durumu ve son işlem logları. Üst başlıkta "SYSTEM ONLINE" yeşil göstergesi (yanıp sönen nokta) bulunur.'
+                description: 'Canlı sistem ölçümleri: toplam çalışan, aktif mesai, devamsızlık oranı, bekleyen talepler. Sistem ayarları, veritabanı sağlığı, servis durumu ve son işlem logları. Üst başlıkta "SYSTEM ONLINE" yeşil göstergesi (yanıp sönen nokta) bulunur.',
+                image: { src: '/help-images/17-system-health.png', caption: 'Sistem Kontrol Merkezi — 30+ sekmeli panel (Genel Bakış, Yetki Kontrolü, Stres Testi, Sistem Testleri, Loglar, Güvenlik vb.)' }
             },
             {
                 title: 'Yetki Denetimi (RBAC)',
@@ -554,23 +534,22 @@ const helpContent = [
         description: 'Çalışan listesi, 7 adımlı ekleme sihirbazı, profil düzenleme, rol/yetki atamaları, yönetici ilişkileri ve çalışma programı atama',
         permission: 'PAGE_EMPLOYEES',
         link: '/employees',
-        images: [
-            { src: '/help-images/04-employees-list.png', caption: 'Personel Yönetimi — departman/aktif-pasif filtreleri, arama kutusu, çalışan listesi tablosu ve "Yeni Personel Ekle" butonu' },
-            { src: '/help-images/04-employee-create-step1.png', caption: 'Yeni Personel Ekleme — Adım 1: Kişisel Bilgiler formu (Ad, Soyad, TC, E-posta, Doğum Tarihi, Kullanıcı Adı, Şifre)' },
-            { src: '/help-images/04-employee-create-step2.png', caption: 'Yeni Personel Ekleme — Adım 2: Kurumsal & Hiyerarşi (Sicil No, İşe Başlama, Yönetici Ataması, Etiketler, İkincil Görevler)' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Çalışan Listesi',
-                description: 'Çalışanlar sayfasında tüm personeli listeleyebilirsiniz. Üst kısımda: departman filtresi (dropdown), aktif/pasif durum filtresi ve isim arama kutusu. "Yeni Personel Ekle" butonu (mavi, + ikonu) ile ekleme sihirbazını başlatın. Liste her çalışan için isim, departman, pozisyon, takvim ve durum bilgisini gösterir.'
+                description: 'Çalışanlar sayfasında tüm personeli listeleyebilirsiniz. Üst kısımda: departman filtresi (dropdown), aktif/pasif durum filtresi ve isim arama kutusu. "Yeni Personel Ekle" butonu (mavi, + ikonu) ile ekleme sihirbazını başlatın. Liste her çalışan için isim, departman, pozisyon, takvim ve durum bilgisini gösterir.',
+                image: { src: '/help-images/04-employees-list.png', caption: 'Personel Yönetimi — departman/aktif-pasif filtreleri, arama kutusu, çalışan listesi tablosu ve "Yeni Personel Ekle" butonu' }
             },
             {
                 title: 'Adım 1: Kişisel Bilgiler',
-                description: 'Ad (zorunlu), Soyad (zorunlu), TC Kimlik No (hassas veri — SENSITIVE_DATA_CHANGE izni gerekli, kilit ikonu gösterilir), E-posta (zorunlu, email formatı), Doğum Tarihi (tarih seçici, hassas veri), Kullanıcı Adı (zorunlu — sisteme giriş için kullanılır), Şifre (anahtar ikonu — yetkili kullanıcı doldurur). Her zorunlu alan kırmızı yıldızla işaretlidir.'
+                description: 'Ad (zorunlu), Soyad (zorunlu), TC Kimlik No (hassas veri — SENSITIVE_DATA_CHANGE izni gerekli, kilit ikonu gösterilir), E-posta (zorunlu, email formatı), Doğum Tarihi (tarih seçici, hassas veri), Kullanıcı Adı (zorunlu — sisteme giriş için kullanılır), Şifre (anahtar ikonu — yetkili kullanıcı doldurur). Her zorunlu alan kırmızı yıldızla işaretlidir.',
+                image: { src: '/help-images/04-employee-create-step1.png', caption: 'Yeni Personel Ekleme — Adım 1: Kişisel Bilgiler formu (Ad, Soyad, TC, E-posta, Doğum Tarihi, Kullanıcı Adı, Şifre)' }
             },
             {
                 title: 'Adım 2: Kurumsal & Hiyerarşi',
-                description: 'Personel Sicil No (zorunlu), İşe Başlama Tarihi (tarih seçici). Matris Organizasyon Yapısı uyarı kartı gösterilir. Birincil Yöneticiler bölümü: en az 1 birincil yönetici zorunlu — her satırda yönetici seçimi (dropdown), departman ve unvan seçimi bulunur. İlk birincil yöneticinin departman+unvanı çalışana otomatik atanır. İkincil Yöneticiler bölümü: isteğe bağlı, sadece OT işlemlerinde yetkili. Etiketler/Uzmanlıklar: renkli pill butonlar, çoklu seçim. İkincil Görevlendirmeler (Matrix): "Yeni Görev Ekle" butonu ile departman + pozisyon + yönetici satırı eklenir.'
+                description: 'Personel Sicil No (zorunlu), İşe Başlama Tarihi (tarih seçici). Matris Organizasyon Yapısı uyarı kartı gösterilir. Birincil Yöneticiler bölümü: en az 1 birincil yönetici zorunlu — her satırda yönetici seçimi (dropdown), departman ve unvan seçimi bulunur. İlk birincil yöneticinin departman+unvanı çalışana otomatik atanır. İkincil Yöneticiler bölümü: isteğe bağlı, sadece OT işlemlerinde yetkili. Etiketler/Uzmanlıklar: renkli pill butonlar, çoklu seçim. İkincil Görevlendirmeler (Matrix): "Yeni Görev Ekle" butonu ile departman + pozisyon + yönetici satırı eklenir.',
+                image: { src: '/help-images/04-employee-create-step2.png', caption: 'Yeni Personel Ekleme — Adım 2: Kurumsal & Hiyerarşi (Sicil No, İşe Başlama, Yönetici Ataması, Etiketler, İkincil Görevler)' }
             },
             {
                 title: 'Adım 3: İletişim & Acil Durum',
@@ -623,13 +602,12 @@ const helpContent = [
         description: 'Departman hiyerarşisi, ağaç görünümü, sürükle-bırak, sağ tık menüsü ve çalışan detay popup\'ı',
         permission: 'PAGE_ORG_CHART',
         link: '/organization-chart',
-        images: [
-            { src: '/help-images/06-org-chart.png', caption: 'Organizasyon Şeması — hiyerarşik ağaç görünümü, zoom kontrolleri, renk kodlu düğümler ve çalışan bilgi popup\'ları' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Organizasyon Görünümü',
-                description: 'Şirketin departman yapısını ağaç görünümünde inceleyebilirsiniz. Her düğüm bir çalışanı temsil eder ve isim, unvan, departman ile çevrimiçi durumu gösterilir. Düğümler rol kategorisine göre renklendirilir: Mavi (Yazılım), İndigo (Mühendislik), Cyan (Teknik), Rose (Tasarım), Emerald (Satış), Amber (Finans), Violet (Sistem Yönetimi).'
+                description: 'Şirketin departman yapısını ağaç görünümünde inceleyebilirsiniz. Her düğüm bir çalışanı temsil eder ve isim, unvan, departman ile çevrimiçi durumu gösterilir. Düğümler rol kategorisine göre renklendirilir: Mavi (Yazılım), İndigo (Mühendislik), Cyan (Teknik), Rose (Tasarım), Emerald (Satış), Amber (Finans), Violet (Sistem Yönetimi).',
+                image: { src: '/help-images/06-org-chart.png', caption: 'Organizasyon Şeması — hiyerarşik ağaç görünümü, zoom kontrolleri, renk kodlu düğümler ve çalışan bilgi popup\'ları' }
             },
             {
                 title: 'Kontroller ve Gezinme',
@@ -665,13 +643,12 @@ const helpContent = [
         description: 'Puantaj hesaplama tetikleme, Celery görev durumu, canlı loglar, hızlı bağlantılar',
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/admin/service-control',
-        images: [
-            { src: '/help-images/14-service-control.png', caption: 'Servis Yönetimi — günlük hesaplama tetikleme (tarih seçici), sistem durumu paneli, hızlı bağlantılar ve canlı servis logları' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Günlük Hesaplama Tetikleme',
-                description: '"Günlük Hesaplama Tetikle" kartında hedef tarih seçerek (varsayılan: dün) o gün için tüm çalışanların puantaj hesaplamalarını yeniden başlatabilirsiniz. "Servisi Çalıştır" butonuna tıklayın. İşlem arka planda çalışır — başarı mesajı (yeşil) veya hata mesajı (kırmızı) gösterilir. Amber uyarı kutusu işlemin sürebileceğini bildirir.'
+                description: '"Günlük Hesaplama Tetikle" kartında hedef tarih seçerek (varsayılan: dün) o gün için tüm çalışanların puantaj hesaplamalarını yeniden başlatabilirsiniz. "Servisi Çalıştır" butonuna tıklayın. İşlem arka planda çalışır — başarı mesajı (yeşil) veya hata mesajı (kırmızı) gösterilir. Amber uyarı kutusu işlemin sürebileceğini bildirir.',
+                image: { src: '/help-images/14-service-control.png', caption: 'Servis Yönetimi — günlük hesaplama tetikleme (tarih seçici), sistem durumu paneli, hızlı bağlantılar ve canlı servis logları' }
             },
             {
                 title: 'Otomatik Görevler (Celery Tasks)',
@@ -703,13 +680,12 @@ const helpContent = [
         description: 'Personel verileri, toplu işlemler, yıllık matris, JSON/CSV yedekleme ve içe aktarma',
         permission: 'PAGE_DATA_MANAGEMENT',
         link: '/system-data-management',
-        images: [
-            { src: '/help-images/18-data-management.png', caption: 'Veri Yönetimi — 4 sekmeli panel (Personel Verileri/Toplu İşlemler/Yıllık Matris/Yedekleme), filtreler ve detay görünümü' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Personel Verileri Sekmesi',
-                description: 'Çalışan arama ve seçme ile başlayın. Dönem (ay/yıl) filtresiyle hedef mali dönemi belirleyin. Seçilen çalışanın günlük puantaj kayıtları detaylı olarak gösterilir. DayEditPanel ile giriş/çıkış saatlerini düzenleyebilirsiniz. CalendarGrid ile aylık takvim görünümünde kayıtları inceleyebilirsiniz.'
+                description: 'Çalışan arama ve seçme ile başlayın. Dönem (ay/yıl) filtresiyle hedef mali dönemi belirleyin. Seçilen çalışanın günlük puantaj kayıtları detaylı olarak gösterilir. DayEditPanel ile giriş/çıkış saatlerini düzenleyebilirsiniz. CalendarGrid ile aylık takvim görünümünde kayıtları inceleyebilirsiniz.',
+                image: { src: '/help-images/18-data-management.png', caption: 'Veri Yönetimi — 4 sekmeli panel (Personel Verileri/Toplu İşlemler/Yıllık Matris/Yedekleme), filtreler ve detay görünümü' }
             },
             {
                 title: 'Toplu İşlemler Sekmesi',
@@ -742,12 +718,10 @@ const helpContent = [
         description: 'Sağlık raporu ve hastane ziyareti kayıtları, dosya yükleme, onay süreci, puantaj entegrasyonu',
         permission: 'PAGE_HEALTH_REPORTS',
         link: '/health-reports',
-        images: [
-            { src: '/help-images/16-health-reports.png', caption: 'Sağlık Raporları — rapor türü toggle (Sağlık Raporları/Hastane Ziyaretleri), 4 özet kartı, filtreler, liste ve detay modalı' }
-        ],
+        images: [],
         steps: [
             { title: 'Rapor Türü Seçimi', description: 'Sayfanın üstünde 2 toggle buton: "Sağlık Raporları" (HeartPulse, kırmızı) ve "Hastane Ziyaretleri" (Stethoscope, rose). Sağlık raporu = tam gün/çok günlü hastalık izni. Hastane ziyareti = belirli saatler arası (kısmi gün).' },
-            { title: 'Özet Kartları ve Filtreler', description: '4 özet kartı: Toplam Rapor (gri), Onay Bekleyen (amber), Onaylanan (yeşil), Reddedilen (kırmızı). Filtreler: çalışan adı/açıklama araması (400ms debounce), durum dropdown (PENDING/APPROVED/REJECTED/CANCELLED), tarih aralığı (başlangıç/bitiş).' },
+            { title: 'Özet Kartları ve Filtreler', description: '4 özet kartı: Toplam Rapor (gri), Onay Bekleyen (amber), Onaylanan (yeşil), Reddedilen (kırmızı). Filtreler: çalışan adı/açıklama araması (400ms debounce), durum dropdown (PENDING/APPROVED/REJECTED/CANCELLED), tarih aralığı (başlangıç/bitiş).', image: { src: '/help-images/16-health-reports.png', caption: 'Sağlık Raporları — rapor türü toggle (Sağlık Raporları/Hastane Ziyaretleri), 4 özet kartı, filtreler, liste ve detay modalı' } },
             { title: 'Rapor Detay Modalı', description: 'Listede "Gör" butonuna tıklayarak detay modalını açın. Çalışan adı, tarih aralığı, açıklama ve ekli dosyalar (indirme + silme) gösterilir. Düzenleme modunda: tarihler, açıklama ve yeni dosya ekleme. Aksiyonlar: "Onayla" (yeşil, ✓) — sadece PENDING durumdakiler, "Reddet" (kırmızı, ⛔) — ret sebebi modalı açılır, "Düzenle" (kalem).' },
             { title: 'Puantaj Etkisi', description: 'Onaylanan sağlık raporları ilgili günlerin puantaj kaydını HEALTH_REPORT veya HOSPITAL_VISIT durumuna geçirir. Bu günler çalışma hedefinden düşülür. Aylık çalışma özetinde (MonthlyWorkSummary) health_report_days ve hospital_visit_count ayrıca raporlanır.' }
         ],
@@ -768,12 +742,10 @@ const helpContent = [
         description: 'Puantaj hesaplama doğrulama, veritabanı-canlı karşılaştırma, NaN tespiti ve ham kayıt analizi',
         permission: 'PAGE_DEBUG',
         link: '/debug/attendance',
-        images: [
-            { src: '/help-images/19-debug.png', caption: 'Puantaj Hata Ayıklayıcı — çalışan ve dönem seçici, kayıt analiz butonu, 3 sütunlu karşılaştırma ve ham kayıt tablosu' }
-        ],
+        images: [],
         steps: [
             { title: 'Çalışan ve Dönem Seçimi', description: 'Dropdown\'dan çalışan seçin. Ay (1-12) ve Yıl sayı girişleriyle mali dönemi belirleyin. "Kayıtları Analiz Et" butonu (indigo, Search ikonu) ile debug işlemini başlatın.' },
-            { title: '3 Sütunlu Karşılaştırma', description: 'Sonuç 3 kolonda gösterilir: (1) Veritabanı Özeti — hedef, tamamlanan, eksik, toplam mola, son güncelleme. "NO_RECORD" ise kırmızı uyarı. (2) Canlı Hesaplama — hesaplama motorunun ürettiği değerler, DB ile karşılaştırma mesajı. (3) Yapılandırma — çalışma takvimi adı, dönem aralığı, izin sayısı.' },
+            { title: '3 Sütunlu Karşılaştırma', description: 'Sonuç 3 kolonda gösterilir: (1) Veritabanı Özeti — hedef, tamamlanan, eksik, toplam mola, son güncelleme. "NO_RECORD" ise kırmızı uyarı. (2) Canlı Hesaplama — hesaplama motorunun ürettiği değerler, DB ile karşılaştırma mesajı. (3) Yapılandırma — çalışma takvimi adı, dönem aralığı, izin sayısı.', image: { src: '/help-images/19-debug.png', caption: 'Puantaj Hata Ayıklayıcı — çalışan ve dönem seçici, kayıt analiz butonu, 3 sütunlu karşılaştırma ve ham kayıt tablosu' } },
             { title: 'Ham Günlük Kayıtlar', description: 'Alt tabloda o dönemin tüm günlük kayıtları listelenir. Sütunlar: Tarih, Toplam Sn, Normal (yeşil), Ek Mesai (mavi), Eksik (kırmızı), Mola (amber), Durum, Kaynak. Tutarsızlıklar kırmızı ile vurgulanır.' },
             { title: 'Hata Tespiti', description: 'NaN veya beklenmeyen değerler oluşmuşsa AlertTriangle ikonu ile işaretlenir. Hata mesajı ve stack trace gösterilir. Genellikle eksik vardiya tanımı veya bozuk veri kaynaklıdır.' }
         ],
@@ -793,13 +765,12 @@ const helpContent = [
         description: 'Ekip çalışma durumu, liste/analitik/fazla mesai görünümleri, hiyerarşik sıralama ve OT ataması',
         permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE'],
         link: '/team',
-        images: [
-            { src: '/help-images/07-attendance.png', caption: 'Mesai Takibi — ekip listesi, çalışma/fazla mesai/eksik süre, çevrimiçi durum, dönem kontrolleri ve görünüm modları' }
-        ],
+        images: [],
         steps: [
             {
                 title: '3 Görünüm Modu',
-                description: 'Sağ üst köşede 3 toggle: (1) Liste — tablo görünümü, çalışanların çalışma detayları. (2) Analitik — TeamAnalyticsDashboard, detaylı ekip analiz grafikleri. (3) Fazla Mesai — OTAssignmentCreator, ekip üyelerine mesai ataması.'
+                description: 'Sağ üst köşede 3 toggle: (1) Liste — tablo görünümü, çalışanların çalışma detayları. (2) Analitik — TeamAnalyticsDashboard, detaylı ekip analiz grafikleri. (3) Fazla Mesai — OTAssignmentCreator, ekip üyelerine mesai ataması.',
+                image: { src: '/help-images/07-attendance.png', caption: 'Mesai Takibi — ekip listesi, çalışma/fazla mesai/eksik süre, çevrimiçi durum, dönem kontrolleri ve görünüm modları' }
             },
             {
                 title: 'Ekip Sekmeleri ve Dönem',
@@ -839,13 +810,12 @@ const helpContent = [
         description: 'Harici yazılım envanteri, API anahtarı yönetimi, HWID bazlı cihaz erişim kontrolü',
         permission: 'PAGE_PROGRAM_MANAGEMENT',
         link: '/program-management',
-        images: [
-            { src: '/help-images/20-program-management.png', caption: 'Program Yönetimi — 3 özet kartı (Toplam/Aktif Program/Kayıtlı Cihaz), sol panel program listesi, sağ panel detay ve erişim logları' }
-        ],
+        images: [],
         steps: [
             {
                 title: 'Program Listesi ve Özet',
-                description: '3 özet kartı: Toplam Program (mavi), Aktif Program (yeşil), Kayıtlı Cihaz (mor). Sol panelde program listesi — her kart program adı, aktif/pasif durumu ve son erişim saatini gösterir. Tıklayarak sağ panelde detay açılır.'
+                description: '3 özet kartı: Toplam Program (mavi), Aktif Program (yeşil), Kayıtlı Cihaz (mor). Sol panelde program listesi — her kart program adı, aktif/pasif durumu ve son erişim saatini gösterir. Tıklayarak sağ panelde detay açılır.',
+                image: { src: '/help-images/20-program-management.png', caption: 'Program Yönetimi — 3 özet kartı (Toplam/Aktif Program/Kayıtlı Cihaz), sol panel program listesi, sağ panel detay ve erişim logları' }
             },
             {
                 title: 'Yeni Program Ekleme',
