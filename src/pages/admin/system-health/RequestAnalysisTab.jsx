@@ -112,7 +112,8 @@ export default function RequestAnalysisTab() {
           (lifecycleData.summary?.issue_breakdown?.no_approver || 0) +
           (lifecycleData.summary?.issue_breakdown?.wrong_approver || 0) +
           (lifecycleData.summary?.issue_breakdown?.inactive_approver || 0) +
-          (lifecycleData.summary?.issue_breakdown?.stale_pending || 0)
+          (lifecycleData.summary?.issue_breakdown?.stale_pending || 0) +
+          (lifecycleData.summary?.issue_breakdown?.ghost_approval || 0)
         : 0;
 
     const exportLifecycleTxt = () => {
@@ -122,7 +123,7 @@ export default function RequestAnalysisTab() {
         lines.push('=== TALEP YAŞAM DÖNGÜSÜ ANALİZİ ===');
         lines.push(`Tarih: ${lcDateFrom} → ${lcDateTo}`);
         lines.push(`Toplam: ${s.total} | Sorunlu: ${s.with_issues}`);
-        lines.push(`Yön.Yok: ${s.issue_breakdown.no_approver} | Pasif Yön: ${s.issue_breakdown.inactive_approver} | Bld.Yok: ${s.issue_breakdown.no_notification} | Görünmez: ${s.issue_breakdown.not_visible} | Eski PEND: ${s.issue_breakdown.stale_pending} | Yanlış Yön: ${s.issue_breakdown.wrong_approver} | Çoklu PRIMARY: ${s.issue_breakdown.multi_primary_no_selection}`);
+        lines.push(`Yön.Yok: ${s.issue_breakdown.no_approver} | Pasif Yön: ${s.issue_breakdown.inactive_approver} | Bld.Yok: ${s.issue_breakdown.no_notification} | Görünmez: ${s.issue_breakdown.not_visible} | Eski PEND: ${s.issue_breakdown.stale_pending} | Yanlış Yön: ${s.issue_breakdown.wrong_approver} | Çoklu PRIMARY: ${s.issue_breakdown.multi_primary_no_selection} | Hayalet Onay: ${s.issue_breakdown.ghost_approval || 0}`);
         lines.push('');
         lines.push('─'.repeat(120));
 
@@ -604,6 +605,7 @@ export default function RequestAnalysisTab() {
                             <SummaryBadge label="Bld. Yok" count={lifecycleData.summary.issue_breakdown.no_notification} color="amber" />
                             <SummaryBadge label="Görünmez" count={lifecycleData.summary.issue_breakdown.not_visible} color="purple" />
                             <SummaryBadge label="Eski PEND" count={lifecycleData.summary.issue_breakdown.stale_pending} color="yellow" />
+                            <SummaryBadge label="Hayalet Onay" count={lifecycleData.summary.issue_breakdown.ghost_approval || 0} color="red" />
                         </div>
 
                         {/* Arama + Aksiyonlar */}
@@ -695,6 +697,9 @@ export default function RequestAnalysisTab() {
                                     )}
                                     {(lifecycleData?.summary?.issue_breakdown?.inactive_approver || 0) > 0 && (
                                         <li>• Pasif yönetici: <b>{lifecycleData.summary.issue_breakdown.inactive_approver}</b> talep → aktif yönetici atanacak</li>
+                                    )}
+                                    {(lifecycleData?.summary?.issue_breakdown?.ghost_approval || 0) > 0 && (
+                                        <li>• Hayalet onay: <b>{lifecycleData.summary.issue_breakdown.ghost_approval}</b> talep → onaylayan yönetici atanacak</li>
                                     )}
                                     {(lifecycleData?.summary?.issue_breakdown?.stale_pending || 0) > 0 && (
                                         <li>• Eski PENDING: <b>{lifecycleData.summary.issue_breakdown.stale_pending}</b> talep → hatırlatma gönderilecek</li>
