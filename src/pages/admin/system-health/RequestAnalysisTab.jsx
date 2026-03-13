@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
+import { message } from 'antd';
 import api from '../../../services/api';
 import ModalOverlay from '../../../components/ui/ModalOverlay';
 
@@ -29,6 +30,9 @@ export default function RequestAnalysisTab() {
     const [bulkFixLoading, setBulkFixLoading] = useState(false);
     const [bulkFixReport, setBulkFixReport] = useState(null);
     const [showFixConfirm, setShowFixConfirm] = useState(false);
+
+    // Per-row yönetici seçimi (NO_APPROVER fix)
+    const [selectedFixApprover, setSelectedFixApprover] = useState({});
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -80,6 +84,23 @@ export default function RequestAnalysisTab() {
             setBulkFixReport({ error: e.response?.data?.error || 'Toplu düzeltme hatası' });
         } finally {
             setBulkFixLoading(false);
+        }
+    };
+
+    const handleSingleFix = async (requestId, approverId) => {
+        try {
+            await api.post('/system/health-check/request-lifecycle-bulk-fix/', {
+                date_from: lcDateFrom,
+                date_to: lcDateTo,
+                request_type: lcRequestType,
+                request_ids: [requestId],
+                issue_codes: ['NO_APPROVER'],
+                target_approver_map: [{ request_id: requestId, approver_id: approverId }],
+            });
+            message.success('Yönetici atandı');
+            fetchLifecycle();
+        } catch (err) {
+            message.error('Yönetici atanamadı');
         }
     };
 
@@ -627,6 +648,9 @@ export default function RequestAnalysisTab() {
                                         onToggle={() => setLcExpandedId(prev =>
                                             prev === `${req.type}-${req.id}` ? null : `${req.type}-${req.id}`
                                         )}
+                                        selectedFixApprover={selectedFixApprover}
+                                        setSelectedFixApprover={setSelectedFixApprover}
+                                        handleSingleFix={handleSingleFix}
                                     />
                                 ))
                             }
@@ -901,7 +925,7 @@ const STATUS_LABELS = { PENDING: 'Bekliyor', APPROVED: 'Onaylı', REJECTED: 'Red
 const STATUS_COLORS = { PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-emerald-100 text-emerald-700', REJECTED: 'bg-red-100 text-red-700', CANCELLED: 'bg-slate-100 text-slate-500', ESCALATED: 'bg-purple-100 text-purple-700' };
 const SEVERITY_COLORS = { CRITICAL: 'bg-red-600 text-white', HIGH: 'bg-orange-500 text-white', MEDIUM: 'bg-amber-400 text-amber-900', LOW: 'bg-blue-100 text-blue-700' };
 
-function LifecycleRow({ req, expanded, onToggle }) {
+function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelectedFixApprover, handleSingleFix }) {
     const hasIssues = req.issues && req.issues.length > 0;
     const borderColor = hasIssues
         ? (req.issues.some(i => i.severity === 'CRITICAL') ? 'border-l-red-600' :
@@ -1040,6 +1064,35 @@ function LifecycleRow({ req, expanded, onToggle }) {
                                 </div>
                             ))}
                         </div>
+                    )}
+
+                    {/* NO_APPROVER inline yönetici seçimi */}
+                    {req.available_managers && req.available_managers.length > 0 && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <select
+                                value={selectedFixApprover?.[req.id] || req.available_managers[0]?.id || ''}
+                                onChange={e => setSelectedFixApprover?.(prev => ({...prev, [req.id]: Number(e.target.value)}))}
+                                className="text-xs px-2 py-1.5 border border-slate-200 rounded-lg bg-white font-medium"
+                            >
+                                {req.available_managers.map(m => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.type === 'PRIMARY' ? '\u2B50 ' : '\uD83D\uDD39 '}{m.name}
+                                        {m.type === 'PRIMARY' ? ' (Birincil)' : ' (İkincil)'}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={() => handleSingleFix?.(req.id, selectedFixApprover?.[req.id] || req.available_managers[0]?.id)}
+                                className="text-xs px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors"
+                            >
+                                Ata
+                            </button>
+                        </div>
+                    )}
+                    {req.available_managers && req.available_managers.length === 0 && req.issues?.some(i => i.code === 'NO_APPROVER') && (
+                        <p className="text-xs text-red-600 font-medium mt-1">
+                            Bu calisanin aktif yoneticisi yok. Calisanlar sayfasindan yonetici atayin.
+                        </p>
                     )}
                 </div>
             )}
