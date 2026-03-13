@@ -694,16 +694,16 @@ export default function RequestAnalysisTab() {
                             <div className="p-5 border-b flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                        bulkFixReport.error ? 'bg-red-100' : 'bg-emerald-100'
+                                        bulkFixReport?.error ? 'bg-red-100' : 'bg-emerald-100'
                                     }`}>
-                                        {bulkFixReport.error
+                                        {bulkFixReport?.error
                                             ? <XCircle size={20} className="text-red-600" />
                                             : <CheckCircle size={20} className="text-emerald-600" />
                                         }
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-800">Düzeltme Raporu</h3>
-                                        {!bulkFixReport.error && (
+                                        {!bulkFixReport?.error && (
                                             <p className="text-xs text-gray-500">
                                                 {bulkFixReport.fixed} düzeltildi / {bulkFixReport.failed} başarısız — {bulkFixReport.elapsed_seconds}s
                                             </p>
@@ -716,9 +716,9 @@ export default function RequestAnalysisTab() {
                             </div>
 
                             <div className="p-5 overflow-y-auto flex-1">
-                                {bulkFixReport.error ? (
+                                {bulkFixReport?.error ? (
                                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                                        {bulkFixReport.error}
+                                        {bulkFixReport?.error}
                                     </div>
                                 ) : (
                                     <>

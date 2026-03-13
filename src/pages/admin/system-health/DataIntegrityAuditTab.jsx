@@ -123,6 +123,7 @@ const KV = ({ k, v, warn }) => (
 );
 
 const LogContent = ({ log }) => {
+    if (!log) return null;
     if (log.error) {
         return <div className="text-red-600 text-xs p-3">Hata: {log.error}</div>;
     }
@@ -433,7 +434,7 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
             </button>
             {expanded && (
                 <div className="px-5 pb-4 border-t border-gray-100 pt-3">
-                    {categoryData.error && (
+                    {categoryData?.error && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-xs text-red-700">
                             <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" />
                             Hata: {categoryData.error}
