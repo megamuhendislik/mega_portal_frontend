@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import { X, UserPlus, Search, Star } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const ManagerEditModal = ({ employeeId, employeeName, onClose, onSaved }) => {
     const [loading, setLoading] = useState(true);
@@ -291,9 +291,9 @@ const ManagerEditModal = ({ employeeId, employeeName, onClose, onSaved }) => {
         </div>
     );
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    return (
+        <ModalOverlay open={true} onClose={onClose} level="tertiary">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                     <div>
@@ -334,8 +334,7 @@ const ManagerEditModal = ({ employeeId, employeeName, onClose, onSaved }) => {
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

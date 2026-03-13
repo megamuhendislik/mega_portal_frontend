@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import api from '../../../services/api';
 import { X, Check, Copy, AlertTriangle, Key } from 'lucide-react';
+import ModalOverlay from '../../../components/ui/ModalOverlay';
 
 const CreateProgramModal = ({ onClose, onCreated }) => {
     const [name, setName] = useState('');
@@ -36,10 +36,8 @@ const CreateProgramModal = ({ onClose, onCreated }) => {
     // Success screen — show generated key
     if (createdProgram) {
         return (
-            <div className="fixed inset-0 z-[9999] overflow-y-auto">
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCreated} />
-                <div className="flex min-h-full items-center justify-center p-4">
-                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <ModalOverlay open={true} onClose={onCreated}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                         <div className="p-6 text-center">
                             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Check size={28} className="text-green-600" />
@@ -91,19 +89,13 @@ const CreateProgramModal = ({ onClose, onCreated }) => {
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
+            </ModalOverlay>
         );
     }
 
-    return createPortal(
-        <div className="fixed inset-0 z-[9999] overflow-y-auto">
-            {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
-
-            {/* Modal Wrapper */}
-            <div className="flex min-h-full items-center justify-center p-4">
-                <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
+    return (
+        <ModalOverlay open={true} onClose={onClose}>
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
                     {/* Header */}
                     <div className="flex items-center justify-between p-5 border-b border-slate-100 rounded-t-xl bg-white">
                         <h3 className="text-lg font-bold text-slate-800">Yeni Program Ekle</h3>
@@ -221,9 +213,8 @@ const CreateProgramModal = ({ onClose, onCreated }) => {
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-        , document.body);
+        </ModalOverlay>
+    );
 };
 
 export default CreateProgramModal;

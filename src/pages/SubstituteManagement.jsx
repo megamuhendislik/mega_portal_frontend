@@ -9,6 +9,7 @@ import { Select, Tooltip } from 'antd';
 import StatCard from '../components/StatCard';
 import api from '../services/api';
 import { getIstanbulToday } from '../utils/dateUtils';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const SubstituteManagement = () => {
   const [delegations, setDelegations] = useState([]);
@@ -834,9 +835,8 @@ const SubstituteManagement = () => {
       </div>
 
       {/* ─── Delete Confirmation Modal ─── */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" onClick={() => setConfirmDelete(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+      <ModalOverlay open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-red-400 to-rose-500" />
             <div className="p-6 space-y-5">
               <div className="flex items-start gap-4">
@@ -864,13 +864,12 @@ const SubstituteManagement = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
 
       {/* ─── Toggle Confirmation Modal ─── */}
-      {confirmToggle && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" onClick={() => setConfirmToggle(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+      <ModalOverlay open={!!confirmToggle} onClose={() => setConfirmToggle(null)}>
+          {confirmToggle && (
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className={`h-1 bg-gradient-to-r ${confirmToggle.is_active ? 'from-amber-400 to-orange-400' : 'from-emerald-400 to-teal-400'}`} />
             <div className="p-6 space-y-5">
               <div className="flex items-start gap-4">
@@ -913,8 +912,8 @@ const SubstituteManagement = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+          )}
+      </ModalOverlay>
     </div>
   );
 };

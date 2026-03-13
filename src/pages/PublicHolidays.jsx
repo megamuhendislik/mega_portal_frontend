@@ -2,6 +2,7 @@ import { Plus, Edit, Trash2, Save, X, Calendar as CalendarIcon, Eye, EyeOff } fr
 import api from '../services/api';
 import moment from 'moment';
 import YearCalendar from '../components/YearCalendar';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const PublicHolidays = () => {
     const [holidays, setHolidays] = useState([]);
@@ -189,9 +190,7 @@ const PublicHolidays = () => {
             </div>
 
             {/* Modal */}
-            {
-                showModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+            <ModalOverlay open={showModal} onClose={() => setShowModal(false)}>
                         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <h3 className="text-xl font-bold text-slate-800">
@@ -282,9 +281,7 @@ const PublicHolidays = () => {
                                 </div>
                             </form>
                         </div>
-                    </div>
-                )
-            }
+            </ModalOverlay>
         </div >
     );
 };

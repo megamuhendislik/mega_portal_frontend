@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { getIstanbulToday } from '../../../utils/dateUtils';
+import ModalOverlay from '../../../components/ui/ModalOverlay';
 
 import {
     CpuChipIcon,
@@ -294,8 +295,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                     />
 
                     {/* Recalculate Console Modal/Area */}
-                    {recalcConsoleOpen && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <ModalOverlay open={recalcConsoleOpen} onClose={() => setRecalcConsoleOpen(false)}>
                             <div className="bg-gray-900 w-full max-w-4xl h-[60vh] md:h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700">
                                 <div className="bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
                                     <h3 className="text-white font-mono font-bold flex items-center gap-2">
@@ -345,8 +345,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                     {recalcLoading && <div className="animate-pulse text-green-500 mt-2">_ İşleniyor...</div>}
                                 </div>
                             </div>
-                        </div>
-                    )}
+                    </ModalOverlay>
 
                     <ActionButton
                         label="Tüm Verileri Sıfırla (Fabrika Ayarları)"

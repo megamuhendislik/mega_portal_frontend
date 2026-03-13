@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import ModalOverlay from '../../components/ui/ModalOverlay';
 import {
     HeartPulse, Search, Loader2, Check, X, Ban,
     ChevronLeft, ChevronRight, Eye, FileText, Trash2,
@@ -483,8 +484,8 @@ const HealthReports = () => {
             </div>
 
             {/* ===== DETAIL MODAL ===== */}
-            {detailModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+            <ModalOverlay open={!!detailModal} onClose={() => { setDetailModal(null); setEditMode(false); }}>
+                {detailModal && (
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         {/* Header */}
                         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white z-10">
@@ -737,12 +738,12 @@ const HealthReports = () => {
                             )}
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </ModalOverlay>
 
             {/* ===== REJECT MODAL ===== */}
-            {rejectModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+            <ModalOverlay open={!!rejectModal} onClose={() => setRejectModal(null)} level="secondary">
+                {rejectModal && (
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Sağlık Raporu Reddet</h3>
@@ -783,8 +784,8 @@ const HealthReports = () => {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </ModalOverlay>
         </div>
     );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ReactDOM from 'react-dom';
 import { Trash2, PlusCircle, Edit, Save, X as XIcon, ChevronDown, ChevronUp, User, Building, ZoomIn, ZoomOut, Maximize, MousePointer, Star, Clock, Users, Eye, EyeOff } from 'lucide-react';
+import ModalOverlay from '../components/ui/ModalOverlay';
 import api from '../services/api';
 import DebugConsole from '../components/DebugConsole';
 import { useAuth } from '../context/AuthContext';
@@ -76,9 +76,9 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
         onSave({ name, code, is_chart_visible: isChartVisible });
     };
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+    return (
+        <ModalOverlay open={true} onClose={onClose} level="secondary">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
                 <h3 className="text-xl font-bold mb-4">{mode === 'create' ? 'Yeni Departman Ekle' : 'Departman Düzenle'}</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -101,8 +101,7 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
                     </div>
                 </form>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
@@ -159,9 +158,9 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) =>
     };
     const gradient = headerGradients[colorKey] || headerGradients['slate'];
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-scale-in" onClick={e => e.stopPropagation()}>
+    return (
+        <ModalOverlay open={true} onClose={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header */}
                 <div className={`bg-gradient-to-br ${gradient} p-5 text-white relative shrink-0`}>
@@ -283,8 +282,7 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) =>
                 </div>
                 )}
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import ModalOverlay from '../../components/ui/ModalOverlay';
 import { getIstanbulToday } from '../../utils/dateUtils';
 import { Utensils, Check, Undo2, Pencil, X, ChevronLeft, ChevronRight, Loader2, Ban, Plus, Search, Package } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -311,8 +312,8 @@ const MealOrders = () => {
             </div>
 
             {/* Cancel Modal */}
-            {cancellingRecord && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+            <ModalOverlay open={!!cancellingRecord} onClose={() => setCancellingRecord(null)}>
+                {cancellingRecord && (
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Yemek Talebi İptal</h3>
@@ -341,12 +342,12 @@ const MealOrders = () => {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </ModalOverlay>
 
             {/* Note Edit Modal */}
-            {editingNote && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+            <ModalOverlay open={!!editingNote} onClose={() => setEditingNote(null)}>
+                {editingNote && (
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Sipariş Notu</h3>
@@ -373,12 +374,12 @@ const MealOrders = () => {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </ModalOverlay>
 
             {/* Create On Behalf Modal */}
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+            <ModalOverlay open={showCreateModal} onClose={() => { setShowCreateModal(false); setSelectedEmployee(null); setEmployeeSearch(''); setNewMealDesc(''); }}>
+                {showCreateModal && (
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Personel Adına Yemek Talebi</h3>
@@ -458,8 +459,8 @@ const MealOrders = () => {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </ModalOverlay>
         </div>
     );
 };

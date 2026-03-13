@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom';
 import { Calendar, X, AlertTriangle, Clock } from 'lucide-react';
 import api from '../../services/api';
 import { getIstanbulToday } from '../../utils/dateUtils';
+import ModalOverlay from '../ui/ModalOverlay';
 
 const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
     const [form, setForm] = useState({
@@ -109,8 +109,8 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
     const dateMax = fiscalPeriods ? fiscalPeriods.next.end : '';
     const effectiveMin = dateMin > today ? dateMin : today;
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
+    return (
+        <ModalOverlay open={isOpen} onClose={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -255,8 +255,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                     </div>
                 </form>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

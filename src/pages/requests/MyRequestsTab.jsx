@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
     CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake
 } from 'lucide-react';
 import api from '../../services/api';
+import ModalOverlay from '../../components/ui/ModalOverlay';
 import { useAuth } from '../../context/AuthContext';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
@@ -516,8 +516,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             />
 
             {/* Edit Overtime Modal */}
-            {showEditOvertimeModal && ReactDOM.createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
+            <ModalOverlay open={showEditOvertimeModal} onClose={() => setShowEditOvertimeModal(false)}>
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
                         <h3 className="text-xl font-bold text-slate-900">Mesai Düzenle</h3>
                         <form onSubmit={handleEditOvertimeSubmit} className="space-y-4">
@@ -561,9 +560,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                             </div>
                         </form>
                     </div>
-                </div>,
-                document.body
-            )}
+            </ModalOverlay>
 
             {/* Request Detail Modal */}
             <RequestDetailModal

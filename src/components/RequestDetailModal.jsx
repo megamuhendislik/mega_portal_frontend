@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User } from 'lucide-react';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
+import ModalOverlay from './ui/ModalOverlay';
 
 const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate }) => {
   const { hasPermission, user } = useAuth();
@@ -219,8 +219,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     );
   };
 
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+  return (
+    <>
+    <ModalOverlay open={isOpen} onClose={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
@@ -863,10 +864,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
           </button>
         </div>
       </div>
+    </ModalOverlay>
 
       {/* Override Modal */}
-      {showOverrideModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <ModalOverlay open={showOverrideModal} onClose={() => { setShowOverrideModal(false); setError(''); }} level="secondary">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">Karar Değiştir</h3>
@@ -957,12 +958,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
 
       {/* Manager Cancel Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <ModalOverlay open={showCancelModal} onClose={() => { setShowCancelModal(false); setError(''); }} level="secondary">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">İzin İptali</h3>
@@ -1000,10 +999,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>,
-    document.body
+      </ModalOverlay>
+    </>
   );
 };
 

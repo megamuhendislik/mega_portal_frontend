@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
+import ModalOverlay from './ui/ModalOverlay';
 import {
     LeaveRequestForm,
     OvertimeRequestForm,
@@ -985,8 +985,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Shared approver dropdown element (passed as prop to form components)
     const approverDropdownElement = renderApproverDropdown();
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    return (
+        <ModalOverlay open={isOpen} onClose={onClose}>
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -1254,8 +1254,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     </div>
                 )}
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

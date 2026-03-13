@@ -107,9 +107,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             const otApproved = dayLogs.reduce((acc, l) => acc + (l.ot_approved_seconds || 0), 0);
             const otPending = dayLogs.reduce((acc, l) => acc + (l.pending_overtime_seconds || 0), 0);
             const totalCalcOt = dayLogs.reduce((acc, l) => acc + (l.calculated_overtime_seconds || 0), 0);
-            // İzin günlerinde potansiyel OT gösterme (DUTY kaydından stale calc_ot)
-            const isDutyOnly = dayLogs.length > 0 && dayLogs.every(l => l.source === 'DUTY');
-            const otPotential = isDutyOnly ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
+            // İzin/Rapor günlerinde: normal → leave olarak göster, potansiyel OT sıfırla
+            const isLeaveDay = dayLogs.length > 0 && dayLogs.every(l => ['DUTY', 'HEALTH_REPORT', 'HOSPITAL_VISIT'].includes(l.source));
+            const otPotential = isLeaveDay ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
             const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
             const dayTarget = dayLogs.length > 0
                 ? Math.max(...dayLogs.map(l => l.day_target_seconds || 0))
@@ -119,11 +119,12 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 date: dateStr,
                 name: format(d, 'EEE', { locale: tr }),
                 fullDate: format(d, 'd MMM yyyy', { locale: tr }),
-                normal: parseFloat((totalNormal / 3600).toFixed(1)),
+                normal: isLeaveDay ? 0 : parseFloat((totalNormal / 3600).toFixed(1)),
+                leave: isLeaveDay ? parseFloat((totalNormal / 3600).toFixed(1)) : 0,
                 ot_approved: parseFloat((otApproved / 3600).toFixed(2)),
                 ot_pending: parseFloat((otPending / 3600).toFixed(2)),
                 ot_potential: parseFloat((otPotential / 3600).toFixed(2)),
-                missing: parseFloat((totalMissing / 3600).toFixed(1)),
+                missing: isLeaveDay ? 0 : parseFloat((totalMissing / 3600).toFixed(1)),
                 break_time: parseFloat((totalBreak / 3600).toFixed(2)),
                 target: dayTarget > 0 ? parseFloat((dayTarget / 3600).toFixed(1)) : null,
                 isFuture: dateStr > getIstanbulToday()
@@ -182,7 +183,8 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                         />
                         <Legend iconType="circle" wrapperStyle={{ paddingTop: '4px', fontSize: '10px' }} />
                         <Line type="step" dataKey="target" stroke="#94a3b8" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={false} name="Hedef" connectNulls={false} />
-                        <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="leave" stackId="a" fill="#8b5cf6" radius={[0, 0, 4, 4]} name="İzin/Rapor" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} name="Normal" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_approved" stackId="a" fill="#10b981" name="Onaylı Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_pending" stackId="a" fill="url(#striped-pending)" stroke="#f59e0b" strokeWidth={1} name="Bekleyen Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_potential" stackId="a" fill="url(#striped-potential)" stroke="#94a3b8" strokeWidth={1} radius={[4, 4, 0, 0]} name="Potansiyel Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />

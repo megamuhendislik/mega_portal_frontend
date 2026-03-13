@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import moment from 'moment';
 import api from '../services/api';
-import { createPortal } from 'react-dom';
 import {
     Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle,
     RefreshCw, AlertTriangle, X, Loader2, Paintbrush, Layers
@@ -10,6 +9,7 @@ import YearCalendar from '../components/YearCalendar';
 import FiscalCalendarView from '../components/FiscalCalendarView';
 import TemplateEditor from '../components/TemplateEditor';
 import { getIstanbulToday } from '../utils/dateUtils';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const TABS = [
     { key: 'templates', label: 'Şablonlar', icon: Layers },
@@ -631,9 +631,8 @@ const WorkSchedules = () => {
             </div>
 
             {/* Processing Modal & Log Viewer */}
-            {(saving || executionLogs.length > 0) && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
+            <ModalOverlay open={saving || executionLogs.length > 0} onClose={() => { if (!saving) { setExecutionLogs([]); setRecalcProgress(null); } }} closeOnOverlayClick={!saving} closeOnEsc={!saving}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
                         {saving ? (
                             <div className="p-8">
                                 <div className="text-center mb-6">
@@ -721,8 +720,7 @@ const WorkSchedules = () => {
                             </>
                         )}
                     </div>
-                </div>
-            )}
+            </ModalOverlay>
         </div>
     );
 };
@@ -1114,8 +1112,8 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
 
     const isBulkHalfDay = type === 'HALF_DAY' && dates.length > 1;
 
-    return createPortal(
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-in fade-in zoom-in-95" style={{ zIndex: 10000 }}>
+    return (
+        <ModalOverlay open={true} onClose={onClose} level="secondary">
             <div className={`bg-white rounded-xl shadow-2xl p-4 md:p-6 w-full ${isBulkHalfDay ? 'max-w-[calc(100vw-2rem)] md:max-w-2xl' : 'max-w-sm'} transition-all`}>
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold text-slate-800">Tatil Detayları</h3>
@@ -1196,8 +1194,7 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
@@ -1255,8 +1252,8 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
         }
     };
 
-    return createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in" style={{ zIndex: 9999 }}>
+    return (
+        <ModalOverlay open={true} onClose={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] md:max-w-5xl max-h-[90vh] flex flex-col overflow-hidden relative">
                 {pendingRange && (
                     <HolidayDetailModal range={pendingRange} onClose={() => setPendingRange(null)} onSave={confirmHolidayCreation} />
@@ -1290,8 +1287,7 @@ const HolidayBuilderModal = ({ onClose, selectedHolidayIds, allHolidays, onUpdat
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

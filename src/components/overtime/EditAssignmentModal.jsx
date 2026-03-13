@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import { Pencil, X, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 import { getIstanbulToday } from '../../utils/dateUtils';
+import ModalOverlay from '../ui/ModalOverlay';
 
 const EditAssignmentModal = ({ isOpen, onClose, onSuccess, assignment }) => {
     const [form, setForm] = useState({
@@ -82,8 +82,8 @@ const EditAssignmentModal = ({ isOpen, onClose, onSuccess, assignment }) => {
         ? weeklyUsage.used_hours / weeklyUsage.limit_hours : 0;
     const limitColor = limitRatio >= 1 ? 'bg-red-500' : limitRatio > 0.7 ? 'bg-amber-500' : 'bg-emerald-500';
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    return (
+        <ModalOverlay open={isOpen} onClose={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -169,8 +169,7 @@ const EditAssignmentModal = ({ isOpen, onClose, onSuccess, assignment }) => {
                     </div>
                 </form>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

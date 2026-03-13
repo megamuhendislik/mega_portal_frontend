@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import ReactDOM from 'react-dom';
+import ModalOverlay from '../components/ui/ModalOverlay';
 import {
     MessageSquare, Plus, Send, Search, Clock, CheckCircle2, AlertCircle,
     ThumbsUp, AlertTriangle, Lightbulb, Paperclip, X, ChevronRight,
@@ -84,11 +84,9 @@ const formatDateTime = (d) => {
 // =================== DELETE CONFIRM MODAL ===================
 
 const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, feedbackTitle }) => {
-    if (!open) return null;
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200/80">
+    return (
+        <ModalOverlay open={open} onClose={onClose} level="secondary">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200/80">
                 <div className="p-6 text-center">
                     <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-4">
                         <Trash2 size={24} className="text-rose-500" />
@@ -119,8 +117,7 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, feedbackTitle }
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
@@ -193,10 +190,9 @@ const CreateFeedbackModal = ({ open, onClose, onSuccess }) => {
 
     if (!open) return null;
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={handleClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-slate-200/80">
+    return (
+        <ModalOverlay open={open} onClose={handleClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-slate-200/80">
                 {/* Header */}
                 <div className="sticky top-0 bg-white/95 backdrop-blur-sm px-6 py-4 border-b border-slate-100 flex items-center justify-between rounded-t-2xl z-10">
                     <h2 className="text-lg font-bold text-slate-800">Yeni Geri Bildirim</h2>
@@ -314,8 +310,7 @@ const CreateFeedbackModal = ({ open, onClose, onSuccess }) => {
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
@@ -376,10 +371,9 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
         }
     };
 
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200/80">
+    return (
+        <ModalOverlay open={open} onClose={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200/80">
                 {/* Header */}
                 <div className="sticky top-0 bg-white/95 backdrop-blur-sm px-6 py-4 border-b border-slate-100 flex items-start justify-between rounded-t-2xl z-10">
                     <div className="flex-1 min-w-0 pr-4">
@@ -517,8 +511,7 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                     </div>
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 

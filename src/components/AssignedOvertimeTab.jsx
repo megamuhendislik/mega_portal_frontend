@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import ReactDOM from 'react-dom';
 import {
     Clock, Calendar, XCircle, Users, Plus, Loader2, CheckCircle2,
     ChevronDown, ChevronRight, Zap, PenLine, FileText, Send, TrendingUp,
@@ -11,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import CreateAssignmentModal from './overtime/CreateAssignmentModal';
 import EditAssignmentModal from './overtime/EditAssignmentModal';
 import { getIstanbulToday } from '../utils/dateUtils';
+import ModalOverlay from './ui/ModalOverlay';
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS & HELPERS
@@ -534,10 +534,9 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
         }
     }, [managers, showManagerSelect]);
 
-    if (!isOpen) return null;
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-fade-in">
+    return (
+        <ModalOverlay open={isOpen} onClose={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>{title}</h3>
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
@@ -571,16 +570,15 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
                     </button>
                 </div>
             </div>
-        </div>, document.body
+        </ModalOverlay>
     );
 };
 
 const CancelModal = ({ isOpen, date, onClose, onSubmit, loading }) => {
     const [reason, setReason] = useState('');
-    if (!isOpen) return null;
-    return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-fade-in">
+    return (
+        <ModalOverlay open={isOpen} onClose={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     <XCircle size={20} className="text-red-500" /> Talebi İptal Et
                 </h3>
@@ -594,7 +592,7 @@ const CancelModal = ({ isOpen, date, onClose, onSubmit, loading }) => {
                     </button>
                 </div>
             </div>
-        </div>, document.body
+        </ModalOverlay>
     );
 };
 

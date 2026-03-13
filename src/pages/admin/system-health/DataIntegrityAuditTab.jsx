@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
-import { createPortal } from 'react-dom';
+import ModalOverlay from '../../../components/ui/ModalOverlay';
 import {
     ShieldCheckIcon,
     ArrowPathIcon,
@@ -48,15 +48,6 @@ const SEVERITY_LABELS = {
     MEDIUM: 'Orta',
     LOW: 'Düşük',
 };
-
-function useBodyScrollLock(active) {
-    useEffect(() => {
-        if (!active) return;
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => { document.body.style.overflow = prev; };
-    }, [active]);
-}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -241,7 +232,6 @@ const LogContent = ({ log }) => {
 
 const DetailLogModal = ({ data, logs, onClose }) => {
     const [activeTab, setActiveTab] = useState(0);
-    useBodyScrollLock(true);
 
     const isBulk = Array.isArray(logs) && logs.length > 0;
     const items = isBulk ? logs : (data ? [data] : []);
@@ -250,11 +240,10 @@ const DetailLogModal = ({ data, logs, onClose }) => {
 
     const current = items[activeTab] || items[0];
 
-    return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-black/50" onClick={onClose}>
+    return (
+        <ModalOverlay open={true} onClose={onClose}>
             <div
                 className="bg-gray-50 shadow-2xl w-full max-w-5xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white rounded-t-2xl shrink-0">
@@ -303,16 +292,13 @@ const DetailLogModal = ({ data, logs, onClose }) => {
                     <LogContent log={current} />
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
 // ─── Fix Report Modal ────────────────────────────────────────────────────────
 
 const FixReportModal = ({ results, onClose }) => {
-    useBodyScrollLock(true);
-
     if (!results || results.mode !== 'fix') return null;
 
     const actionLog = results.action_log || [];
@@ -327,11 +313,10 @@ const FixReportModal = ({ results, onClose }) => {
         grouped[cat].push(entry);
     }
 
-    return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-black/50" onClick={onClose}>
+    return (
+        <ModalOverlay open={true} onClose={onClose}>
             <div
                 className="bg-gray-50 shadow-2xl w-full max-w-4xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white rounded-t-2xl shrink-0">
@@ -411,8 +396,7 @@ const FixReportModal = ({ results, onClose }) => {
                     )}
                 </div>
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
@@ -1007,15 +991,12 @@ export default function DataIntegrityAuditTab() {
             )}
 
             {/* Loading overlay */}
-            {loadingDetail && createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
-                    <div className="bg-white rounded-xl shadow-xl px-6 py-4 flex items-center gap-3">
-                        <ArrowPathIcon className="w-5 h-5 animate-spin text-indigo-600" />
-                        <span className="text-sm font-bold text-gray-700">Detay logu yükleniyor...</span>
-                    </div>
-                </div>,
-                document.body
-            )}
+            <ModalOverlay open={loadingDetail} onClose={() => {}} closeOnOverlayClick={false} closeOnEsc={false}>
+                <div className="bg-white rounded-xl shadow-xl px-6 py-4 flex items-center gap-3">
+                    <ArrowPathIcon className="w-5 h-5 animate-spin text-indigo-600" />
+                    <span className="text-sm font-bold text-gray-700">Detay logu yükleniyor...</span>
+                </div>
+            </ModalOverlay>
 
             {/* Empty state */}
             {!results && !loading && (

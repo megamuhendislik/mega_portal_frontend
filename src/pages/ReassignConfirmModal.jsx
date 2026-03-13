@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import ReactDOM from 'react-dom';
 import { ExclamationTriangleIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import { UserPlus, Star } from 'lucide-react';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const ReassignConfirmModal = ({ reassignment, onConfirm, onCancel, isSaving }) => {
     const [clickedType, setClickedType] = useState(null);
@@ -20,15 +20,9 @@ const ReassignConfirmModal = ({ reassignment, onConfirm, onCancel, isSaving }) =
         ? `${employee.name} adlı personel ${target.name} altına atanacaktır.`
         : `${employee.name} adlı personel ${target.name} departmanına taşınacaktır.`;
 
-    return ReactDOM.createPortal(
-        <div
-            className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={onCancel}
-        >
-            <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6"
-                onClick={e => e.stopPropagation()}
-            >
+    return (
+        <ModalOverlay open={true} onClose={onCancel} level="tertiary">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-5">
                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -128,8 +122,7 @@ const ReassignConfirmModal = ({ reassignment, onConfirm, onCancel, isSaving }) =
                     </div>
                 )}
             </div>
-        </div>,
-        document.body
+        </ModalOverlay>
     );
 };
 
