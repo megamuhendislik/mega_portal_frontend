@@ -22,6 +22,7 @@ const HeroDailySummary = ({ summary, loading }) => {
     const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((totalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
     const isOffDay = safeSummary.is_off_day || false;
+    const onLeave = safeSummary.on_leave || false;
     const usedBreakSeconds = isOffDay ? 0 : (safeSummary.break_used || 0);
     const totalBreakAllowanceSeconds = isOffDay ? 0 : (safeSummary.break_allowance || ((safeSummary.remaining_break || 0) + usedBreakSeconds));
     const remainingBreakSeconds = Math.max(0, totalBreakAllowanceSeconds - usedBreakSeconds);
@@ -64,8 +65,8 @@ const HeroDailySummary = ({ summary, loading }) => {
                                     <Briefcase size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">PUANTAJ</p>
-                                    <h3 className="text-base font-bold text-slate-700">Normal Mesai</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{onLeave ? 'İZİN' : 'PUANTAJ'}</p>
+                                    <h3 className="text-base font-bold text-slate-700">{onLeave ? 'İzinli Gün' : 'Normal Mesai'}</h3>
                                 </div>
                             </div>
 
@@ -80,21 +81,30 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
                             </div>
                             <p className="text-xs font-semibold text-slate-400 pl-1">
-                                Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span>
+                                {onLeave ? (
+                                    <><span className="text-violet-600 font-bold">İzin kredisi</span> — Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
+                                ) : (
+                                    <>Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
+                                )}
                             </p>
                         </div>
 
                         <div className="mt-8">
                             <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.4)] relative"
+                                    className={clsx(
+                                        "h-full rounded-full relative",
+                                        onLeave
+                                            ? "bg-gradient-to-r from-violet-500 to-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.4)]"
+                                            : "bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                                    )}
                                     style={{ width: `${workPercent}%`, transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
                                 >
                                     <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white/50"></div>
                                 </div>
                             </div>
                             <div className="flex justify-between mt-3 text-[10px] font-bold tracking-wide uppercase">
-                                <span className="text-indigo-600">%{workPercent} Tamamlandı</span>
+                                <span className={onLeave ? "text-violet-600" : "text-indigo-600"}>{onLeave ? 'İZİNLİ GÜN' : `%${workPercent} Tamamlandı`}</span>
                             </div>
                         </div>
                     </div>
