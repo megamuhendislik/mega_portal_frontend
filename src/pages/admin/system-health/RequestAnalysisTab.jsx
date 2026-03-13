@@ -33,6 +33,7 @@ export default function RequestAnalysisTab() {
 
     // Per-row yönetici seçimi (NO_APPROVER fix)
     const [selectedFixApprover, setSelectedFixApprover] = useState({});
+    const [autoApprove, setAutoApprove] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -76,6 +77,7 @@ export default function RequestAnalysisTab() {
                 date_from: lcDateFrom,
                 date_to: lcDateTo,
                 request_type: lcRequestType,
+                auto_approve: autoApprove,
             });
             setBulkFixReport(res.data);
             // Düzeltme sonrası tekrar tara
@@ -87,7 +89,7 @@ export default function RequestAnalysisTab() {
         }
     };
 
-    const handleSingleFix = async (requestId, approverId) => {
+    const handleSingleFix = async (requestId, approverId, approve = false) => {
         try {
             await api.post('/system/health-check/request-lifecycle-bulk-fix/', {
                 date_from: lcDateFrom,
@@ -96,8 +98,9 @@ export default function RequestAnalysisTab() {
                 request_ids: [requestId],
                 issue_codes: ['NO_APPROVER'],
                 target_approver_map: [{ request_id: requestId, approver_id: approverId }],
+                auto_approve: approve,
             });
-            message.success('Yönetici atandı');
+            message.success(approve ? 'Yönetici atandı ve onaylandı' : 'Yönetici atandı');
             fetchLifecycle();
         } catch (err) {
             message.error('Yönetici atanamadı');
@@ -699,6 +702,21 @@ export default function RequestAnalysisTab() {
                                 </ul>
                             </div>
 
+                            {(lifecycleData?.summary?.issue_breakdown?.no_approver || 0) > 0 && (
+                                <label className="flex items-center gap-2 mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoApprove}
+                                        onChange={e => setAutoApprove(e.target.checked)}
+                                        className="w-4 h-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-medium text-emerald-800">Yönetici atandıktan sonra otomatik onayla</span>
+                                        <p className="text-[10px] text-emerald-600">PENDING OT talepleri onaylanır + günlük/aylık hedefler güncellenir</p>
+                                    </div>
+                                </label>
+                            )}
+
                             <div className="flex justify-end gap-2">
                                 <button onClick={() => setShowFixConfirm(false)}
                                     className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
@@ -1082,11 +1100,19 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                                 ))}
                             </select>
                             <button
-                                onClick={() => handleSingleFix?.(req.id, selectedFixApprover?.[req.id] || req.available_managers[0]?.id)}
+                                onClick={() => handleSingleFix?.(req.id, selectedFixApprover?.[req.id] || req.available_managers[0]?.id, false)}
                                 className="text-xs px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors"
                             >
                                 Ata
                             </button>
+                            {req.status === 'PENDING' && req.type === 'OVERTIME' && (
+                                <button
+                                    onClick={() => handleSingleFix?.(req.id, selectedFixApprover?.[req.id] || req.available_managers[0]?.id, true)}
+                                    className="text-xs px-2.5 py-1.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                                >
+                                    Ata + Onayla
+                                </button>
+                            )}
                         </div>
                     )}
                     {req.available_managers && req.available_managers.length === 0 && req.issues?.some(i => i.code === 'NO_APPROVER') && (
