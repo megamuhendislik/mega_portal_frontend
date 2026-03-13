@@ -109,6 +109,41 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     // Reject reason modal
     const [rejectModal, setRejectModal] = useState({ open: false, otId: null, reason: '' });
 
+    // New request type data
+    const [cardlessRequests, setCardlessRequests] = useState([]);
+    const [mealRequests, setMealRequests] = useState([]);
+    const [externalDutyRequests, setExternalDutyRequests] = useState([]);
+
+    // Fiscal lock bypass
+    const [forceOverride, setForceOverride] = useState(false);
+
+    // OT creation form
+    const [newOtStart, setNewOtStart] = useState(null);
+    const [newOtEnd, setNewOtEnd] = useState(null);
+    const [newOtStatus, setNewOtStatus] = useState('APPROVED');
+    const [newOtReason, setNewOtReason] = useState('');
+    const [otCreating, setOtCreating] = useState(false);
+
+    // Cardless creation form
+    const [newCardlessIn, setNewCardlessIn] = useState(null);
+    const [newCardlessOut, setNewCardlessOut] = useState(null);
+    const [newCardlessStatus, setNewCardlessStatus] = useState('APPROVED');
+    const [newCardlessReason, setNewCardlessReason] = useState('');
+    const [cardlessCreating, setCardlessCreating] = useState(false);
+
+    // Meal creation form
+    const [newMealStatus, setNewMealStatus] = useState('PENDING');
+    const [newMealDesc, setNewMealDesc] = useState('');
+    const [mealCreating, setMealCreating] = useState(false);
+
+    // External duty creation form
+    const [newDutyStart, setNewDutyStart] = useState(null);
+    const [newDutyEnd, setNewDutyEnd] = useState(null);
+    const [newDutyCity, setNewDutyCity] = useState('');
+    const [newDutyDesc, setNewDutyDesc] = useState('');
+    const [newDutyStatus, setNewDutyStatus] = useState('APPROVED');
+    const [dutyCreating, setDutyCreating] = useState(false);
+
     const dateStr = format(date, 'yyyy-MM-dd');
 
     /* ───── data loading ───── */
@@ -126,6 +161,9 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             setRequestTypes(res.data.request_types || []);
             setDailyTarget(res.data.daily_target_seconds || 0);
             setScheduleInfo(res.data.schedule_info || null);
+            setCardlessRequests(res.data.cardless_requests || []);
+            setMealRequests(res.data.meal_requests || []);
+            setExternalDutyRequests(res.data.external_duty_requests || []);
             if (res.data.request_types?.length > 0) {
                 setLeaveTypeId(prev => prev || res.data.request_types[0].id);
             }
@@ -151,9 +189,16 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             await api.post('/system-data/update_daily_records/', {
                 employee_id: employee.id,
                 date: dateStr,
-                records: records,
+                records: records.map(r => ({
+                    id: r.id || undefined,
+                    check_in: r.check_in,
+                    check_out: r.check_out,
+                    source: r.source || 'MANUAL',
+                    status: r.status || 'OPEN',
+                })),
                 delete_ids: deleteIds,
                 override_note: overrideNote,
+                force_override: forceOverride,
             });
             message.success('Kaydedildi!');
             if (onSaveSuccess) onSaveSuccess();
@@ -374,6 +419,89 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
         }
         handleOtAction(rejectModal.otId, 'reject', rejectModal.reason);
         setRejectModal({ open: false, otId: null, reason: '' });
+    };
+
+    /* ───── admin override handlers ───── */
+    const handleCreateOt = async () => {
+        if (!newOtStart || !newOtEnd) { message.warning('Başlangıç ve bitiş saati gerekli'); return; }
+        setOtCreating(true);
+        try {
+            await api.post('/system-data/admin_create_overtime/', {
+                employee_id: employee.id, date: format(date, 'yyyy-MM-dd'),
+                start_time: newOtStart.format('HH:mm'), end_time: newOtEnd.format('HH:mm'),
+                status: newOtStatus, reason: newOtReason, override_note: overrideNote,
+            });
+            message.success('Ek mesai talebi oluşturuldu');
+            setNewOtStart(null); setNewOtEnd(null); setNewOtReason('');
+            loadData(); onSaveSuccess?.();
+        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
+        finally { setOtCreating(false); }
+    };
+
+    const handleCreateCardless = async () => {
+        if (!newCardlessIn || !newCardlessOut) { message.warning('Giriş ve çıkış saati gerekli'); return; }
+        setCardlessCreating(true);
+        try {
+            await api.post('/system-data/admin_create_cardless/', {
+                employee_id: employee.id, date: format(date, 'yyyy-MM-dd'),
+                check_in_time: newCardlessIn.format('HH:mm'), check_out_time: newCardlessOut.format('HH:mm'),
+                status: newCardlessStatus, reason: newCardlessReason, override_note: overrideNote,
+            });
+            message.success('Kartsız giriş talebi oluşturuldu');
+            setNewCardlessIn(null); setNewCardlessOut(null); setNewCardlessReason('');
+            loadData(); onSaveSuccess?.();
+        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
+        finally { setCardlessCreating(false); }
+    };
+
+    const handleCreateMeal = async () => {
+        setMealCreating(true);
+        try {
+            await api.post('/system-data/admin_create_meal/', {
+                employee_id: employee.id, date: format(date, 'yyyy-MM-dd'),
+                status: newMealStatus, description: newMealDesc, override_note: overrideNote,
+            });
+            message.success('Yemek talebi oluşturuldu');
+            setNewMealDesc(''); loadData();
+        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
+        finally { setMealCreating(false); }
+    };
+
+    const handleCreateDuty = async () => {
+        if (!newDutyStart || !newDutyEnd) { message.warning('Başlangıç ve bitiş tarihi gerekli'); return; }
+        setDutyCreating(true);
+        try {
+            await api.post('/system-data/admin_create_external_duty/', {
+                employee_id: employee.id, start_date: newDutyStart.format('YYYY-MM-DD'),
+                end_date: newDutyEnd.format('YYYY-MM-DD'), status: newDutyStatus,
+                duty_city: newDutyCity, duty_description: newDutyDesc, override_note: overrideNote,
+            });
+            message.success('Dış görev talebi oluşturuldu');
+            setNewDutyStart(null); setNewDutyEnd(null); setNewDutyCity(''); setNewDutyDesc('');
+            loadData(); onSaveSuccess?.();
+        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
+        finally { setDutyCreating(false); }
+    };
+
+    const handleUpdateRequestStatus = async (requestType, requestId, newStatus) => {
+        try {
+            await api.post('/system-data/admin_update_request_status/', {
+                request_type: requestType, request_id: requestId,
+                new_status: newStatus, override_note: overrideNote,
+            });
+            message.success('Statü güncellendi');
+            loadData();
+        } catch (err) { message.error(err.response?.data?.error || 'Hata'); }
+    };
+
+    const handleDeleteRequest = async (requestType, requestId) => {
+        try {
+            await api.post('/system-data/admin_delete_request/', {
+                request_type: requestType, request_id: requestId, override_note: overrideNote,
+            });
+            message.success('Talep silindi');
+            loadData();
+        } catch (err) { message.error(err.response?.data?.error || 'Hata'); }
     };
 
     /* ───── time helpers for records ───── */
@@ -670,16 +798,35 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                     </div>
                                 </div>
 
-                                {/* Kaynak seçimi */}
-                                <div className="mt-2">
-                                    <label className="block text-[11px] font-medium text-slate-500 mb-1">Kaynak</label>
-                                    <Select
-                                        value={rec.source}
-                                        onChange={(val) => updateRec(i, 'source', val)}
-                                        options={sourceOptions}
-                                        size="small"
-                                        className="w-full"
-                                    />
+                                {/* Kaynak + Durum seçimi */}
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-[11px] font-medium text-slate-500 mb-1">Kaynak</label>
+                                        <Select
+                                            value={rec.source}
+                                            onChange={(val) => updateRec(i, 'source', val)}
+                                            options={sourceOptions}
+                                            size="small"
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-medium text-slate-500 mb-1">Durum</label>
+                                        <Select
+                                            size="small"
+                                            value={rec.status || 'OPEN'}
+                                            onChange={v => updateRec(i, 'status', v)}
+                                            className="w-full"
+                                            options={[
+                                                { value: 'OPEN', label: 'Açık' },
+                                                { value: 'CALCULATED', label: 'Hesaplandı' },
+                                                { value: 'APPROVED', label: 'Onaylandı' },
+                                                { value: 'AUTO_APPROVED', label: 'Oto Onay' },
+                                                { value: 'PENDING_MANAGER_APPROVAL', label: 'Onay Bekliyor' },
+                                                { value: 'ABSENT', label: 'Devamsız' },
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -1059,9 +1206,16 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             )}
                         </div>
                         <Space size={4}>
-                            <Tag color={statusColor[lr.status] || 'default'} className="!m-0">
-                                {statusLabel[lr.status] || lr.status}
-                            </Tag>
+                            <Select size="small" value={lr.status} style={{ width: 120 }}
+                                onChange={val => handleUpdateRequestStatus('leave', lr.id, val)}
+                                options={[
+                                    { value: 'PENDING', label: 'Beklemede' },
+                                    { value: 'APPROVED', label: 'Onaylandı' },
+                                    { value: 'REJECTED', label: 'Reddedildi' },
+                                    { value: 'CANCELLED', label: 'İptal' },
+                                ]}
+                            />
+                            {lr.is_admin_override && <Tag color="purple">Admin</Tag>}
                             {lr.status !== 'CANCELLED' && (
                                 <Popconfirm
                                     title="Bu izni iptal etmek istediğinize emin misiniz?"
@@ -1173,9 +1327,22 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                 <div className="text-[10px] text-red-500 mt-0.5">Red sebebi: {ot.rejection_reason}</div>
                             )}
                         </div>
-                        <Tag color={statusColor[ot.status] || 'default'}>
-                            {statusLabel[ot.status] || ot.status}
-                        </Tag>
+                        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                            <Select size="small" value={ot.status} style={{ width: 120 }}
+                                onChange={val => handleUpdateRequestStatus('overtime', ot.id, val)}
+                                options={[
+                                    { value: 'POTENTIAL', label: 'Potansiyel' },
+                                    { value: 'PENDING', label: 'Beklemede' },
+                                    { value: 'APPROVED', label: 'Onaylandı' },
+                                    { value: 'REJECTED', label: 'Reddedildi' },
+                                    { value: 'CANCELLED', label: 'İptal' },
+                                ]}
+                            />
+                            {ot.is_admin_override && <Tag color="purple">Admin</Tag>}
+                            <Popconfirm title="Bu talebi silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('overtime', ot.id)}>
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                        </div>
                     </div>
                     {(ot.status === 'PENDING' || ot.status === 'POTENTIAL') && (
                         <div className="flex gap-2 mt-3 pt-2.5 border-t">
@@ -1207,6 +1374,28 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                     className="!my-4"
                 />
             )}
+
+            {/* Yeni Ek Mesai Talebi */}
+            <Divider orientation="left" style={{ fontSize: 13 }}>Yeni Ek Mesai Talebi</Divider>
+            <div className="space-y-2">
+                <div className="flex gap-2 items-center flex-wrap">
+                    <TimePicker value={newOtStart} onChange={setNewOtStart} format="HH:mm" placeholder="Başlangıç" size="small" needConfirm={false} />
+                    <span>—</span>
+                    <TimePicker value={newOtEnd} onChange={setNewOtEnd} format="HH:mm" placeholder="Bitiş" size="small" needConfirm={false} />
+                    <Select size="small" value={newOtStatus} onChange={setNewOtStatus} style={{ width: 130 }}
+                        options={[
+                            { value: 'POTENTIAL', label: 'Potansiyel' },
+                            { value: 'PENDING', label: 'Beklemede' },
+                            { value: 'APPROVED', label: 'Onaylandı' },
+                        ]}
+                    />
+                </div>
+                <Input.TextArea rows={1} value={newOtReason} onChange={e => setNewOtReason(e.target.value)}
+                    placeholder="Görev açıklaması (opsiyonel)" size="small" />
+                <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateOt} loading={otCreating}>
+                    OT Talebi Oluştur
+                </Button>
+            </div>
         </div>
     );
 
@@ -1261,6 +1450,156 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             ),
             children: renderOvertime(),
         },
+        {
+            key: 'cardless',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <ClockCircleOutlined className="text-cyan-500" />
+                    Kartsız Giriş
+                    {cardlessRequests.length > 0 && (
+                        <Tag className="!text-[10px] !m-0 !ml-1" color="cyan">{cardlessRequests.length}</Tag>
+                    )}
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    {cardlessRequests.map(cr => (
+                        <div key={cr.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded flex-wrap">
+                            <Tag color="blue">{cr.check_in_time} - {cr.check_out_time}</Tag>
+                            <Select size="small" value={cr.status} style={{ width: 120 }}
+                                onChange={val => handleUpdateRequestStatus('cardless', cr.id, val)}
+                                options={[
+                                    { value: 'PENDING', label: 'Beklemede' },
+                                    { value: 'APPROVED', label: 'Onaylandı' },
+                                    { value: 'REJECTED', label: 'Reddedildi' },
+                                    { value: 'CANCELLED', label: 'İptal' },
+                                ]}
+                            />
+                            {cr.is_admin_override && <Tag color="purple">Admin</Tag>}
+                            <span className="text-xs text-gray-500 flex-1">{cr.reason}</span>
+                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('cardless', cr.id)}>
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                        </div>
+                    ))}
+                    {cardlessRequests.length === 0 && <Empty description="Kartsız giriş talebi yok" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+                    <Divider orientation="left" style={{ fontSize: 13 }}>Yeni Kartsız Giriş</Divider>
+                    <div className="flex gap-2 items-center flex-wrap">
+                        <TimePicker value={newCardlessIn} onChange={setNewCardlessIn} format="HH:mm" placeholder="Giriş" size="small" needConfirm={false} />
+                        <span>—</span>
+                        <TimePicker value={newCardlessOut} onChange={setNewCardlessOut} format="HH:mm" placeholder="Çıkış" size="small" needConfirm={false} />
+                        <Select size="small" value={newCardlessStatus} onChange={setNewCardlessStatus} style={{ width: 120 }}
+                            options={[{ value: 'PENDING', label: 'Beklemede' }, { value: 'APPROVED', label: 'Onaylandı' }]}
+                        />
+                    </div>
+                    <Input.TextArea rows={1} value={newCardlessReason} onChange={e => setNewCardlessReason(e.target.value)}
+                        placeholder="Sebep (opsiyonel)" size="small" />
+                    <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateCardless} loading={cardlessCreating}>
+                        Kartsız Giriş Oluştur
+                    </Button>
+                </div>
+            ),
+        },
+        {
+            key: 'meal',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <CalendarOutlined className="text-orange-500" />
+                    Yemek Talebi
+                    {mealRequests.length > 0 && (
+                        <Tag className="!text-[10px] !m-0 !ml-1" color="volcano">{mealRequests.length}</Tag>
+                    )}
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    {mealRequests.map(mr => (
+                        <div key={mr.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded flex-wrap">
+                            <span className="text-sm">{mr.description || 'Yemek talebi'}</span>
+                            <Select size="small" value={mr.status} style={{ width: 130 }}
+                                onChange={val => handleUpdateRequestStatus('meal', mr.id, val)}
+                                options={[
+                                    { value: 'PENDING', label: 'Beklemede' },
+                                    { value: 'ORDERED', label: 'Sipariş Verildi' },
+                                    { value: 'DELIVERED', label: 'Teslim Edildi' },
+                                    { value: 'CANCELLED', label: 'İptal' },
+                                ]}
+                            />
+                            {mr.is_admin_override && <Tag color="purple">Admin</Tag>}
+                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('meal', mr.id)}>
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                        </div>
+                    ))}
+                    {mealRequests.length === 0 && <Empty description="Yemek talebi yok" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+                    <Divider orientation="left" style={{ fontSize: 13 }}>Yeni Yemek Talebi</Divider>
+                    <div className="flex gap-2 items-center flex-wrap">
+                        <Select size="small" value={newMealStatus} onChange={setNewMealStatus} style={{ width: 140 }}
+                            options={[{ value: 'PENDING', label: 'Beklemede' }, { value: 'ORDERED', label: 'Sipariş Verildi' }]}
+                        />
+                        <Input value={newMealDesc} onChange={e => setNewMealDesc(e.target.value)}
+                            placeholder="Açıklama (opsiyonel)" size="small" style={{ width: 200 }} />
+                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateMeal} loading={mealCreating}>
+                            Yemek Talebi Oluştur
+                        </Button>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'external_duty',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <CalendarOutlined className="text-indigo-500" />
+                    Dış Görev
+                    {externalDutyRequests.length > 0 && (
+                        <Tag className="!text-[10px] !m-0 !ml-1" color="purple">{externalDutyRequests.length}</Tag>
+                    )}
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    {externalDutyRequests.map(ed => (
+                        <div key={ed.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded flex-wrap">
+                            <Tag>{ed.start_date} — {ed.end_date}</Tag>
+                            <span className="text-sm">{ed.duty_city}</span>
+                            <Select size="small" value={ed.status} style={{ width: 120 }}
+                                onChange={val => handleUpdateRequestStatus('leave', ed.id, val)}
+                                options={[
+                                    { value: 'PENDING', label: 'Beklemede' },
+                                    { value: 'APPROVED', label: 'Onaylandı' },
+                                    { value: 'REJECTED', label: 'Reddedildi' },
+                                    { value: 'CANCELLED', label: 'İptal' },
+                                ]}
+                            />
+                            {ed.is_admin_override && <Tag color="purple">Admin</Tag>}
+                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('leave', ed.id)}>
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                        </div>
+                    ))}
+                    {externalDutyRequests.length === 0 && <Empty description="Dış görev talebi yok" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+                    <Divider orientation="left" style={{ fontSize: 13 }}>Yeni Dış Görev</Divider>
+                    <div className="space-y-2">
+                        <div className="flex gap-2 items-center flex-wrap">
+                            <DatePicker value={newDutyStart} onChange={setNewDutyStart} placeholder="Başlangıç" size="small" />
+                            <span>—</span>
+                            <DatePicker value={newDutyEnd} onChange={setNewDutyEnd} placeholder="Bitiş" size="small" />
+                            <Select size="small" value={newDutyStatus} onChange={setNewDutyStatus} style={{ width: 120 }}
+                                options={[{ value: 'PENDING', label: 'Beklemede' }, { value: 'APPROVED', label: 'Onaylandı' }]}
+                            />
+                        </div>
+                        <Input value={newDutyCity} onChange={e => setNewDutyCity(e.target.value)}
+                            placeholder="Şehir" size="small" style={{ width: 200 }} />
+                        <Input.TextArea rows={1} value={newDutyDesc} onChange={e => setNewDutyDesc(e.target.value)}
+                            placeholder="Görev açıklaması" size="small" />
+                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateDuty} loading={dutyCreating}>
+                            Dış Görev Oluştur
+                        </Button>
+                    </div>
+                </div>
+            ),
+        },
     ];
 
     return (
@@ -1281,6 +1620,17 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                     {otRequests.length > 0 && <span className="text-amber-600 font-bold">{otRequests.length} FM</span>}
                 </div>
             </div>
+
+            {/* Fiscal Lock Bypass Banner */}
+            {scheduleInfo?.is_locked && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mx-2 mt-2 flex items-center gap-3">
+                    <span className="text-amber-600 font-medium text-sm">Bu tarih kilitli mali dönemde</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                        <input type="checkbox" checked={forceOverride} onChange={e => setForceOverride(e.target.checked)} className="rounded" />
+                        <span>Lock bypass ile düzenle</span>
+                    </label>
+                </div>
+            )}
 
             {/* Collapse Accordion */}
             <div className="flex-1 overflow-y-auto p-2">
