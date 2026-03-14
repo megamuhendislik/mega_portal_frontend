@@ -525,7 +525,7 @@ const TeamItemCard = ({ item, onCancel, onEdit }) => {
 const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, managers = [], claimType }) => {
     const [reason, setReason] = useState('');
     const [selectedManagerId, setSelectedManagerId] = useState(null);
-    const showManagerSelect = claimType === 'POTENTIAL' && managers.length > 1;
+    const showManagerSelect = managers.length > 1;
 
     useEffect(() => {
         if (showManagerSelect) {
@@ -726,7 +726,11 @@ const AssignedOvertimeTab = () => {
         setActionLoading(true);
         try {
             const { type, target } = claimModal;
-            if (type === 'INTENDED') await api.post(`/overtime-assignments/${target.assignment_id}/claim/`, { reason: reason || undefined });
+            if (type === 'INTENDED') {
+                const intendedPayload = { reason: reason || undefined };
+                if (selectedManagerId) intendedPayload.target_approver_id = selectedManagerId;
+                await api.post(`/overtime-assignments/${target.assignment_id}/claim/`, intendedPayload);
+            }
             else if (type === 'POTENTIAL') {
                 const payload = {
                     ...(target.overtime_request_id ? { overtime_request_id: target.overtime_request_id } : { attendance_id: target.attendance_id }),

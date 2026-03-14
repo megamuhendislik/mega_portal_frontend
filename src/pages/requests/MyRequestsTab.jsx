@@ -218,10 +218,27 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const handleClaimPotential = useCallback(async (req) => {
         setClaimingId(req.id);
         try {
-            await api.post('/overtime-requests/claim-potential/', {
+            // Yönetici bilgisini al (tek ise otomatik, çoklu ise ilk PRIMARY)
+            let targetApproverId = null;
+            try {
+                const mgrRes = await api.get('/available-approvers/?type=OVERTIME');
+                const mgrs = mgrRes.data || [];
+                if (mgrs.length === 1) {
+                    targetApproverId = mgrs[0].id;
+                } else if (mgrs.length > 1) {
+                    const primary = mgrs.find(m => m.relationship === 'PRIMARY');
+                    targetApproverId = primary ? primary.id : mgrs[0].id;
+                }
+            } catch { /* devam et */ }
+
+            const payload = {
                 overtime_request_id: req.id,
                 reason: 'Talep edildi',
-            });
+            };
+            if (targetApproverId) {
+                payload.target_approver_id = targetApproverId;
+            }
+            await api.post('/overtime-requests/claim-potential/', payload);
             await fetchData();
             notifyParent();
         } catch (e) {

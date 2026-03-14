@@ -180,6 +180,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
   const [manualForm, setManualForm] = useState({ date: '', start_time: '', end_time: '', reason: '' });
   const [manualLoading, setManualLoading] = useState(false);
 
+  // Manager selection for claims/manual entry
+  const [otManagers, setOtManagers] = useState([]);
+  const [selectedClaimManagerId, setSelectedClaimManagerId] = useState(null);
+  const [selectedManualManagerId, setSelectedManualManagerId] = useState(null);
+
   const [assignModal, setAssignModal] = useState(false);
 
   const [overrideModal, setOverrideModal] = useState({ visible: false, assignment: null });
@@ -190,6 +195,21 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
     if (user?.employee_id) return user.employee_id;
     return null;
   }, [isManagerMode, selectedEmployee, user]);
+
+  // Fetch available OT managers for claim/manual entry (personal mode only)
+  useEffect(() => {
+    if (isManagerMode) return;
+    api.get('/available-approvers/?type=OVERTIME')
+      .then(res => {
+        const list = res.data || [];
+        setOtManagers(list);
+        const primary = list.find(m => m.relationship === 'PRIMARY');
+        const defaultId = primary ? primary.id : (list[0]?.id || null);
+        setSelectedClaimManagerId(defaultId);
+        setSelectedManualManagerId(defaultId);
+      })
+      .catch(() => setOtManagers([]));
+  }, [isManagerMode]);
 
   // Fetch available fiscal periods
   useEffect(() => {
@@ -353,6 +373,9 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       } else if (claimModal.data.id) {
         payload.overtime_request_id = claimModal.data.id;
       }
+      if (selectedClaimManagerId) {
+        payload.target_approver_id = selectedClaimManagerId;
+      }
       await api.post('/overtime-requests/claim-potential/', payload);
       message.success('Talep başarıyla gönderildi');
       setClaimModal({ open: false, data: null });
@@ -380,7 +403,13 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
     }
     setManualLoading(true);
     try {
-      await api.post('/overtime-requests/manual-entry/', manualForm);
+      const manualPayload = { ...manualForm };
+      if (selectedManualManagerId) {
+        manualPayload.target_approver_id = selectedManualManagerId;
+      } else if (otManagers.length === 1) {
+        manualPayload.target_approver_id = otManagers[0].id;
+      }
+      await api.post('/overtime-requests/manual-entry/', manualPayload);
       message.success('Manuel mesai talebi oluşturuldu');
       setManualModal(false);
       setManualForm({ date: '', start_time: '', end_time: '', reason: '' });
@@ -721,6 +750,27 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
               </div>
             )}
 
+            {otManagers.length > 1 && (
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Onay Yöneticisi</label>
+                <Select
+                  value={selectedClaimManagerId}
+                  onChange={setSelectedClaimManagerId}
+                  className="w-full"
+                  options={otManagers.map(m => ({
+                    value: m.id,
+                    label: `${m.relationship === 'PRIMARY' ? '⭐' : '🔹'} ${m.name}${m.via ? ` (${m.via})` : ''}`,
+                  }))}
+                />
+              </div>
+            )}
+
+            {otManagers.length === 0 && (
+              <div className="px-3 py-2 rounded-lg text-xs font-medium border bg-amber-50 border-amber-200 text-amber-700">
+                Onaylayıcı yönetici bulunamadı. Talep oluşturulamaz.
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium text-slate-700 block mb-1">Açıklama</label>
               <Input.TextArea
@@ -779,6 +829,22 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
               />
             </div>
           </div>
+          {otManagers.length > 1 && (
+            <div>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">Onay Yöneticisi</label>
+              <Select
+                value={selectedManualManagerId}
+                onChange={setSelectedManualManagerId}
+                className="w-full"
+                size="small"
+                options={otManagers.map(m => ({
+                  value: m.id,
+                  label: `${m.relationship === 'PRIMARY' ? '⭐' : '🔹'} ${m.name}${m.via ? ` (${m.via})` : ''}`,
+                }))}
+              />
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-bold text-slate-500 mb-1 block">Açıklama *</label>
             <Input.TextArea

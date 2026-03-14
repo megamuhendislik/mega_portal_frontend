@@ -7,19 +7,46 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
     const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [managers, setManagers] = useState([]);
+    const [selectedManagerId, setSelectedManagerId] = useState(null);
+
+    // Yönetici listesini getir
+    useEffect(() => {
+        if (!isOpen) return;
+        api.get('/available-approvers/?type=OVERTIME')
+            .then(res => {
+                const list = res.data || [];
+                setManagers(list);
+                if (list.length === 1) {
+                    setSelectedManagerId(list[0].id);
+                } else {
+                    const primary = list.find(m => m.relationship === 'PRIMARY');
+                    setSelectedManagerId(primary ? primary.id : (list[0]?.id || null));
+                }
+            })
+            .catch(() => setManagers([]));
+    }, [isOpen]);
 
     if (!isOpen || !attendanceData) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (managers.length === 0) {
+            setError('Onaylayıcı yönetici bulunamadı. Lütfen İK ile iletişime geçin.');
+            return;
+        }
         setLoading(true);
         setError(null);
 
         try {
-            await api.post('/overtime-requests/create_from_attendance/', {
+            const payload = {
                 attendance_id: attendanceData.id,
-                reason: reason
-            });
+                reason: reason,
+            };
+            if (selectedManagerId) {
+                payload.target_approver_id = selectedManagerId;
+            }
+            await api.post('/overtime-requests/create_from_attendance/', payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -67,6 +94,32 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
                     </div>
 
                     <form onSubmit={handleSubmit}>
+                        {managers.length > 1 && (
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Onay Yöneticisi
+                                </label>
+                                <select
+                                    value={selectedManagerId || ''}
+                                    onChange={(e) => setSelectedManagerId(Number(e.target.value))}
+                                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                                >
+                                    {managers.map(m => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.relationship === 'PRIMARY' ? '⭐ ' : '🔹 '}{m.name}
+                                            {m.via ? ` (${m.via})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {managers.length === 0 && (
+                            <div className="mb-4 p-3 bg-amber-50 text-amber-700 text-sm rounded-lg border border-amber-200">
+                                Onaylayıcı yönetici bulunamadı. Talep oluşturulamaz.
+                            </div>
+                        )}
+
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Açıklama / Gerekçe <span className="text-red-500">*</span>

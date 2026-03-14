@@ -450,7 +450,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         setClaimingId(assignmentId);
         setError(null);
         try {
-            await api.post(`/overtime-assignments/${assignmentId}/claim/`, { reason });
+            const claimPayload = { reason };
+            if (selectedApproverId) {
+                claimPayload.target_approver_id = selectedApproverId;
+            }
+            await api.post(`/overtime-assignments/${assignmentId}/claim/`, claimPayload);
             // Remove the claimed item from the list
             setClaimableData(prev => ({
                 ...prev,
@@ -472,7 +476,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         setClaimingId(attendanceId);
         setError(null);
         try {
-            await api.post('/overtime-requests/create_from_attendance/', { attendance_id: attendanceId, reason });
+            const payload = { attendance_id: attendanceId, reason };
+            if (selectedApproverId) {
+                payload.target_approver_id = selectedApproverId;
+            }
+            await api.post('/overtime-requests/create_from_attendance/', payload);
             // Remove the claimed item from the list
             setClaimableData(prev => ({
                 ...prev,
@@ -617,6 +625,12 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         setAvailableApprovers(res.data || []);
                     } catch {}
                 }
+                setLoading(false);
+                return;
+            }
+            // Yönetici bulunamadı
+            if (data?.no_approver) {
+                setError(data.error || 'Onaylayıcı bulunamadı. Yöneticiniz tanımlanmamış, lütfen İK ile iletişime geçin.');
                 setLoading(false);
                 return;
             }
