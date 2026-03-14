@@ -639,7 +639,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                       <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                         <span>{item.hours_per_day || item.max_duration_hours} saat</span>
                         <span>•</span>
-                        <span>Atayan: {item.assigned_by_name}</span>
+                        <span>Atayan: {item.manager_name || item.assigned_by_name}</span>
                       </div>
                     </div>
                   </div>
@@ -1002,7 +1002,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                 <span>•</span>
                 <span>Süre: {intendedClaimModal.item.hours_per_day || intendedClaimModal.item.max_duration_hours} sa</span>
                 <span>•</span>
-                <span>Atayan: {intendedClaimModal.item.assigned_by_name}</span>
+                <span>Atayan: {intendedClaimModal.item.manager_name || intendedClaimModal.item.assigned_by_name}</span>
               </div>
             </div>
 
