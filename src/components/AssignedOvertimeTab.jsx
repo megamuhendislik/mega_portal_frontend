@@ -85,12 +85,19 @@ const StatusPill = ({ status }) => {
 };
 
 const AssignmentPill = ({ assignment }) => {
-    const past = isDatePast(assignment.date);
-    if (assignment.status === 'CLAIMED') return <Pill color="blue">Talep Edildi</Pill>;
+    const todayStr = getIstanbulToday();
+    const past = assignment.date < todayStr;
+    const isToday = assignment.date === todayStr;
+    if (assignment.status === 'CLAIMED') return <Pill color="purple">Talep Edildi</Pill>;
     if (assignment.status === 'EXPIRED') return <Pill color="red">Süresi Doldu</Pill>;
-    if (assignment.status === 'CANCELLED') return <Pill color="slate">İptal</Pill>;
-    if (assignment.status === 'ASSIGNED' && past) return <Pill color="emerald">Talep Edilebilir</Pill>;
-    return <Pill color="sky">Bekliyor</Pill>;
+    if (assignment.status === 'CANCELLED') return <Pill color="slate">İptal Edildi</Pill>;
+    if (assignment.status === 'ASSIGNED') {
+        if (past && assignment.actual_overtime_hours > 0) return <Pill color="amber">Talep Bekliyor</Pill>;
+        if (past) return <Pill color="slate">Çalışma Yok</Pill>;
+        if (isToday) return <Pill color="amber">Bugün</Pill>;
+        return <Pill color="sky">Planlandı</Pill>;
+    }
+    return <Pill color="slate">{assignment.status}</Pill>;
 };
 
 const CountBadge = ({ count, color = 'slate' }) => {
@@ -214,30 +221,31 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
 
                     {/* Özet satırı */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                        {type === 'intended' && (
+                            <>
+                                <span className="text-blue-600 font-medium">
+                                    Max: <strong>{item.max_duration_hours} sa</strong>
+                                </span>
+                                <span className="text-slate-500">
+                                    Gerçekleşen: <strong className={item.actual_overtime_hours > 0 ? 'text-emerald-700' : 'text-slate-400'}>
+                                        {item.actual_overtime_hours > 0 ? `${item.actual_overtime_hours} sa` : '—'}
+                                    </strong>
+                                </span>
+                            </>
+                        )}
+                        {type === 'potential' && (
+                            <span className="text-purple-700 font-medium">
+                                Fazla Mesai: <strong>{item.actual_overtime_hours} sa</strong>
+                            </span>
+                        )}
                         {item.total_work_hours > 0 && (
                             <span className="text-slate-500">
                                 Toplam: <strong className="text-slate-700">{item.total_work_hours} sa</strong>
                             </span>
                         )}
-                        {type === 'intended' && item.actual_overtime_hours === 0 ? (
-                            <span className="text-blue-600 font-medium">
-                                Atanan: {item.max_duration_hours} sa
-                            </span>
-                        ) : (
-                            <span className="text-slate-500">
-                                Fazla Mesai: <strong className={`${type === 'potential' ? 'text-purple-700' : 'text-blue-700'}`}>
-                                    {item.actual_overtime_hours} sa
-                                </strong>
-                            </span>
-                        )}
                         {item.total_break_seconds > 0 && (
                             <span className="flex items-center gap-0.5 text-slate-400">
                                 <Coffee size={10} /> {formatDuration(item.total_break_seconds)}
-                            </span>
-                        )}
-                        {type === 'intended' && item.actual_overtime_hours > 0 && (
-                            <span className="text-slate-500">
-                                Maks: <strong className="text-slate-700">{item.max_duration_hours} sa</strong>
                             </span>
                         )}
                     </div>
@@ -265,12 +273,35 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                     ) : item.is_rejected ? (
                         <>
                             <Pill color="red">Reddedildi</Pill>
-                            <button onClick={onClaim}
-                                className="px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700">
-                                <Send size={10} /> Tekrar Talep
-                            </button>
+                            {isDatePast(item.date) && item.check_out_time && item.actual_overtime_hours > 0 && (
+                                <button onClick={onClaim}
+                                    className="px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700">
+                                    <Send size={10} /> Tekrar Talep
+                                </button>
+                            )}
                         </>
-                    ) : type === 'intended' && !item.can_claim && !(item.actual_overtime_hours > 0) ? (
+                    ) : type === 'intended' && item.date > getIstanbulToday() ? (
+                        <Pill color="sky">Planlandı</Pill>
+                    ) : type === 'intended' && item.date === getIstanbulToday() && !item.check_out_time ? (
+                        <div className="flex flex-col items-end gap-1">
+                            <Pill color="amber">Bugün</Pill>
+                            <span className="text-[9px] text-slate-400 text-right max-w-[100px]">Kartla çıkış yapınız</span>
+                        </div>
+                    ) : item.actual_overtime_hours > 0 && (item.check_out_time || isDatePast(item.date)) ? (
+                        <button onClick={onClaim}
+                            className={`px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 ${
+                                type === 'potential'
+                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}>
+                            <Send size={11} /> Talep Et
+                        </button>
+                    ) : isDatePast(item.date) && !item.check_out_time ? (
+                        <div className="flex flex-col items-end gap-1">
+                            <Pill color="slate">Çalışma Yok</Pill>
+                            <span className="text-[9px] text-slate-400 text-right max-w-[100px]">Giriş/çıkış kaydı yok</span>
+                        </div>
+                    ) : type === 'intended' && !item.can_claim ? (
                         <Pill color="blue">Atandı</Pill>
                     ) : (
                         <button onClick={onClaim}
@@ -1147,7 +1178,7 @@ const AssignedOvertimeTab = () => {
                             : (
                                 <div className="space-y-2">
                                     {filteredRequests.map(req => (
-                                        <RequestCard key={req.id} req={req} onCancel={() => setCancelModal({ open: true, target: req })} />
+                                        <RequestCard key={req.id} req={req} />
                                     ))}
                                 </div>
                             )
