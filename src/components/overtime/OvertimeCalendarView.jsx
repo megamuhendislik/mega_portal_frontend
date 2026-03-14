@@ -859,7 +859,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                   : 'Algılanan mesai'}
               </div>
               <div className="text-xs mt-1">
-                Süre: {claimModal.data.actual_overtime_hours || (claimModal.data.actual_overtime_seconds ? (claimModal.data.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
+                Süre: {claimModal.data.duration_hours || claimModal.data.actual_overtime_hours || (claimModal.data.actual_overtime_seconds ? (claimModal.data.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
               </div>
             </div>
 
