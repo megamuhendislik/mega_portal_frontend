@@ -50,21 +50,33 @@ const Requests = () => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // Manager detection
-    const [subordinates, setSubordinates] = useState([]);
-    const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || subordinates.length > 0;
+    // Manager detection — PRIMARY / SECONDARY counts
+    const [primaryCount, setPrimaryCount] = useState(0);
+    const [secondaryCount, setSecondaryCount] = useState(0);
+    const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
+    const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasAnyTeam;
 
     // Badge for incoming tab
     const [incomingPendingCount, setIncomingPendingCount] = useState(0);
 
     useEffect(() => {
-        const fetchSubordinates = async () => {
+        const fetchTeamCounts = async () => {
             try {
-                const res = await api.get('/employees/subordinates/');
-                setSubordinates(Array.isArray(res.data) ? res.data : res.data.results || []);
-            } catch (e) { /* not manager */ }
+                const [priRes, secRes] = await Promise.allSettled([
+                    api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
+                    api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
+                ]);
+                if (priRes.status === 'fulfilled') {
+                    const d = priRes.value.data;
+                    setPrimaryCount((Array.isArray(d) ? d : d.results || []).length);
+                }
+                if (secRes.status === 'fulfilled') {
+                    const d = secRes.value.data;
+                    setSecondaryCount((Array.isArray(d) ? d : d.results || []).length);
+                }
+            } catch { /* not manager */ }
         };
-        fetchSubordinates();
+        fetchTeamCounts();
     }, []);
 
     // Sync tab changes to URL
@@ -152,12 +164,16 @@ const Requests = () => {
                         onPendingCountChange={handlePendingCountChange}
                         onDataChange={handleDataChange}
                         refreshTrigger={refreshTrigger}
+                        primaryCount={primaryCount}
+                        secondaryCount={secondaryCount}
                     />
                 )}
                 {activeTab === 'overtime_requests' && (
                     <OvertimeRequestsTab
                         onDataChange={handleDataChange}
                         refreshTrigger={refreshTrigger}
+                        primaryCount={primaryCount}
+                        secondaryCount={secondaryCount}
                     />
                 )}
                 {activeTab === 'analytics' && (

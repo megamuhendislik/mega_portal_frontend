@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Clock, CalendarPlus, ArrowDownLeft, BarChart3, Info } from 'lucide-react';
 import { Tooltip } from 'antd';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import OvertimeCalendarView from '../../components/overtime/OvertimeCalendarView';
 import OTAssignmentCreator from '../../components/overtime/OTAssignmentCreator';
@@ -28,25 +27,11 @@ const SubTabButton = ({ active, onClick, children, icon, badge }) => (
   </button>
 );
 
-export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
+export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0 }) {
   const { hasPermission } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('my_requests');
-  const [, setSubordinates] = useState([]);
-  const [isManager, setIsManager] = useState(false);
-
-  useEffect(() => {
-    const fetchSubordinates = async () => {
-      try {
-        const res = await api.get('/employees/subordinates/');
-        const subs = Array.isArray(res.data) ? res.data : res.data.results || [];
-        setSubordinates(subs);
-        setIsManager(subs.length > 0 || hasPermission('APPROVAL_OVERTIME'));
-      } catch {
-        setIsManager(hasPermission('APPROVAL_OVERTIME'));
-      }
-    };
-    fetchSubordinates();
-  }, [hasPermission]);
+  const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
+  const isManager = hasAnyTeam || hasPermission('APPROVAL_OVERTIME');
 
   // Normal çalışan — mevcut görünüm
   if (!isManager) {
@@ -68,26 +53,30 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
             <Info size={13} className="text-slate-400 cursor-help" />
           </Tooltip>
         </SubTabButton>
-        <SubTabButton
-          active={activeSubTab === 'assign'}
-          onClick={() => setActiveSubTab('assign')}
-          icon={<CalendarPlus size={16} />}
-        >
-          Mesai Ata
-          <Tooltip title="Ekibinizdeki çalışanlara ek mesai atayın. Takvimden tarih seçerek toplu atama yapabilirsiniz.">
-            <Info size={13} className="text-slate-400 cursor-help" />
-          </Tooltip>
-        </SubTabButton>
-        <SubTabButton
-          active={activeSubTab === 'incoming'}
-          onClick={() => setActiveSubTab('incoming')}
-          icon={<ArrowDownLeft size={16} />}
-        >
-          Gelen Talepler
-          <Tooltip title="Ekibinizden gelen ek mesai taleplerini inceleyin, onaylayın veya reddedin.">
-            <Info size={13} className="text-slate-400 cursor-help" />
-          </Tooltip>
-        </SubTabButton>
+        {hasAnyTeam && (
+          <SubTabButton
+            active={activeSubTab === 'assign'}
+            onClick={() => setActiveSubTab('assign')}
+            icon={<CalendarPlus size={16} />}
+          >
+            Mesai Ata
+            <Tooltip title="Ekibinizdeki çalışanlara ek mesai atayın. Takvimden tarih seçerek toplu atama yapabilirsiniz.">
+              <Info size={13} className="text-slate-400 cursor-help" />
+            </Tooltip>
+          </SubTabButton>
+        )}
+        {hasAnyTeam && (
+          <SubTabButton
+            active={activeSubTab === 'incoming'}
+            onClick={() => setActiveSubTab('incoming')}
+            icon={<ArrowDownLeft size={16} />}
+          >
+            Gelen Talepler
+            <Tooltip title="Ekibinizden gelen ek mesai taleplerini inceleyin, onaylayın veya reddedin.">
+              <Info size={13} className="text-slate-400 cursor-help" />
+            </Tooltip>
+          </SubTabButton>
+        )}
         <SubTabButton
           active={activeSubTab === 'analytics'}
           onClick={() => setActiveSubTab('analytics')}

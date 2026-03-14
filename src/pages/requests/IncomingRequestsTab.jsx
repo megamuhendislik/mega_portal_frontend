@@ -7,7 +7,7 @@ import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
-const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType }) => {
+const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0 }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -20,6 +20,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // Sub-tab: 'primary_team' | 'secondary_team'
     const [activeSubTab, setActiveSubTab] = useState('primary_team');
+
+    // Auto-select visible tab when one side is hidden
+    useEffect(() => {
+        if (primaryCount === 0 && secondaryCount > 0) setActiveSubTab('secondary_team');
+    }, [primaryCount, secondaryCount]);
 
     // Filters
     const [typeFilter, setTypeFilter] = useState(filterType === 'overtime' ? 'OVERTIME' : 'ALL');
@@ -570,26 +575,28 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-4">
                 {/* Sub-tab pills */}
                 <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={() => { setActiveSubTab('primary_team'); setStatusFilter('ALL'); setTypeFilter(filterType === 'overtime' ? 'OVERTIME' : 'ALL'); }}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                            activeSubTab === 'primary_team'
-                                ? 'bg-slate-900 text-white shadow-lg'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                        <UserCheck size={14} />
-                        Birincil Ekip
-                        <Tooltip title="Sizin doğrudan yöneticiniz olduğunuz çalışanların talepleri">
-                            <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
-                        </Tooltip>
-                        {primaryPendingCount > 0 && (
-                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                                activeSubTab === 'primary_team' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
-                            }`}>{primaryPendingCount}</span>
-                        )}
-                    </button>
-                    {hasSecondaryTeam && (
+                    {primaryCount > 0 && (
+                        <button
+                            onClick={() => { setActiveSubTab('primary_team'); setStatusFilter('ALL'); setTypeFilter(filterType === 'overtime' ? 'OVERTIME' : 'ALL'); }}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                                activeSubTab === 'primary_team'
+                                    ? 'bg-slate-900 text-white shadow-lg'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                            <UserCheck size={14} />
+                            Birincil Ekip
+                            <Tooltip title="Sizin doğrudan yöneticiniz olduğunuz çalışanların talepleri">
+                                <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                            </Tooltip>
+                            {primaryPendingCount > 0 && (
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                                    activeSubTab === 'primary_team' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+                                }`}>{primaryPendingCount}</span>
+                            )}
+                        </button>
+                    )}
+                    {(secondaryCount > 0 || hasSecondaryTeam) && (
                         <button
                             onClick={() => { setActiveSubTab('secondary_team'); setStatusFilter('ALL'); setTypeFilter('ALL'); }}
                             className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
