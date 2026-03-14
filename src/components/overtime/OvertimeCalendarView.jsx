@@ -102,25 +102,29 @@ function getCellInfo(dateStr, calendarData) {
   }
 
   const dayInfo = calendarData[dateStr];
+  // Backend returns summary nested under .summary key
+  const s = dayInfo.summary || dayInfo;
   const statuses = [];
   let totalHours = 0;
 
-  if (dayInfo.approved_hours > 0) {
+  if (s.approved_hours > 0) {
     statuses.push('APPROVED');
-    totalHours += dayInfo.approved_hours;
+    totalHours += s.approved_hours;
   }
-  if (dayInfo.pending_hours > 0) {
+  if (s.pending_hours > 0) {
     statuses.push('PENDING');
-    totalHours += dayInfo.pending_hours;
+    totalHours += s.pending_hours;
   }
-  if (dayInfo.potential_hours > 0) {
+  if (s.potential_hours > 0) {
     statuses.push('POTENTIAL');
-    totalHours += dayInfo.potential_hours;
+    totalHours += s.potential_hours;
   }
-  if (dayInfo.rejected_hours > 0) {
+  if (s.rejected_hours > 0) {
     statuses.push('REJECTED');
   }
-  if (dayInfo.assigned_hours > 0 && !statuses.includes('APPROVED') && !statuses.includes('PENDING')) {
+  // Check assignments array for ASSIGNED status
+  const hasAssignments = (dayInfo.assignments || []).length > 0;
+  if (hasAssignments && !statuses.includes('APPROVED') && !statuses.includes('PENDING')) {
     statuses.push('ASSIGNED');
   }
 
@@ -274,7 +278,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       ]);
 
       if (calRes.status === 'fulfilled') {
-        setCalendarData(calRes.value.data.calendar || calRes.value.data || {});
+        setCalendarData(calRes.value.data.days || calRes.value.data.calendar || calRes.value.data || {});
       }
       if (otRes.status === 'fulfilled') {
         setWeeklyOtStatus(otRes.value.data);
@@ -388,7 +392,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         params: { ...params, fiscal_month: fiscalPeriod.month, fiscal_year: fiscalPeriod.year }
       });
 
-      const cal = res.data.calendar || res.data || {};
+      const cal = res.data.days || res.data.calendar || res.data || {};
       const dayInfo = cal[day.date] || {};
 
       setDayDetailData({
@@ -474,10 +478,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
     if (calendarData && typeof calendarData === 'object') {
       Object.values(calendarData).forEach(day => {
         if (day && typeof day === 'object') {
-          approved += day.approved_hours || 0;
-          pending += day.pending_hours || 0;
-          rejected += day.rejected_hours || 0;
-          potential += day.potential_hours || 0;
+          const s = day.summary || day;
+          approved += s.approved_hours || 0;
+          pending += s.pending_hours || 0;
+          rejected += s.rejected_hours || 0;
+          potential += s.potential_hours || 0;
         }
       });
     }
