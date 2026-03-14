@@ -522,28 +522,32 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         {/* Team Tabs — hide when parent already controls team selection */}
         {!parentTeamTab && (
           <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
-            <button
-              onClick={() => { setTeamTab('primary'); setSelectedEmployeeId(null); }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                teamTab === 'primary'
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Users size={14} className="inline mr-1.5" />
-              Ana Ekip ({primaryTeam.length})
-            </button>
-            <button
-              onClick={() => { setTeamTab('secondary'); setSelectedEmployeeId(null); }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                teamTab === 'secondary'
-                  ? 'bg-white text-amber-700 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Users size={14} className="inline mr-1.5" />
-              İkincil Ekip ({secondaryTeam.length})
-            </button>
+            <Tooltip title="Doğrudan yöneticiniz olduğunuz çalışanlar" placement="top">
+              <button
+                onClick={() => { setTeamTab('primary'); setSelectedEmployeeId(null); }}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  teamTab === 'primary'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Users size={14} className="inline mr-1.5" />
+                Ana Ekip ({primaryTeam.length})
+              </button>
+            </Tooltip>
+            <Tooltip title="İkincil yönetici olarak atandığınız çalışanlar (sadece ek mesai)" placement="top">
+              <button
+                onClick={() => { setTeamTab('secondary'); setSelectedEmployeeId(null); }}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  teamTab === 'secondary'
+                    ? 'bg-white text-amber-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Users size={14} className="inline mr-1.5" />
+                İkincil Ekip ({secondaryTeam.length})
+              </button>
+            </Tooltip>
           </div>
         )}
 
@@ -569,7 +573,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           <div>
             <FieldLabel
               text="Personel"
-              tooltip={`Ek mesai ataması yapılacak ekip üyesini seçin`}
+              tooltip="Ek mesai atamak istediğiniz çalışanı seçin. Sadece ekibinizdeki çalışanları görebilirsiniz."
             />
             <Select
               showSearch
@@ -645,7 +649,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                               Haftalık Ek Mesai
                             </span>
-                            <Tooltip title={`Bu çalışanın son 7 günlük ek mesai toplamı ve kalan limiti`} placement="top">
+                            <Tooltip title="Çalışanın bu hafta için toplam ek mesai saati. Haftalık limit genellikle 30 saattir." placement="top">
                               <Info size={11} className="text-slate-400 cursor-help" />
                             </Tooltip>
                           </div>
@@ -689,7 +693,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           ? `${formatShortDate(fiscalPeriod.current.start)} — ${formatShortDate(fiscalPeriod.current.end)}`
                           : `Mali Dönem`}
                       </span>
-                      <Tooltip title={`Ek mesai yapılacak günleri seçin. Mavi günler zaten atanmış günlerdir`} placement="top">
+                      <Tooltip title="Mavi ile işaretli günler daha önce atanmış, mor günler yeni seçiminiz. Geçmiş günlere atama yapılamaz." placement="top">
                         <Info size={12} className="text-slate-400 cursor-help" />
                       </Tooltip>
                     </div>
@@ -792,7 +796,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     <div>
                       <FieldLabel
                         text={`Saat / Gün`}
-                        tooltip={`Çalışanın bu gün en fazla kalabileceği ek mesai süresi. Hafta içi: 6 sa, hafta sonu: 12 sa önerilir`}
+                        tooltip="Her gün için atanacak ek mesai süresi (saat). 0.5 ile 12 saat arasında."
                       />
                       <input
                         type="number"
@@ -816,7 +820,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     <div>
                       <FieldLabel
                         text={`Görev Açıklaması`}
-                        tooltip={`Ek mesai sırasında yapılacak işin kısa açıklaması (zorunlu)`}
+                        tooltip="Çalışanın yapacağı işin kısa açıklaması. Bu metin çalışana bildirim olarak gönderilir."
                         required
                       />
                       <textarea

@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-    Search, Users, Shield, UserCheck, UserCog, Clock, FileText
+    Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Info
 } from 'lucide-react';
+import { Tooltip } from 'antd';
 import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
@@ -579,6 +580,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     >
                         <UserCheck size={14} />
                         Birincil Ekip
+                        <Tooltip title="Sizin doğrudan yöneticiniz olduğunuz çalışanların talepleri">
+                            <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                        </Tooltip>
                         {primaryPendingCount > 0 && (
                             <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                                 activeSubTab === 'primary_team' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
@@ -596,6 +600,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         >
                             <UserCog size={14} />
                             İkincil Ekip
+                            <Tooltip title="İkincil yönetici olarak atandığınız çalışanların talepleri. İkincil yöneticiler sadece ek mesai işlemleri yapabilir.">
+                                <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                            </Tooltip>
                             {secondaryPendingCount > 0 && (
                                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                                     activeSubTab === 'secondary_team' ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
@@ -606,6 +613,10 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 </div>
 
                 {/* Filters row 1: Search + Person + Date Range */}
+                <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <Info size={12} className="text-slate-400" />
+                    <span>Çalışan adı, talep türü veya tarih ile arayabilirsiniz.</span>
+                </div>
                 <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -682,6 +693,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                 <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2">
                                     <Clock size={14} />
                                     Onay Bekleyen ({filteredPendingActionable.length})
+                                    <Tooltip title="Onayınızı bekleyen talepler. Onaylama veya reddetme işlemi yapabilirsiniz.">
+                                        <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                                    </Tooltip>
                                 </h3>
                             </div>
                             <div className="overflow-x-auto">
@@ -730,6 +744,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                 <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">
                                     <Users size={14} />
                                     {activeSubTab === 'primary_team' ? 'Ekip Talepleri' : 'Geçmiş Talepler'} ({allTeamFiltered.length})
+                                    <Tooltip title="Ekibinizdeki çalışanların tüm talep geçmişi. 'Değiştir' butonu ile önceki kararları değiştirebilirsiniz (override).">
+                                        <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                                    </Tooltip>
                                 </h3>
                             </div>
                             <div className="overflow-x-auto">

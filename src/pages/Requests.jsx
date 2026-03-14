@@ -84,10 +84,10 @@ const Requests = () => {
 
     // Page title based on active tab
     const titles = {
-        my_requests: { title: 'Kendi Taleplerim', subtitle: 'Tüm izin, mesai ve diğer taleplerinizi tek yerden yönetin.' },
-        incoming_requests: { title: 'Gelen Talepler', subtitle: 'Ekibinizden gelen talepleri onaylayın veya reddedin.' },
-        overtime_requests: { title: 'Ek Mesai Talepleri', subtitle: 'Ek mesai oluşturun, talep edin veya ekibinize atayın.' },
-        analytics: { title: 'Talep Analizi', subtitle: 'Talep istatistiklerinizi ve ekip performansını inceleyin.' },
+        my_requests: { title: 'Kendi Taleplerim', subtitle: 'Tüm izin, mesai ve diğer taleplerinizi tek yerden yönetin. Yeni talep oluşturmak için "Yeni Talep" butonunu kullanın.' },
+        incoming_requests: { title: 'Gelen Talepler', subtitle: 'Ekibinizden gelen talepleri inceleyin, onaylayın veya reddedin. Önceki kararları değiştirmek için "Değiştir" butonunu kullanabilirsiniz.' },
+        overtime_requests: { title: 'Ek Mesai Talepleri', subtitle: 'Ek mesai takvimini görüntüleyin, manuel talep oluşturun veya yöneticiyseniz ekibinize mesai atayın.' },
+        analytics: { title: 'Talep Analizi', subtitle: 'Talep istatistiklerinizi ve ekip performansını grafiklerle inceleyin.' },
     };
     const { title, subtitle } = titles[activeTab] || titles.my_requests;
 

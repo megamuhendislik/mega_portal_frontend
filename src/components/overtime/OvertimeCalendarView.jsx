@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  ChevronLeft, ChevronRight, Clock, PenLine, Users, RefreshCw
+  ChevronLeft, ChevronRight, Clock, PenLine, Users, RefreshCw,
+  CalendarCheck, ArrowRight, Info
 } from 'lucide-react';
-import { Select, Progress, Spin, Empty, Modal, Input, message } from 'antd';
+import { Select, Progress, Spin, Empty, Modal, Input, message, Tooltip } from 'antd';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import OTDayDetailPanel from './OTDayDetailPanel';
@@ -189,10 +190,17 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
   const [overrideModal, setOverrideModal] = useState({ visible: false, assignment: null });
 
+  // INTENDED (manager-assigned) claimable items
+  const [intendedItems, setIntendedItems] = useState([]);
+  const [intendedLoading, setIntendedLoading] = useState(false);
+  const [claimingId, setClaimingId] = useState(null);
+  const [intendedClaimReason, setIntendedClaimReason] = useState('');
+  const [intendedClaimModal, setIntendedClaimModal] = useState({ open: false, item: null });
+
   // Determine target employee id
   const targetEmployeeId = useMemo(() => {
     if (isManagerMode && selectedEmployee) return selectedEmployee;
-    if (user?.employee_id) return user.employee_id;
+    if (user?.id) return user.id;
     return null;
   }, [isManagerMode, selectedEmployee, user]);
 
@@ -281,6 +289,45 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
   useEffect(() => {
     fetchCalendarData();
   }, [fetchCalendarData]);
+
+  // Fetch INTENDED (manager-assigned) claimable items (personal mode only)
+  const fetchIntendedItems = useCallback(async () => {
+    if (isManagerMode) return;
+    setIntendedLoading(true);
+    try {
+      const res = await api.get('/overtime-assignments/claimable/');
+      setIntendedItems(res.data?.intended || []);
+    } catch {
+      setIntendedItems([]);
+    } finally {
+      setIntendedLoading(false);
+    }
+  }, [isManagerMode]);
+
+  useEffect(() => {
+    fetchIntendedItems();
+  }, [fetchIntendedItems]);
+
+  // Claim an INTENDED assignment
+  const handleClaimIntended = async (item) => {
+    setClaimingId(item.id);
+    try {
+      const payload = { reason: intendedClaimReason || 'Planlı mesai talebi' };
+      if (selectedClaimManagerId) {
+        payload.target_approver_id = selectedClaimManagerId;
+      }
+      await api.post(`/overtime-assignments/${item.id}/claim/`, payload);
+      message.success('Atanmış mesai başarıyla talep edildi');
+      setIntendedClaimModal({ open: false, item: null });
+      setIntendedClaimReason('');
+      fetchIntendedItems();
+      fetchCalendarData();
+    } catch (err) {
+      message.error(err.response?.data?.error || err.response?.data?.detail || 'Talep hatası');
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   // Fiscal period navigation
   const canGoPrev = useMemo(() => {
@@ -518,12 +565,14 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       {/* Top Bar: Action Buttons + Employee Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setManualModal(true)}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2"
-          >
-            <PenLine size={15} /> Manuel Mesai Talebi
-          </button>
+          <Tooltip title="Sistem tarafından algılanmayan ek mesai saatleriniz için manuel giriş yapabilirsiniz.">
+            <button
+              onClick={() => setManualModal(true)}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2"
+            >
+              <PenLine size={15} /> Manuel Mesai Talebi
+            </button>
+          </Tooltip>
           {isManagerMode && (
             <button
               onClick={() => setAssignModal(true)}
@@ -555,6 +604,58 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         )}
       </div>
 
+      {/* INTENDED (Manager-Assigned) Claimable Items */}
+      {!isManagerMode && intendedItems.length > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarCheck size={18} className="text-purple-600" />
+            <h3 className="font-bold text-purple-800 text-sm">Atanmış Ek Mesailer</h3>
+            <Tooltip title="Yöneticiniz tarafından size atanan ek mesai görevleri. Talep etmek için butona tıklayın.">
+              <Info size={14} className="text-purple-400 cursor-help" />
+            </Tooltip>
+            <span className="ml-auto bg-purple-200 text-purple-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+              {intendedItems.length} yeni
+            </span>
+          </div>
+          <div className="space-y-2">
+            {intendedItems.map((item) => {
+              const dateObj = new Date(item.date + 'T00:00:00');
+              const dayName = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][dateObj.getDay()];
+              const dateStr = `${dateObj.getDate()} ${MONTH_NAMES[dateObj.getMonth()]}`;
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-lg border border-purple-100 p-3 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="text-center bg-purple-100 rounded-lg px-2.5 py-1.5 flex-shrink-0">
+                      <div className="text-[10px] font-bold text-purple-500 uppercase">{dayName}</div>
+                      <div className="text-sm font-black text-purple-700">{dateStr}</div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-800 truncate">
+                        {item.task_description || 'Ek mesai görevi'}
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                        <span>{item.hours_per_day || item.max_duration_hours} saat</span>
+                        <span>•</span>
+                        <span>Atayan: {item.assigned_by_name}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIntendedClaimModal({ open: true, item })}
+                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <ArrowRight size={14} /> Talep Et
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Fiscal Period Selector + Weekly OT */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl p-3">
         <div className="flex items-center gap-3">
@@ -569,7 +670,12 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
             <div className="font-bold text-slate-800">
               {MONTH_NAMES[fiscalPeriod.month - 1]} {fiscalPeriod.year}
             </div>
-            <div className="text-[10px] text-slate-400">Mali Dönem</div>
+            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+              Mali Dönem
+              <Tooltip title="Mali dönem her ayın 26'sından bir sonraki ayın 25'ine kadar sürer.">
+                <Info size={11} className="text-slate-400 cursor-help" />
+              </Tooltip>
+            </div>
           </div>
           <button
             onClick={handleNextPeriod}
@@ -591,7 +697,12 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         {weeklyProgress && weeklyOtStatus && (
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Haftalık Mesai</div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                Haftalık Mesai
+                <Tooltip title="Son 7 günlük toplam ek mesai saatiniz. Onaylı + bekleyen talepler sayılır.">
+                  <Info size={11} className="text-slate-400 cursor-help" />
+                </Tooltip>
+              </div>
               <div className="text-xs font-bold text-slate-700">
                 {weeklyOtStatus.used_hours}/{weeklyOtStatus.limit_hours} sa
               </div>
@@ -643,21 +754,31 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100">
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Onaylı
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Bekleyen
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Algılanan
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-400" /> Reddedilen
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2.5 h-2.5 rounded-full bg-purple-400" /> Atanmış
-            </div>
+            <Tooltip title="Yöneticiniz tarafından onaylanmış ek mesai">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Onaylı
+              </div>
+            </Tooltip>
+            <Tooltip title="Onay bekleyen ek mesai talebi">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Bekleyen
+              </div>
+            </Tooltip>
+            <Tooltip title="Sistem tarafından otomatik algılanmış potansiyel ek mesai. Henüz talep olarak oluşturulmamış.">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Algılanan
+              </div>
+            </Tooltip>
+            <Tooltip title="Yöneticiniz tarafından reddedilmiş ek mesai talebi">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-400" /> Reddedilen
+              </div>
+            </Tooltip>
+            <Tooltip title="Yöneticiniz tarafından size atanan ek mesai görevi">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
+                <div className="w-2.5 h-2.5 rounded-full bg-purple-400" /> Atanmış
+              </div>
+            </Tooltip>
             <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
               <div className="w-4 h-4 rounded border-2 border-blue-400" /> Bugün
             </div>
@@ -683,7 +804,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                 if (selectedDay) handleDayClick({ date: selectedDay });
               }}
               isManager={isManagerMode || hasPermission('APPROVAL_OVERTIME')}
-              isOwnData={!isManagerMode || selectedEmployee === user?.employee_id}
+              isOwnData={!isManagerMode || selectedEmployee === user?.id}
             />
           ) : null}
         </div>
@@ -855,6 +976,62 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
             />
           </div>
         </div>
+      </Modal>
+
+      {/* INTENDED Claim Modal */}
+      <Modal
+        open={intendedClaimModal.open}
+        onCancel={() => { setIntendedClaimModal({ open: false, item: null }); setIntendedClaimReason(''); }}
+        onOk={() => intendedClaimModal.item && handleClaimIntended(intendedClaimModal.item)}
+        confirmLoading={!!claimingId}
+        title={
+          <div className="flex items-center gap-2">
+            <CalendarCheck size={18} className="text-purple-500" />
+            <span>Atanmış Mesai Talep Et</span>
+          </div>
+        }
+        okText="Talep Et"
+        cancelText="Vazgeç"
+      >
+        {intendedClaimModal.item && (
+          <div className="space-y-3">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-800">
+              <div className="font-medium">{intendedClaimModal.item.task_description || 'Ek mesai görevi'}</div>
+              <div className="text-xs mt-1 flex items-center gap-2">
+                <span>Tarih: {intendedClaimModal.item.date}</span>
+                <span>•</span>
+                <span>Süre: {intendedClaimModal.item.hours_per_day || intendedClaimModal.item.max_duration_hours} sa</span>
+                <span>•</span>
+                <span>Atayan: {intendedClaimModal.item.assigned_by_name}</span>
+              </div>
+            </div>
+
+            {otManagers.length > 1 && (
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Onay Yöneticisi</label>
+                <Select
+                  value={selectedClaimManagerId}
+                  onChange={setSelectedClaimManagerId}
+                  className="w-full"
+                  options={otManagers.map(m => ({
+                    value: m.id,
+                    label: `${m.relationship === 'PRIMARY' ? '⭐' : '🔹'} ${m.name}${m.via ? ` (${m.via})` : ''}`,
+                  }))}
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1">Açıklama (opsiyonel)</label>
+              <Input.TextArea
+                value={intendedClaimReason}
+                onChange={(e) => setIntendedClaimReason(e.target.value)}
+                placeholder="Talep açıklaması..."
+                rows={2}
+              />
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Override Confirm Modal */}

@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
-    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake
+    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info
 } from 'lucide-react';
+import { Tooltip } from 'antd';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import { useAuth } from '../../context/AuthContext';
@@ -42,11 +43,18 @@ const FilterChip = ({ active, onClick, label, icon, count, color = 'blue' }) => 
     );
 };
 
-const StatCard = ({ label, value, icon, color }) => (
+const StatCard = ({ label, value, icon, color, tooltip }) => (
     <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 group">
         <div className="flex justify-between items-start">
             <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    {label}
+                    {tooltip && (
+                        <Tooltip title={tooltip}>
+                            <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                        </Tooltip>
+                    )}
+                </p>
                 <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 tracking-tight group-hover:scale-105 transition-transform origin-left">{value}</h3>
             </div>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} bg-opacity-10`}>
@@ -416,17 +424,20 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="İzin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" />
-                <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" />
-                <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" />
-                <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" />
+                <StatCard label="İzin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" tooltip="Bu mali dönemde oluşturduğunuz izin talepleri" />
+                <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" tooltip="Bu mali dönemde oluşturduğunuz ek mesai talepleri" />
+                <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" tooltip="Bu mali dönemde oluşturduğunuz yemek talepleri" />
+                <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" tooltip="Bu mali dönemde oluşturduğunuz kartsız giriş talepleri" />
             </div>
 
             {/* Mali Dönem Filtresi */}
-            <div className="mb-4">
+            <div className="mb-4 flex items-center gap-2">
                 <FiscalMonthPicker
                     onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
                 />
+                <Tooltip title="Mali dönem her ayın 26'sından başlayıp, bir sonraki ayın 25'ine kadar sürer.">
+                    <Info size={14} className="text-slate-400 cursor-help inline-block" />
+                </Tooltip>
             </div>
 
             {/* Filter Chips */}
@@ -449,6 +460,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
                         <input type="checkbox" checked={showPotential} onChange={(e) => setShowPotential(e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded" />
                         Potansiyel
+                        <Tooltip title="Sistem tarafından algılanan fazla mesai tespitleri. Bunlar henüz talep olarak oluşturulmamıştır. 'Talep Et' butonuyla resmi talep oluşturabilirsiniz.">
+                            <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                        </Tooltip>
                     </label>
                 </div>
             </div>
@@ -472,7 +486,14 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                         <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
                             <p className="text-xs font-bold text-purple-700 mb-2 flex items-center gap-1.5">
                                 <AlertCircle size={14} />
-                                Potansiyel fazla mesai tespitleriniz var. Talep etmek için satırdaki butonu kullanın.
+                                <Tooltip title="Sistem, vardiya saatleriniz dışında çalıştığınızı tespit ettiğinde otomatik olarak potansiyel mesai kaydı oluşturur.">
+                                    <span className="underline decoration-dotted cursor-help">Potansiyel fazla mesai</span>
+                                </Tooltip>
+                                {' '}tespitleriniz var.{' '}
+                                <Tooltip title="Talep ettikten sonra yöneticinize onay için gönderilir.">
+                                    <span className="underline decoration-dotted cursor-help">Talep etmek</span>
+                                </Tooltip>
+                                {' '}için satırdaki butonu kullanın.
                             </p>
                         </div>
                     )}
