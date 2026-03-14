@@ -310,13 +310,13 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
   // Claim an INTENDED assignment
   const handleClaimIntended = async (item) => {
-    setClaimingId(item.id);
+    setClaimingId(item.assignment_id);
     try {
       const payload = { reason: intendedClaimReason || 'Planlı mesai talebi' };
       if (selectedClaimManagerId) {
         payload.target_approver_id = selectedClaimManagerId;
       }
-      await api.post(`/overtime-assignments/${item.id}/claim/`, payload);
+      await api.post(`/overtime-assignments/${item.assignment_id}/claim/`, payload);
       message.success('Atanmış mesai başarıyla talep edildi');
       setIntendedClaimModal({ open: false, item: null });
       setIntendedClaimReason('');
@@ -624,7 +624,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
               const dateStr = `${dateObj.getDate()} ${MONTH_NAMES[dateObj.getMonth()]}`;
               return (
                 <div
-                  key={item.id}
+                  key={item.assignment_id}
                   className="bg-white rounded-lg border border-purple-100 p-3 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
