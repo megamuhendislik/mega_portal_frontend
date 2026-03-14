@@ -182,11 +182,13 @@ const DurationCell = ({ req }) => {
         if (req.start_time && req.end_time) {
             return <span className="text-xs font-bold text-blue-700">{calculateDuration(req.start_time, req.end_time)}</span>;
         }
-        const hours = (req.total_days || 1) * 9;
+        const days = req.total_days || 1;
+        const hours = days * 9;
         const h = Math.floor(hours);
         const m = Math.round((hours - h) * 60);
         const label = m > 0 ? `${h}s ${m}dk` : `${h} Saat`;
-        return <span className="text-xs font-bold text-blue-700">{label} <span className="text-blue-400 font-normal">(Tam gün)</span></span>;
+        const isFullDay = days >= 1;
+        return <span className="text-xs font-bold text-blue-700">{label} {isFullDay && <span className="text-blue-400 font-normal">(Tam gün{days > 1 ? ` × ${days}` : ''})</span>}</span>;
     }
     if (req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time) {
         return <span className="text-xs font-bold text-purple-700">{calculateDuration(req.check_in_time, req.check_out_time)}</span>;
