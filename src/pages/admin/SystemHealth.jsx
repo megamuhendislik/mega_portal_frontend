@@ -23,7 +23,8 @@ import {
     CreditCardIcon,
     UserGroupIcon,
     CakeIcon,
-    BeakerIcon
+    BeakerIcon,
+    BoltIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -50,6 +51,7 @@ import ManagerPermissionTab from './system-health/ManagerPermissionTab';
 import DataBrowserTab from './system-health/DataBrowserTab';
 import BirthdayTab from './system-health/BirthdayTab';
 import E2ETestTab from './system-health/E2ETestTab';
+import OTAnalysisTab from './system-health/OTAnalysisTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -128,6 +130,7 @@ export default function SystemHealth() {
                         { id: 'manager_permission', name: 'Yönetici Yetki', icon: ShieldCheckIcon },
                         { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
                         { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
+                        { id: 'ot_analysis_panel', name: 'Ek Mesai Analizi', icon: BoltIcon },
                         { id: 'e2e_tests', name: 'E2E Testleri', icon: BeakerIcon },
                     ].map((tab) => (
                         <button
@@ -179,6 +182,7 @@ export default function SystemHealth() {
                 {activeTab === 'manager_permission' && <ManagerPermissionTab />}
                 {activeTab === 'data_browser' && <DataBrowserTab />}
                 {activeTab === 'birthdays' && <BirthdayTab />}
+                {activeTab === 'ot_analysis_panel' && <OTAnalysisTab />}
                 {activeTab === 'e2e_tests' && <E2ETestTab />}
             </div>
 
