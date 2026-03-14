@@ -952,9 +952,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               <button
                 onClick={handleOverrideSubmit}
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition disabled:opacity-50 ${
+                  overrideAction === 'reject'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-purple-600 hover:bg-purple-700'
+                }`}
               >
-                {loading ? 'İşleniyor...' : 'Onayla'}
+                {loading ? 'İşleniyor...' : (overrideAction === 'reject' ? 'Reddet' : 'Onayla')}
               </button>
             </div>
           </div>
