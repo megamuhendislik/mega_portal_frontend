@@ -13,6 +13,9 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   BoltIcon,
+  WrenchScrewdriverIcon,
+  TrashIcon,
+  ShieldExclamationIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
@@ -214,6 +217,77 @@ function FilterRow({ search, setSearch, filters = [] }) {
   );
 }
 
+function FixActionCard({ title, description, icon: Icon, colorClasses, state, onScan, onFix }) {
+  const { loading, result, executing } = state;
+  const hasResults = result && !result.error;
+  const count = hasResults ? (result.affected_count ?? result.would_affect ?? 0) : 0;
+  const isDryRun = hasResults && result.dry_run === true;
+
+  return (
+    <div className={`rounded-xl border p-4 ${colorClasses}`}>
+      <div className="flex items-start gap-3 mb-3">
+        <Icon className="w-5 h-5 mt-0.5 shrink-0 opacity-70" />
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-semibold leading-snug">{title}</h4>
+          <p className="text-xs opacity-70 mt-0.5 leading-relaxed">{description}</p>
+        </div>
+      </div>
+
+      {result?.error && (
+        <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{result.error}</div>
+      )}
+
+      {hasResults && (
+        <div className="bg-white/60 rounded-lg px-3 py-2 mb-3 text-xs space-y-1">
+          <div className="font-medium">
+            {isDryRun ? 'Tarama Sonucu' : 'Düzeltme Tamamlandı'}: <span className="font-bold">{count}</span> kayıt {isDryRun ? 'bulundu' : 'düzeltildi'}
+          </div>
+          {result.details && result.details.length > 0 && (
+            <ul className="mt-1 space-y-0.5 max-h-32 overflow-y-auto">
+              {result.details.slice(0, 10).map((d, i) => (
+                <li key={i} className="text-[11px] opacity-80 truncate" title={typeof d === 'string' ? d : JSON.stringify(d)}>
+                  {typeof d === 'string' ? d : `${d.employee_name || ''} — ${formatDate(d.date)} ${d.reason || d.status || ''}`}
+                </li>
+              ))}
+              {result.details.length > 10 && (
+                <li className="text-[11px] opacity-50">...ve {result.details.length - 10} kayıt daha</li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onScan}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/80 border border-current/10 rounded-lg hover:bg-white transition-colors disabled:opacity-50"
+        >
+          {loading ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <MagnifyingGlassIcon className="w-3.5 h-3.5" />}
+          Tarama Yap
+        </button>
+        {isDryRun && count > 0 && (
+          <button
+            onClick={() => {
+              if (window.confirm(`${count} kayıt düzeltilecek. Devam edilsin mi?`)) onFix();
+            }}
+            disabled={executing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {executing ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <WrenchScrewdriverIcon className="w-3.5 h-3.5" />}
+            Düzelt
+          </button>
+        )}
+        {!isDryRun && count > 0 && (
+          <span className="flex items-center gap-1 text-xs text-green-700">
+            <CheckCircleIcon className="w-4 h-4" /> Tamamlandı
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OTAnalysisTab() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -315,6 +389,28 @@ export default function OTAnalysisTab() {
     )},
     { label: 'Durum', render: (r) => <ClaimStatusBadge claimStatus={r.claim_status} blockReason={r.block_reason} /> },
   ];
+
+  // --- Fix Actions State ---
+  const [fixStates, setFixStates] = useState({
+    orphan: { loading: false, result: null, executing: false },
+    duplicate: { loading: false, result: null, executing: false },
+    short: { loading: false, result: null, executing: false },
+    nullApprover: { loading: false, result: null, executing: false },
+  });
+
+  const updateFixState = (key, patch) => setFixStates(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+
+  const runFixAction = useCallback(async (key, endpoint, dryRun = true) => {
+    const stateKey = dryRun ? 'loading' : 'executing';
+    updateFixState(key, { [stateKey]: true });
+    try {
+      const res = await api.post(`/system/health-check/ot-analysis/${endpoint}/`, { dry_run: dryRun });
+      updateFixState(key, { [stateKey]: false, result: res.data });
+      if (!dryRun) fetchData(); // refresh after real fix
+    } catch (err) {
+      updateFixState(key, { [stateKey]: false, result: { error: err.response?.data?.detail || err.message } });
+    }
+  }, [fetchData]);
 
   // --- TXT Rapor İndir ---
   const downloadReport = useCallback(() => {
@@ -496,6 +592,52 @@ export default function OTAnalysisTab() {
           icon={NoSymbolIcon}
           colorClasses="bg-red-50 border-red-200 text-red-900"
         />
+      </div>
+
+      {/* Fix Actions */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+          <WrenchScrewdriverIcon className="w-4 h-4" />
+          Veri Düzeltme Aksiyonları
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <FixActionCard
+            title="Yetim CLAIMED Atamalar"
+            description="Talep iptal/red edilmiş ama atama hâlâ CLAIMED durumda. ASSIGNED'a sıfırlanır."
+            icon={ExclamationTriangleIcon}
+            colorClasses="bg-amber-50 border-amber-200 text-amber-900"
+            state={fixStates.orphan}
+            onScan={() => runFixAction('orphan', 'fix-orphan-assignments', true)}
+            onFix={() => runFixAction('orphan', 'fix-orphan-assignments', false)}
+          />
+          <FixActionCard
+            title="Çoklu İPTAL Temizliği"
+            description="Aynı çalışan/tarih/saat için birden fazla CANCELLED kayıt. En eski korunur, geri kalan silinir."
+            icon={TrashIcon}
+            colorClasses="bg-gray-50 border-gray-200 text-gray-800"
+            state={fixStates.duplicate}
+            onScan={() => runFixAction('duplicate', 'fix-duplicate-cancelled', true)}
+            onFix={() => runFixAction('duplicate', 'fix-duplicate-cancelled', false)}
+          />
+          <FixActionCard
+            title="Kısa Potansiyel Temizliği"
+            description="Minimum eşik (30dk) altındaki POTENTIAL kayıtlar. Bu kayıtlar zaten talep edilemez, temizlenir."
+            icon={ClockIcon}
+            colorClasses="bg-blue-50 border-blue-200 text-blue-800"
+            state={fixStates.short}
+            onScan={() => runFixAction('short', 'fix-short-potentials', true)}
+            onFix={() => runFixAction('short', 'fix-short-potentials', false)}
+          />
+          <FixActionCard
+            title="NULL Onaylayıcı Düzelt"
+            description="PENDING talepler onaylayıcısız. ApproverService ile atanır veya POTENTIAL'e geri döndürülür."
+            icon={ShieldExclamationIcon}
+            colorClasses="bg-red-50 border-red-200 text-red-800"
+            state={fixStates.nullApprover}
+            onScan={() => runFixAction('nullApprover', 'fix-null-approvers', true)}
+            onFix={() => runFixAction('nullApprover', 'fix-null-approvers', false)}
+          />
+        </div>
       </div>
 
       {/* Table 1: Assignments */}
