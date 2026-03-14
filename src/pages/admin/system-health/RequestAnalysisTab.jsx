@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench, Users } from 'lucide-react';
 import { message } from 'antd';
 import api from '../../../services/api';
 import ModalOverlay from '../../../components/ui/ModalOverlay';
@@ -34,6 +34,10 @@ export default function RequestAnalysisTab() {
     // Per-row yönetici seçimi (NO_APPROVER fix)
     const [selectedFixApprover, setSelectedFixApprover] = useState({});
     const [autoApprove, setAutoApprove] = useState(false);
+
+    // Çalışan Bazlı Analiz
+    const [showEmployeeAnalysis, setShowEmployeeAnalysis] = useState(false);
+    const [empAnalysisFilter, setEmpAnalysisFilter] = useState('all'); // all, with_issues, unclaimed, no_requests
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -647,6 +651,156 @@ export default function RequestAnalysisTab() {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Çalışan Bazlı Analiz */}
+                        {lifecycleData.per_employee?.length > 0 && (
+                            <div className="border rounded-lg overflow-hidden">
+                                <button
+                                    onClick={() => setShowEmployeeAnalysis(p => !p)}
+                                    className="w-full flex items-center justify-between px-3 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Users size={15} className="text-indigo-600" />
+                                        <span className="text-xs font-bold text-indigo-800">
+                                            Çalışan Bazlı Analiz ({lifecycleData.per_employee.length} kişi)
+                                        </span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded-full font-bold">
+                                            {lifecycleData.per_employee.filter(e => e.with_issues > 0).length} sorunlu
+                                        </span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-200 text-amber-700 rounded-full font-bold">
+                                            {lifecycleData.per_employee.filter(e => e.unclaimed_potentials > 0).length} talep edilmemiş OT
+                                        </span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded-full font-bold">
+                                            {lifecycleData.per_employee.filter(e => e.total === 0 && e.unclaimed_potentials === 0).length} hiç talebi yok
+                                        </span>
+                                    </div>
+                                    {showEmployeeAnalysis ? <ChevronDown size={16} className="text-indigo-500" /> : <ChevronRight size={16} className="text-indigo-500" />}
+                                </button>
+                                {showEmployeeAnalysis && (
+                                    <div className="p-3 space-y-2 bg-white">
+                                        {/* Filtreler */}
+                                        <div className="flex gap-1.5 flex-wrap">
+                                            {[
+                                                { key: 'all', label: 'Tümü', count: lifecycleData.per_employee.length },
+                                                { key: 'with_issues', label: 'Sorunlu', count: lifecycleData.per_employee.filter(e => e.with_issues > 0).length },
+                                                { key: 'unclaimed', label: 'Talep Edilmemiş OT', count: lifecycleData.per_employee.filter(e => e.unclaimed_potentials > 0).length },
+                                                { key: 'no_requests', label: 'Hiç Talebi Yok', count: lifecycleData.per_employee.filter(e => e.total === 0 && e.unclaimed_potentials === 0).length },
+                                            ].map(f => (
+                                                <button
+                                                    key={f.key}
+                                                    onClick={() => setEmpAnalysisFilter(f.key)}
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
+                                                        empAnalysisFilter === f.key
+                                                            ? 'bg-indigo-600 text-white'
+                                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                    }`}
+                                                >
+                                                    {f.label} ({f.count})
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Tablo */}
+                                        <div className="overflow-auto max-h-[400px] border rounded-lg">
+                                            <table className="w-full text-xs">
+                                                <thead className="bg-slate-50 sticky top-0 z-10">
+                                                    <tr className="text-left text-[10px] font-bold text-slate-500 uppercase">
+                                                        <th className="px-2 py-2">Personel</th>
+                                                        <th className="px-2 py-2">Departman</th>
+                                                        <th className="px-2 py-2 text-center">Toplam</th>
+                                                        <th className="px-2 py-2 text-center">Ek Mesai</th>
+                                                        <th className="px-2 py-2 text-center">İzin</th>
+                                                        <th className="px-2 py-2 text-center">Kartsız</th>
+                                                        <th className="px-2 py-2 text-center">Sağlık R.</th>
+                                                        <th className="px-2 py-2 text-center">Bekleyen</th>
+                                                        <th className="px-2 py-2 text-center">Onaylanan</th>
+                                                        <th className="px-2 py-2 text-center">Sorunlu</th>
+                                                        <th className="px-2 py-2 text-center">Talep Edilmemiş OT</th>
+                                                        <th className="px-2 py-2">Sorun Kodları</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {lifecycleData.per_employee
+                                                        .filter(emp => {
+                                                            if (empAnalysisFilter === 'with_issues') return emp.with_issues > 0;
+                                                            if (empAnalysisFilter === 'unclaimed') return emp.unclaimed_potentials > 0;
+                                                            if (empAnalysisFilter === 'no_requests') return emp.total === 0 && emp.unclaimed_potentials === 0;
+                                                            return true;
+                                                        })
+                                                        .map(emp => {
+                                                            const potMin = emp.unclaimed_potential_minutes || 0;
+                                                            const potH = Math.floor(potMin / 60);
+                                                            const potM = potMin % 60;
+                                                            const potDisplay = potMin > 0 ? `${emp.unclaimed_potentials} adet (${potH > 0 ? potH + ' sa ' : ''}${potM} dk)` : '—';
+                                                            const hasIssue = emp.with_issues > 0;
+                                                            const hasUnclaimed = emp.unclaimed_potentials > 0;
+                                                            const noRequests = emp.total === 0 && !hasUnclaimed;
+                                                            const rowBg = hasIssue ? 'bg-red-50' : hasUnclaimed ? 'bg-amber-50' : noRequests ? 'bg-slate-50' : '';
+
+                                                            return (
+                                                                <tr
+                                                                    key={emp.employee_id}
+                                                                    className={`${rowBg} hover:bg-indigo-50 cursor-pointer transition-colors`}
+                                                                    onClick={() => { setLcSearch(emp.employee_name); setShowEmployeeAnalysis(false); }}
+                                                                    title="Tıklayınca bu çalışanın taleplerini filtreler"
+                                                                >
+                                                                    <td className="px-2 py-1.5 font-semibold text-slate-700 whitespace-nowrap">{emp.employee_name}</td>
+                                                                    <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap">{emp.department || '—'}</td>
+                                                                    <td className="px-2 py-1.5 text-center font-bold">{emp.total || '—'}</td>
+                                                                    <td className="px-2 py-1.5 text-center">{emp.by_type?.OVERTIME || '—'}</td>
+                                                                    <td className="px-2 py-1.5 text-center">{emp.by_type?.LEAVE || '—'}</td>
+                                                                    <td className="px-2 py-1.5 text-center">{emp.by_type?.CARDLESS_ENTRY || '—'}</td>
+                                                                    <td className="px-2 py-1.5 text-center">{emp.by_type?.HEALTH_REPORT || '—'}</td>
+                                                                    <td className="px-2 py-1.5 text-center">
+                                                                        {(emp.by_status?.PENDING || 0) > 0
+                                                                            ? <span className="text-amber-600 font-bold">{emp.by_status.PENDING}</span>
+                                                                            : '—'}
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 text-center">
+                                                                        {(emp.by_status?.APPROVED || 0) > 0
+                                                                            ? <span className="text-emerald-600 font-bold">{emp.by_status.APPROVED}</span>
+                                                                            : '—'}
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 text-center">
+                                                                        {hasIssue
+                                                                            ? <span className="text-red-600 font-bold">{emp.with_issues}</span>
+                                                                            : '—'}
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 text-center">
+                                                                        {hasUnclaimed
+                                                                            ? <span className="text-amber-600 font-bold">{potDisplay}</span>
+                                                                            : '—'}
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5">
+                                                                        <div className="flex flex-wrap gap-0.5">
+                                                                            {emp.issue_codes?.map(code => (
+                                                                                <span key={code} className="px-1 py-0.5 bg-red-100 text-red-700 rounded text-[9px] font-bold whitespace-nowrap">
+                                                                                    {code}
+                                                                                </span>
+                                                                            ))}
+                                                                            {hasUnclaimed && (
+                                                                                <span className="px-1 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-bold whitespace-nowrap">
+                                                                                    UNCLAIMED_OT
+                                                                                </span>
+                                                                            )}
+                                                                            {noRequests && (
+                                                                                <span className="px-1 py-0.5 bg-slate-200 text-slate-600 rounded text-[9px] font-bold whitespace-nowrap">
+                                                                                    NO_REQUESTS
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
