@@ -408,14 +408,14 @@ export default function OTDayDetailPanel({
                         </span>
                       )}
                       <span className="font-bold text-blue-700">
-                        {pot.actual_overtime_hours || (pot.actual_overtime_seconds ? (pot.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
+                        {pot.duration_hours || pot.actual_overtime_hours || (pot.actual_overtime_seconds ? (pot.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
                       </span>
                     </div>
                   </div>
 
                   {/* Claim button */}
                   <div className="shrink-0">
-                    {pot.actual_overtime_seconds > 0 && !pot.already_claimed && !pot.claim_status && (
+                    {(pot.can_claim || (pot.actual_overtime_seconds > 0 && !pot.already_claimed && !pot.claim_status)) && (
                       <Button
                         type="primary"
                         size="small"
