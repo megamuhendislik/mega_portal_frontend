@@ -17,12 +17,17 @@ const HeroDailySummary = ({ summary, loading }) => {
     const safeSummary = summary || {};
 
     // Correct Backend Field Mapping (Now Seconds)
+    // normal_worked: sadece normal mesai saatleri (OT dahil değil)
+    // total_worked: normal + OT toplam (geriye uyumluluk için)
+    const normalWorkSeconds = safeSummary.normal_worked ?? Math.max(0, (safeSummary.total_worked || 0) - (safeSummary.current_overtime || 0));
     const totalWorkSeconds = safeSummary.total_worked || 0;
     const workTargetSeconds = (safeSummary.daily_expected !== undefined && safeSummary.daily_expected !== null) ? safeSummary.daily_expected : 0;
-    const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((totalWorkSeconds / workTargetSeconds) * 100)) : 0;
+    const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((normalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
     const isOffDay = safeSummary.is_off_day || false;
     const onLeave = safeSummary.on_leave || false;
+    // Off-day'de çalışma varsa: tüm çalışma OT'dir, Normal Mesai gösterilmez
+    const isOffDayWithWork = isOffDay && totalWorkSeconds > 0;
     const usedBreakSeconds = isOffDay ? 0 : (safeSummary.break_used || 0);
     const totalBreakAllowanceSeconds = isOffDay ? 0 : (safeSummary.break_allowance || ((safeSummary.remaining_break || 0) + usedBreakSeconds));
     const remainingBreakSeconds = Math.max(0, totalBreakAllowanceSeconds - usedBreakSeconds);
@@ -61,28 +66,64 @@ const HeroDailySummary = ({ summary, loading }) => {
                     <div className="relative z-10 flex flex-col h-full justify-between">
                         <div>
                             <div className="flex items-center gap-4 mb-6">
-                                <div className="p-3 bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-indigo-500/30 group-hover:rotate-6 transition-all duration-300">
+                                <div className={clsx(
+                                    "p-3 text-white rounded-2xl shadow-lg group-hover:rotate-6 transition-all duration-300",
+                                    isOffDayWithWork
+                                        ? "bg-gradient-to-br from-orange-500 to-amber-600 shadow-orange-500/30"
+                                        : isOffDay
+                                            ? "bg-gradient-to-br from-slate-400 to-slate-500 shadow-slate-400/30"
+                                            : "bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/30"
+                                )}>
                                     <Briefcase size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{onLeave ? 'İZİN' : 'PUANTAJ'}</p>
-                                    <h3 className="text-base font-bold text-slate-700">{onLeave ? 'İzinli Gün' : 'Normal Mesai'}</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                                        {onLeave ? 'İZİN' : isOffDay ? 'TATİL' : 'PUANTAJ'}
+                                    </p>
+                                    <h3 className="text-base font-bold text-slate-700">
+                                        {onLeave ? 'İzinli Gün' : isOffDayWithWork ? 'Ek Mesai Günü' : isOffDay ? 'Tatil Günü' : 'Normal Mesai'}
+                                    </h3>
                                 </div>
                             </div>
 
                             <div className="flex items-baseline gap-1 mb-2">
-                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor(totalWorkSeconds / 3600)}
-                                </span>
-                                <span className="text-sm font-bold text-slate-400 uppercase mr-2">sa</span>
-                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
-                                    {Math.floor((totalWorkSeconds % 3600) / 60)}
-                                </span>
-                                <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
+                                {isOffDay && !onLeave ? (
+                                    /* Off-day: normal mesai yok, sadece OT varsa OT göster */
+                                    isOffDayWithWork ? (
+                                        <>
+                                            <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-orange-600 tracking-tighter">
+                                                {Math.floor(totalWorkSeconds / 3600)}
+                                            </span>
+                                            <span className="text-sm font-bold text-orange-400 uppercase mr-2">sa</span>
+                                            <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-orange-600 tracking-tighter">
+                                                {Math.floor((totalWorkSeconds % 3600) / 60)}
+                                            </span>
+                                            <span className="text-sm font-bold text-orange-400 uppercase">dk</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-300">—</span>
+                                    )
+                                ) : (
+                                    /* Normal gün veya izin: sadece normal mesai saatleri */
+                                    <>
+                                        <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                            {Math.floor(normalWorkSeconds / 3600)}
+                                        </span>
+                                        <span className="text-sm font-bold text-slate-400 uppercase mr-2">sa</span>
+                                        <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tighter">
+                                            {Math.floor((normalWorkSeconds % 3600) / 60)}
+                                        </span>
+                                        <span className="text-sm font-bold text-slate-400 uppercase">dk</span>
+                                    </>
+                                )}
                             </div>
                             <p className="text-xs font-semibold text-slate-400 pl-1">
                                 {onLeave ? (
                                     <><span className="text-violet-600 font-bold">İzin kredisi</span> — Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
+                                ) : isOffDayWithWork ? (
+                                    <span className="text-orange-500 font-bold">Tüm çalışma ek mesai olarak sayılır</span>
+                                ) : isOffDay ? (
+                                    <span className="text-slate-400">Normal mesai hedefi yok</span>
                                 ) : (
                                     <>Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
                                 )}
@@ -96,15 +137,27 @@ const HeroDailySummary = ({ summary, loading }) => {
                                         "h-full rounded-full relative",
                                         onLeave
                                             ? "bg-gradient-to-r from-violet-500 to-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.4)]"
-                                            : "bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                                            : isOffDayWithWork
+                                                ? "bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]"
+                                                : "bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
                                     )}
-                                    style={{ width: `${workPercent}%`, transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                    style={{ width: isOffDay ? (isOffDayWithWork ? '100%' : '0%') : `${workPercent}%`, transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
                                 >
                                     <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white/50"></div>
                                 </div>
                             </div>
                             <div className="flex justify-between mt-3 text-[10px] font-bold tracking-wide uppercase">
-                                <span className={onLeave ? "text-violet-600" : "text-indigo-600"}>{onLeave ? 'İZİNLİ GÜN' : `%${workPercent} Tamamlandı`}</span>
+                                <span className={clsx(
+                                    onLeave ? "text-violet-600" :
+                                    isOffDayWithWork ? "text-orange-600" :
+                                    isOffDay ? "text-slate-400" :
+                                    "text-indigo-600"
+                                )}>
+                                    {onLeave ? 'İZİNLİ GÜN' :
+                                     isOffDayWithWork ? 'EK MESAİ GÜNÜ' :
+                                     isOffDay ? 'TATİL GÜNÜ' :
+                                     `%${workPercent} Tamamlandı`}
+                                </span>
                             </div>
                         </div>
                     </div>
