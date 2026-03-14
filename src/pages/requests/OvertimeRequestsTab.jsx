@@ -31,7 +31,7 @@ const SubTabButton = ({ active, onClick, children, icon, badge }) => (
 export default function OvertimeRequestsTab({ onDataChange, refreshTrigger }) {
   const { hasPermission } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('my_requests');
-  const [subordinates, setSubordinates] = useState([]);
+  const [, setSubordinates] = useState([]);
   const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {

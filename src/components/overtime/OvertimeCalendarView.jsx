@@ -196,7 +196,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
   // INTENDED (manager-assigned) claimable items
   const [intendedItems, setIntendedItems] = useState([]);
-  const [intendedLoading, setIntendedLoading] = useState(false);
+  const [_intendedLoading, setIntendedLoading] = useState(false);
   const [claimingId, setClaimingId] = useState(null);
   const [intendedClaimReason, setIntendedClaimReason] = useState('');
   const [intendedClaimModal, setIntendedClaimModal] = useState({ open: false, item: null });
@@ -1023,6 +1023,12 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                     label: `${m.relationship === 'PRIMARY' ? '⭐' : '🔹'} ${m.name}${m.via ? ` (${m.via})` : ''}`,
                   }))}
                 />
+              </div>
+            )}
+
+            {otManagers.length === 0 && (
+              <div className="px-3 py-2 rounded-lg text-xs font-medium border bg-amber-50 border-amber-200 text-amber-700">
+                Onaylayıcı yönetici bulunamadı. Talep oluşturulamaz.
               </div>
             )}
 
