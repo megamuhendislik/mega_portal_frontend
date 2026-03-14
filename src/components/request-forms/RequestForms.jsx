@@ -573,7 +573,8 @@ export const LeaveRequestForm = ({
 // Props:
 //   overtimeForm, setOvertimeForm, claimableData, claimableLoading,
 //   onClaimIntended, onClaimPotential, claimingId,
-//   manualOpen, setManualOpen, approverDropdown
+//   manualOpen, setManualOpen, approverDropdown,
+//   availableApprovers, selectedApproverId, onApproverSelect
 // ============================================================
 export const OvertimeRequestForm = ({
     overtimeForm,
@@ -586,6 +587,9 @@ export const OvertimeRequestForm = ({
     manualOpen,
     setManualOpen,
     approverDropdown,
+    availableApprovers = [],
+    selectedApproverId,
+    onApproverSelect,
 }) => {
     const [claimConfirm, setClaimConfirm] = useState(null); // { type: 'INTENDED'|'POTENTIAL', id, ... }
     const [claimReason, setClaimReason] = useState('');
@@ -794,6 +798,49 @@ export const OvertimeRequestForm = ({
                             </p>
                         </div>
                     </div>
+
+                    {/* Manager selector for employees with 2+ managers */}
+                    {availableApprovers.length > 1 && (
+                        <div className="mb-3">
+                            <label className="block text-xs font-bold text-blue-700 mb-1.5 flex items-center gap-1">
+                                <Users size={13} className="text-blue-500" />
+                                Onay Yöneticisi <span className="text-red-500">*</span>
+                            </label>
+                            <div className="space-y-1.5">
+                                {availableApprovers.map(a => (
+                                    <label
+                                        key={a.id}
+                                        className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all text-xs ${
+                                            selectedApproverId === a.id
+                                                ? 'bg-white border-blue-400 ring-1 ring-blue-400/30'
+                                                : 'bg-white/60 border-blue-100 hover:border-blue-300'
+                                        }`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="claim_approver"
+                                            value={a.id}
+                                            checked={selectedApproverId === a.id}
+                                            onChange={() => onApproverSelect?.(a.id)}
+                                            className="w-3.5 h-3.5 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-bold text-slate-700">{a.name}</span>
+                                            <span className="text-blue-500 ml-1">
+                                                {a.relationship === 'PRIMARY' ? '(Asıl)' : a.relationship === 'SECONDARY' ? '(İkincil)' : a.relationship === 'CROSS' ? '(Çapraz)' : ''}
+                                            </span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                            {!selectedApproverId && (
+                                <p className="text-[11px] text-amber-600 font-medium mt-1">
+                                    Lütfen bir onay yöneticisi seçin.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     <textarea
                         rows="2"
                         value={claimReason}
@@ -812,7 +859,12 @@ export const OvertimeRequestForm = ({
                         <button
                             type="button"
                             onClick={handleConfirmClaim}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5"
+                            disabled={availableApprovers.length > 1 && !selectedApproverId}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5 ${
+                                availableApprovers.length > 1 && !selectedApproverId
+                                    ? 'bg-blue-300 text-white cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
                         >
                             <Check size={14} />
                             Onayla ve Talep Et

@@ -1080,6 +1080,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     manualOpen={overtimeManualOpen}
                                     setManualOpen={setOvertimeManualOpen}
                                     approverDropdown={approverDropdownElement}
+                                    availableApprovers={availableApprovers}
+                                    selectedApproverId={selectedApproverId}
+                                    onApproverSelect={setSelectedApproverId}
                                 />
                             )}
                             {selectedType === 'MEAL' && (
