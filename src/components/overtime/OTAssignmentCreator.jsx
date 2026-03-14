@@ -314,7 +314,13 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         _date: date,
         _assignedBy: item.source_type === 'INTENDED' && busy ? busy.manager_name : null,
         _maxHours: item.source_type === 'INTENDED' && busy ? busy.max_hours : null,
-        _requestedHours: item.duration_hours != null ? parseFloat(item.duration_hours) : null,
+        _requestedHours: item.duration_hours != null
+          ? parseFloat(item.duration_hours)
+          : item.duration_minutes != null
+          ? parseFloat(item.duration_minutes) / 60
+          : item.duration_seconds != null
+          ? parseFloat(item.duration_seconds) / 3600
+          : null,
         _type: 'request',
       });
     }
