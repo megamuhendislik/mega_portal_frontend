@@ -126,6 +126,20 @@ export default function RequestAnalysisTab() {
         lines.push(`Toplam: ${s.total} | Sorunlu: ${s.with_issues}`);
         lines.push(`Yön.Yok: ${s.issue_breakdown.no_approver} | Pasif Yön: ${s.issue_breakdown.inactive_approver} | Bld.Yok: ${s.issue_breakdown.no_notification} | Görünmez: ${s.issue_breakdown.not_visible} | Eski PEND: ${s.issue_breakdown.stale_pending} | Yanlış Yön: ${s.issue_breakdown.wrong_approver} | Çoklu PRIMARY: ${s.issue_breakdown.multi_primary_no_selection} | Hayalet Onay: ${s.issue_breakdown.ghost_approval || 0} | Duplikat: ${s.issue_breakdown.duplicate_request || 0}`);
         lines.push('');
+
+        // Duplikat grup detayı
+        if (s.duplicate_groups?.length > 0) {
+            lines.push('=== DUPLİKAT GRUPLARI ===');
+            for (const g of s.duplicate_groups) {
+                lines.push(`  ${g.employee_name} | ${g.date} | ${g.type} | ${g.total} kayıt`);
+                lines.push(`    ✓ Korunacak: ID:${g.keep_id} (${g.keep_duration}, ${g.keep_status})`);
+                for (const d of g.duplicates) {
+                    lines.push(`    ✗ Silinecek: ID:${d.id} (${d.duration}, ${d.status})`);
+                }
+            }
+            lines.push('');
+        }
+
         lines.push('─'.repeat(120));
 
         for (const req of lifecycleData.requests) {
@@ -609,6 +623,32 @@ export default function RequestAnalysisTab() {
                             <SummaryBadge label="Hayalet Onay" count={lifecycleData.summary.issue_breakdown.ghost_approval || 0} color="red" />
                             <SummaryBadge label="Duplikat" count={lifecycleData.summary.issue_breakdown.duplicate_request || 0} color="rose" />
                         </div>
+
+                        {/* Duplikat Grup Detayı */}
+                        {(lifecycleData.summary.duplicate_groups?.length > 0) && (
+                            <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                                <div className="text-xs font-bold text-rose-700 mb-2">Duplikat Grupları ({lifecycleData.summary.duplicate_groups.length} grup, {lifecycleData.summary.issue_breakdown.duplicate_request} fazlalık)</div>
+                                <div className="space-y-2">
+                                    {lifecycleData.summary.duplicate_groups.map((g, i) => (
+                                        <div key={i} className="bg-white rounded p-2 border border-rose-100 text-xs">
+                                            <div className="font-semibold text-slate-700">
+                                                {g.employee_name} — {g.date} — {g.type} — {g.total} kayıt
+                                            </div>
+                                            <div className="text-emerald-600 mt-1">
+                                                ✓ Korunacak: ID:{g.keep_id} ({g.keep_duration}, {g.keep_status})
+                                            </div>
+                                            <div className="text-rose-600 mt-0.5">
+                                                {g.duplicates.map((d, j) => (
+                                                    <span key={j} className="inline-block mr-2">
+                                                        ✗ ID:{d.id} ({d.duration}, {d.status})
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Arama + Aksiyonlar */}
                         <div className="flex gap-2 items-center">
