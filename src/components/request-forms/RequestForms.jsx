@@ -1003,6 +1003,18 @@ export const ExternalDutyForm = ({
         }
     }, [currentStep]);
 
+    // Debounced preview fetch when date segments change (moved from Step8 to respect Rules of Hooks)
+    const segmentsJson = JSON.stringify(externalDutyForm.date_segments || []);
+    useEffect(() => {
+        if (currentStep !== 8) return;
+        const segments = externalDutyForm.date_segments || [];
+        const allFilled = segments.every(s => s.start_time && s.end_time);
+        if (allFilled && segments.length > 0 && fetchDutyHoursPreview) {
+            const timer = setTimeout(() => fetchDutyHoursPreview(), 600);
+            return () => clearTimeout(timer);
+        }
+    }, [segmentsJson, currentStep]);
+
     // Step definitions (all possible steps)
     const ALL_STEPS = {
         0: { id: 0, label: 'Görev Tipi', icon: Briefcase },
@@ -1598,15 +1610,6 @@ export const ExternalDutyForm = ({
         };
 
         const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-
-        // Debounced preview fetch when all segments are filled
-        useEffect(() => {
-            const allFilled = segments.every(s => s.start_time && s.end_time);
-            if (allFilled && segments.length > 0 && fetchDutyHoursPreview) {
-                const timer = setTimeout(() => fetchDutyHoursPreview(), 600);
-                return () => clearTimeout(timer);
-            }
-        }, [JSON.stringify(segments)]);
 
         return (
             <div className="space-y-4 animate-in slide-in-from-right-8 duration-300">
