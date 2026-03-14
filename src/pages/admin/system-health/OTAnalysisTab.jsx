@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ArrowPathIcon,
+  ArrowDownTrayIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
   ChevronUpIcon,
@@ -315,6 +316,90 @@ export default function OTAnalysisTab() {
     { label: 'Durum', render: (r) => <ClaimStatusBadge claimStatus={r.claim_status} blockReason={r.block_reason} /> },
   ];
 
+  // --- TXT Rapor İndir ---
+  const downloadReport = useCallback(() => {
+    if (!data) return;
+    const s = data.summary || {};
+    const pad = (str, len) => (str + ' '.repeat(len)).slice(0, len);
+    const line = (char = '─', len = 80) => char.repeat(len);
+    const now = new Date().toLocaleString('tr-TR');
+
+    let txt = '';
+    txt += `${'═'.repeat(80)}\n`;
+    txt += `  EK MESAİ ANALİZ RAPORU\n`;
+    txt += `  Dönem: ${s.period_label || '—'}   |   Oluşturma: ${now}\n`;
+    txt += `${'═'.repeat(80)}\n\n`;
+
+    // Özet
+    txt += `── ÖZET ${'─'.repeat(72)}\n\n`;
+    txt += `  Potansiyel Mesai    : ${s.total_potential || 0} kayıt  (${formatHours(s.total_potential_hours)})\n`;
+    txt += `  Talep Edilen        : ${s.total_requested || 0} kayıt  (${formatHours(s.total_requested_hours)})\n`;
+    txt += `  Yönetici Atamaları  : ${s.total_assignments || 0} kayıt\n`;
+    txt += `  Talepsiz Potansiyel : ${s.unclaimed_potential || 0} kayıt  (${formatHours(s.unclaimed_potential_hours)})\n`;
+    txt += `  Bloklanmış          : ${s.blocked_potential || 0} kayıt  (${formatHours(s.blocked_potential_hours)})\n\n`;
+
+    if (s.requests_by_status && Object.keys(s.requests_by_status).length) {
+      txt += `  Talep Durumları     : ${Object.entries(s.requests_by_status).map(([k, v]) => `${STATUS_LABELS[k] || k}: ${v}`).join(', ')}\n`;
+    }
+    if (s.requests_by_source && Object.keys(s.requests_by_source).length) {
+      txt += `  Talep Kaynakları    : ${Object.entries(s.requests_by_source).map(([k, v]) => `${SOURCE_LABELS[k] || k}: ${v}`).join(', ')}\n`;
+    }
+    if (s.assignments_by_status && Object.keys(s.assignments_by_status).length) {
+      txt += `  Atama Durumları     : ${Object.entries(s.assignments_by_status).map(([k, v]) => `${STATUS_LABELS[k] || k}: ${v}`).join(', ')}\n`;
+    }
+    txt += '\n';
+
+    // Tablo 1: Atamalar
+    if (data.assignments?.length) {
+      txt += `── YÖNETİCİ ATAMALARI (${data.assignments.length}) ${'─'.repeat(50)}\n\n`;
+      txt += `  ${pad('Çalışan', 22)} ${pad('Departman', 16)} ${pad('Tarih', 10)} ${pad('Max', 6)} ${pad('Durum', 14)} ${pad('Talep', 8)} Atayan\n`;
+      txt += `  ${line('─', 22)} ${line('─', 16)} ${line('─', 10)} ${line('─', 6)} ${line('─', 14)} ${line('─', 8)} ${line('─', 20)}\n`;
+      for (const a of data.assignments) {
+        txt += `  ${pad(a.employee_name || '—', 22)} ${pad(a.department || '—', 16)} ${pad(formatDate(a.date), 10)} ${pad(a.max_hours + 'sa', 6)} ${pad(STATUS_LABELS[a.status] || a.status, 14)} ${pad(a.has_claim ? '✓ Var' : '✗ Yok', 8)} ${a.assigned_by || '—'}\n`;
+      }
+      txt += '\n';
+    }
+
+    // Tablo 2: Talepler
+    if (data.requests?.length) {
+      txt += `── EK MESAİ TALEPLERİ (${data.requests.length}) ${'─'.repeat(50)}\n\n`;
+      txt += `  ${pad('Çalışan', 22)} ${pad('Departman', 16)} ${pad('Tarih', 10)} ${pad('Saat', 14)} ${pad('Süre', 10)} ${pad('Kaynak', 12)} ${pad('Durum', 14)} Onaylayan\n`;
+      txt += `  ${line('─', 22)} ${line('─', 16)} ${line('─', 10)} ${line('─', 14)} ${line('─', 10)} ${line('─', 12)} ${line('─', 14)} ${line('─', 20)}\n`;
+      for (const r of data.requests) {
+        txt += `  ${pad(r.employee_name || '—', 22)} ${pad(r.department || '—', 16)} ${pad(formatDate(r.date), 10)} ${pad(`${r.start_time}-${r.end_time}`, 14)} ${pad(formatHours(r.hours), 10)} ${pad(SOURCE_LABELS[r.source] || r.source, 12)} ${pad(STATUS_LABELS[r.status] || r.status, 14)} ${r.approval_manager || r.target_approver || '—'}\n`;
+      }
+      txt += '\n';
+    }
+
+    // Tablo 3: Potansiyeller
+    if (data.potentials?.length) {
+      txt += `── POTANSİYEL MESAİLER (${data.potentials.length}) ${'─'.repeat(50)}\n\n`;
+      txt += `  ${pad('Çalışan', 22)} ${pad('Departman', 16)} ${pad('Tarih', 10)} ${pad('Saat', 14)} ${pad('Süre', 10)} ${pad('OT Tipi', 16)} ${pad('Durum', 18)} Bloklanma Sebebi\n`;
+      txt += `  ${line('─', 22)} ${line('─', 16)} ${line('─', 10)} ${line('─', 14)} ${line('─', 10)} ${line('─', 16)} ${line('─', 18)} ${line('─', 30)}\n`;
+      for (const p of data.potentials) {
+        const claimLabel = CLAIM_STATUS_CONFIG[p.claim_status]?.label || p.claim_status;
+        txt += `  ${pad(p.employee_name || '—', 22)} ${pad(p.department || '—', 16)} ${pad(formatDate(p.date), 10)} ${pad(`${p.start_time}-${p.end_time}`, 14)} ${pad(formatHours(p.hours), 10)} ${pad(OT_TYPE_LABELS[p.ot_type] || p.ot_type || '—', 16)} ${pad(claimLabel, 18)} ${p.block_reason || '—'}\n`;
+      }
+      txt += '\n';
+    }
+
+    txt += `${'═'.repeat(80)}\n`;
+    txt += `  Rapor sonu — ${now}\n`;
+    txt += `${'═'.repeat(80)}\n`;
+
+    // Download
+    const blob = new Blob(['\uFEFF' + txt], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `ek-mesai-analiz-${dateStr}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [data]);
+
   // --- Render ---
   if (loading && !data) {
     return (
@@ -347,14 +432,24 @@ export default function OTAnalysisTab() {
           <h2 className="text-lg font-semibold text-gray-800">Ek Mesai Analizi</h2>
           <p className="text-sm text-gray-500">{s.period_label || 'Mevcut mali ay'}</p>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Yenile
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={downloadReport}
+            disabled={!data}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <ArrowDownTrayIcon className="w-4 h-4" />
+            Raporu İndir
+          </button>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Yenile
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
