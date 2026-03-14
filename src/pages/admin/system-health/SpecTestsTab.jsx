@@ -4,7 +4,7 @@
  * 8 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
  * Tüm domain loglarını detaylı gösterir (eski stage sistemi gibi).
  */
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Card, Button, Tag, Space, Typography, Progress, Collapse,
   Table, Tooltip, Row, Col, Statistic, Alert, Badge,
@@ -102,6 +102,8 @@ export default function SpecTestsTab() {
   const [runningDetails, setRunningDetails] = useState([]);
   const [runningOutput, setRunningOutput] = useState('');
   const pollingRef = useRef(null);
+  const liveLogRef = useRef(null);
+  const liveListRef = useRef(null);
 
   const pollStatus = useCallback((taskId, targetDomains) => {
     const poll = async () => {
@@ -240,6 +242,12 @@ export default function SpecTestsTab() {
     },
   ];
 
+  // Auto-scroll live log and test list to bottom
+  useEffect(() => {
+    if (liveLogRef.current) liveLogRef.current.scrollTop = liveLogRef.current.scrollHeight;
+    if (liveListRef.current) liveListRef.current.scrollTop = liveListRef.current.scrollHeight;
+  }, [runningOutput, runningDetails]);
+
   const totalPassed = Object.values(results).reduce((s, r) => s + (r.passed || 0), 0);
   const totalFailed = Object.values(results).reduce((s, r) => s + (r.failed || 0) + (r.errors || 0), 0);
   const totalTests = Object.values(results).reduce((s, r) => s + (r.tests_ran || 0), 0);
@@ -316,7 +324,7 @@ export default function SpecTestsTab() {
               <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>
                 Canlı Sonuçlar ({runningDetails.length} test tamamlandı)
               </Text>
-              <div style={{
+              <div ref={liveListRef} style={{
                 maxHeight: 200, overflow: 'auto',
                 background: '#fafafa', borderRadius: 4, padding: 8,
               }}>
@@ -343,13 +351,13 @@ export default function SpecTestsTab() {
             </div>
           )}
 
-          {/* Live raw output */}
-          {showLogs && runningOutput && (
+          {/* Live raw output — show even if empty, as long as a domain is running */}
+          {showLogs && currentDomain && (
             <div style={{ marginTop: 8 }}>
               <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
                 <CodeOutlined /> Canlı Log
               </Text>
-              <pre style={{
+              <pre ref={liveLogRef} style={{
                 fontSize: 10,
                 maxHeight: 200,
                 overflow: 'auto',
@@ -362,7 +370,7 @@ export default function SpecTestsTab() {
                 wordBreak: 'break-word',
                 margin: 0,
               }}>
-                {runningOutput}
+                {runningOutput || 'Test başlatılıyor, çıktı bekleniyor...'}
               </pre>
             </div>
           )}
