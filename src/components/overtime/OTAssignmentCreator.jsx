@@ -79,6 +79,8 @@ const STATUS_STYLES = {
   POTENTIAL: 'bg-blue-100 text-blue-700',
   REJECTED: 'bg-red-100 text-red-700',
   CANCELLED: 'bg-slate-100 text-slate-500',
+  ASSIGNED: 'bg-indigo-100 text-indigo-700',
+  EXPIRED: 'bg-slate-100 text-slate-400',
 };
 
 const STATUS_LABELS = {
@@ -87,6 +89,8 @@ const STATUS_LABELS = {
   POTENTIAL: 'Potansiyel',
   REJECTED: 'Reddedildi',
   CANCELLED: 'İptal',
+  ASSIGNED: 'Atandı',
+  EXPIRED: 'Süresi Doldu',
 };
 
 const SOURCE_STYLES = {
@@ -294,6 +298,47 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       .forEach(b => { map[b.date] = b; });
     return map;
   }, [busyDays]);
+
+  // --- Unified table rows: merge requests + unclaimed assignments ---
+  const unifiedRows = useMemo(() => {
+    const rows = [];
+    const requestDates = new Set();
+
+    // Add all OvertimeRequests
+    for (const item of assignments) {
+      const date = item.overtime_date || item.date;
+      requestDates.add(date);
+      const busy = busyMap[date];
+      rows.push({
+        ...item,
+        _date: date,
+        _assignedBy: item.source_type === 'INTENDED' && busy ? busy.manager_name : null,
+        _maxHours: item.source_type === 'INTENDED' && busy ? busy.max_hours : null,
+        _requestedHours: item.duration_hours != null ? parseFloat(item.duration_hours) : null,
+        _type: 'request',
+      });
+    }
+
+    // Add unclaimed assignments (ASSIGNED/EXPIRED from busyDays)
+    for (const busy of busyDays) {
+      if ((busy.status === 'ASSIGNED' || busy.status === 'EXPIRED') && !requestDates.has(busy.date)) {
+        rows.push({
+          id: `asgn-${busy.date}`,
+          _date: busy.date,
+          _assignedBy: busy.manager_name,
+          _maxHours: busy.max_hours,
+          _requestedHours: null,
+          status: busy.status,
+          source_type: 'INTENDED',
+          task_description: busy.task_description,
+          _type: 'assignment',
+        });
+      }
+    }
+
+    rows.sort((a, b) => (b._date || '').localeCompare(a._date || ''));
+    return rows;
+  }, [assignments, busyDays, busyMap]);
 
   // --- Calendar generation ---
   const { weeks } = useMemo(() => {
@@ -926,7 +971,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       <Loader2 size={20} className="text-violet-500 animate-spin" />
                       <span className="ml-2 text-sm text-slate-500">Yükleniyor...</span>
                     </div>
-                  ) : assignments.length === 0 ? (
+                  ) : unifiedRows.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10">
                       <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
                         <Clock size={20} className="text-slate-400" />
@@ -939,6 +984,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <thead>
                           <tr className="border-b border-slate-100">
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Tarih</th>
+                            <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Atayan</th>
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Süre</th>
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Durum</th>
                             <th className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 px-3">Kaynak</th>
@@ -946,32 +992,40 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           </tr>
                         </thead>
                         <tbody>
-                          {assignments.map((item, idx) => (
-                            <tr key={item.id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                          {unifiedRows.map((row, idx) => (
+                            <tr key={row.id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                               <td className="py-2.5 px-3 text-xs font-medium text-slate-700">
-                                {item.overtime_date || item.date
-                                  ? formatShortDate(item.overtime_date || item.date)
-                                  : '-'}
+                                {row._date ? formatShortDate(row._date) : '-'}
+                              </td>
+                              <td className="py-2.5 px-3 text-xs text-slate-600">
+                                {row._assignedBy || '-'}
                               </td>
                               <td className="py-2.5 px-3 text-xs font-medium text-slate-700">
-                                {item.duration_hours != null
-                                  ? `${parseFloat(item.duration_hours).toFixed(1)} sa`
-                                  : item.max_duration_hours != null
-                                  ? `${parseFloat(item.max_duration_hours).toFixed(1)} sa`
-                                  : '-'}
+                                {row._requestedHours != null ? (
+                                  <span>
+                                    {row._requestedHours.toFixed(1)} sa
+                                    {row._maxHours != null && (
+                                      <span className="text-[10px] text-slate-400 ml-1">/ max {parseFloat(row._maxHours).toFixed(1)}</span>
+                                    )}
+                                  </span>
+                                ) : row._maxHours != null ? (
+                                  <span className="text-slate-500">max {parseFloat(row._maxHours).toFixed(1)} sa</span>
+                                ) : (
+                                  '-'
+                                )}
                               </td>
                               <td className="py-2.5 px-3">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${STATUS_STYLES[item.status] || 'bg-slate-100 text-slate-500'}`}>
-                                  {STATUS_LABELS[item.status] || item.status}
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${STATUS_STYLES[row.status] || 'bg-slate-100 text-slate-500'}`}>
+                                  {STATUS_LABELS[row.status] || row.status}
                                 </span>
                               </td>
                               <td className="py-2.5 px-3">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${SOURCE_STYLES[item.source_type] || 'bg-slate-100 text-slate-500'}`}>
-                                  {SOURCE_LABELS[item.source_type] || item.source_type || '-'}
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${SOURCE_STYLES[row.source_type] || 'bg-slate-100 text-slate-500'}`}>
+                                  {SOURCE_LABELS[row.source_type] || row.source_type || '-'}
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 text-xs text-slate-600 max-w-[200px] truncate">
-                                {item.task_description || '-'}
+                                {row.task_description || '-'}
                               </td>
                             </tr>
                           ))}
