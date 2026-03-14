@@ -6,7 +6,6 @@ import {
 import { Tooltip } from 'antd';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
-import { useAuth } from '../../context/AuthContext';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
@@ -65,8 +64,6 @@ const StatCard = ({ label, value, icon, color, tooltip }) => (
 );
 
 const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
-    const { user } = useAuth();
-
     // Data states
     const [requests, setRequests] = useState([]);
     const [overtimeRequests, setOvertimeRequests] = useState([]);
@@ -93,7 +90,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [selectedRequestType, setSelectedRequestType] = useState(null);
     const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
     const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
-    const [expandedRowId, setExpandedRowId] = useState(null);
+    const [expandedRowId] = useState(null);
     const [claimManagers, setClaimManagers] = useState([]);
     const [claimModal, setClaimModal] = useState({ open: false, target: null });
 
@@ -261,7 +258,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         }
     }, [claimModal.target, claimManagers, fetchData, notifyParent]);
 
-    const handleCreateSuccess = useCallback((approverName) => {
+    const handleCreateSuccess = useCallback(() => {
         fetchData();
         notifyParent();
     }, [fetchData, notifyParent]);
@@ -517,10 +514,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                             key={`${req._type || req.type}-${req.id}`}
                                             req={req}
                                             isExpanded={expandedRowId === `${req._type || req.type}-${req.id}`}
-                                            onToggle={() => {
-                                                const key = `${req._type || req.type}-${req.id}`;
-                                                setExpandedRowId(prev => prev === key ? null : key);
-                                            }}
+                                            onToggle={() => handleViewDetails(req, req._type || req.type)}
                                             onViewDetails={handleViewDetails}
                                             onEdit={handleEdit}
                                             onDelete={handleDeleteRequest}

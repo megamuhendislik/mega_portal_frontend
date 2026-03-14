@@ -21,10 +21,12 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [cancelLoading, setCancelLoading] = useState(false);
   const [dutyPreview, setDutyPreview] = useState(null);
   const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
+  const [showFullReason, setShowFullReason] = useState(false);
 
   useEffect(() => {
     if (isOpen && request) {
       fetchTimeLockInfo();
+      setShowFullReason(false);
     }
   }, [isOpen, request]);
 
@@ -721,12 +723,26 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </>
             )}
 
-            {(request.reason || request.description) && (
-              <div className="pt-3 border-t border-slate-200">
-                <span className="text-sm font-medium text-slate-600 block mb-1">Gerekçe</span>
-                <p className="text-sm text-slate-700 whitespace-pre-line">{request.reason || request.description}</p>
-              </div>
-            )}
+            {(request.reason || request.description) && (() => {
+              const text = request.reason || request.description;
+              const isLong = text.length > 200;
+              return (
+                <div className="pt-3 border-t border-slate-200">
+                  <span className="text-sm font-medium text-slate-600 block mb-1">Gerekçe</span>
+                  <p className={`text-sm text-slate-700 whitespace-pre-wrap break-words ${isLong && !showFullReason ? 'line-clamp-3' : ''}`}>
+                    {text}
+                  </p>
+                  {isLong && (
+                    <button
+                      onClick={() => setShowFullReason(prev => !prev)}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700 mt-1"
+                    >
+                      {showFullReason ? 'Daha az göster' : 'Devamını oku...'}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Onay / Karar Bilgisi */}
             {(() => {
