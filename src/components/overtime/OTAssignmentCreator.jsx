@@ -170,6 +170,11 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
   const [assignments, setAssignments] = useState([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
 
+  // My assignments (Atamalarım) state
+  const [myAssignments, setMyAssignments] = useState([]);
+  const [assignmentFilter, setAssignmentFilter] = useState('ASSIGNED');
+  const [cancellingId, setCancellingId] = useState(null);
+
   // Sync with parent team tab when it changes
   useEffect(() => {
     if (parentTeamTab) {
@@ -290,6 +295,19 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     fetchAssignments();
   }, [fetchAssignments]);
 
+  // --- Fetch my created assignments (Atamalarım) ---
+  const fetchMyAssignments = useCallback(async () => {
+    try {
+      const res = await api.get('/overtime-assignments/', {
+        params: { scope: 'created_by_me', page_size: 100 }
+      });
+      const data = res.data?.results || res.data || [];
+      setMyAssignments(Array.isArray(data) ? data : []);
+    } catch { setMyAssignments([]); }
+  }, []);
+
+  useEffect(() => { fetchMyAssignments(); }, [fetchMyAssignments]);
+
   // --- Busy days lookup ---
   const busyMap = useMemo(() => {
     const map = {};
@@ -298,6 +316,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       .forEach(b => { map[b.date] = b; });
     return map;
   }, [busyDays]);
+
+  // --- Filtered my assignments (Atamalarım) ---
+  const filteredMyAssignments = useMemo(() => {
+    if (assignmentFilter === 'ASSIGNED') return myAssignments.filter(a => a.status === 'ASSIGNED');
+    return myAssignments;
+  }, [myAssignments, assignmentFilter]);
 
   // --- Unified table rows: merge requests + unclaimed assignments ---
   const unifiedRows = useMemo(() => {
@@ -413,6 +437,20 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
   }, [currentUsed, weeklyLimit, isUnlimited]);
 
   // --- Submit handler ---
+  // --- Cancel my assignment ---
+  const handleCancelMyAssignment = async (a) => {
+    if (!window.confirm(`${a.employee_name || 'Çalışan'} - ${a.date} atamasını iptal etmek istiyor musunuz?`)) return;
+    setCancellingId(a.id);
+    try {
+      await api.post(`/overtime-assignments/${a.id}/cancel/`);
+      fetchMyAssignments();
+      onAssignmentCreated?.();
+    } catch (err) {
+      alert(err.response?.data?.error || 'İptal sırasında hata oluştu.');
+    }
+    setCancellingId(null);
+  };
+
   const handleSubmit = async () => {
     setError('');
 
@@ -460,6 +498,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       setSubmitting(false);
       onAssignmentCreated?.();
       fetchAssignments();
+      fetchMyAssignments();
       setTimeout(() => {
         setSuccess(false);
       }, 1500);
@@ -1044,6 +1083,81 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
             </>
           )}
         </>
+      )}
+
+      {/* ===== ATAMALARIM ===== */}
+      {myAssignments.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[15px] font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <FileText size={16} className="text-slate-400" />
+              Atamalarım
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600">
+                {filteredMyAssignments.length}
+              </span>
+            </h3>
+            <div className="flex gap-1">
+              {['ASSIGNED', 'ALL'].map(f => (
+                <button key={f} onClick={() => setAssignmentFilter(f)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    assignmentFilter === f ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:text-slate-600'
+                  }`}>
+                  {f === 'ASSIGNED' ? 'Aktif' : 'Tümü'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredMyAssignments.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">
+              {assignmentFilter === 'ASSIGNED' ? 'Aktif atama yok.' : 'Atama bulunmuyor.'}
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {filteredMyAssignments.map(a => {
+                const statusColors = {
+                  ASSIGNED: 'bg-sky-50 text-sky-700 border-sky-200',
+                  CLAIMED: 'bg-purple-50 text-purple-700 border-purple-200',
+                  EXPIRED: 'bg-red-50 text-red-600 border-red-200',
+                  CANCELLED: 'bg-slate-100 text-slate-500 border-slate-200',
+                };
+                const statusLabels = { ASSIGNED: 'Atandı', CLAIMED: 'Talep Edildi', EXPIRED: 'Süresi Doldu', CANCELLED: 'İptal' };
+                const d = new Date(a.date + 'T00:00:00');
+                return (
+                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all bg-white">
+                    <div className="w-12 text-center flex-shrink-0">
+                      <div className="text-lg font-black text-slate-800">{d.getDate()}</div>
+                      <div className="text-[9px] font-bold text-slate-400 uppercase">
+                        {d.toLocaleDateString('tr-TR', { month: 'short' })}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-slate-800 truncate">{a.employee_name || '—'}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{a.task_description || '—'}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] text-blue-600 font-medium">Max: {a.max_duration_hours} sa</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[a.status] || statusColors.CANCELLED}`}>
+                          {statusLabels[a.status] || a.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      {a.status === 'ASSIGNED' && a.can_cancel !== false && (
+                        <button
+                          onClick={() => handleCancelMyAssignment(a)}
+                          disabled={cancellingId === a.id}
+                          title="İptal Et"
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
