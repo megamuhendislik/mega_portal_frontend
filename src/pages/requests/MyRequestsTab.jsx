@@ -86,6 +86,8 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [showEditOvertimeModal, setShowEditOvertimeModal] = useState(false);
     const [editOvertimeForm, setEditOvertimeForm] = useState({ id: null, start_time: '', end_time: '', reason: '' });
     const [expandedRowId, setExpandedRowId] = useState(null);
+    const [claimManagers, setClaimManagers] = useState([]);
+    const [claimModal, setClaimModal] = useState({ open: false, target: null });
 
     // Date range filter
     const [dateFrom, setDateFrom] = useState('');
@@ -155,6 +157,13 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         }
     }, [refreshTrigger, fetchData]);
 
+    // Fetch available OT managers for claim modal
+    useEffect(() => {
+        api.get('/available-approvers/?type=OVERTIME')
+            .then(res => setClaimManagers(res.data || []))
+            .catch(() => setClaimManagers([]));
+    }, []);
+
     // Notify parent when data changes
     const notifyParent = useCallback(() => {
         if (onDataChange) onDataChange();
@@ -215,28 +224,24 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         setShowDetailModal(true);
     }, []);
 
-    const handleClaimPotential = useCallback(async (req) => {
+    const handleClaimPotential = useCallback((req) => {
+        setClaimModal({ open: true, target: req });
+    }, []);
+
+    const handleClaimSubmit = useCallback(async (reason, selectedManagerId) => {
+        const req = claimModal.target;
+        if (!req) return;
+        setClaimModal({ open: false, target: null });
         setClaimingId(req.id);
         try {
-            // Yönetici bilgisini al (tek ise otomatik, çoklu ise ilk PRIMARY)
-            let targetApproverId = null;
-            try {
-                const mgrRes = await api.get('/available-approvers/?type=OVERTIME');
-                const mgrs = mgrRes.data || [];
-                if (mgrs.length === 1) {
-                    targetApproverId = mgrs[0].id;
-                } else if (mgrs.length > 1) {
-                    const primary = mgrs.find(m => m.relationship === 'PRIMARY');
-                    targetApproverId = primary ? primary.id : mgrs[0].id;
-                }
-            } catch { /* devam et */ }
-
             const payload = {
                 overtime_request_id: req.id,
-                reason: 'Talep edildi',
+                reason: reason || 'Talep edildi',
             };
-            if (targetApproverId) {
-                payload.target_approver_id = targetApproverId;
+            if (selectedManagerId) {
+                payload.target_approver_id = selectedManagerId;
+            } else if (claimManagers.length === 1) {
+                payload.target_approver_id = claimManagers[0].id;
             }
             await api.post('/overtime-requests/claim-potential/', payload);
             await fetchData();
@@ -246,7 +251,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         } finally {
             setClaimingId(null);
         }
-    }, [fetchData, notifyParent]);
+    }, [claimModal.target, claimManagers, fetchData, notifyParent]);
 
     const handleCreateSuccess = useCallback((approverName) => {
         fetchData();
@@ -587,6 +592,70 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 requestType={selectedRequestType}
                 onUpdate={() => { fetchData(); notifyParent(); }}
             />
+
+            {/* Claim Modal — multi-PRIMARY yönetici seçimi */}
+            {claimModal.open && (
+                <ModalOverlay open={claimModal.open} onClose={() => setClaimModal({ open: false, target: null })}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Mesai Talep Et</h3>
+                            <button onClick={() => setClaimModal({ open: false, target: null })} className="p-1 hover:bg-slate-100 rounded-lg">
+                                <XCircle size={18} className="text-slate-400" />
+                            </button>
+                        </div>
+                        {claimModal.target && (
+                            <p className="text-sm text-slate-500">
+                                {claimModal.target.date} &bull; {claimModal.target.start_time?.slice(0,5)} - {claimModal.target.end_time?.slice(0,5)}
+                            </p>
+                        )}
+                        {claimManagers.length === 0 && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                                <p className="text-xs font-bold text-red-700 flex items-center gap-1.5">
+                                    <AlertCircle size={14} />
+                                    Yöneticiniz tanımlanmamış. İK ile iletişime geçin.
+                                </p>
+                            </div>
+                        )}
+                        {claimManagers.length > 1 && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1.5">Onay Yöneticisi</label>
+                                <select
+                                    id="claim-manager-select"
+                                    defaultValue={(() => { const p = claimManagers.find(m => m.relationship === 'PRIMARY'); return p ? p.id : claimManagers[0]?.id; })()}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 outline-none"
+                                >
+                                    {claimManagers.map(m => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.relationship === 'PRIMARY' ? '⭐ ' : '🔹 '}{m.name}{m.relationship === 'PRIMARY' ? ' (Birincil)' : ' (İkincil)'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        <textarea
+                            id="claim-reason-input"
+                            rows="3"
+                            placeholder="Açıklama (opsiyonel)..."
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 outline-none resize-none"
+                        />
+                        <div className="flex gap-2">
+                            <button onClick={() => setClaimModal({ open: false, target: null })} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
+                            <button
+                                onClick={() => {
+                                    const selectEl = document.getElementById('claim-manager-select');
+                                    const reasonEl = document.getElementById('claim-reason-input');
+                                    const managerId = selectEl ? Number(selectEl.value) : (claimManagers.length === 1 ? claimManagers[0].id : null);
+                                    handleClaimSubmit(reasonEl?.value || '', managerId);
+                                }}
+                                disabled={claimManagers.length === 0}
+                                className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
+                            >
+                                Talep Et
+                            </button>
+                        </div>
+                    </div>
+                </ModalOverlay>
+            )}
         </div>
     );
 };
