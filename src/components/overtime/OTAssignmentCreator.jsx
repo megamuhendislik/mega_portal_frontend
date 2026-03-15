@@ -3,7 +3,7 @@ import { Select, Tooltip, message } from 'antd';
 import {
   Clock, AlertTriangle, CalendarPlus, Loader2,
   Save, Check, ShieldAlert, Users, X, FileText, Info,
-  Pencil, Eye, Calendar, Users2, ShieldX,
+  Pencil, Eye, Calendar, Users2, ShieldX, Trash2,
   CircleCheck, Activity, CircleDot, ArrowRight, UserCheck
 } from 'lucide-react';
 import api from '../../services/api';
@@ -546,6 +546,23 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       message.success('Atama iptal edildi.');
     } catch (err) {
       message.error(err.response?.data?.error || 'İptal sırasında hata oluştu.');
+    }
+    setCancellingId(null);
+  };
+
+  // --- Delete assignment (hard delete) ---
+  const handleDeleteAssignment = async (a) => {
+    if (!window.confirm(`${a.employee_name || 'Çalışan'} - ${a.date} atamasını kalıcı olarak silmek istiyor musunuz? Bu işlem geri alınamaz.`)) return;
+    setCancellingId(a.id);
+    try {
+      await api.delete(`/overtime-assignments/${a.id}/`);
+      setDetailModal(null);
+      fetchMyAssignments();
+      fetchTeamAssignments();
+      onAssignmentCreated?.();
+      message.success('Atama silindi.');
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Silme sırasında hata oluştu.');
     }
     setCancellingId(null);
   };
@@ -1421,7 +1438,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
 
                       {/* Action buttons */}
                       <div className="flex gap-1 flex-shrink-0">
-                        {isMine && a.status === 'ASSIGNED' && (
+                        {a.can_cancel && (
                           <button
                             onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
                             title="Düzenle"
@@ -1429,13 +1446,22 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                             <Pencil size={12} /> Düzenle
                           </button>
                         )}
-                        {isMine && a.status === 'ASSIGNED' && a.can_cancel !== false && (
+                        {a.can_cancel && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
                             disabled={cancellingId === a.id}
                             title="İptal Et"
                             className="px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold transition-colors flex items-center gap-1 disabled:opacity-50">
                             <X size={12} /> {cancellingId === a.id ? '...' : 'İptal'}
+                          </button>
+                        )}
+                        {a.can_delete && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteAssignment(a); }}
+                            disabled={cancellingId === a.id}
+                            title="Kalıcı Sil"
+                            className="px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-bold transition-colors flex items-center gap-1 disabled:opacity-50">
+                            <Trash2 size={12} /> {cancellingId === a.id ? '...' : 'Sil'}
                           </button>
                         )}
                         {!isMine && a.can_override && (
@@ -1779,24 +1805,36 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </div>
             </div>
 
-            {/* Footer Actions — own assignment: edit + cancel */}
-            {isOwnAssignment(detailModal) && detailModal.status === 'ASSIGNED' && (
+            {/* Footer Actions — edit + cancel + delete */}
+            {(detailModal.can_cancel || detailModal.can_delete) && (
               <div className="flex items-center gap-2 p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
-                <button
-                  onClick={() => openEditModal(detailModal)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
-                >
-                  <Pencil size={14} />
-                  Düzenle
-                </button>
-                {detailModal.can_cancel !== false && (
+                {detailModal.can_cancel && (
+                  <button
+                    onClick={() => openEditModal(detailModal)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+                  >
+                    <Pencil size={14} />
+                    Düzenle
+                  </button>
+                )}
+                {detailModal.can_cancel && (
                   <button
                     onClick={() => handleCancelFromDetail(detailModal)}
                     disabled={cancellingId === detailModal.id}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
                   >
                     <X size={14} />
                     {cancellingId === detailModal.id ? 'İptal Ediliyor...' : 'İptal Et'}
+                  </button>
+                )}
+                {detailModal.can_delete && (
+                  <button
+                    onClick={() => handleDeleteAssignment(detailModal)}
+                    disabled={cancellingId === detailModal.id}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 size={14} />
+                    {cancellingId === detailModal.id ? 'Siliniyor...' : 'Sil'}
                   </button>
                 )}
               </div>
