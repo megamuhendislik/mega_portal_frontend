@@ -53,8 +53,10 @@ const Requests = () => {
     // Manager detection — PRIMARY / SECONDARY counts
     const [primaryCount, setPrimaryCount] = useState(0);
     const [secondaryCount, setSecondaryCount] = useState(0);
+    const [teamCountsLoading, setTeamCountsLoading] = useState(true);
     const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
-    const isManager = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME') || hasAnyTeam;
+    const hasApprovalPerm = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME');
+    const isManager = hasApprovalPerm || hasAnyTeam;
 
     // Badge for incoming tab
     const [incomingPendingCount, setIncomingPendingCount] = useState(0);
@@ -63,18 +65,19 @@ const Requests = () => {
         const fetchTeamCounts = async () => {
             try {
                 const [priRes, secRes] = await Promise.allSettled([
-                    api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
-                    api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
+                    api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY', count_only: 'true' } }),
+                    api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY', count_only: 'true' } }),
                 ]);
                 if (priRes.status === 'fulfilled') {
                     const d = priRes.value.data;
-                    setPrimaryCount((Array.isArray(d) ? d : d.results || []).length);
+                    setPrimaryCount(d.count != null ? d.count : (Array.isArray(d) ? d : d.results || []).length);
                 }
                 if (secRes.status === 'fulfilled') {
                     const d = secRes.value.data;
-                    setSecondaryCount((Array.isArray(d) ? d : d.results || []).length);
+                    setSecondaryCount(d.count != null ? d.count : (Array.isArray(d) ? d : d.results || []).length);
                 }
             } catch { /* not manager */ }
+            setTeamCountsLoading(false);
         };
         fetchTeamCounts();
     }, []);
@@ -123,7 +126,7 @@ const Requests = () => {
                     Kendi Taleplerim
                 </TabButton>
 
-                {isManager && (
+                {(isManager || teamCountsLoading) && (
                     <TabButton
                         active={activeTab === 'incoming_requests'}
                         onClick={() => handleTabChange('incoming_requests')}
@@ -159,7 +162,7 @@ const Requests = () => {
                         refreshTrigger={refreshTrigger}
                     />
                 )}
-                {activeTab === 'incoming_requests' && isManager && (
+                {activeTab === 'incoming_requests' && (isManager || teamCountsLoading) && (
                     <IncomingRequestsTab
                         onPendingCountChange={handlePendingCountChange}
                         onDataChange={handleDataChange}
@@ -174,6 +177,7 @@ const Requests = () => {
                         refreshTrigger={refreshTrigger}
                         primaryCount={primaryCount}
                         secondaryCount={secondaryCount}
+                        teamCountsLoading={teamCountsLoading}
                     />
                 )}
                 {activeTab === 'analytics' && (

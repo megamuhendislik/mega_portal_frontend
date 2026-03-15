@@ -27,11 +27,12 @@ const SubTabButton = ({ active, onClick, children, icon, badge }) => (
   </button>
 );
 
-export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0 }) {
+export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0, teamCountsLoading = false }) {
   const { hasPermission } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('my_requests');
   const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
-  const isManager = hasAnyTeam || hasPermission('APPROVAL_OVERTIME');
+  const hasApprovalPerm = hasPermission('APPROVAL_OVERTIME');
+  const isManager = hasAnyTeam || hasApprovalPerm;
 
   // Lazy mount: component mounts on first visit, stays alive after (display:none hides it)
   const [mounted, setMounted] = useState({ my_requests: true });
@@ -41,7 +42,21 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
     setMounted(prev => prev[tab] ? prev : { ...prev, [tab]: true });
   }, []);
 
-  // Normal çalışan — mevcut görünüm
+  // Hâlâ ekip bilgisi yükleniyorsa ve açık yetki yoksa: skeleton göster
+  if (teamCountsLoading && !hasApprovalPerm) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-10 w-28 bg-slate-100 rounded-lg" />
+          ))}
+        </div>
+        <div className="h-64 bg-slate-50 rounded-xl" />
+      </div>
+    );
+  }
+
+  // Normal çalışan — mevcut görünüm (yalnızca yükleme bittikten sonra)
   if (!isManager) {
     return <OvertimeCalendarView mode="personal" />;
   }
