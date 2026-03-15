@@ -1327,77 +1327,171 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               {allFilter === 'ASSIGNED' ? 'Aktif atama yok.' : 'Atama bulunmuyor.'}
             </p>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
               {allAssignmentsCombined.map(a => {
                 const statusColors = {
-                  ASSIGNED: 'bg-sky-50 text-sky-700 border-sky-200',
-                  CLAIMED: 'bg-purple-50 text-purple-700 border-purple-200',
-                  EXPIRED: 'bg-red-50 text-red-600 border-red-200',
-                  CANCELLED: 'bg-slate-100 text-slate-500 border-slate-200',
+                  ASSIGNED: 'border-sky-200 bg-sky-50/50',
+                  CLAIMED: 'border-purple-200 bg-purple-50/50',
+                  EXPIRED: 'border-red-200 bg-red-50/30',
+                  CANCELLED: 'border-slate-200 bg-slate-50/30',
+                };
+                const statusBadge = {
+                  ASSIGNED: 'bg-sky-100 text-sky-700',
+                  CLAIMED: 'bg-purple-100 text-purple-700',
+                  EXPIRED: 'bg-red-100 text-red-600',
+                  CANCELLED: 'bg-slate-100 text-slate-500',
                 };
                 const statusLabels = { ASSIGNED: 'Atandı', CLAIMED: 'Talep Edildi', EXPIRED: 'Süresi Doldu', CANCELLED: 'İptal' };
                 const d = new Date(a.date + 'T00:00:00');
                 const isMine = isOwnAssignment(a);
+                const todayStr = getIstanbulToday();
+                const isPast = a.date < todayStr;
+                const isToday = a.date === todayStr;
+                const rd = a.request_detail;
+                const hasClaimed = rd?.claimed;
+                const hasAttendance = rd?.has_attendance;
+                const reqStatus = rd?.request_status;
+                const actualHours = rd?.actual_ot_hours;
+
                 return (
                   <div key={a.id}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all bg-white cursor-pointer"
+                    className={`rounded-xl border transition-all bg-white cursor-pointer hover:shadow-md ${statusColors[a.status] || statusColors.CANCELLED}`}
                     onClick={() => setDetailModal(a)}
                   >
-                    <div className="w-12 text-center flex-shrink-0">
-                      <div className="text-lg font-black text-slate-800">{d.getDate()}</div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase">
-                        {d.toLocaleDateString('tr-TR', { month: 'short' })}
+                    {/* Top Row: Date + Employee + Actions */}
+                    <div className="flex items-start gap-3 p-3 pb-2">
+                      {/* Date pill */}
+                      <div className={`w-14 flex-shrink-0 rounded-lg p-1.5 text-center ${isToday ? 'bg-violet-600 text-white' : isPast ? 'bg-slate-100' : 'bg-violet-50'}`}>
+                        <div className={`text-lg font-black leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>{d.getDate()}</div>
+                        <div className={`text-[9px] font-bold uppercase ${isToday ? 'text-violet-200' : 'text-slate-400'}`}>
+                          {d.toLocaleDateString('tr-TR', { month: 'short' })}
+                        </div>
+                        <div className={`text-[8px] font-bold ${isToday ? 'text-violet-200' : 'text-slate-300'}`}>
+                          {d.toLocaleDateString('tr-TR', { weekday: 'short' })}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-slate-800 truncate">{a.employee_name || '—'}</div>
-                      <div className="text-[11px] text-slate-400 truncate">{a.task_description || '—'}</div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-[11px] text-blue-600 font-medium">Max: {a.max_duration_hours} sa</span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[a.status] || statusColors.CANCELLED}`}>
-                          {statusLabels[a.status] || a.status}
-                        </span>
-                        {a.assigned_by_name && (
-                          <span className="text-[10px] text-slate-400">
-                            Atayan: {a.assigned_by_name}
+
+                      {/* Main info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-sm font-bold text-slate-800 truncate">{a.employee_name || '—'}</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold flex-shrink-0 ${statusBadge[a.status] || statusBadge.CANCELLED}`}>
+                            {statusLabels[a.status] || a.status}
                           </span>
+                        </div>
+                        {a.task_description && (
+                          <div className="text-[11px] text-slate-500 truncate mb-1">{a.task_description}</div>
                         )}
+                        {/* Info chips row */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[10px] font-bold text-blue-600">
+                            <Clock size={10} /> {a.max_duration_hours} sa
+                          </span>
+                          {a.assigned_by_name && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 text-[10px] font-medium text-slate-500">
+                              <UserCheck size={10} /> {a.assigned_by_name}
+                            </span>
+                          )}
+                          {hasClaimed && reqStatus && (
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              reqStatus === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' :
+                              reqStatus === 'REJECTED' ? 'bg-red-50 text-red-600' :
+                              reqStatus === 'PENDING' ? 'bg-amber-50 text-amber-700' :
+                              'bg-slate-50 text-slate-500'
+                            }`}>
+                              {reqStatus === 'APPROVED' ? <><Check size={10} /> Onaylı</> :
+                               reqStatus === 'REJECTED' ? <><X size={10} /> Reddedildi</> :
+                               reqStatus === 'PENDING' ? <><Clock size={10} /> Onay Bekliyor</> :
+                               reqStatus}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-1 flex-shrink-0">
+                        {isMine && a.status === 'ASSIGNED' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
+                            title="Düzenle"
+                            className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-[10px] font-bold transition-colors flex items-center gap-1">
+                            <Pencil size={12} /> Düzenle
+                          </button>
+                        )}
+                        {isMine && a.status === 'ASSIGNED' && a.can_cancel !== false && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
+                            disabled={cancellingId === a.id}
+                            title="İptal Et"
+                            className="px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold transition-colors flex items-center gap-1 disabled:opacity-50">
+                            <X size={12} /> {cancellingId === a.id ? '...' : 'İptal'}
+                          </button>
+                        )}
+                        {!isMine && a.can_override && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setOverrideConfirmModal(a); setOverrideReason(''); }}
+                            disabled={cancellingId === a.id}
+                            title="Kararı Ez (Override)"
+                            className="px-2 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 text-[10px] font-bold transition-colors flex items-center gap-1 disabled:opacity-50">
+                            <ShieldX size={12} /> Override
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDetailModal(a); }}
+                          title="Detay"
+                          className="px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold transition-colors flex items-center gap-1">
+                          <Eye size={12} /> Detay
+                        </button>
                       </div>
                     </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      {isMine && a.status === 'ASSIGNED' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
-                          title="Düzenle"
-                          className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors">
-                          <Pencil size={14} />
-                        </button>
-                      )}
-                      {isMine && a.status === 'ASSIGNED' && a.can_cancel !== false && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
-                          disabled={cancellingId === a.id}
-                          title="İptal Et"
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">
-                          <X size={14} />
-                        </button>
-                      )}
-                      {!isMine && a.can_override && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setOverrideConfirmModal(a); setOverrideReason(''); }}
-                          disabled={cancellingId === a.id}
-                          title="Kararı Ez (Override)"
-                          className="p-1.5 rounded-lg hover:bg-orange-50 text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50">
-                          <ShieldX size={14} />
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDetailModal(a); }}
-                        title="Detay"
-                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-                        <Eye size={14} />
-                      </button>
-                    </div>
+
+                    {/* Bottom Row: Realization info (only if attendance exists or claimed) */}
+                    {(hasAttendance || hasClaimed) && (
+                      <div className="flex items-center gap-3 px-3 pb-2.5 pt-0">
+                        <div className="w-14 flex-shrink-0" /> {/* spacer matching date col */}
+                        <div className={`flex-1 flex items-center gap-2.5 flex-wrap px-2.5 py-1.5 rounded-lg text-[10px] ${
+                          hasAttendance ? 'bg-emerald-50/70' : 'bg-slate-50'
+                        }`}>
+                          {hasAttendance && rd.check_in && (
+                            <span className="inline-flex items-center gap-1 text-slate-600">
+                              <ArrowRight size={10} className="text-emerald-500" />
+                              Giriş: <strong>{new Date(rd.check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                            </span>
+                          )}
+                          {hasAttendance && rd.check_out && (
+                            <span className="inline-flex items-center gap-1 text-slate-600">
+                              <ArrowRight size={10} className="text-red-400 rotate-180" />
+                              Çıkış: <strong>{new Date(rd.check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                            </span>
+                          )}
+                          {actualHours != null && actualHours > 0 && (
+                            <span className="inline-flex items-center gap-1 font-extrabold text-emerald-700">
+                              <Activity size={10} /> Fiili: {actualHours} sa
+                            </span>
+                          )}
+                          {actualHours === 0 && hasAttendance && (
+                            <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+                              <Info size={10} /> EK mesai yok
+                            </span>
+                          )}
+                          {hasClaimed && rd.requested_hours != null && (
+                            <span className="inline-flex items-center gap-1 text-blue-600 font-medium">
+                              <FileText size={10} /> Talep: {rd.requested_hours} sa
+                            </span>
+                          )}
+                          {hasClaimed && rd.target_approver_name && (
+                            <span className="inline-flex items-center gap-1 text-slate-500">
+                              <UserCheck size={10} /> {rd.target_approver_name}
+                            </span>
+                          )}
+                          {!hasAttendance && hasClaimed && (
+                            <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+                              <Info size={10} /> Henüz giriş kaydı yok
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
