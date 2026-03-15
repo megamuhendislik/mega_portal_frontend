@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import { getIstanbulToday } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import ModalOverlay from '../ui/ModalOverlay';
 
 // ═══════════════════════════════════════════════════
 //  FISCAL CALENDAR HELPERS
@@ -1482,9 +1483,8 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       )}
 
       {/* ===== DETAIL MODAL ===== */}
-      {detailModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDetailModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <ModalOverlay open={!!detailModal} onClose={() => setDetailModal(null)} level="primary">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -1790,13 +1790,11 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </div>
             )}
           </div>
-        </div>
-      )}
+      </ModalOverlay>
 
       {/* ===== EDIT MODAL ===== */}
-      {editModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setEditModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <ModalOverlay open={!!editModal} onClose={() => setEditModal(null)} level="secondary">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -1895,13 +1893,11 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
 
       {/* ===== OVERRIDE CONFIRM MODAL ===== */}
-      {overrideConfirmModal && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setOverrideConfirmModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+      <ModalOverlay open={!!overrideConfirmModal} onClose={() => setOverrideConfirmModal(null)} level="tertiary">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-orange-100 bg-orange-50/50 rounded-t-2xl">
               <h3 className="text-base font-bold text-orange-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -1969,8 +1965,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </ModalOverlay>
     </div>
   );
 }
