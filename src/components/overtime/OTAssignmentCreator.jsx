@@ -3,7 +3,8 @@ import { Select, Tooltip, message } from 'antd';
 import {
   Clock, AlertTriangle, CalendarPlus, Loader2,
   Save, Check, ShieldAlert, Users, X, FileText, Info,
-  Pencil, Eye, Calendar, Users2, ShieldX
+  Pencil, Eye, Calendar, Users2, ShieldX,
+  CircleCheck, Activity, CircleDot, ArrowRight, UserCheck
 } from 'lucide-react';
 import api from '../../services/api';
 import { getIstanbulToday } from '../../utils/dateUtils';
@@ -1482,8 +1483,178 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                 </div>
               )}
 
-              {/* OT Request Status */}
-              {detailModal.overtime_request_status && (
+              {/* ── Lifecycle / Gerçekleşme Bilgisi ── */}
+              {detailModal.request_detail && (
+                <div className="space-y-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                    <Activity size={12} /> Yaşam Döngüsü
+                  </div>
+
+                  {/* Step indicators */}
+                  <div className="flex items-center gap-1 text-[11px]">
+                    {/* Step 1: Atandı */}
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-100 text-violet-700 font-bold">
+                      <CircleDot size={12} /> Atandı
+                    </div>
+                    <ArrowRight size={12} className="text-slate-300 flex-shrink-0" />
+
+                    {/* Step 2: Talep */}
+                    {detailModal.request_detail.claimed ? (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-bold">
+                        <CircleCheck size={12} /> Talep Edildi
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-400 font-bold">
+                        <CircleDot size={12} /> Bekleniyor
+                      </div>
+                    )}
+                    <ArrowRight size={12} className="text-slate-300 flex-shrink-0" />
+
+                    {/* Step 3: Onay durumu */}
+                    {detailModal.request_detail.claimed ? (
+                      detailModal.request_detail.request_status === 'APPROVED' ? (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold">
+                          <Check size={12} /> Onaylandı
+                        </div>
+                      ) : detailModal.request_detail.request_status === 'REJECTED' ? (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700 font-bold">
+                          <X size={12} /> Reddedildi
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">
+                          <Clock size={12} /> Onay Bekliyor
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-300 font-bold">
+                        <CircleDot size={12} /> —
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Claimed request details */}
+                  {detailModal.request_detail.claimed && (
+                    <div className="bg-blue-50/60 rounded-xl p-3 space-y-2">
+                      <div className="text-[10px] font-bold text-blue-500 uppercase mb-1">Talep Bilgileri</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {detailModal.request_detail.requested_hours != null && (
+                          <div>
+                            <span className="text-slate-400">Talep Edilen:</span>{' '}
+                            <span className="font-bold text-slate-700">{detailModal.request_detail.requested_hours} saat</span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.source_type && (
+                          <div>
+                            <span className="text-slate-400">Kaynak:</span>{' '}
+                            <span className="font-bold text-slate-700">
+                              {detailModal.request_detail.source_type === 'INTENDED' ? 'Planlı' :
+                               detailModal.request_detail.source_type === 'POTENTIAL' ? 'Algılanan' :
+                               detailModal.request_detail.source_type === 'MANUAL' ? 'Manuel' :
+                               detailModal.request_detail.source_type}
+                            </span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.start_time && (
+                          <div>
+                            <span className="text-slate-400">Başlangıç:</span>{' '}
+                            <span className="font-bold text-slate-700">
+                              {new Date(detailModal.request_detail.start_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.end_time && (
+                          <div>
+                            <span className="text-slate-400">Bitiş:</span>{' '}
+                            <span className="font-bold text-slate-700">
+                              {new Date(detailModal.request_detail.end_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.target_approver_name && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400">Onaylayıcı:</span>{' '}
+                            <span className="font-bold text-slate-700 inline-flex items-center gap-1">
+                              <UserCheck size={12} className="text-blue-500" />
+                              {detailModal.request_detail.target_approver_name}
+                            </span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.reason && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400">Sebep:</span>{' '}
+                            <span className="text-slate-600">{detailModal.request_detail.reason}</span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.approved_at && (
+                          <div className="col-span-2 text-[11px] text-emerald-600">
+                            Onaylanma: {new Date(detailModal.request_detail.approved_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                        {detailModal.request_detail.rejected_at && (
+                          <div className="col-span-2 text-[11px] text-red-600">
+                            Reddedilme: {new Date(detailModal.request_detail.rejected_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actual attendance / realization */}
+                  {detailModal.request_detail.has_attendance ? (
+                    <div className="bg-emerald-50/60 rounded-xl p-3 space-y-2">
+                      <div className="text-[10px] font-bold text-emerald-600 uppercase mb-1 flex items-center gap-1">
+                        <CircleCheck size={12} /> Gerçekleşme Bilgisi
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {detailModal.request_detail.check_in && (
+                          <div>
+                            <span className="text-slate-400">Giriş:</span>{' '}
+                            <span className="font-bold text-slate-700">
+                              {new Date(detailModal.request_detail.check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.check_out && (
+                          <div>
+                            <span className="text-slate-400">Çıkış:</span>{' '}
+                            <span className="font-bold text-slate-700">
+                              {new Date(detailModal.request_detail.check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.actual_ot_hours != null && (
+                          <div>
+                            <span className="text-slate-400">Fiili EK Mesai:</span>{' '}
+                            <span className="font-extrabold text-emerald-700">{detailModal.request_detail.actual_ot_hours} saat</span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.normal_hours != null && (
+                          <div>
+                            <span className="text-slate-400">Normal Mesai:</span>{' '}
+                            <span className="font-bold text-slate-700">{detailModal.request_detail.normal_hours} saat</span>
+                          </div>
+                        )}
+                        {detailModal.request_detail.attendance_status && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400">Puantaj Durumu:</span>{' '}
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold ${STATUS_STYLES[detailModal.request_detail.attendance_status] || 'bg-slate-100 text-slate-500'}`}>
+                              {STATUS_LABELS[detailModal.request_detail.attendance_status] || detailModal.request_detail.attendance_status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-2 text-xs text-slate-400">
+                      <Info size={14} className="flex-shrink-0" />
+                      Henüz giriş/çıkış kaydı bulunmuyor.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Fallback: OT Request Status (when request_detail not available) */}
+              {!detailModal.request_detail && detailModal.overtime_request_status && (
                 <div className="bg-slate-50 rounded-xl p-3">
                   <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Ek Mesai Talebi</div>
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ${STATUS_STYLES[detailModal.overtime_request_status] || 'bg-slate-100 text-slate-500'}`}>
