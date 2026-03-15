@@ -1484,6 +1484,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
 
       {/* ===== DETAIL MODAL ===== */}
       <ModalOverlay open={!!detailModal} onClose={() => setDetailModal(null)} level="primary">
+        {detailModal && (
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
@@ -1790,10 +1791,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </div>
             )}
           </div>
+        )}
       </ModalOverlay>
 
       {/* ===== EDIT MODAL ===== */}
       <ModalOverlay open={!!editModal} onClose={() => setEditModal(null)} level="secondary">
+        {editModal && (
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
@@ -1893,10 +1896,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </button>
             </div>
           </div>
+        )}
       </ModalOverlay>
 
       {/* ===== OVERRIDE CONFIRM MODAL ===== */}
       <ModalOverlay open={!!overrideConfirmModal} onClose={() => setOverrideConfirmModal(null)} level="tertiary">
+        {overrideConfirmModal && (
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-orange-100 bg-orange-50/50 rounded-t-2xl">
@@ -1965,6 +1970,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </button>
             </div>
           </div>
+        )}
       </ModalOverlay>
     </div>
   );
