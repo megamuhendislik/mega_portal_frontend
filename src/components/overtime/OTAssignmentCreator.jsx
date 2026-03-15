@@ -174,13 +174,16 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
 
   // My assignments (Atamalarım) state
   const [myAssignments, setMyAssignments] = useState([]);
-  const [assignmentFilter, setAssignmentFilter] = useState('ASSIGNED');
   const [cancellingId, setCancellingId] = useState(null);
 
   // Team assignments (Ekip Atamaları) state
   const [teamAssignments, setTeamAssignments] = useState([]);
   const [teamAssignmentsLoading, setTeamAssignmentsLoading] = useState(false);
-  const [teamFilter, setTeamFilter] = useState('ASSIGNED');
+
+  // Unified assignment section filters
+  const [allFilter, setAllFilter] = useState('ASSIGNED');
+  const [managerFilter, setManagerFilter] = useState('ALL');
+  const [employeeFilter, setEmployeeFilter] = useState('ALL');
 
   // Detail & Edit modal state
   const [detailModal, setDetailModal] = useState(null);
@@ -348,17 +351,46 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     return map;
   }, [busyDays]);
 
-  // --- Filtered my assignments (Atamalarım) ---
-  const filteredMyAssignments = useMemo(() => {
-    if (assignmentFilter === 'ASSIGNED') return myAssignments.filter(a => a.status === 'ASSIGNED');
-    return myAssignments;
-  }, [myAssignments, assignmentFilter]);
+  // --- Combined + filtered assignments (Tüm Atamalar) ---
+  const allAssignmentsCombined = useMemo(() => {
+    const map = new Map();
+    [...myAssignments, ...teamAssignments].forEach(a => {
+      if (!map.has(a.id)) map.set(a.id, a);
+    });
+    let list = Array.from(map.values());
+    // Status filter
+    if (allFilter === 'ASSIGNED') list = list.filter(a => a.status === 'ASSIGNED');
+    // Manager filter
+    if (managerFilter !== 'ALL') list = list.filter(a => String(a.assigned_by) === managerFilter);
+    // Employee filter
+    if (employeeFilter !== 'ALL') list = list.filter(a => String(a.employee || a.employee_id) === employeeFilter);
+    // Sort by date desc
+    list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return list;
+  }, [myAssignments, teamAssignments, allFilter, managerFilter, employeeFilter]);
 
-  // --- Filtered team assignments (Ekip Atamaları) ---
-  const filteredTeamAssignments = useMemo(() => {
-    if (teamFilter === 'ASSIGNED') return teamAssignments.filter(a => a.status === 'ASSIGNED');
-    return teamAssignments;
-  }, [teamAssignments, teamFilter]);
+  // Unique managers for filter dropdown
+  const uniqueManagers = useMemo(() => {
+    const map = new Map();
+    [...myAssignments, ...teamAssignments].forEach(a => {
+      if (a.assigned_by && a.assigned_by_name) {
+        map.set(String(a.assigned_by), a.assigned_by_name);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [myAssignments, teamAssignments]);
+
+  // Unique employees for filter dropdown
+  const uniqueEmployees = useMemo(() => {
+    const map = new Map();
+    [...myAssignments, ...teamAssignments].forEach(a => {
+      const empId = a.employee || a.employee_id;
+      if (empId && a.employee_name) {
+        map.set(String(empId), a.employee_name);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [myAssignments, teamAssignments]);
 
   // --- Unified table rows: merge requests + unclaimed assignments ---
   const unifiedRows = useMemo(() => {
@@ -652,6 +684,32 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     return 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-500/20';
   };
 
+  // --- Handle busy day click → open detail modal ---
+  const handleBusyDayClick = useCallback((day) => {
+    // Find assignment from combined list
+    const allAssignments = [...myAssignments, ...teamAssignments];
+    const match = allAssignments.find(a =>
+      a.date === day.date &&
+      (a.employee === selectedEmployeeId || a.employee_id === selectedEmployeeId)
+    );
+    if (match) {
+      setDetailModal(match);
+    } else {
+      // Fallback: show busyMap info in a minimal way
+      const info = busyMap[day.date];
+      if (info) {
+        setDetailModal({
+          date: day.date,
+          employee_name: selectedEmployee?.name || '—',
+          assigned_by_name: info.manager_name || '—',
+          max_duration_hours: info.max_hours,
+          status: info.status || 'ASSIGNED',
+          task_description: info.task_description || '',
+        });
+      }
+    }
+  }, [myAssignments, teamAssignments, selectedEmployeeId, selectedEmployee, busyMap]);
+
   // --- Render calendar cell ---
   const renderCell = (day, idx) => {
     if (!day) {
@@ -661,14 +719,15 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     const isBusy = !!busyMap[day.date];
     const busyInfo = busyMap[day.date];
     const isSelected = selectedDates.includes(day.date);
-    const isDisabled = day.isPast || isBusy;
+    // Busy dates are always clickable (open detail), only past+not-busy are disabled
+    const isDisabled = day.isPast && !isBusy;
 
     let cellClasses = 'h-9 w-full rounded-lg text-xs font-bold relative flex items-center justify-center transition-all duration-150 ';
 
-    if (isDisabled && day.isPast) {
+    if (isBusy) {
+      cellClasses += 'bg-blue-50 text-blue-500 ring-1 ring-blue-300 cursor-pointer hover:bg-blue-100 hover:ring-blue-400';
+    } else if (day.isPast) {
       cellClasses += 'bg-slate-100 text-slate-300 cursor-not-allowed';
-    } else if (isDisabled && isBusy) {
-      cellClasses += 'bg-blue-50 text-blue-400 ring-1 ring-blue-300 cursor-not-allowed';
     } else if (isSelected) {
       cellClasses += 'bg-violet-500 text-white ring-2 ring-violet-400 ring-offset-1 cursor-pointer shadow-sm';
     } else if (day.isWeekend) {
@@ -687,10 +746,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         type="button"
         disabled={isDisabled}
         className={cellClasses}
-        onClick={() => toggleDate(day.date)}
+        onClick={() => isBusy ? handleBusyDayClick(day) : toggleDate(day.date)}
         title={
           isBusy
-            ? `Dolu — ${busyInfo?.manager_name || 'Atanmış'}`
+            ? `Dolu — ${busyInfo?.manager_name || 'Atanmış'} (detay için tıklayın)`
             : day.isPast
             ? 'Geçmiş tarih'
             : isSelected
@@ -1204,22 +1263,22 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
         </>
       )}
 
-      {/* ===== ATAMALARIM ===== */}
-      {myAssignments.length > 0 && (
+      {/* ===== TÜM ATAMALAR ===== */}
+      {(myAssignments.length > 0 || teamAssignments.length > 0) && (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="text-[15px] font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              <FileText size={16} className="text-slate-400" />
-              Atamalarım
+              <Users2 size={16} className="text-slate-400" />
+              Tüm Atamalar
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600">
-                {filteredMyAssignments.length}
+                {allAssignmentsCombined.length}
               </span>
             </h3>
             <div className="flex gap-1">
               {['ASSIGNED', 'ALL'].map(f => (
-                <button key={f} onClick={() => setAssignmentFilter(f)}
+                <button key={f} onClick={() => setAllFilter(f)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    assignmentFilter === f ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:text-slate-600'
+                    allFilter === f ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:text-slate-600'
                   }`}>
                   {f === 'ASSIGNED' ? 'Aktif' : 'Tümü'}
                 </button>
@@ -1227,13 +1286,48 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
             </div>
           </div>
 
-          {filteredMyAssignments.length === 0 ? (
+          {/* Filters row */}
+          {(uniqueManagers.length > 1 || uniqueEmployees.length > 1) && (
+            <div className="flex gap-3 flex-wrap">
+              {uniqueManagers.length > 1 && (
+                <select
+                  value={managerFilter}
+                  onChange={(e) => setManagerFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200"
+                >
+                  <option value="ALL">Tüm Yöneticiler</option>
+                  {uniqueManagers.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              )}
+              {uniqueEmployees.length > 1 && (
+                <select
+                  value={employeeFilter}
+                  onChange={(e) => setEmployeeFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200"
+                >
+                  <option value="ALL">Tüm Çalışanlar</option>
+                  {uniqueEmployees.map(emp => (
+                    <option key={emp.value} value={emp.value}>{emp.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {teamAssignmentsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 size={20} className="animate-spin text-slate-400" />
+              <span className="ml-2 text-sm text-slate-400">Yükleniyor...</span>
+            </div>
+          ) : allAssignmentsCombined.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-6">
-              {assignmentFilter === 'ASSIGNED' ? 'Aktif atama yok.' : 'Atama bulunmuyor.'}
+              {allFilter === 'ASSIGNED' ? 'Aktif atama yok.' : 'Atama bulunmuyor.'}
             </p>
           ) : (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {filteredMyAssignments.map(a => {
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {allAssignmentsCombined.map(a => {
                 const statusColors = {
                   ASSIGNED: 'bg-sky-50 text-sky-700 border-sky-200',
                   CLAIMED: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -1242,6 +1336,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                 };
                 const statusLabels = { ASSIGNED: 'Atandı', CLAIMED: 'Talep Edildi', EXPIRED: 'Süresi Doldu', CANCELLED: 'İptal' };
                 const d = new Date(a.date + 'T00:00:00');
+                const isMine = isOwnAssignment(a);
                 return (
                   <div key={a.id}
                     className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all bg-white cursor-pointer"
@@ -1256,15 +1351,20 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold text-slate-800 truncate">{a.employee_name || '—'}</div>
                       <div className="text-[11px] text-slate-400 truncate">{a.task_description || '—'}</div>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-[11px] text-blue-600 font-medium">Max: {a.max_duration_hours} sa</span>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[a.status] || statusColors.CANCELLED}`}>
                           {statusLabels[a.status] || a.status}
                         </span>
+                        {a.assigned_by_name && (
+                          <span className="text-[10px] text-slate-400">
+                            Atayan: {a.assigned_by_name}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
-                      {a.status === 'ASSIGNED' && (
+                      {isMine && a.status === 'ASSIGNED' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
                           title="Düzenle"
@@ -1272,13 +1372,22 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <Pencil size={14} />
                         </button>
                       )}
-                      {a.status === 'ASSIGNED' && a.can_cancel !== false && (
+                      {isMine && a.status === 'ASSIGNED' && a.can_cancel !== false && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
                           disabled={cancellingId === a.id}
                           title="İptal Et"
                           className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">
                           <X size={14} />
+                        </button>
+                      )}
+                      {!isMine && a.can_override && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOverrideConfirmModal(a); setOverrideReason(''); }}
+                          disabled={cancellingId === a.id}
+                          title="Kararı Ez (Override)"
+                          className="p-1.5 rounded-lg hover:bg-orange-50 text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50">
+                          <ShieldX size={14} />
                         </button>
                       )}
                       <button
@@ -1295,116 +1404,6 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           )}
         </div>
       )}
-
-      {/* ===== EKİP ATAMALARI ===== */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[15px] font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            <Users2 size={16} className="text-slate-400" />
-            Ekip Atamaları
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600">
-              {filteredTeamAssignments.length}
-            </span>
-          </h3>
-          <div className="flex gap-1">
-            {['ASSIGNED', 'ALL'].map(f => (
-              <button key={f} onClick={() => setTeamFilter(f)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  teamFilter === f ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:text-slate-600'
-                }`}>
-                {f === 'ASSIGNED' ? 'Aktif' : 'Tümü'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {teamAssignmentsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 size={20} className="animate-spin text-slate-400" />
-            <span className="ml-2 text-sm text-slate-400">Yükleniyor...</span>
-          </div>
-        ) : filteredTeamAssignments.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-6">
-            {teamFilter === 'ASSIGNED' ? 'Aktif ekip ataması yok.' : 'Ekip ataması bulunmuyor.'}
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {filteredTeamAssignments.map(a => {
-              const statusColors = {
-                ASSIGNED: 'bg-sky-50 text-sky-700 border-sky-200',
-                CLAIMED: 'bg-purple-50 text-purple-700 border-purple-200',
-                EXPIRED: 'bg-red-50 text-red-600 border-red-200',
-                CANCELLED: 'bg-slate-100 text-slate-500 border-slate-200',
-              };
-              const statusLabels = { ASSIGNED: 'Atandı', CLAIMED: 'Talep Edildi', EXPIRED: 'Süresi Doldu', CANCELLED: 'İptal' };
-              const d = new Date(a.date + 'T00:00:00');
-              const isMine = isOwnAssignment(a);
-              return (
-                <div key={a.id}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all bg-white cursor-pointer"
-                  onClick={() => setDetailModal(a)}
-                >
-                  <div className="w-12 text-center flex-shrink-0">
-                    <div className="text-lg font-black text-slate-800">{d.getDate()}</div>
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">
-                      {d.toLocaleDateString('tr-TR', { month: 'short' })}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-slate-800 truncate">{a.employee_name || '—'}</div>
-                    <div className="text-[11px] text-slate-400 truncate">{a.task_description || '—'}</div>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-[11px] text-blue-600 font-medium">Max: {a.max_duration_hours} sa</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[a.status] || statusColors.CANCELLED}`}>
-                        {statusLabels[a.status] || a.status}
-                      </span>
-                      {a.assigned_by_name && (
-                        <span className="text-[10px] text-slate-400">
-                          Atayan: {a.assigned_by_name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 flex-shrink-0">
-                    {isMine && a.status === 'ASSIGNED' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
-                        title="Düzenle"
-                        className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors">
-                        <Pencil size={14} />
-                      </button>
-                    )}
-                    {isMine && a.status === 'ASSIGNED' && a.can_cancel !== false && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
-                        disabled={cancellingId === a.id}
-                        title="İptal Et"
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">
-                        <X size={14} />
-                      </button>
-                    )}
-                    {!isMine && a.can_override && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setOverrideConfirmModal(a); setOverrideReason(''); }}
-                        disabled={cancellingId === a.id}
-                        title="Kararı Ez (Override)"
-                        className="p-1.5 rounded-lg hover:bg-orange-50 text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50">
-                        <ShieldX size={14} />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDetailModal(a); }}
-                      title="Detay"
-                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-                      <Eye size={14} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {/* ===== DETAIL MODAL ===== */}
       {detailModal && (
