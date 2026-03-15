@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Clock, CalendarPlus, ArrowDownLeft, BarChart3, Info } from 'lucide-react';
 import { Tooltip } from 'antd';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import OvertimeCalendarView from '../../components/overtime/OvertimeCalendarView';
 import OTAssignmentCreator from '../../components/overtime/OTAssignmentCreator';
 import IncomingRequestsTab from './IncomingRequestsTab';
@@ -36,6 +37,38 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
 
   // Lazy mount: component mounts on first visit, stays alive after (display:none hides it)
   const [mounted, setMounted] = useState({ my_requests: true });
+
+  // ── Shared team data: fetch ONCE here, pass to children ──
+  const needsTeamFetch = hasAnyTeam || hasApprovalPerm;
+  const [sharedTeamData, setSharedTeamData] = useState({ primary: [], secondary: [], loading: needsTeamFetch });
+
+  useEffect(() => {
+    if (!needsTeamFetch) return;
+    let cancelled = false;
+    const fetchTeams = async () => {
+      try {
+        const [priRes, secRes] = await Promise.allSettled([
+          api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
+          api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
+        ]);
+        if (cancelled) return;
+        const toList = (res) => {
+          if (res.status !== 'fulfilled') return [];
+          const data = Array.isArray(res.value.data) ? res.value.data : res.value.data.results || [];
+          return data.map(s => ({
+            id: s.id,
+            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
+            department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
+          }));
+        };
+        setSharedTeamData({ primary: toList(priRes), secondary: toList(secRes), loading: false });
+      } catch {
+        if (!cancelled) setSharedTeamData(prev => ({ ...prev, loading: false }));
+      }
+    };
+    fetchTeams();
+    return () => { cancelled = true; };
+  }, [needsTeamFetch]);
 
   const switchTab = useCallback((tab) => {
     setActiveSubTab(tab);
@@ -119,7 +152,14 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
 
       {hasAnyTeam && (
         <div style={{ display: activeSubTab === 'assign' ? 'block' : 'none' }}>
-          {mounted.assign && <OTAssignmentCreator onAssignmentCreated={onDataChange} />}
+          {mounted.assign && (
+            <OTAssignmentCreator
+              onAssignmentCreated={onDataChange}
+              sharedPrimaryTeam={sharedTeamData.primary}
+              sharedSecondaryTeam={sharedTeamData.secondary}
+              sharedTeamLoading={sharedTeamData.loading}
+            />
+          )}
         </div>
       )}
 

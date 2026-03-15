@@ -48,6 +48,7 @@ const Requests = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [mountedTabs, setMountedTabs] = useState({ [initialTab]: true });
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Manager detection — PRIMARY / SECONDARY counts
@@ -85,6 +86,7 @@ const Requests = () => {
     // Sync tab changes to URL
     const handleTabChange = useCallback((tab) => {
         setActiveTab(tab);
+        setMountedTabs(prev => prev[tab] ? prev : { ...prev, [tab]: true });
         setSearchParams(tab === 'my_requests' ? {} : { tab: tab.replace('_requests', '') }, { replace: true });
     }, [setSearchParams]);
 
@@ -156,35 +158,48 @@ const Requests = () => {
 
             {/* Content Area */}
             <div className="min-h-[400px]">
-                {activeTab === 'my_requests' && (
-                    <MyRequestsTab
-                        onDataChange={handleDataChange}
-                        refreshTrigger={refreshTrigger}
-                    />
+                <div style={{ display: activeTab === 'my_requests' ? 'block' : 'none' }}>
+                    {mountedTabs.my_requests && (
+                        <MyRequestsTab
+                            onDataChange={handleDataChange}
+                            refreshTrigger={refreshTrigger}
+                        />
+                    )}
+                </div>
+
+                {(isManager || teamCountsLoading) && (
+                    <div style={{ display: activeTab === 'incoming_requests' ? 'block' : 'none' }}>
+                        {mountedTabs.incoming_requests && (
+                            <IncomingRequestsTab
+                                onPendingCountChange={handlePendingCountChange}
+                                onDataChange={handleDataChange}
+                                refreshTrigger={refreshTrigger}
+                                primaryCount={primaryCount}
+                                secondaryCount={secondaryCount}
+                            />
+                        )}
+                    </div>
                 )}
-                {activeTab === 'incoming_requests' && (isManager || teamCountsLoading) && (
-                    <IncomingRequestsTab
-                        onPendingCountChange={handlePendingCountChange}
-                        onDataChange={handleDataChange}
-                        refreshTrigger={refreshTrigger}
-                        primaryCount={primaryCount}
-                        secondaryCount={secondaryCount}
-                    />
-                )}
-                {activeTab === 'overtime_requests' && (
-                    <OvertimeRequestsTab
-                        onDataChange={handleDataChange}
-                        refreshTrigger={refreshTrigger}
-                        primaryCount={primaryCount}
-                        secondaryCount={secondaryCount}
-                        teamCountsLoading={teamCountsLoading}
-                    />
-                )}
-                {activeTab === 'analytics' && (
-                    <AnalyticsTab
-                        refreshTrigger={refreshTrigger}
-                    />
-                )}
+
+                <div style={{ display: activeTab === 'overtime_requests' ? 'block' : 'none' }}>
+                    {mountedTabs.overtime_requests && (
+                        <OvertimeRequestsTab
+                            onDataChange={handleDataChange}
+                            refreshTrigger={refreshTrigger}
+                            primaryCount={primaryCount}
+                            secondaryCount={secondaryCount}
+                            teamCountsLoading={teamCountsLoading}
+                        />
+                    )}
+                </div>
+
+                <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
+                    {mountedTabs.analytics && (
+                        <AnalyticsTab
+                            refreshTrigger={refreshTrigger}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -139,12 +139,12 @@ function getDefaultHours(dates) {
 //  MAIN COMPONENT
 // ═══════════════════════════════════════════════════
 
-export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab }) {
-  // Team data state — sync with parent if provided
+export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab, sharedPrimaryTeam, sharedSecondaryTeam, sharedTeamLoading }) {
+  // Team data state — use shared data from parent when available
   const [teamTab, setTeamTab] = useState(parentTeamTab || 'primary');
-  const [primaryTeam, setPrimaryTeam] = useState([]);
-  const [secondaryTeam, setSecondaryTeam] = useState([]);
-  const [teamLoading, setTeamLoading] = useState(true);
+  const [primaryTeam, setPrimaryTeam] = useState(sharedPrimaryTeam || []);
+  const [secondaryTeam, setSecondaryTeam] = useState(sharedSecondaryTeam || []);
+  const [teamLoading, setTeamLoading] = useState(sharedTeamLoading !== undefined ? sharedTeamLoading : true);
 
   // Employee selection
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
@@ -203,38 +203,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     }
   }, [parentTeamTab]);
 
-  // --- Fetch team data on mount ---
+  // --- Sync shared team data from parent (no re-fetch needed) ---
   useEffect(() => {
-    const fetchTeams = async () => {
-      setTeamLoading(true);
-      try {
-        const [primaryRes, secondaryRes] = await Promise.allSettled([
-          api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
-          api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
-        ]);
-        if (primaryRes.status === 'fulfilled') {
-          const data = Array.isArray(primaryRes.value.data) ? primaryRes.value.data : primaryRes.value.data.results || [];
-          setPrimaryTeam(data.map(s => ({
-            id: s.id,
-            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
-            department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
-          })));
-        }
-        if (secondaryRes.status === 'fulfilled') {
-          const data = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : secondaryRes.value.data.results || [];
-          setSecondaryTeam(data.map(s => ({
-            id: s.id,
-            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
-            department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
-          })));
-        }
-      } catch {
-        // handled individually by allSettled
-      }
-      setTeamLoading(false);
-    };
-    fetchTeams();
-  }, []);
+    if (sharedPrimaryTeam) setPrimaryTeam(sharedPrimaryTeam);
+    if (sharedSecondaryTeam) setSecondaryTeam(sharedSecondaryTeam);
+    if (sharedTeamLoading !== undefined) setTeamLoading(sharedTeamLoading);
+  }, [sharedPrimaryTeam, sharedSecondaryTeam, sharedTeamLoading]);
 
   // Derive employees from active team tab
   const employees = teamTab === 'primary' ? primaryTeam : secondaryTeam;
@@ -326,7 +300,11 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     } catch { setMyAssignments([]); }
   }, []);
 
-  useEffect(() => { fetchMyAssignments(); }, [fetchMyAssignments]);
+  // Defer assignment fetches — load AFTER initial render to avoid blocking UI
+  useEffect(() => {
+    const timer = setTimeout(() => { fetchMyAssignments(); }, 100);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Fetch team assignments (Ekip Atamaları) ---
   const fetchTeamAssignments = useCallback(async () => {
@@ -341,7 +319,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     setTeamAssignmentsLoading(false);
   }, []);
 
-  useEffect(() => { fetchTeamAssignments(); }, [fetchTeamAssignments]);
+  useEffect(() => {
+    const timer = setTimeout(() => { fetchTeamAssignments(); }, 150);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Busy days lookup ---
   const busyMap = useMemo(() => {
