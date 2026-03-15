@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Select, Tooltip } from 'antd';
+import { Select, Tooltip, message } from 'antd';
 import {
   Clock, AlertTriangle, CalendarPlus, Loader2,
-  Save, Check, ShieldAlert, Users, X, FileText, Info
+  Save, Check, ShieldAlert, Users, X, FileText, Info,
+  Pencil, Eye, Calendar, Users2, ShieldX
 } from 'lucide-react';
 import api from '../../services/api';
 import { getIstanbulToday } from '../../utils/dateUtils';
+import { useAuth } from '../../context/AuthContext';
 
 // ═══════════════════════════════════════════════════
 //  FISCAL CALENDAR HELPERS
@@ -175,6 +177,20 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
   const [assignmentFilter, setAssignmentFilter] = useState('ASSIGNED');
   const [cancellingId, setCancellingId] = useState(null);
 
+  // Team assignments (Ekip Atamaları) state
+  const [teamAssignments, setTeamAssignments] = useState([]);
+  const [teamAssignmentsLoading, setTeamAssignmentsLoading] = useState(false);
+  const [teamFilter, setTeamFilter] = useState('ASSIGNED');
+
+  // Detail & Edit modal state
+  const [detailModal, setDetailModal] = useState(null);
+  const [editModal, setEditModal] = useState(null);
+  const [editForm, setEditForm] = useState({ max_duration_hours: 1, task_description: '', notes: '' });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Auth context for current user
+  const { user: currentUser } = useAuth();
+
   // Sync with parent team tab when it changes
   useEffect(() => {
     if (parentTeamTab) {
@@ -308,6 +324,21 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
 
   useEffect(() => { fetchMyAssignments(); }, [fetchMyAssignments]);
 
+  // --- Fetch team assignments (Ekip Atamaları) ---
+  const fetchTeamAssignments = useCallback(async () => {
+    setTeamAssignmentsLoading(true);
+    try {
+      const res = await api.get('/overtime-assignments/team/', {
+        params: { scope: 'managed', page_size: 100 }
+      });
+      const data = res.data?.results || res.data || [];
+      setTeamAssignments(Array.isArray(data) ? data : []);
+    } catch { setTeamAssignments([]); }
+    setTeamAssignmentsLoading(false);
+  }, []);
+
+  useEffect(() => { fetchTeamAssignments(); }, [fetchTeamAssignments]);
+
   // --- Busy days lookup ---
   const busyMap = useMemo(() => {
     const map = {};
@@ -322,6 +353,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     if (assignmentFilter === 'ASSIGNED') return myAssignments.filter(a => a.status === 'ASSIGNED');
     return myAssignments;
   }, [myAssignments, assignmentFilter]);
+
+  // --- Filtered team assignments (Ekip Atamaları) ---
+  const filteredTeamAssignments = useMemo(() => {
+    if (teamFilter === 'ASSIGNED') return teamAssignments.filter(a => a.status === 'ASSIGNED');
+    return teamAssignments;
+  }, [teamAssignments, teamFilter]);
 
   // --- Unified table rows: merge requests + unclaimed assignments ---
   const unifiedRows = useMemo(() => {
@@ -444,12 +481,93 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     try {
       await api.post(`/overtime-assignments/${a.id}/cancel/`);
       fetchMyAssignments();
+      fetchTeamAssignments();
       onAssignmentCreated?.();
     } catch (err) {
-      alert(err.response?.data?.error || 'İptal sırasında hata oluştu.');
+      message.error(err.response?.data?.error || 'İptal sırasında hata oluştu.');
     }
     setCancellingId(null);
   };
+
+  // --- Cancel from detail modal ---
+  const handleCancelFromDetail = async (a) => {
+    if (!window.confirm(`${a.employee_name || 'Çalışan'} - ${a.date} atamasını iptal etmek istiyor musunuz?`)) return;
+    setCancellingId(a.id);
+    try {
+      await api.post(`/overtime-assignments/${a.id}/cancel/`);
+      setDetailModal(null);
+      fetchMyAssignments();
+      fetchTeamAssignments();
+      onAssignmentCreated?.();
+      message.success('Atama iptal edildi.');
+    } catch (err) {
+      message.error(err.response?.data?.error || 'İptal sırasında hata oluştu.');
+    }
+    setCancellingId(null);
+  };
+
+  // --- Open edit modal ---
+  const openEditModal = (a) => {
+    setEditForm({
+      max_duration_hours: a.max_duration_hours || 1,
+      task_description: a.task_description || '',
+      notes: a.notes || '',
+    });
+    setEditModal(a);
+  };
+
+  // --- Submit edit ---
+  const handleEditSubmit = async () => {
+    if (!editModal) return;
+    setEditSubmitting(true);
+    try {
+      await api.patch(`/overtime-assignments/${editModal.id}/update/`, {
+        max_duration_hours: editForm.max_duration_hours,
+        task_description: editForm.task_description,
+        notes: editForm.notes,
+      });
+      message.success('Atama güncellendi.');
+      setEditModal(null);
+      setDetailModal(null);
+      fetchMyAssignments();
+      fetchTeamAssignments();
+      onAssignmentCreated?.();
+    } catch (err) {
+      const data = err.response?.data;
+      message.error(data?.error || data?.detail || 'Güncelleme sırasında hata oluştu.');
+    }
+    setEditSubmitting(false);
+  };
+
+  // --- Override assignment (PRIMARY over SECONDARY / hierarchical) ---
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideConfirmModal, setOverrideConfirmModal] = useState(null);
+
+  const handleOverride = async (a, reason) => {
+    setCancellingId(a.id);
+    try {
+      await api.post(`/overtime-assignments/${a.id}/override/`, {
+        action: 'cancel',
+        reason: reason || '',
+      });
+      setOverrideConfirmModal(null);
+      setOverrideReason('');
+      setDetailModal(null);
+      fetchMyAssignments();
+      fetchTeamAssignments();
+      onAssignmentCreated?.();
+      message.success('Atama override edildi (ezildi).');
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Override sırasında hata oluştu.');
+    }
+    setCancellingId(null);
+  };
+
+  // --- Check if assignment is owned by current user ---
+  const isOwnAssignment = useCallback((a) => {
+    if (!currentUser) return false;
+    return a.assigned_by === currentUser.id;
+  }, [currentUser]);
 
   const handleSubmit = async () => {
     setError('');
@@ -499,6 +617,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       onAssignmentCreated?.();
       fetchAssignments();
       fetchMyAssignments();
+      fetchTeamAssignments();
       setTimeout(() => {
         setSuccess(false);
       }, 1500);
@@ -1124,7 +1243,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                 const statusLabels = { ASSIGNED: 'Atandı', CLAIMED: 'Talep Edildi', EXPIRED: 'Süresi Doldu', CANCELLED: 'İptal' };
                 const d = new Date(a.date + 'T00:00:00');
                 return (
-                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all bg-white">
+                  <div key={a.id}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all bg-white cursor-pointer"
+                    onClick={() => setDetailModal(a)}
+                  >
                     <div className="w-12 text-center flex-shrink-0">
                       <div className="text-lg font-black text-slate-800">{d.getDate()}</div>
                       <div className="text-[9px] font-bold text-slate-400 uppercase">
@@ -1142,21 +1264,466 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       </div>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
+                      {a.status === 'ASSIGNED' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
+                          title="Düzenle"
+                          className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors">
+                          <Pencil size={14} />
+                        </button>
+                      )}
                       {a.status === 'ASSIGNED' && a.can_cancel !== false && (
                         <button
-                          onClick={() => handleCancelMyAssignment(a)}
+                          onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
                           disabled={cancellingId === a.id}
                           title="İptal Et"
                           className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">
                           <X size={14} />
                         </button>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDetailModal(a); }}
+                        title="Detay"
+                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                        <Eye size={14} />
+                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ===== EKİP ATAMALARI ===== */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[15px] font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <Users2 size={16} className="text-slate-400" />
+            Ekip Atamaları
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600">
+              {filteredTeamAssignments.length}
+            </span>
+          </h3>
+          <div className="flex gap-1">
+            {['ASSIGNED', 'ALL'].map(f => (
+              <button key={f} onClick={() => setTeamFilter(f)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  teamFilter === f ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:text-slate-600'
+                }`}>
+                {f === 'ASSIGNED' ? 'Aktif' : 'Tümü'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {teamAssignmentsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={20} className="animate-spin text-slate-400" />
+            <span className="ml-2 text-sm text-slate-400">Yükleniyor...</span>
+          </div>
+        ) : filteredTeamAssignments.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-6">
+            {teamFilter === 'ASSIGNED' ? 'Aktif ekip ataması yok.' : 'Ekip ataması bulunmuyor.'}
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            {filteredTeamAssignments.map(a => {
+              const statusColors = {
+                ASSIGNED: 'bg-sky-50 text-sky-700 border-sky-200',
+                CLAIMED: 'bg-purple-50 text-purple-700 border-purple-200',
+                EXPIRED: 'bg-red-50 text-red-600 border-red-200',
+                CANCELLED: 'bg-slate-100 text-slate-500 border-slate-200',
+              };
+              const statusLabels = { ASSIGNED: 'Atandı', CLAIMED: 'Talep Edildi', EXPIRED: 'Süresi Doldu', CANCELLED: 'İptal' };
+              const d = new Date(a.date + 'T00:00:00');
+              const isMine = isOwnAssignment(a);
+              return (
+                <div key={a.id}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all bg-white cursor-pointer"
+                  onClick={() => setDetailModal(a)}
+                >
+                  <div className="w-12 text-center flex-shrink-0">
+                    <div className="text-lg font-black text-slate-800">{d.getDate()}</div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                      {d.toLocaleDateString('tr-TR', { month: 'short' })}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-slate-800 truncate">{a.employee_name || '—'}</div>
+                    <div className="text-[11px] text-slate-400 truncate">{a.task_description || '—'}</div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-[11px] text-blue-600 font-medium">Max: {a.max_duration_hours} sa</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[a.status] || statusColors.CANCELLED}`}>
+                        {statusLabels[a.status] || a.status}
+                      </span>
+                      {a.assigned_by_name && (
+                        <span className="text-[10px] text-slate-400">
+                          Atayan: {a.assigned_by_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {isMine && a.status === 'ASSIGNED' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEditModal(a); }}
+                        title="Düzenle"
+                        className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    {isMine && a.status === 'ASSIGNED' && a.can_cancel !== false && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleCancelMyAssignment(a); }}
+                        disabled={cancellingId === a.id}
+                        title="İptal Et"
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">
+                        <X size={14} />
+                      </button>
+                    )}
+                    {!isMine && a.can_override && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOverrideConfirmModal(a); setOverrideReason(''); }}
+                        disabled={cancellingId === a.id}
+                        title="Kararı Ez (Override)"
+                        className="p-1.5 rounded-lg hover:bg-orange-50 text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-50">
+                        <ShieldX size={14} />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDetailModal(a); }}
+                      title="Detay"
+                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                      <Eye size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ===== DETAIL MODAL ===== */}
+      {detailModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDetailModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <Eye size={18} className="text-violet-500" />
+                Atama Detayı
+              </h3>
+              <button onClick={() => setDetailModal(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {/* Employee & Department */}
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                  <Users size={18} className="text-violet-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-800">{detailModal.employee_name || '—'}</div>
+                  <div className="text-xs text-slate-500">{detailModal.employee_department || '—'}</div>
+                </div>
+              </div>
+
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Tarih</div>
+                  <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <Calendar size={14} className="text-slate-400" />
+                    {(() => {
+                      try {
+                        const d = new Date(detailModal.date + 'T00:00:00');
+                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' });
+                      } catch { return detailModal.date; }
+                    })()}
+                  </div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Max Süre</div>
+                  <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <Clock size={14} className="text-slate-400" />
+                    {detailModal.max_duration_hours} saat
+                  </div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Durum</div>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ${STATUS_STYLES[detailModal.status] || 'bg-slate-100 text-slate-500'}`}>
+                    {STATUS_LABELS[detailModal.status] || detailModal.status}
+                  </span>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Atayan</div>
+                  <div className="text-sm font-bold text-slate-800">{detailModal.assigned_by_name || '—'}</div>
+                </div>
+              </div>
+
+              {/* Task Description */}
+              {detailModal.task_description && (
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Görev Açıklaması</div>
+                  <div className="text-sm text-slate-700 whitespace-pre-wrap">{detailModal.task_description}</div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {detailModal.notes && (
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Notlar</div>
+                  <div className="text-sm text-slate-700 whitespace-pre-wrap">{detailModal.notes}</div>
+                </div>
+              )}
+
+              {/* OT Request Status */}
+              {detailModal.overtime_request_status && (
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Ek Mesai Talebi</div>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ${STATUS_STYLES[detailModal.overtime_request_status] || 'bg-slate-100 text-slate-500'}`}>
+                    {STATUS_LABELS[detailModal.overtime_request_status] || detailModal.overtime_request_status}
+                  </span>
+                </div>
+              )}
+
+              {/* Timestamps */}
+              <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+                {detailModal.created_at && (
+                  <span>Oluşturulma: {new Date(detailModal.created_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                )}
+                {detailModal.updated_at && (
+                  <span>Güncelleme: {new Date(detailModal.updated_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Actions — own assignment: edit + cancel */}
+            {isOwnAssignment(detailModal) && detailModal.status === 'ASSIGNED' && (
+              <div className="flex items-center gap-2 p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+                <button
+                  onClick={() => openEditModal(detailModal)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+                >
+                  <Pencil size={14} />
+                  Düzenle
+                </button>
+                {detailModal.can_cancel !== false && (
+                  <button
+                    onClick={() => handleCancelFromDetail(detailModal)}
+                    disabled={cancellingId === detailModal.id}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                  >
+                    <X size={14} />
+                    {cancellingId === detailModal.id ? 'İptal Ediliyor...' : 'İptal Et'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Footer Actions — override: PRIMARY can override SECONDARY's assignment */}
+            {!isOwnAssignment(detailModal) && detailModal.can_override && (
+              <div className="p-5 border-t border-slate-100 bg-orange-50/50 rounded-b-2xl space-y-3">
+                <div className="flex items-center gap-2 text-xs text-orange-700">
+                  <ShieldX size={14} className="flex-shrink-0" />
+                  <span className="font-bold">Bu atamayı ezebilirsiniz (override). Atayan: {detailModal.assigned_by_name}</span>
+                </div>
+                <button
+                  onClick={() => { setOverrideConfirmModal(detailModal); setOverrideReason(''); }}
+                  disabled={cancellingId === detailModal.id}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                >
+                  <ShieldX size={14} />
+                  {cancellingId === detailModal.id ? 'İşleniyor...' : 'Kararı Ez (Override)'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT MODAL ===== */}
+      {editModal && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setEditModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <Pencil size={18} className="text-blue-500" />
+                Atama Düzenle
+              </h3>
+              <button onClick={() => setEditModal(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Info */}
+            <div className="px-5 pt-4 pb-2">
+              <div className="text-sm font-bold text-slate-800">{editModal.employee_name || '—'}</div>
+              <div className="text-xs text-slate-400">
+                {(() => {
+                  try {
+                    const d = new Date(editModal.date + 'T00:00:00');
+                    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' });
+                  } catch { return editModal.date; }
+                })()}
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="p-5 space-y-4">
+              {/* Max Duration Hours */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Maksimum Süre (saat)</label>
+                <input
+                  type="number"
+                  min="0.5"
+                  max="12"
+                  step="0.5"
+                  value={editForm.max_duration_hours}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, max_duration_hours: parseFloat(e.target.value) || 0.5 }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                />
+              </div>
+
+              {/* Task Description */}
+              {(() => {
+                const todayStr = getIstanbulToday();
+                const isPast = editModal.date < todayStr;
+                return !isPast ? (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Görev Açıklaması</label>
+                    <textarea
+                      value={editForm.task_description}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, task_description: e.target.value }))}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Görev açıklaması..."
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                    />
+                    <div className="text-[10px] text-slate-400 text-right mt-0.5">{editForm.task_description.length}/500</div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 rounded-xl p-3 text-xs text-amber-700">
+                    Geçmiş tarihli atamanın görev açıklaması düzenlenemez.
+                  </div>
+                );
+              })()}
+
+              {/* Notes */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Notlar</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={2}
+                  placeholder="İsteğe bağlı notlar..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center gap-2 p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+              <button
+                onClick={() => setEditModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-100 transition-colors"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                disabled={editSubmitting}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                {editSubmitting ? (
+                  <><Loader2 size={14} className="animate-spin" /> Kaydediliyor...</>
+                ) : (
+                  <><Save size={14} /> Kaydet</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== OVERRIDE CONFIRM MODAL ===== */}
+      {overrideConfirmModal && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setOverrideConfirmModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-orange-100 bg-orange-50/50 rounded-t-2xl">
+              <h3 className="text-base font-bold text-orange-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <ShieldX size={18} className="text-orange-600" />
+                Atamayı Ez (Override)
+              </h3>
+              <button onClick={() => setOverrideConfirmModal(null)} className="p-1.5 rounded-lg hover:bg-orange-100 text-orange-400 hover:text-orange-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 space-y-1">
+                <div className="text-sm font-bold text-orange-800">
+                  {overrideConfirmModal.employee_name} — {(() => {
+                    try {
+                      return new Date(overrideConfirmModal.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+                    } catch { return overrideConfirmModal.date; }
+                  })()}
+                </div>
+                <div className="text-xs text-orange-600">
+                  Atayan: <span className="font-bold">{overrideConfirmModal.assigned_by_name}</span> · Max: {overrideConfirmModal.max_duration_hours} sa
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-600">
+                Bu atama başka bir yönetici tarafından oluşturulmuş. Override ile atamayı iptal edeceksiniz.
+                Atayan yöneticiye ve çalışana bildirim gönderilecektir.
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                  Override Sebebi (opsiyonel)
+                </label>
+                <textarea
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  rows={2}
+                  maxLength={300}
+                  placeholder="Neden bu atamayı eziyorsunuz?"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center gap-2 p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+              <button
+                onClick={() => setOverrideConfirmModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-100 transition-colors"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={() => handleOverride(overrideConfirmModal, overrideReason)}
+                disabled={cancellingId === overrideConfirmModal.id}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                {cancellingId === overrideConfirmModal.id ? (
+                  <><Loader2 size={14} className="animate-spin" /> İşleniyor...</>
+                ) : (
+                  <><ShieldX size={14} /> Onayla ve Ez</>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

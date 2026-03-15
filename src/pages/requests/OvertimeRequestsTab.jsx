@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Clock, CalendarPlus, ArrowDownLeft, BarChart3, Info } from 'lucide-react';
 import { Tooltip } from 'antd';
 import { useAuth } from '../../context/AuthContext';
@@ -33,6 +33,14 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
   const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
   const isManager = hasAnyTeam || hasPermission('APPROVAL_OVERTIME');
 
+  // Lazy mount: component mounts on first visit, stays alive after (display:none hides it)
+  const [mounted, setMounted] = useState({ my_requests: true });
+
+  const switchTab = useCallback((tab) => {
+    setActiveSubTab(tab);
+    setMounted(prev => prev[tab] ? prev : { ...prev, [tab]: true });
+  }, []);
+
   // Normal çalışan — mevcut görünüm
   if (!isManager) {
     return <OvertimeCalendarView mode="personal" />;
@@ -45,7 +53,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
       <div className="flex gap-2 flex-wrap">
         <SubTabButton
           active={activeSubTab === 'my_requests'}
-          onClick={() => setActiveSubTab('my_requests')}
+          onClick={() => switchTab('my_requests')}
           icon={<Clock size={16} />}
         >
           Taleplerim
@@ -56,7 +64,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
         {hasAnyTeam && (
           <SubTabButton
             active={activeSubTab === 'assign'}
-            onClick={() => setActiveSubTab('assign')}
+            onClick={() => switchTab('assign')}
             icon={<CalendarPlus size={16} />}
           >
             Mesai Ata
@@ -68,7 +76,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
         {hasAnyTeam && (
           <SubTabButton
             active={activeSubTab === 'incoming'}
-            onClick={() => setActiveSubTab('incoming')}
+            onClick={() => switchTab('incoming')}
             icon={<ArrowDownLeft size={16} />}
           >
             Gelen Talepler
@@ -79,7 +87,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
         )}
         <SubTabButton
           active={activeSubTab === 'analytics'}
-          onClick={() => setActiveSubTab('analytics')}
+          onClick={() => switchTab('analytics')}
           icon={<BarChart3 size={16} />}
         >
           Analiz
@@ -89,25 +97,31 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
         </SubTabButton>
       </div>
 
-      {/* İçerik */}
-      {activeSubTab === 'my_requests' && (
+      {/* İçerik — display:none ile sekmeler gizlenir; bir kez mount edilen bileşen canlı kalır */}
+      <div style={{ display: activeSubTab === 'my_requests' ? 'block' : 'none' }}>
         <OvertimeCalendarView mode="personal" />
+      </div>
+
+      {hasAnyTeam && (
+        <div style={{ display: activeSubTab === 'assign' ? 'block' : 'none' }}>
+          {mounted.assign && <OTAssignmentCreator onAssignmentCreated={onDataChange} />}
+        </div>
       )}
 
-      {activeSubTab === 'assign' && (
-        <OTAssignmentCreator onAssignmentCreated={onDataChange} />
+      {hasAnyTeam && (
+        <div style={{ display: activeSubTab === 'incoming' ? 'block' : 'none' }}>
+          {mounted.incoming && (
+            <IncomingRequestsTab
+              filterType="overtime"
+              refreshTrigger={refreshTrigger}
+            />
+          )}
+        </div>
       )}
 
-      {activeSubTab === 'incoming' && (
-        <IncomingRequestsTab
-          filterType="overtime"
-          refreshTrigger={refreshTrigger}
-        />
-      )}
-
-      {activeSubTab === 'analytics' && (
-        <TeamOvertimeAnalytics />
-      )}
+      <div style={{ display: activeSubTab === 'analytics' ? 'block' : 'none' }}>
+        {mounted.analytics && <TeamOvertimeAnalytics />}
+      </div>
     </div>
   );
 }
