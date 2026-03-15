@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList } from 'lucide-react';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
+
+const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 
 const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate }) => {
   const { hasPermission, user } = useAuth();
@@ -22,13 +24,32 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [dutyPreview, setDutyPreview] = useState(null);
   const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
   const [showFullReason, setShowFullReason] = useState(false);
+  const [weeklyOtStatus, setWeeklyOtStatus] = useState(null);
+  const [weeklyOtLoading, setWeeklyOtLoading] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({});
+
+  const toggleSection = (key) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     if (isOpen && request) {
       fetchTimeLockInfo();
       setShowFullReason(false);
+      setExpandedSections({});
+      setWeeklyOtStatus(null);
     }
   }, [isOpen, request]);
+
+  // Fetch weekly OT status for overtime requests
+  useEffect(() => {
+    if (!isOpen || !request || requestType !== 'OVERTIME') return;
+    const empId = request.employee || request.employee_detail?.id;
+    if (!empId) return;
+    setWeeklyOtLoading(true);
+    api.get(`/overtime-requests/weekly-ot-status/`, { params: { employee_id: empId, reference_date: request.date } })
+      .then(res => setWeeklyOtStatus(res.data))
+      .catch(() => setWeeklyOtStatus(null))
+      .finally(() => setWeeklyOtLoading(false));
+  }, [isOpen, request?.id, requestType]);
 
   useEffect(() => {
     if (request?.status === 'PENDING' &&
@@ -623,40 +644,87 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
             {requestType === 'OVERTIME' && (
               <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-600">Tarih</span>
-                  <span className="text-sm text-slate-800">{formatDate(request.date || request.start_date)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-600">Saat Aralığı</span>
-                  <span className="text-sm font-bold text-amber-700">
-                    {request.start_time?.substring(0, 5)} - {request.end_time?.substring(0, 5)}
-                  </span>
-                </div>
-                {request.total_hours != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-600">Toplam Süre</span>
-                    <span className="text-sm font-bold text-amber-600">{request.total_hours} Saat</span>
-                  </div>
-                )}
-                {request.source_type && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-600">Kaynak</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      request.source_type === 'INTENDED' ? 'bg-emerald-50 text-emerald-700' :
-                      request.source_type === 'POTENTIAL' ? 'bg-yellow-50 text-yellow-700' :
-                      'bg-red-50 text-red-700'
-                    }`}>
-                      {request.source_type === 'INTENDED' ? 'Planlı' :
-                       request.source_type === 'POTENTIAL' ? 'Planlanmamış' : 'Manuel Giriş'}
+                {/* Temel Bilgiler */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-xl p-3 border border-slate-200">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Tarih</span>
+                    <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      <Calendar size={14} className="text-slate-400" />
+                      {formatDate(request.date || request.start_date)}
                     </span>
                   </div>
-                )}
+                  <div className="bg-white rounded-xl p-3 border border-slate-200">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Saat Aralığı</span>
+                    <span className="text-sm font-bold text-amber-700 flex items-center gap-1.5">
+                      <Clock size={14} className="text-amber-500" />
+                      {request.start_time?.substring(0, 5)} → {request.end_time?.substring(0, 5)}
+                    </span>
+                  </div>
+                  <div className="bg-white rounded-xl p-3 border border-slate-200">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Toplam Süre</span>
+                    <span className="text-sm font-black text-amber-600">
+                      {request.total_hours != null ? `${request.total_hours} saat` : `${request.duration_minutes || Math.round((request.duration_seconds || 0) / 60)} dk`}
+                    </span>
+                  </div>
+                  <div className="bg-white rounded-xl p-3 border border-slate-200">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Kaynak</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      request.source_type === 'INTENDED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                      request.source_type === 'POTENTIAL' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                      'bg-violet-50 text-violet-700 border border-violet-200'
+                    }`}>
+                      {request.source_type === 'INTENDED' ? 'Planlı (Atanmış)' :
+                       request.source_type === 'POTENTIAL' ? 'Algılanan (Otomatik)' : 'Manuel Giriş'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Haftalık OT Durumu */}
+                <div className="bg-blue-50/80 rounded-xl p-4 border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 size={16} className="text-blue-600" />
+                    <h4 className="text-sm font-bold text-blue-700">Haftalık Ek Mesai Durumu</h4>
+                  </div>
+                  {weeklyOtLoading ? (
+                    <div className="h-8 bg-blue-100 rounded animate-pulse" />
+                  ) : weeklyOtStatus ? (() => {
+                    const used = parseFloat(weeklyOtStatus.used_hours || 0);
+                    const limit = parseFloat(weeklyOtStatus.limit_hours || 30);
+                    const thisReqHours = request.total_hours || (request.duration_seconds ? round(request.duration_seconds / 3600, 1) : 0);
+                    const projected = used + (request.status === 'PENDING' ? thisReqHours : 0);
+                    const pct = Math.min(100, Math.round((used / limit) * 100));
+                    const projPct = Math.min(100, Math.round((projected / limit) * 100));
+                    const barColor = projPct > 85 ? 'bg-red-500' : projPct > 60 ? 'bg-amber-500' : 'bg-emerald-500';
+                    const projColor = projPct > 85 ? 'text-red-700' : projPct > 60 ? 'text-amber-700' : 'text-emerald-700';
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-sm mb-1.5">
+                          <span className="text-slate-600">Kullanılan: <span className="font-bold text-slate-800">{used} sa</span> / {limit} sa</span>
+                          <span className="font-bold text-slate-500">{pct}%</span>
+                        </div>
+                        <div className="h-3 bg-blue-100 rounded-full overflow-hidden mb-2">
+                          <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                        </div>
+                        {request.status === 'PENDING' && (
+                          <div className={`text-xs ${projColor} font-bold bg-white/60 rounded-lg p-2 border border-blue-100`}>
+                            Bu talep dahil: {projected} sa ({projPct}%) — Kalan: {Math.max(0, round(limit - projected, 1))} sa
+                          </div>
+                        )}
+                      </>
+                    );
+                  })() : (
+                    <div className="text-xs text-slate-400">Haftalık bilgi yüklenemedi</div>
+                  )}
+                </div>
               </>
             )}
 
-            {/* Calisan Aylik Calisma Ozeti — Fazla Mesai Talepleri */}
-            {requestType === 'OVERTIME' && request.employee_monthly_stats && (
+            {/* Aylık Çalışma Özeti — Fazla Mesai Talepleri */}
+            {requestType === 'OVERTIME' && request.employee_monthly_stats && (() => {
+              const s = request.employee_monthly_stats;
+              const otApprovedHours = round((s.ot_total_approved_minutes || 0) / 60, 1);
+              const thisReqHours = request.total_hours || (request.duration_seconds ? round(request.duration_seconds / 3600, 1) : 0);
+              return (
               <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock size={16} className="text-amber-600" />
@@ -665,42 +733,156 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Hedef</span>
-                    <span className="block font-black text-slate-700 text-lg">{request.employee_monthly_stats.target_hours}s</span>
+                    <span className="block font-black text-slate-700 text-lg">{s.target_hours}s</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Tamamlanan</span>
-                    <span className="block font-black text-emerald-600 text-lg">{request.employee_monthly_stats.completed_hours} s</span>
+                    <span className="block font-black text-emerald-600 text-lg">{s.completed_hours}s</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Eksik</span>
-                    <span className={`block font-black text-lg ${request.employee_monthly_stats.missing_hours > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                      {request.employee_monthly_stats.missing_hours}s
+                    <span className={`block font-black text-lg ${s.missing_hours > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {s.missing_hours}s
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-center mb-3">
+                <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-white p-2 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Net Bakiye</span>
-                    <span className={`block font-bold text-sm ${request.employee_monthly_stats.is_surplus ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {request.employee_monthly_stats.is_surplus ? '+' : ''}{request.employee_monthly_stats.net_balance_hours}s
+                    <span className={`block font-bold text-sm ${s.is_surplus ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {s.is_surplus ? '+' : ''}{s.net_balance_hours}s
                     </span>
                   </div>
-                  <div className="bg-white p-2 rounded-lg border border-amber-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Çalışan Gün</span>
-                    <span className="block font-bold text-sm text-slate-700">{request.employee_monthly_stats.worked_days}</span>
+                  <div className="bg-white p-2 rounded-lg border border-emerald-200 bg-emerald-50">
+                    <span className="block text-[10px] text-emerald-500 font-bold uppercase">Onaylı OT</span>
+                    <span className="block font-bold text-sm text-emerald-700">{otApprovedHours} sa</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-amber-200 bg-amber-50">
+                    <span className="block text-[10px] text-amber-500 font-bold uppercase">Bekleyen OT</span>
+                    <span className="block font-bold text-sm text-amber-700">{s.ot_requests_pending} talep</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-xs bg-white/60 p-2 rounded-lg border border-amber-100">
-                  <span className="text-slate-600">
-                    Fazla Mesai Onaylı: <span className="font-bold text-emerald-700">{request.employee_monthly_stats.ot_requests_approved}</span>
+                {request.status === 'PENDING' && (
+                  <div className="text-xs text-amber-700 font-bold bg-white/60 rounded-lg p-2 border border-amber-100">
+                    Bu talep onaylanırsa toplam onaylı OT: {round(otApprovedHours + thisReqHours, 1)} sa
+                  </div>
+                )}
+              </div>
+              );
+            })()}
+
+            {/* ── Collapsible: Giriş/Çıkış Logları ── */}
+            {requestType === 'OVERTIME' && request.attendance_logs?.length > 0 && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggleSection('logs')} className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
+                  <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <LogIn size={14} className="text-slate-500" />
+                    Giriş/Çıkış Logları ({request.attendance_logs.length})
                   </span>
-                  <span className="text-slate-600">
-                    Fazla Mesai Bekleyen: <span className="font-bold text-amber-700">{request.employee_monthly_stats.ot_requests_pending}</span>
+                  {expandedSections.logs ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
+                </button>
+                {expandedSections.logs && (
+                  <div className="p-3 space-y-2">
+                    {request.attendance_logs.map((log, i) => (
+                      <div key={log.id || i} className="flex items-center gap-3 bg-white rounded-lg p-2.5 border border-slate-100 text-xs">
+                        <div className="flex items-center gap-1.5 min-w-[80px]">
+                          <LogIn size={12} className="text-emerald-500" />
+                          <span className="font-bold text-emerald-700">{log.check_in || '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-[80px]">
+                          <LogOut size={12} className="text-red-500" />
+                          <span className="font-bold text-red-700">{log.check_out || '—'}</span>
+                        </div>
+                        <div className="flex-1 flex items-center gap-3 text-slate-500">
+                          <span>Normal: <span className="font-bold text-slate-700">{round(log.normal_seconds / 3600, 1)}s</span></span>
+                          <span>OT: <span className="font-bold text-amber-700">{round(log.overtime_seconds / 3600, 1)}s</span></span>
+                          <span>Mola: <span className="font-bold text-blue-700">{Math.round(log.break_seconds / 60)}dk</span></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Collapsible: İlişkili Yemek Talebi ── */}
+            {requestType === 'OVERTIME' && request.employee_meal_info && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggleSection('meal')} className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
+                  <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <Utensils size={14} className="text-orange-500" />
+                    İlişkili Yemek Talebi
                   </span>
-                  <span className="text-slate-600">
-                    Toplam Fazla Mesai: <span className="font-bold text-slate-800">{request.employee_monthly_stats.ot_total_approved_minutes} dk</span>
+                  {expandedSections.meal ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
+                </button>
+                {expandedSections.meal && (
+                  <div className="p-3">
+                    <div className="bg-white rounded-lg p-3 border border-slate-100 space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Durum</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                          request.employee_meal_info.status === 'APPROVED' || request.employee_meal_info.status === 'ORDERED' ? 'bg-emerald-50 text-emerald-700' :
+                          request.employee_meal_info.status === 'PENDING' ? 'bg-amber-50 text-amber-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {request.employee_meal_info.status === 'APPROVED' ? 'Onaylı' :
+                           request.employee_meal_info.status === 'ORDERED' ? 'Sipariş Edildi' :
+                           request.employee_meal_info.status === 'PENDING' ? 'Beklemede' :
+                           request.employee_meal_info.status === 'REJECTED' ? 'Reddedildi' : request.employee_meal_info.status}
+                        </span>
+                      </div>
+                      {request.employee_meal_info.description && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-600">Açıklama</span>
+                          <span className="text-slate-800 font-medium">{request.employee_meal_info.description}</span>
+                        </div>
+                      )}
+                      {request.employee_meal_info.order_note && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-600">Sipariş Notu</span>
+                          <span className="text-slate-800">{request.employee_meal_info.order_note}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Collapsible: Atama Bilgisi (INTENDED) ── */}
+            {requestType === 'OVERTIME' && request.source_type === 'INTENDED' && request.assignment && (
+              <div className="border border-emerald-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggleSection('assignment')} className="w-full flex items-center justify-between p-3 bg-emerald-50 hover:bg-emerald-100 transition-colors text-left">
+                  <span className="flex items-center gap-2 text-sm font-bold text-emerald-700">
+                    <ClipboardList size={14} className="text-emerald-500" />
+                    Atama Bilgisi
                   </span>
-                </div>
+                  {expandedSections.assignment ? <ChevronDown size={16} className="text-emerald-400" /> : <ChevronRight size={16} className="text-emerald-400" />}
+                </button>
+                {expandedSections.assignment && (
+                  <div className="p-3">
+                    <div className="bg-white rounded-lg p-3 border border-emerald-100 space-y-2 text-sm">
+                      {request.assignment_details?.assigned_by_name && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-600">Atayan Yönetici</span>
+                          <span className="font-bold text-slate-800">{request.assignment_details.assigned_by_name}</span>
+                        </div>
+                      )}
+                      {request.assignment_details?.max_duration_hours && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-600">Max Süre</span>
+                          <span className="font-bold text-amber-700">{request.assignment_details.max_duration_hours} saat</span>
+                        </div>
+                      )}
+                      {request.assignment_details?.task_description && (
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Görev Açıklaması</span>
+                          <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-2">{request.assignment_details.task_description}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
