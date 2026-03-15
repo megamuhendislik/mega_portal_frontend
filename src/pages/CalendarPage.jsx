@@ -171,8 +171,8 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
     }
 
     const dateStr = moment(date).format('YYYY-MM-DD');
-    const dayName = moment(date).format('dddd');
-    const formattedDate = moment(date).format('D MMMM YYYY');
+    const dayName = moment(date).locale('tr').format('dddd');
+    const formattedDate = moment(date).locale('tr').format('D MMMM YYYY');
 
     // Filter events for this date
     const dayEvents = events.filter(evt => {

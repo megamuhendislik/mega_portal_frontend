@@ -48,11 +48,18 @@ function makeDelta(comparison, key) {
     return undefined;
 }
 
+/** Convert English month labels to Turkish */
+const MONTH_TR = { Jan: 'Oca', Feb: 'Şub', Mar: 'Mar', Apr: 'Nis', May: 'May', Jun: 'Haz', Jul: 'Tem', Aug: 'Ağu', Sep: 'Eyl', Oct: 'Eki', Nov: 'Kas', Dec: 'Ara' };
+function toTurkishLabel(label) {
+    if (!label) return label;
+    return label.replace(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/, (m) => MONTH_TR[m] || m);
+}
+
 /** Build trend data for TrendChart from monthly_trend array */
 function buildTrendData(monthlyTrend) {
     if (!monthlyTrend) return [];
     return monthlyTrend.map(m => ({
-        name: m.label,
+        name: toTurkishLabel(m.label),
         leave: m.leave || 0,
         overtime: m.overtime || 0,
         meal: m.meal || 0,
