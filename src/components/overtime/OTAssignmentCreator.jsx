@@ -211,6 +211,35 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
     if (sharedTeamLoading !== undefined) setTeamLoading(sharedTeamLoading);
   }, [sharedPrimaryTeam, sharedSecondaryTeam, sharedTeamLoading]);
 
+  // --- Self-fetch fallback when no shared data is provided ---
+  useEffect(() => {
+    if (sharedTeamLoading !== undefined) return; // parent provides data
+    let cancelled = false;
+    const fetchTeam = async () => {
+      try {
+        const [priRes, secRes] = await Promise.allSettled([
+          api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
+          api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
+        ]);
+        if (cancelled) return;
+        const toList = (res) => {
+          if (res.status !== 'fulfilled') return [];
+          const data = Array.isArray(res.value.data) ? res.value.data : res.value.data.results || [];
+          return data.map(s => ({
+            id: s.id,
+            name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
+            department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
+          }));
+        };
+        setPrimaryTeam(toList(priRes));
+        setSecondaryTeam(toList(secRes));
+      } catch { /* ignore */ }
+      if (!cancelled) setTeamLoading(false);
+    };
+    fetchTeam();
+    return () => { cancelled = true; };
+  }, [sharedTeamLoading]);
+
   // Derive employees from active team tab
   const employees = teamTab === 'primary' ? primaryTeam : secondaryTeam;
 
