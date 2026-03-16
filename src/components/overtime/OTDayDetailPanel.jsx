@@ -414,8 +414,8 @@ export default function OTDayDetailPanel({
                   </div>
 
                   {/* Claim button */}
-                  <div className="shrink-0">
-                    {(pot.can_claim || (pot.actual_overtime_seconds > 0 && !pot.already_claimed && !pot.claim_status)) && (
+                  <div className="shrink-0 flex items-center gap-1">
+                    {(pot.can_claim || (pot.actual_overtime_seconds > 0 && !pot.already_claimed && !['PENDING', 'APPROVED'].includes(pot.claim_status))) && (
                       <Button
                         type="primary"
                         size="small"
@@ -423,7 +423,7 @@ export default function OTDayDetailPanel({
                         onClick={() => onClaim?.(pot)}
                         className="!text-[10px] !font-bold !flex !items-center !gap-1"
                       >
-                        Talep Et
+                        {pot.is_rejected ? 'Tekrar Talep Et' : 'Talep Et'}
                       </Button>
                     )}
                     {pot.claim_status === 'APPROVED' && (
@@ -432,7 +432,7 @@ export default function OTDayDetailPanel({
                     {pot.claim_status === 'PENDING' && (
                       <Tag color="orange" className="!text-[10px] !font-bold !m-0">Bekliyor</Tag>
                     )}
-                    {pot.claim_status === 'REJECTED' && (
+                    {pot.is_rejected && (
                       <Tag color="red" className="!text-[10px] !font-bold !m-0">Reddedildi</Tag>
                     )}
                   </div>

@@ -697,6 +697,11 @@ export const OvertimeRequestForm = ({
                                                     <span>Henüz gerçekleşen mesai yok</span>
                                                 </div>
                                             )}
+                                            {item.is_rejected && item.rejection_reason && (
+                                                <div className="flex items-center gap-1.5 text-red-600">
+                                                    <span className="font-semibold">Önceki red:</span> {item.rejection_reason}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <button
@@ -708,7 +713,9 @@ export const OvertimeRequestForm = ({
                                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                 : claimingId === item.assignment_id
                                                     ? 'bg-emerald-100 text-emerald-600 cursor-wait'
-                                                    : 'bg-emerald-500 text-white hover:bg-emerald-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-emerald-500/20'
+                                                    : item.is_rejected
+                                                        ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-red-500/20'
+                                                        : 'bg-emerald-500 text-white hover:bg-emerald-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-emerald-500/20'
                                         }`}
                                     >
                                         {claimingId === item.assignment_id ? (
@@ -719,7 +726,7 @@ export const OvertimeRequestForm = ({
                                         ) : (
                                             <>
                                                 <Check size={13} />
-                                                Talep Et
+                                                {item.is_rejected ? 'Tekrar Talep Et' : 'Talep Et'}
                                             </>
                                         )}
                                     </button>
@@ -754,6 +761,11 @@ export const OvertimeRequestForm = ({
                                                     <span className="text-slate-400">({item.shift_end_time} - {item.check_out_time})</span>
                                                 )}
                                             </div>
+                                            {item.is_rejected && item.rejection_reason && (
+                                                <div className="flex items-center gap-1.5 text-red-600">
+                                                    <span className="font-semibold">Önceki red:</span> {item.rejection_reason}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <button
@@ -763,7 +775,9 @@ export const OvertimeRequestForm = ({
                                         className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                                             claimingId === item.attendance_id
                                                 ? 'bg-amber-100 text-amber-600 cursor-wait'
-                                                : 'bg-amber-500 text-white hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-amber-500/20'
+                                                : item.is_rejected
+                                                    ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-red-500/20'
+                                                    : 'bg-amber-500 text-white hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-amber-500/20'
                                         }`}
                                     >
                                         {claimingId === item.attendance_id ? (
@@ -774,7 +788,7 @@ export const OvertimeRequestForm = ({
                                         ) : (
                                             <>
                                                 <Check size={13} />
-                                                Talep Et
+                                                {item.is_rejected ? 'Tekrar Talep Et' : 'Talep Et'}
                                             </>
                                         )}
                                     </button>
