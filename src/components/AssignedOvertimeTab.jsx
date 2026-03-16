@@ -363,7 +363,7 @@ const GroupAccordion = ({ name, count, children, defaultOpen = true }) => {
 // REQUEST CARD (for "Tüm Ek Mesai Taleplerim")
 // ═══════════════════════════════════════════════════════════
 
-const RequestCard = ({ req, onCancel }) => {
+const RequestCard = ({ req }) => {
     const d = new Date(req.date + 'T00:00:00');
     const dayName = DAY_NAMES[d.getDay()];
     const dayNum = String(d.getDate()).padStart(2, '0');
@@ -416,12 +416,6 @@ const RequestCard = ({ req, onCancel }) => {
                     )}
                 </div>
                 <div className="flex flex-col items-end justify-center px-3 flex-shrink-0">
-                    {req.status === 'PENDING' && (
-                        <button onClick={onCancel}
-                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] rounded-lg transition-colors flex items-center gap-1">
-                            <XCircle size={10} /> İptal
-                        </button>
-                    )}
                 </div>
             </div>
         </div>
@@ -613,27 +607,7 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
     );
 };
 
-const CancelModal = ({ isOpen, date, onClose, onSubmit, loading }) => {
-    const [reason, setReason] = useState('');
-    return (
-        <ModalOverlay open={isOpen} onClose={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    <XCircle size={20} className="text-red-500" /> Talebi İptal Et
-                </h3>
-                <p className="text-sm text-slate-500"><strong>{date}</strong> tarihli talebi iptal etmek istediğinize emin misiniz?</p>
-                <textarea rows="2" value={reason} onChange={e => setReason(e.target.value)} placeholder="İptal sebebi (opsiyonel)" className="input-field resize-none" />
-                <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Vazgeç</button>
-                    <button onClick={() => { onSubmit(reason); setReason(''); }} disabled={loading}
-                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-red-500/20 disabled:opacity-50">
-                        İptal Et
-                    </button>
-                </div>
-            </div>
-        </ModalOverlay>
-    );
-};
+// CancelModal kaldırıldı — OT request iptal yapılamaz
 
 // ═══════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -659,7 +633,6 @@ const AssignedOvertimeTab = () => {
 
     // ── UI ──
     const [claimModal, setClaimModal] = useState({ open: false, type: null, target: null, title: '', subtitle: '' });
-    const [cancelModal, setCancelModal] = useState({ open: false, target: null });
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [editModal, setEditModal] = useState({ open: false, assignment: null });
     const [actionLoading, setActionLoading] = useState(false);
@@ -672,6 +645,11 @@ const AssignedOvertimeTab = () => {
     const [manualError, setManualError] = useState('');
     const [manualSubmitting, setManualSubmitting] = useState(false);
     const [selectedManualManagerId, setSelectedManualManagerId] = useState(null);
+
+    // ── Task 11: Segment selection for POTENTIAL claims ──
+    const [selectedSegments, setSelectedSegments] = useState({});
+    // ── Task 13: INTENDED + POTENTIAL segment selection ──
+    const [selectedIntendedPotentials, setSelectedIntendedPotentials] = useState({});
 
     useEffect(() => {
         if (!manualForm.date) {
@@ -760,6 +738,11 @@ const AssignedOvertimeTab = () => {
             if (type === 'INTENDED') {
                 const intendedPayload = { reason: reason || undefined };
                 if (selectedManagerId) intendedPayload.target_approver_id = selectedManagerId;
+                // Task 13: Include selected potential segment IDs
+                const potentialIds = selectedIntendedPotentials[target.assignment_id] || [];
+                if (potentialIds.length > 0) {
+                    intendedPayload.potential_ids = potentialIds;
+                }
                 await api.post(`/overtime-assignments/${target.assignment_id}/claim/`, intendedPayload);
             }
             else if (type === 'POTENTIAL') {
@@ -776,15 +759,7 @@ const AssignedOvertimeTab = () => {
         setActionLoading(false);
     };
 
-    const handleCancel = async (reason) => {
-        setActionLoading(true);
-        try {
-            await api.post(`/overtime-requests/${cancelModal.target.id}/cancel/`, { reason: reason || undefined });
-            setCancelModal({ open: false, target: null });
-            fetchData();
-        } catch (err) { alert(err.response?.data?.error || 'İptal sırasında hata oluştu.'); }
-        setActionLoading(false);
-    };
+    // handleCancel (OT request) kaldırıldı — kullanıcı iptal yapamaz
 
     const handleManualSubmit = async (e) => {
         e.preventDefault();
@@ -820,6 +795,25 @@ const AssignedOvertimeTab = () => {
         setManualSubmitting(false);
     };
 
+    // ── Task 11: Claim grouped POTENTIAL segments ──
+    const handleClaimPotentialGroup = async (groupKey, selectedIds) => {
+        if (!selectedIds.length) return;
+        setActionLoading(true);
+        try {
+            const payload = {
+                overtime_request_ids: selectedIds,
+                reason: 'Ek mesai talebi',
+            };
+            await api.post('/overtime-requests/claim-potential/', payload);
+            fetchData();
+        } catch (err) {
+            const errMsg = err.response?.data?.error || 'Talep oluşturulamadı';
+            alert(errMsg);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleCancelAssignment = async (a) => {
         if (!window.confirm(`${a.employee_name} - ${formatDateTurkish(a.date)} atamasını iptal etmek istiyor musunuz?`)) return;
         try { await api.post(`/overtime-assignments/${a.id}/cancel/`); fetchData(); }
@@ -835,6 +829,34 @@ const AssignedOvertimeTab = () => {
     const visibleIntended = useMemo(() => {
         return claimableData.intended;
     }, [claimableData.intended]);
+
+    // ── Task 11: Group potentials by group_key ──
+    const potentialGroups = useMemo(() => {
+        const groups = {};
+        for (const item of claimableData.potential || []) {
+            const key = item.group_key || `standalone_${item.overtime_request_id}`;
+            if (!groups[key]) {
+                groups[key] = {
+                    group_key: key,
+                    date: item.date,
+                    items: [],
+                    totalSeconds: 0,
+                };
+            }
+            groups[key].items.push(item);
+            groups[key].totalSeconds += item.actual_overtime_seconds || 0;
+        }
+        return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
+    }, [claimableData.potential]);
+
+    // Initialize selectedSegments when potentialGroups changes
+    useEffect(() => {
+        const initial = {};
+        for (const group of potentialGroups) {
+            initial[group.group_key] = group.items.map(i => i.overtime_request_id);
+        }
+        setSelectedSegments(initial);
+    }, [potentialGroups]);
 
     const pendingCount = myRequests.filter(r => r.status === 'PENDING').length;
     const approvedHours = Math.round(myRequests.filter(r => r.status === 'APPROVED').reduce((s, r) => s + (r.duration_seconds || 0), 0) / 3600 * 10) / 10;
@@ -996,54 +1018,171 @@ const AssignedOvertimeTab = () => {
                         </div>
                     </div>
 
-                    {/* ─── Benden İstenen Planlı Mesailer ─── */}
+                    {/* ─── Benden İstenen Planlı Mesailer (Task 13: INTENDED + POTENTIAL segment selection) ─── */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
                         <SectionHeader icon={<CalendarCheck size={16} />} title="Benden İstenen Planlı Mesailer" count={visibleIntended.length} countColor="blue" />
                         {visibleIntended.length === 0
                             ? <EmptyState text="Atanmış planlı ek mesai bulunmuyor." />
                             : (
                                 <div className="space-y-2">
-                                    {visibleIntended.map((item, i) => (
-                                        <OvertimeDetailCard
-                                            key={i}
-                                            item={item}
-                                            type="intended"
-                                            claimed={item.already_claimed}
-                                            onClaim={() => setClaimModal({
-                                                open: true, type: 'INTENDED', target: item,
-                                                title: 'Planlı Mesai Talep Et',
-                                                subtitle: `${formatDateTurkish(item.date)} — ${item.claimable_hours || item.actual_overtime_hours} saat`,
-                                            })}
-                                        />
-                                    ))}
+                                    {visibleIntended.map((item, i) => {
+                                        const sameDatePotentials = (claimableData.potential || []).filter(
+                                            p => p.date === item.date
+                                        );
+                                        const assignId = item.assignment_id;
+                                        return (
+                                            <div key={i}>
+                                                <OvertimeDetailCard
+                                                    item={item}
+                                                    type="intended"
+                                                    claimed={item.already_claimed}
+                                                    onClaim={() => setClaimModal({
+                                                        open: true, type: 'INTENDED', target: item,
+                                                        title: 'Planlı Mesai Talep Et',
+                                                        subtitle: `${formatDateTurkish(item.date)} — ${item.claimable_hours || item.actual_overtime_hours} saat`,
+                                                    })}
+                                                />
+                                                {sameDatePotentials.length > 0 && !item.already_claimed && !item.claim_status && (
+                                                    <div className="ml-[72px] mr-3 -mt-1 mb-1 border border-dashed border-purple-200 rounded-b-lg bg-purple-50/30 p-2.5">
+                                                        <p className="text-[10px] font-bold text-purple-500 mb-1.5">Algılanan segmentleri dahil et:</p>
+                                                        {sameDatePotentials.map(p => (
+                                                            <label key={p.overtime_request_id} className="flex items-center gap-2 text-xs text-slate-600 py-0.5 cursor-pointer">
+                                                                <input type="checkbox"
+                                                                    checked={(selectedIntendedPotentials[assignId] || []).includes(p.overtime_request_id)}
+                                                                    onChange={(e) => {
+                                                                        setSelectedIntendedPotentials(prev => {
+                                                                            const current = prev[assignId] || [];
+                                                                            if (e.target.checked) {
+                                                                                return { ...prev, [assignId]: [...current, p.overtime_request_id] };
+                                                                            }
+                                                                            return { ...prev, [assignId]: current.filter(id => id !== p.overtime_request_id) };
+                                                                        });
+                                                                    }}
+                                                                    className="w-3.5 h-3.5 rounded border-slate-300 text-purple-600"
+                                                                />
+                                                                <Clock size={10} className="text-purple-400" />
+                                                                <span className="font-medium">{p.start_time} – {p.end_time}</span>
+                                                                <span className="text-slate-400">({formatDuration(p.actual_overtime_seconds)})</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )
                         }
                     </div>
 
-                    {/* ─── Algılanan Plansız Mesailer ─── */}
+                    {/* ─── Algılanan Plansız Mesailer (Task 11: Checkbox Segment Selection) ─── */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                        <SectionHeader icon={<Zap size={16} />} title="Algılanan Plansız Mesailer" count={claimableData.potential.length} countColor="blue" />
-                        {claimableData.potential.length === 0
-                            ? <EmptyState text="Algılanan fazla mesai bulunmuyor." />
-                            : (
-                                <div className="space-y-2">
-                                    {claimableData.potential.map((item, i) => (
-                                        <OvertimeDetailCard
-                                            key={i}
-                                            item={item}
-                                            type="potential"
-                                            claimed={item.already_claimed}
-                                            onClaim={() => setClaimModal({
-                                                open: true, type: 'POTENTIAL', target: item,
-                                                title: 'Plansız Mesai Talep Et',
-                                                subtitle: `${formatDateTurkish(item.date)}${item.start_time && item.end_time ? ` (${item.start_time}–${item.end_time})` : ''} — ${item.actual_overtime_hours} saat`,
+                        <SectionHeader icon={<Zap size={16} />} title="Algılanan Plansız Mesailer" count={(claimableData.potential || []).length} countColor="blue" />
+                        {potentialGroups.length === 0
+                            ? <EmptyState text="Algılanan ek mesai segmenti yok" />
+                            : potentialGroups.map((group) => {
+                                const selected = selectedSegments[group.group_key] || [];
+                                const selectedDuration = group.items
+                                    .filter(i => selected.includes(i.overtime_request_id))
+                                    .reduce((sum, i) => sum + (i.actual_overtime_seconds || 0), 0);
+                                const isAboveThreshold = selectedDuration >= 1800;
+
+                                const gd = new Date(group.date + 'T00:00:00');
+                                const dayName = DAY_NAMES[gd.getDay()];
+                                const dayNum = String(gd.getDate()).padStart(2, '0');
+                                const monthName = MONTH_NAMES[gd.getMonth()];
+                                const year = gd.getFullYear();
+
+                                return (
+                                    <div key={group.group_key} className="rounded-xl border border-slate-100 bg-white p-4 mb-3 hover:border-blue-200 transition-all">
+                                        {/* Date header */}
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-lg font-black text-slate-800">{dayNum}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-slate-500">{monthName} {year}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400">{dayName}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Segment checkboxes */}
+                                        <div className="space-y-2 mb-3">
+                                            {group.items.map((item) => {
+                                                const checked = selected.includes(item.overtime_request_id);
+                                                const otTypeLabel = item.ot_type === 'PRE_SHIFT' ? 'Vardiya Öncesi'
+                                                    : item.ot_type === 'POST_SHIFT' ? 'Vardiya Sonrası'
+                                                    : item.ot_type === 'OFF_DAY' ? 'Tatil Günü'
+                                                    : 'Karma';
+                                                const otTypeColor = item.ot_type === 'PRE_SHIFT' ? 'text-blue-700 bg-blue-50'
+                                                    : item.ot_type === 'POST_SHIFT' ? 'text-purple-700 bg-purple-50'
+                                                    : item.ot_type === 'OFF_DAY' ? 'text-amber-700 bg-amber-50'
+                                                    : 'text-slate-700 bg-slate-50';
+
+                                                return (
+                                                    <label key={item.overtime_request_id}
+                                                        className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                                                            checked ? 'bg-blue-50/70 border border-blue-200' : 'bg-slate-50/50 border border-transparent hover:bg-slate-100/70'
+                                                        }`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={(e) => {
+                                                                setSelectedSegments(prev => {
+                                                                    const current = prev[group.group_key] || [];
+                                                                    if (e.target.checked) {
+                                                                        return { ...prev, [group.group_key]: [...current, item.overtime_request_id] };
+                                                                    } else {
+                                                                        return { ...prev, [group.group_key]: current.filter(id => id !== item.overtime_request_id) };
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <div className="flex-1 flex flex-wrap items-center gap-2">
+                                                            <Clock size={12} className="text-slate-400 flex-shrink-0" />
+                                                            <span className="text-sm font-semibold text-slate-700">
+                                                                {item.start_time} – {item.end_time}
+                                                            </span>
+                                                            <span className="text-xs text-slate-500">
+                                                                ({formatDuration(item.actual_overtime_seconds)})
+                                                            </span>
+                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${otTypeColor}`}>
+                                                                {otTypeLabel}
+                                                            </span>
+                                                        </div>
+                                                    </label>
+                                                );
                                             })}
-                                        />
-                                    ))}
-                                </div>
-                            )
-                        }
+                                        </div>
+
+                                        {/* Total + claim button */}
+                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                            <span className="text-xs text-slate-500">
+                                                Seçilen: <strong className="text-slate-700">{formatDuration(selectedDuration)}</strong>
+                                                {selected.length > 0 && ` (${selected.length} segment)`}
+                                            </span>
+                                            <button
+                                                disabled={selected.length === 0 || !isAboveThreshold || actionLoading}
+                                                onClick={() => handleClaimPotentialGroup(group.group_key, selected)}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                    selected.length > 0 && isAboveThreshold
+                                                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                Talep Et {selected.length > 0 ? `(${selected.length})` : ''}
+                                            </button>
+                                        </div>
+                                        {selected.length > 0 && !isAboveThreshold && (
+                                            <p className="text-[10px] text-amber-600 mt-1.5 flex items-center gap-1">
+                                                <AlertTriangle size={10} />
+                                                Toplam min. 30 dk olmali.
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })}
                     </div>
 
                     {/* ─── Manuel Ek Mesai ─── */}
@@ -1287,9 +1426,6 @@ const AssignedOvertimeTab = () => {
                 onClose={() => setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' })}
                 onSubmit={handleClaim} loading={actionLoading}
                 managers={managers} claimType={claimModal.type} />
-            <CancelModal isOpen={cancelModal.open} date={cancelModal.target ? formatDateTurkish(cancelModal.target.date) : ''}
-                onClose={() => setCancelModal({ open: false, target: null })}
-                onSubmit={handleCancel} loading={actionLoading} />
             {isManager && (
                 <CreateAssignmentModal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)}
                     onSuccess={fetchData} teamMembers={teamMembers} />
