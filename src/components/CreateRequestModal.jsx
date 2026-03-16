@@ -480,7 +480,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             if (selectedApproverId) {
                 payload.target_approver_id = selectedApproverId;
             }
-            await api.post('/overtime-requests/create_from_attendance/', payload);
+            await api.post('/overtime-requests/claim-potential/', payload);
             // Remove the claimed item from the list
             setClaimableData(prev => ({
                 ...prev,

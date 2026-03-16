@@ -118,7 +118,8 @@ export default function RequestAnalysisTab() {
           (lifecycleData.summary?.issue_breakdown?.inactive_approver || 0) +
           (lifecycleData.summary?.issue_breakdown?.stale_pending || 0) +
           (lifecycleData.summary?.issue_breakdown?.ghost_approval || 0) +
-          (lifecycleData.summary?.issue_breakdown?.duplicate_request || 0)
+          (lifecycleData.summary?.issue_breakdown?.duplicate_request || 0) +
+          (lifecycleData.summary?.issue_breakdown?.cross_path_duplicate || 0)
         : 0;
 
     const exportLifecycleTxt = () => {
@@ -128,7 +129,8 @@ export default function RequestAnalysisTab() {
         lines.push('=== TALEP YAŞAM DÖNGÜSÜ ANALİZİ ===');
         lines.push(`Tarih: ${lcDateFrom} → ${lcDateTo}`);
         lines.push(`Toplam: ${s.total} | Sorunlu: ${s.with_issues}`);
-        lines.push(`Yön.Yok: ${s.issue_breakdown.no_approver} | Pasif Yön: ${s.issue_breakdown.inactive_approver} | Bld.Yok: ${s.issue_breakdown.no_notification} | Görünmez: ${s.issue_breakdown.not_visible} | Eski PEND: ${s.issue_breakdown.stale_pending} | Yanlış Yön: ${s.issue_breakdown.wrong_approver} | Çoklu PRIMARY: ${s.issue_breakdown.multi_primary_no_selection} | Hayalet Onay: ${s.issue_breakdown.ghost_approval || 0} | Duplikat: ${s.issue_breakdown.duplicate_request || 0}`);
+        const totalDup = (s.issue_breakdown.duplicate_request || 0) + (s.issue_breakdown.cross_path_duplicate || 0);
+        lines.push(`Yön.Yok: ${s.issue_breakdown.no_approver} | Pasif Yön: ${s.issue_breakdown.inactive_approver} | Bld.Yok: ${s.issue_breakdown.no_notification} | Görünmez: ${s.issue_breakdown.not_visible} | Eski PEND: ${s.issue_breakdown.stale_pending} | Yanlış Yön: ${s.issue_breakdown.wrong_approver} | Çoklu PRIMARY: ${s.issue_breakdown.multi_primary_no_selection} | Hayalet Onay: ${s.issue_breakdown.ghost_approval || 0} | Duplikat: ${totalDup}`);
         lines.push('');
 
         // Duplikat grup detayı
@@ -625,13 +627,13 @@ export default function RequestAnalysisTab() {
                             <SummaryBadge label="Görünmez" count={lifecycleData.summary.issue_breakdown.not_visible} color="purple" />
                             <SummaryBadge label="Eski PEND" count={lifecycleData.summary.issue_breakdown.stale_pending} color="yellow" />
                             <SummaryBadge label="Hayalet Onay" count={lifecycleData.summary.issue_breakdown.ghost_approval || 0} color="red" />
-                            <SummaryBadge label="Duplikat" count={lifecycleData.summary.issue_breakdown.duplicate_request || 0} color="rose" />
+                            <SummaryBadge label="Duplikat" count={(lifecycleData.summary.issue_breakdown.duplicate_request || 0) + (lifecycleData.summary.issue_breakdown.cross_path_duplicate || 0)} color="rose" />
                         </div>
 
                         {/* Duplikat Grup Detayı */}
                         {(lifecycleData.summary.duplicate_groups?.length > 0) && (
                             <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                                <div className="text-xs font-bold text-rose-700 mb-2">Duplikat Grupları ({lifecycleData.summary.duplicate_groups.length} grup, {lifecycleData.summary.issue_breakdown.duplicate_request} fazlalık)</div>
+                                <div className="text-xs font-bold text-rose-700 mb-2">Duplikat Grupları ({lifecycleData.summary.duplicate_groups.length} grup, {(lifecycleData.summary.issue_breakdown.duplicate_request || 0) + (lifecycleData.summary.issue_breakdown.cross_path_duplicate || 0)} fazlalık)</div>
                                 <div className="space-y-2">
                                     {lifecycleData.summary.duplicate_groups.map((g, i) => (
                                         <div key={i} className="bg-white rounded p-2 border border-rose-100 text-xs">
@@ -900,8 +902,8 @@ export default function RequestAnalysisTab() {
                                     {(lifecycleData?.summary?.issue_breakdown?.stale_pending || 0) > 0 && (
                                         <li>• Eski PENDING: <b>{lifecycleData.summary.issue_breakdown.stale_pending}</b> talep → hatırlatma gönderilecek</li>
                                     )}
-                                    {(lifecycleData?.summary?.issue_breakdown?.duplicate_request || 0) > 0 && (
-                                        <li>• Duplikat: <b>{lifecycleData.summary.issue_breakdown.duplicate_request}</b> talep → fazlalıklar CANCELLED yapılacak</li>
+                                    {((lifecycleData?.summary?.issue_breakdown?.duplicate_request || 0) + (lifecycleData?.summary?.issue_breakdown?.cross_path_duplicate || 0)) > 0 && (
+                                        <li>• Duplikat: <b>{(lifecycleData.summary.issue_breakdown.duplicate_request || 0) + (lifecycleData.summary.issue_breakdown.cross_path_duplicate || 0)}</b> talep → fazlalıklar CANCELLED yapılacak</li>
                                     )}
                                 </ul>
                             </div>
