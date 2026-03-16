@@ -548,13 +548,19 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 const typeObj = requestTypes.find(t => t.category === 'EXTERNAL_DUTY');
                 if (!typeObj) throw new Error('Dış Görev talep türü bulunamadı.');
 
+                // Validate: at least one day must have times filled
+                const filledSegs = (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time);
+                if (filledSegs.length === 0 && !externalDutyForm.start_time && !externalDutyForm.end_time) {
+                    throw new Error('Lütfen en az bir gün için çalışma saatlerini girin (Çalışma Saatleri adımı).');
+                }
+
                 response = await api.post('/leave/requests/', {
                     request_type: typeObj.id,
                     start_date: externalDutyForm.start_date,
                     end_date: externalDutyForm.end_date,
                     start_time: externalDutyForm.start_time || null,
                     end_time: externalDutyForm.end_time || null,
-                    date_segments: (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time),
+                    date_segments: filledSegs,
                     reason: externalDutyForm.duty_description || externalDutyForm.reason || 'Şirket dışı görev',
                     destination: externalDutyForm.destination || `${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim(),
                     trip_type: externalDutyForm.trip_type,
