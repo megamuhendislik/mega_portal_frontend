@@ -24,7 +24,8 @@ import {
     UserGroupIcon,
     CakeIcon,
     BeakerIcon,
-    BoltIcon
+    BoltIcon,
+    BugAntIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -52,6 +53,7 @@ import DataBrowserTab from './system-health/DataBrowserTab';
 import BirthdayTab from './system-health/BirthdayTab';
 import E2ETestTab from './system-health/E2ETestTab';
 import OTAnalysisTab from './system-health/OTAnalysisTab';
+import ErrorLogsTab from './system-health/ErrorLogsTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -101,6 +103,7 @@ export default function SystemHealth() {
                 <nav className="flex space-x-1 overflow-x-auto p-2" aria-label="Tabs">
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
+                        { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
                         { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
                         { id: 'stress_test', name: 'Stres Testi & Konsol', icon: CommandLineIcon },
                         { id: 'test_suite', name: 'Sistem Testleri', icon: CheckCircleIcon },
@@ -153,6 +156,7 @@ export default function SystemHealth() {
             {/* CONTENT AREA */}
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
+                {activeTab === 'error_logs' && <ErrorLogsTab />}
                 {activeTab === 'permissions' && <PermissionsTab />}
                 {activeTab === 'stress_test' && <StressTestTab />}
                 {activeTab === 'test_suite' && <TestSuiteTab />}

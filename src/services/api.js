@@ -110,4 +110,18 @@ api.interceptors.response.use(
     }
 );
 
+// Frontend hata raporlama
+export function reportFrontendError(error, componentName = '') {
+    try {
+        api.post('/system/error-logs/report/', {
+            message: error.message || String(error),
+            stack_trace: error.stack || '',
+            source_url: window.location.href,
+            component_name: componentName,
+        }).catch(() => {});
+    } catch {
+        // Hata raporlama hatası — yoksay
+    }
+}
+
 export default api;
