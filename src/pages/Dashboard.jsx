@@ -524,7 +524,7 @@ const Dashboard = () => {
 
                             {/* Accrual Progress */}
                             <div className="mt-2 pt-2 border-t border-slate-50">
-                                {monthlySummary?.days_to_next_accrual !== undefined ? (
+                                {monthlySummary?.days_to_next_accrual != null ? (
                                     <>
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-bold text-indigo-500 uppercase">YENİLEME</span>
