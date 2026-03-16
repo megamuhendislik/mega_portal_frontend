@@ -2,7 +2,15 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { User, Users, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, ArrowUpRight, ArrowDownRight, LayoutList, LayoutGrid, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 
-const StatusBadge = ({ status, isOnLeave, leaveStatus }) => {
+const StatusBadge = ({ status, isOnLeave, isOnDuty, leaveStatus }) => {
+    if (isOnDuty) {
+        return (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-100 shadow-sm">
+                <Calendar size={10} className="text-purple-500" />
+                GÖREVDE
+            </span>
+        );
+    }
     if (isOnLeave) {
         return (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 shadow-sm">
@@ -206,6 +214,7 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                         {/* Avatar */}
                         <div className={clsx(
                             "w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0",
+                            node.isOnDuty ? "bg-purple-100 text-purple-600" :
                             node.isOnLeave ? "bg-amber-100 text-amber-600" :
                                 node.status === 'IN' ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"
                         )}>
@@ -223,7 +232,7 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                     {/* Column 2: Status & Today */}
                     <div className="col-span-2 flex flex-col justify-center">
                         <div className="mb-1">
-                            <StatusBadge status={node.status} isOnLeave={node.isOnLeave} leaveStatus={node.leaveStatus} />
+                            <StatusBadge status={node.status} isOnLeave={node.isOnLeave} isOnDuty={node.isOnDuty} leaveStatus={node.leaveStatus} />
                         </div>
                         <div className="flex items-baseline gap-1 text-xs">
                             <span className="font-bold text-slate-700">{Math.floor(node.totalTodayMinutes / 60)}</span>
@@ -394,7 +403,7 @@ const PerformanceTableView = ({ teamData }) => {
                                             </div>
                                             <div>
                                                 <p className="font-medium text-slate-900 text-sm">{emp.name}</p>
-                                                <div className="mt-0.5"><StatusBadge status={emp.status} isOnLeave={emp.isOnLeave} leaveStatus={emp.leaveStatus} /></div>
+                                                <div className="mt-0.5"><StatusBadge status={emp.status} isOnLeave={emp.isOnLeave} isOnDuty={emp.isOnDuty} leaveStatus={emp.leaveStatus} /></div>
                                             </div>
                                         </div>
                                     </td>

@@ -26,6 +26,7 @@ const HeroDailySummary = ({ summary, loading }) => {
 
     const isOffDay = safeSummary.is_off_day || false;
     const onLeave = safeSummary.on_leave || false;
+    const onDuty = safeSummary.on_duty || false;
     // Off-day'de çalışma varsa: tüm çalışma OT'dir, Normal Mesai gösterilmez
     const isOffDayWithWork = isOffDay && totalWorkSeconds > 0;
     const usedBreakSeconds = isOffDay ? 0 : (safeSummary.break_used || 0);
@@ -68,26 +69,28 @@ const HeroDailySummary = ({ summary, loading }) => {
                             <div className="flex items-center gap-4 mb-6">
                                 <div className={clsx(
                                     "p-3 text-white rounded-2xl shadow-lg group-hover:rotate-6 transition-all duration-300",
-                                    isOffDayWithWork
-                                        ? "bg-gradient-to-br from-orange-500 to-amber-600 shadow-orange-500/30"
-                                        : isOffDay
-                                            ? "bg-gradient-to-br from-slate-400 to-slate-500 shadow-slate-400/30"
-                                            : "bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/30"
+                                    onDuty
+                                        ? "bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-purple-500/30"
+                                        : isOffDayWithWork
+                                            ? "bg-gradient-to-br from-orange-500 to-amber-600 shadow-orange-500/30"
+                                            : isOffDay
+                                                ? "bg-gradient-to-br from-slate-400 to-slate-500 shadow-slate-400/30"
+                                                : "bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/30"
                                 )}>
                                     <Briefcase size={20} />
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                                        {onLeave ? 'İZİN' : isOffDay ? 'TATİL' : 'PUANTAJ'}
+                                        {onDuty ? 'GÖREV' : onLeave ? 'İZİN' : isOffDay ? 'TATİL' : 'PUANTAJ'}
                                     </p>
                                     <h3 className="text-base font-bold text-slate-700">
-                                        {onLeave ? 'İzinli Gün' : isOffDayWithWork ? 'Ek Mesai Günü' : isOffDay ? 'Tatil Günü' : 'Normal Mesai'}
+                                        {onDuty ? 'Şirket Dışı Çalışma' : onLeave ? 'İzinli Gün' : isOffDayWithWork ? 'Ek Mesai Günü' : isOffDay ? 'Tatil Günü' : 'Normal Mesai'}
                                     </h3>
                                 </div>
                             </div>
 
                             <div className="flex items-baseline gap-1 mb-2">
-                                {isOffDay && !onLeave ? (
+                                {isOffDay && !onLeave && !onDuty ? (
                                     /* Off-day: normal mesai yok, sadece OT varsa OT göster */
                                     isOffDayWithWork ? (
                                         <>
@@ -118,7 +121,9 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 )}
                             </div>
                             <p className="text-xs font-semibold text-slate-400 pl-1">
-                                {onLeave ? (
+                                {onDuty ? (
+                                    <>Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
+                                ) : onLeave ? (
                                     <><span className="text-violet-600 font-bold">İzin kredisi</span> — Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
                                 ) : isOffDayWithWork ? (
                                     <span className="text-orange-500 font-bold">Tüm çalışma ek mesai olarak sayılır</span>
@@ -135,25 +140,29 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 <div
                                     className={clsx(
                                         "h-full rounded-full relative",
-                                        onLeave
-                                            ? "bg-gradient-to-r from-violet-500 to-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.4)]"
-                                            : isOffDayWithWork
-                                                ? "bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]"
-                                                : "bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                                        onDuty
+                                            ? "bg-gradient-to-r from-purple-500 to-fuchsia-500 shadow-[0_0_10px_rgba(168,85,247,0.4)]"
+                                            : onLeave
+                                                ? "bg-gradient-to-r from-violet-500 to-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.4)]"
+                                                : isOffDayWithWork
+                                                    ? "bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]"
+                                                    : "bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
                                     )}
-                                    style={{ width: isOffDay ? (isOffDayWithWork ? '100%' : '0%') : `${workPercent}%`, transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                    style={{ width: onDuty ? `${workPercent}%` : (isOffDay ? (isOffDayWithWork ? '100%' : '0%') : `${workPercent}%`), transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
                                 >
                                     <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white/50"></div>
                                 </div>
                             </div>
                             <div className="flex justify-between mt-3 text-[10px] font-bold tracking-wide uppercase">
                                 <span className={clsx(
+                                    onDuty ? "text-purple-600" :
                                     onLeave ? "text-violet-600" :
                                     isOffDayWithWork ? "text-orange-600" :
                                     isOffDay ? "text-slate-400" :
                                     "text-indigo-600"
                                 )}>
-                                    {onLeave ? 'İZİNLİ GÜN' :
+                                    {onDuty ? 'ŞİRKET DIŞI ÇALIŞMA' :
+                                     onLeave ? 'İZİNLİ GÜN' :
                                      isOffDayWithWork ? 'EK MESAİ GÜNÜ' :
                                      isOffDay ? 'TATİL GÜNÜ' :
                                      `%${workPercent} Tamamlandı`}

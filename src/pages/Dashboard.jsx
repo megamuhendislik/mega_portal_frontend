@@ -379,11 +379,11 @@ const Dashboard = () => {
             {/* 1. Daily Stats Grid (From Today Summary) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
                 <StatCard
-                    title={todaySummary?.on_leave ? 'BUGÜN İZİNLİ' : 'BUGÜN ÇALIŞMA'}
+                    title={todaySummary?.on_duty ? 'ŞİRKET DIŞI ÇALIŞMA' : todaySummary?.on_leave ? 'BUGÜN İZİNLİ' : 'BUGÜN ÇALIŞMA'}
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
-                    subValue={todaySummary?.on_leave ? `İzin kredisi — Hedef: ${formatHours(todaySummary?.daily_expected)} sa` : `Hedef: ${formatHours(todaySummary?.daily_expected)} sa`}
+                    subValue={todaySummary?.on_duty ? `Görevde — Hedef: ${formatHours(todaySummary?.daily_expected)} sa` : todaySummary?.on_leave ? `İzin kredisi — Hedef: ${formatHours(todaySummary?.daily_expected)} sa` : `Hedef: ${formatHours(todaySummary?.daily_expected)} sa`}
                     icon={Briefcase}
-                    color={todaySummary?.on_leave ? 'purple' : 'indigo'}
+                    color={todaySummary?.on_duty ? 'purple' : todaySummary?.on_leave ? 'purple' : 'indigo'}
                 />
                 <StatCard
                     title="KALAN MOLA"

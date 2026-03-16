@@ -160,6 +160,11 @@ export const EmployeeAttendanceRow = ({
                             {s.today_leave?.is_on_leave && (
                                 <LeaveBadge leave={s.today_leave} />
                             )}
+                            {s.today_duty?.is_on_duty && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full font-bold bg-purple-50 text-purple-600 border border-purple-200 shrink-0">
+                                    Şirket Dışı Çalışma
+                                </span>
+                            )}
                         </div>
                         {s.weekly_ot_limit_hours > 0 && (() => {
                             const used = round2(s.weekly_ot_used_seconds / 3600);

@@ -6,11 +6,12 @@ import {
 import api from '../services/api';
 
 const PRESENCE_CONFIG = {
-    INSIDE:         { label: 'Ofiste',     color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
-    REMOTE_WORKING: { label: 'Ofiste',     color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
-    ON_LEAVE:       { label: 'İzinde',     color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', ring: 'ring-orange-500/20' },
-    LEFT:           { label: 'Dışarıda',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
-    OUTSIDE:        { label: 'Dışarıda',   color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
+    INSIDE:         { label: 'Ofiste',              color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
+    REMOTE_WORKING: { label: 'Ofiste',              color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', ring: 'ring-green-500/20' },
+    ON_LEAVE:       { label: 'İzinde',              color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', ring: 'ring-orange-500/20' },
+    ON_DUTY:        { label: 'Şirket Dışı Çalışma', color: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', ring: 'ring-purple-500/20' },
+    LEFT:           { label: 'Dışarıda',            color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
+    OUTSIDE:        { label: 'Dışarıda',            color: 'bg-slate-400',  text: 'text-slate-600',  bg: 'bg-slate-50',  border: 'border-slate-200', ring: 'ring-slate-500/20' },
 };
 
 const getInitials = (firstName, lastName) => {
@@ -93,6 +94,7 @@ const CompanyDirectory = () => {
     const statCards = [
         { key: 'inside', label: 'Ofiste', value: (summary.inside || 0) + (summary.remote || 0), color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <Building2 size={18} className="text-green-500" />, filterStatus: 'INSIDE' },
         { key: 'on_leave', label: 'İzinde', value: summary.on_leave, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: <MapPin size={18} className="text-orange-500" />, filterStatus: 'ON_LEAVE' },
+        ...(summary.on_duty > 0 ? [{ key: 'on_duty', label: 'Görevde', value: summary.on_duty, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', icon: <MapPin size={18} className="text-purple-500" />, filterStatus: 'ON_DUTY' }] : []),
         { key: 'outside', label: 'Dışarıda', value: (summary.outside || 0) + (summary.left || 0), color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', icon: <WifiOff size={18} className="text-slate-400" />, filterStatus: 'OUTSIDE' },
     ];
 
@@ -100,6 +102,7 @@ const CompanyDirectory = () => {
         { key: '', label: `Tümü (${summary.total})` },
         { key: 'INSIDE', label: `Ofiste (${(summary.inside || 0) + (summary.remote || 0)})`, dot: 'bg-green-500' },
         { key: 'ON_LEAVE', label: `İzinde (${summary.on_leave})`, dot: 'bg-orange-500' },
+        ...(summary.on_duty > 0 ? [{ key: 'ON_DUTY', label: `Görevde (${summary.on_duty})`, dot: 'bg-purple-500' }] : []),
         { key: 'OUTSIDE', label: `Dışarıda (${(summary.outside || 0) + (summary.left || 0)})`, dot: 'bg-slate-400' },
     ];
 
