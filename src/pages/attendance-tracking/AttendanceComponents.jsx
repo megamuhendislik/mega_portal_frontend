@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     ArrowUpRight, ArrowDownRight, X, LogIn, LogOut,
     ChevronDown, ChevronRight as ChevronRightIcon,
-    CalendarCheck, AlertTriangle, Palmtree, HeartPulse, Hospital
+    CalendarCheck, AlertTriangle, Palmtree, HeartPulse, Hospital, Briefcase
 } from 'lucide-react';
 import moment from 'moment';
 import api from '../../services/api';
@@ -38,6 +38,11 @@ const LEAVE_BADGE_CONFIG = {
         bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200',
         tooltipBg: 'bg-purple-800', headerColor: 'text-purple-200',
     },
+    external_duty: {
+        icon: Briefcase,
+        bg: 'bg-violet-50', text: 'text-violet-600', border: 'border-violet-200',
+        tooltipBg: 'bg-violet-800', headerColor: 'text-violet-200',
+    },
 };
 
 const formatLeaveDate = (dateStr) => {
@@ -48,9 +53,11 @@ const formatLeaveDate = (dateStr) => {
 
 export const LeaveBadge = ({ leave, size = 'sm' }) => {
     if (!leave?.is_on_leave) return null;
-    const configKey = leave.type === 'health_report' && leave.type_code === 'HOSPITAL_VISIT'
-        ? 'hospital_visit'
-        : leave.type === 'health_report' ? 'health_report' : 'leave';
+    const configKey = leave.type === 'external_duty'
+        ? 'external_duty'
+        : leave.type === 'health_report' && leave.type_code === 'HOSPITAL_VISIT'
+            ? 'hospital_visit'
+            : leave.type === 'health_report' ? 'health_report' : 'leave';
     const cfg = LEAVE_BADGE_CONFIG[configKey];
     const Icon = cfg.icon;
     const isSmall = size === 'sm';

@@ -92,6 +92,51 @@ const getStatusBadge = (log) => {
     );
 };
 
+/**
+ * Saatlik izin/görev coverage'ı ile attendance kaydının zaman aralığının
+ * çakışıp çakışmadığını kontrol eder.
+ * Tam gün coverage → her zaman true.
+ * Saatlik coverage → kayıt check_in/check_out ile saat çakışması gerekir.
+ */
+const doesCoverageOverlap = (coverage, log) => {
+    if (!coverage) return false;
+    // Tam gün → her zaman göster
+    if (!coverage.is_hourly) return true;
+    // Saatlik ama saat bilgisi yoksa fallback olarak göster
+    if (!coverage.start_time || !coverage.end_time) return true;
+    // Kayıt saatleri yoksa göster (güvenli fallback)
+    if (!log.check_in && !log.check_out) return true;
+
+    // HH:MM → dakika çevrimi
+    const toMin = (hhmm) => {
+        const [h, m] = hhmm.split(':').map(Number);
+        return h * 60 + m;
+    };
+    const covStart = toMin(coverage.start_time);
+    const covEnd = toMin(coverage.end_time);
+
+    // Kayıt check_in/check_out'tan saat çıkar
+    const getHHMM = (iso) => {
+        if (!iso) return null;
+        const d = new Date(iso);
+        return d.getHours() * 60 + d.getMinutes();
+    };
+    const logStart = getHHMM(log.check_in);
+    const logEnd = getHHMM(log.check_out);
+
+    // En az bir ucu varsa çakışma kontrolü yap
+    if (logStart !== null && logEnd !== null) {
+        // İki aralık çakışır mı: [logStart, logEnd] ∩ [covStart, covEnd]
+        return logStart < covEnd && logEnd > covStart;
+    }
+    // Sadece check_in var → check_in coverage aralığında mı
+    if (logStart !== null) return logStart >= covStart && logStart < covEnd;
+    // Sadece check_out var → check_out coverage aralığında mı
+    if (logEnd !== null) return logEnd > covStart && logEnd <= covEnd;
+
+    return true; // fallback
+};
+
 const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
     return (
         <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 overflow-hidden">
@@ -156,7 +201,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                 </td>
                                 <td className="p-2 md:p-3 lg:p-5">
                                     <div className="flex flex-col items-start gap-1">
-                                        {leaveCoverageMap[log.work_date] && (
+                                        {leaveCoverageMap[log.work_date] && doesCoverageOverlap(leaveCoverageMap[log.work_date], log) && (
                                             <LeaveBadge leave={{ is_on_leave: true, ...leaveCoverageMap[log.work_date] }} size="sm" />
                                         )}
                                         {/* Tam gün izin/rapor varsa attendance status badge gösterme — izin zaten onaylı */}
