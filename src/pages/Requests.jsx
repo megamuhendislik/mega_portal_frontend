@@ -4,7 +4,6 @@ import {
     Layers, ArrowDownLeft, CalendarCheck, BarChart3
 } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 import MyRequestsTab from './requests/MyRequestsTab';
 import IncomingRequestsTab from './requests/IncomingRequestsTab';
@@ -44,7 +43,6 @@ const TAB_ALIASES = {
 };
 
 const Requests = () => {
-    const { hasPermission } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -56,8 +54,9 @@ const Requests = () => {
     const [secondaryCount, setSecondaryCount] = useState(0);
     const [teamCountsLoading, setTeamCountsLoading] = useState(true);
     const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
-    const hasApprovalPerm = hasPermission('APPROVAL_LEAVE') || hasPermission('APPROVAL_OVERTIME');
-    const isManager = hasApprovalPerm || hasAnyTeam;
+    // APPROVAL_* tüm rollere verildiği için yönetici tespitinde kullanılmaz;
+    // gerçek yönetici = subordinate'i olan kişi
+    const isManager = hasAnyTeam;
 
     // Badge for incoming tab
     const [incomingPendingCount, setIncomingPendingCount] = useState(0);

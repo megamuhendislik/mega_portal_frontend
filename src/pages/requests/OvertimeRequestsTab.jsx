@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Clock, CalendarPlus, ArrowDownLeft, BarChart3, Info } from 'lucide-react';
 import { Tooltip } from 'antd';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import OvertimeCalendarView from '../../components/overtime/OvertimeCalendarView';
 import OTAssignmentCreator from '../../components/overtime/OTAssignmentCreator';
@@ -29,17 +28,16 @@ const SubTabButton = ({ active, onClick, children, icon, badge }) => (
 );
 
 export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0, teamCountsLoading = false }) {
-  const { hasPermission } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('my_requests');
   const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
-  const hasApprovalPerm = hasPermission('APPROVAL_OVERTIME');
-  const isManager = hasAnyTeam || hasApprovalPerm;
+  // APPROVAL_* tüm rollere verildiği için yönetici tespitinde kullanılmaz
+  const isManager = hasAnyTeam;
 
   // Lazy mount: component mounts on first visit, stays alive after (display:none hides it)
   const [mounted, setMounted] = useState({ my_requests: true });
 
   // ── Shared team data: fetch ONCE here, pass to children ──
-  const needsTeamFetch = hasAnyTeam || hasApprovalPerm;
+  const needsTeamFetch = hasAnyTeam;
   const [sharedTeamData, setSharedTeamData] = useState({ primary: [], secondary: [], loading: needsTeamFetch });
 
   useEffect(() => {
@@ -75,8 +73,8 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
     setMounted(prev => prev[tab] ? prev : { ...prev, [tab]: true });
   }, []);
 
-  // Hâlâ ekip bilgisi yükleniyorsa ve açık yetki yoksa: skeleton göster
-  if (teamCountsLoading && !hasApprovalPerm) {
+  // Hâlâ ekip bilgisi yükleniyorsa: skeleton göster
+  if (teamCountsLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex gap-2">
