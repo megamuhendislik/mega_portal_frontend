@@ -1841,12 +1841,23 @@ export const ExternalDutyForm = ({
                     }`}>
                     <ChevronLeft size={16} /> Geri
                 </button>
-                {currentStepIndex < TOTAL_ACTIVE - 1 && currentStep !== 0 && (
-                    <button type="button" onClick={goNext}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
-                        İleri <ChevronRightIcon size={16} />
-                    </button>
-                )}
+                {currentStepIndex < TOTAL_ACTIVE - 1 && currentStep !== 0 && (() => {
+                    // Step 8 (Çalışma Saatleri): tüm günlere saat girilmeden İleri basılamaz
+                    const step8Disabled = currentStep === 8 && !(
+                        (externalDutyForm.date_segments || []).length > 0 &&
+                        (externalDutyForm.date_segments || []).every(s => s.start_time && s.end_time)
+                    );
+                    return (
+                        <button type="button" onClick={goNext} disabled={step8Disabled}
+                            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+                                step8Disabled
+                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    : 'text-white bg-purple-600 hover:bg-purple-700 active:scale-95'
+                            }`}>
+                            İleri <ChevronRightIcon size={16} />
+                        </button>
+                    );
+                })()}
             </div>
         </div>
     );
