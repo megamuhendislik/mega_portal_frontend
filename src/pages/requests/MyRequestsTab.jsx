@@ -176,21 +176,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
     // --- Handlers ---
 
-    const handleDeleteRequest = useCallback(async (r) => {
-        if (!window.confirm('Bu talebi silmek istediğinize emin misiniz?')) return;
-        const t = r.type || r._type;
-        try {
-            if (t === 'LEAVE') await api.delete(`/leave/requests/${r.id}/`);
-            else if (t === 'OVERTIME') await api.delete(`/overtime-requests/${r.id}/`);
-            else if (t === 'MEAL') await api.delete(`/meal-requests/${r.id}/`);
-            else if (t === 'CARDLESS_ENTRY') await api.delete(`/cardless-entry-requests/${r.id}/`);
-            else if (t === 'HEALTH_REPORT' || t === 'HOSPITAL_VISIT') await api.post(`/health-reports/${r.id}/cancel/`);
-            await fetchData();
-            notifyParent();
-        } catch (e) {
-            alert(e.response?.data?.error || e.response?.data?.detail || 'Silme işlemi başarısız oldu.');
-        }
-    }, [fetchData, notifyParent]);
+    // handleDeleteRequest kaldırıldı — kullanıcı iptal/silme yapamaz
 
     const handleEditOvertimeClick = useCallback((r) => {
         setEditOvertimeForm({
@@ -517,7 +503,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                             onToggle={() => handleViewDetails(req, req._type || req.type)}
                                             onViewDetails={handleViewDetails}
                                             onEdit={handleEdit}
-                                            onDelete={handleDeleteRequest}
+                                            onDelete={null}
                                             showEmployeeColumn={false}
                                             mode="personal"
                                             claimPotentialRenderer={(r) => {

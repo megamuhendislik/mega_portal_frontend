@@ -18,9 +18,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [timeLockInfo, setTimeLockInfo] = useState(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [employeeHistory, setEmployeeHistory] = useState([]);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [cancelLoading, setCancelLoading] = useState(false);
   const [dutyPreview, setDutyPreview] = useState(null);
   const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
   const [showFullReason, setShowFullReason] = useState(false);
@@ -161,28 +158,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       setError(err.response?.data?.error || 'Override işlemi başarısız oldu');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleManagerCancel = async () => {
-    if (!cancelReason.trim()) {
-      setError('İptal gerekçesi zorunludur');
-      return;
-    }
-    setCancelLoading(true);
-    setError('');
-    try {
-      await api.post(`/leave/requests/${request.id}/manager-cancel/`, {
-        reason: cancelReason
-      });
-      setShowCancelModal(false);
-      setCancelReason('');
-      if (onUpdate) onUpdate();
-      onClose();
-    } catch (err) {
-      setError(err.response?.data?.error || 'İptal işlemi başarısız oldu');
-    } finally {
-      setCancelLoading(false);
     }
   };
 
@@ -1004,17 +979,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             </div>
           )}
 
-          {/* Manager Cancel Button */}
-          {requestType === 'LEAVE' && request.status === 'APPROVED' && !timeLockInfo?.is_locked && (hasPermission('APPROVAL_LEAVE') || hasPermission('SYSTEM_FULL_ACCESS')) && (
-            <button
-              onClick={() => setShowCancelModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
-            >
-              <XCircle size={20} />
-              {request.request_type_detail?.category === 'EXTERNAL_DUTY' ? 'Görevi İptal Et' : 'İzni İptal Et'}
-            </button>
-          )}
-
           {/* Override Button */}
           {canOverride && (() => {
             const isOwnDecision = request?.approval_manager_name === user?.employee?.full_name
@@ -1162,46 +1126,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
           </div>
       </ModalOverlay>
 
-      {/* Manager Cancel Modal */}
-      <ModalOverlay open={showCancelModal} onClose={() => { setShowCancelModal(false); setError(''); }} level="secondary">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">İzin İptali</h3>
-              <button onClick={() => { setShowCancelModal(false); setError(''); }} className="text-slate-400 hover:text-slate-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-2 text-sm text-red-700">
-                <AlertCircle size={16} className="mt-0.5" />
-                <p>Bu işlem onaylı izni iptal edecek ve kullanılan izin günleri iade edilecektir.</p>
-              </div>
-            </div>
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                İptal Gerekçesi <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                rows="4"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="İptal gerekçesini yazınız..."
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => { setShowCancelModal(false); setError(''); }} className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
-                Vazgeç
-              </button>
-              <button onClick={handleManagerCancel} disabled={cancelLoading} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-                {cancelLoading ? 'İşleniyor...' : 'İptal Et'}
-              </button>
-            </div>
-          </div>
-      </ModalOverlay>
     </>
   );
 };

@@ -58,7 +58,6 @@ export default function OTDayDetailPanel({
   isOwnData = true,
 }) {
   const [rejectReason, setRejectReason] = useState('');
-  const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
 
   if (!dayData) return null;
@@ -90,22 +89,6 @@ export default function OTDayDetailPanel({
       onRefresh?.();
     } catch (err) {
       message.error(err.response?.data?.error || 'Reddetme hatası');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleCancelRequest = async (requestId) => {
-    setActionLoading(`cancel-req-${requestId}`);
-    try {
-      await api.post(`/overtime-requests/${requestId}/cancel/`, {
-        reason: cancelReason || undefined
-      });
-      message.success('Talep iptal edildi');
-      setCancelReason('');
-      onRefresh?.();
-    } catch (err) {
-      message.error(err.response?.data?.error || 'İptal hatası');
     } finally {
       setActionLoading(null);
     }
@@ -257,26 +240,6 @@ export default function OTDayDetailPanel({
                         </>
                       )}
 
-                      {/* Own cancel */}
-                      {isOwnData && req.status === 'PENDING' && (
-                        <Popconfirm
-                          title="Talebi iptal etmek istiyor musunuz?"
-                          onConfirm={() => handleCancelRequest(req.id)}
-                          okText="İptal Et"
-                          cancelText="Vazgeç"
-                          okButtonProps={{ danger: true }}
-                        >
-                          <Button
-                            danger
-                            size="small"
-                            icon={<XCircle size={12} />}
-                            loading={actionLoading === `cancel-req-${req.id}`}
-                            className="!text-[10px] !font-bold !flex !items-center !gap-1"
-                          >
-                            İptal
-                          </Button>
-                        </Popconfirm>
-                      )}
                     </div>
                   </div>
                 </div>
