@@ -231,6 +231,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 : requestType === 'OVERTIME' ? 'Fazla Mesai Talebi'
                 : requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi'
                 : requestType === 'MEAL' ? 'Yemek Talebi'
+                : requestType === 'HEALTH_REPORT' ? 'Sağlık Raporu'
+                : requestType === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti'
                 : 'Talep'}
               {request.id && <span className="text-slate-400 ml-2">#{request.id}</span>}
             </p>
@@ -307,6 +309,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                       : requestType === 'OVERTIME' ? 'Fazla Mesai'
                       : requestType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş'
                       : requestType === 'MEAL' ? 'Yemek'
+                      : requestType === 'HEALTH_REPORT' ? 'Sağlık Raporu'
+                      : requestType === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti'
                       : 'Diğer'}
                   </span>
                 </div>
@@ -324,6 +328,36 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                 )}
               </div>
             </div>
+
+            {/* Hospital Visit / Health Report Details */}
+            {(requestType === 'HOSPITAL_VISIT' || requestType === 'HEALTH_REPORT') && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-600">Başlangıç Tarihi</span>
+                  <span className="text-sm text-slate-800">{formatDate(request.start_date || request.date)}</span>
+                </div>
+                {request.end_date && request.end_date !== request.start_date && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Bitiş Tarihi</span>
+                    <span className="text-sm text-slate-800">{formatDate(request.end_date)}</span>
+                  </div>
+                )}
+                {request.start_time && request.end_time && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Saat Aralığı</span>
+                    <span className="text-sm font-bold text-pink-600">
+                      {request.start_time?.substring(0, 5)} - {request.end_time?.substring(0, 5)}
+                    </span>
+                  </div>
+                )}
+                {!request.start_time && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Süre</span>
+                    <span className="text-sm font-bold text-red-600">Tam Gün</span>
+                  </div>
+                )}
+              </>
+            )}
 
             {requestType === 'LEAVE' && (
               <>

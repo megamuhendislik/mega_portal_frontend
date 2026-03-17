@@ -3,7 +3,7 @@ import {
     ArrowUpDown, Calendar, Clock, CheckCircle2, XCircle, AlertCircle,
     FileText, Utensils, CreditCard, ChevronRight, User, MoreHorizontal,
     Check, X, Eye, Edit2, Trash2, ArrowRight, ArrowRightLeft, Users,
-    LogIn, LogOut
+    LogIn, LogOut, HeartPulse
 } from 'lucide-react';
 import ModalOverlay from './ui/ModalOverlay';
 
@@ -64,6 +64,8 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
             case 'OVERTIME': return <Clock size={16} className="text-amber-600" />;
             case 'MEAL': return <Utensils size={16} className="text-emerald-600" />;
             case 'CARDLESS_ENTRY': return <CreditCard size={16} className="text-purple-600" />;
+            case 'HEALTH_REPORT': return <HeartPulse size={16} className="text-red-600" />;
+            case 'HOSPITAL_VISIT': return <HeartPulse size={16} className="text-pink-600" />;
             default: return <FileText size={16} className="text-slate-500" />;
         }
     };
@@ -73,6 +75,8 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
         if (req.type === 'OVERTIME') return 'Fazla Mesai';
         if (req.type === 'MEAL') return 'Yemek';
         if (req.type === 'CARDLESS_ENTRY') return 'Kartsız Giriş';
+        if (req.type === 'HEALTH_REPORT') return 'Sağlık Raporu';
+        if (req.type === 'HOSPITAL_VISIT') return 'Hastane Ziyareti';
         return 'Talep';
     };
 
@@ -218,10 +222,11 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                     {/* Type */}
                                     <td className="p-4">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center 
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center
                                                 ${req.type === 'LEAVE' ? 'bg-blue-50' :
                                                     req.type === 'OVERTIME' ? 'bg-amber-50' :
-                                                        req.type === 'MEAL' ? 'bg-emerald-50' : 'bg-purple-50'}`}>
+                                                        req.type === 'MEAL' ? 'bg-emerald-50' :
+                                                            req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT' ? 'bg-pink-50' : 'bg-purple-50'}`}>
                                                 {getTypeIcon(req.type)}
                                             </div>
                                             <div className="text-sm font-medium text-slate-700">
@@ -260,6 +265,12 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                         </span>
                                                     )}
                                                 </div>
+                                            )}
+                                            {(req.type === 'HOSPITAL_VISIT' || req.type === 'HEALTH_REPORT') && req.start_time && req.end_time && (
+                                                <span className="text-xs font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit mt-0.5">
+                                                    <Clock size={10} />
+                                                    {formatTime(req.start_time)} - {formatTime(req.end_time)}
+                                                </span>
                                             )}
                                         </div>
                                     </td>
@@ -335,6 +346,23 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs font-bold rounded">
                                                         {calculateDuration(req.check_in_time, req.check_out_time)}
                                                     </span>
+                                                )}
+                                                {(req.type === 'HOSPITAL_VISIT' || req.type === 'HEALTH_REPORT') && (
+                                                    <>
+                                                        {req.start_time && req.end_time && (
+                                                            <span className="px-2 py-0.5 bg-pink-50 text-pink-700 text-xs font-bold rounded">
+                                                                {calculateDuration(req.start_time, req.end_time)}
+                                                            </span>
+                                                        )}
+                                                        {!req.start_time && (
+                                                            <span className="px-2 py-0.5 bg-red-50 text-red-600 text-xs font-medium rounded">
+                                                                Tam Gün
+                                                            </span>
+                                                        )}
+                                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">
+                                                            {req.type === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti' : 'Sağlık Raporu'}
+                                                        </span>
+                                                    </>
                                                 )}
                                             </div>
                                             {/* OT Attendance Logs (giriş/çıkış bilgisi) */}
