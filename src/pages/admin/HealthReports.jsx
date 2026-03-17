@@ -657,11 +657,15 @@ const HealthReports = () => {
                                                     {doc.file && (
                                                         <button
                                                             onClick={() => viewDocumentProxy(detailModal.id, doc.id)}
-                                                            className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 transition-colors disabled:opacity-50"
+                                                            className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-blue-100 rounded-lg text-blue-500 text-xs font-medium transition-colors disabled:opacity-50"
                                                             title="Görüntüle"
                                                             disabled={downloadingDocId === doc.id}
                                                         >
-                                                            {downloadingDocId === doc.id ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                                                            {downloadingDocId === doc.id ? (
+                                                                <><Loader2 size={14} className="animate-spin" /> Açılıyor…</>
+                                                            ) : (
+                                                                <><ExternalLink size={14} /> Belgeyi Aç</>
+                                                            )}
                                                         </button>
                                                     )}
                                                     <button

@@ -435,7 +435,11 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                                         <FileIcon name={att.file_name} />
                                         <span className="flex-1 truncate text-slate-700 group-hover:text-blue-700">{att.file_name}</span>
                                         <span className="text-xs text-slate-400">{att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ''}</span>
-                                        {downloadingAttId === att.id ? <Loader2 size={14} className="animate-spin text-blue-500" /> : <Download size={14} className="text-slate-300 group-hover:text-blue-500" />}
+                                        {downloadingAttId === att.id ? (
+                                            <span className="flex items-center gap-1 text-blue-500 text-xs font-medium shrink-0"><Loader2 size={14} className="animate-spin" /> Açılıyor…</span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 text-slate-300 group-hover:text-blue-500 text-xs font-medium shrink-0"><Download size={14} /> Belgeyi Aç</span>
+                                        )}
                                     </button>
                                 ))}
                             </div>
