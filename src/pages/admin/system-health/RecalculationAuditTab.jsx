@@ -48,7 +48,7 @@ export default function RecalculationAuditTab() {
                 end_date: endDate,
             };
             if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/recalculation-audit/', body);
+            const res = await api.post('/system/health-check/recalculation-audit/', body, { timeout: 300000 });
             setResult(res.data);
         } catch (e) {
             setError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
@@ -74,7 +74,7 @@ export default function RecalculationAuditTab() {
                 end_date: endDate,
             };
             if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/recalculation-fix/', body);
+            const res = await api.post('/system/health-check/recalculation-fix/', body, { timeout: 300000 });
             setResult(res.data);
         } catch (e) {
             setError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
