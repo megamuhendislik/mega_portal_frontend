@@ -69,6 +69,7 @@ const Profile = () => {
     });
 
     const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIFICATION_PREFS);
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const mustChangePassword = user?.must_change_password || false;
 
@@ -100,6 +101,7 @@ const Profile = () => {
     const handleSave = async () => {
         setLoading(true);
         setSuccessMessage('');
+        setFieldErrors({});
         try {
             if (activeTab === 'security') {
                 if (!formData.old_password || !formData.new_password) {
@@ -160,11 +162,30 @@ const Profile = () => {
             }
         } catch (error) {
             console.error('Update failed:', error);
-            const msg = error.response?.data?.error
-                || error.response?.data?.detail
-                || (typeof error.response?.data === 'object' ? JSON.stringify(error.response.data) : null)
-                || 'Güncelleme sırasında bir hata oluştu.';
-            alert(msg);
+            const data = error.response?.data;
+
+            // DRF field-level validation errors: { field: ["message", ...] }
+            if (data && typeof data === 'object' && !data.detail && !data.error) {
+                const errors = {};
+                let hasFieldError = false;
+                for (const [key, val] of Object.entries(data)) {
+                    if (Array.isArray(val)) {
+                        errors[key] = val.join(' ');
+                        hasFieldError = true;
+                    } else if (typeof val === 'string') {
+                        errors[key] = val;
+                        hasFieldError = true;
+                    }
+                }
+                if (hasFieldError) {
+                    setFieldErrors(errors);
+                    return;
+                }
+            }
+
+            // Generic error fallback
+            const msg = data?.error || data?.detail || 'Güncelleme sırasında bir hata oluştu.';
+            setFieldErrors({ _general: msg });
         } finally {
             setLoading(false);
         }
@@ -225,7 +246,7 @@ const Profile = () => {
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => { setActiveTab(tab.id); setFieldErrors({}); setSuccessMessage(''); }}
                                 className={`
                                     group w-full flex items-center gap-3 px-4 py-3 rounded-xl
                                     transition-all duration-300 ease-out text-[13px] font-medium whitespace-nowrap relative
@@ -379,9 +400,10 @@ const Profile = () => {
                                             icon={Fingerprint}
                                             label="TC Kimlik No"
                                             value={formData.tc_number}
-                                            onChange={v => setFormData({ ...formData, tc_number: v })}
+                                            onChange={v => { setFormData({ ...formData, tc_number: v }); setFieldErrors(prev => ({ ...prev, tc_number: undefined })); }}
                                             placeholder="11 haneli TC Kimlik No"
                                             maxLength={11}
+                                            error={fieldErrors.tc_number}
                                         />
 
                                         {/* Doğum Tarihi */}
@@ -389,8 +411,9 @@ const Profile = () => {
                                             icon={Calendar}
                                             label="Doğum Tarihi"
                                             value={formData.birth_date}
-                                            onChange={v => setFormData({ ...formData, birth_date: v })}
+                                            onChange={v => { setFormData({ ...formData, birth_date: v }); setFieldErrors(prev => ({ ...prev, birth_date: undefined })); }}
                                             type="date"
+                                            error={fieldErrors.birth_date}
                                         />
 
                                         {/* E-posta */}
@@ -398,9 +421,10 @@ const Profile = () => {
                                             icon={Mail}
                                             label="E-posta Adresi"
                                             value={formData.email}
-                                            onChange={v => setFormData({ ...formData, email: v })}
+                                            onChange={v => { setFormData({ ...formData, email: v }); setFieldErrors(prev => ({ ...prev, email: undefined })); }}
                                             placeholder="ornek@mega.com.tr"
                                             type="email"
+                                            error={fieldErrors.email}
                                         />
 
                                         {/* Telefon */}
@@ -408,8 +432,9 @@ const Profile = () => {
                                             icon={Phone}
                                             label="Telefon"
                                             value={formData.phone}
-                                            onChange={v => setFormData({ ...formData, phone: v })}
+                                            onChange={v => { setFormData({ ...formData, phone: v }); setFieldErrors(prev => ({ ...prev, phone: undefined })); }}
                                             placeholder="05XX XXX XX XX"
+                                            error={fieldErrors.phone}
                                         />
                                     </div>
                                 </div>
@@ -434,6 +459,14 @@ const Profile = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Error / Success banner */}
+                            {fieldErrors._general && (
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+                                    <AlertTriangle size={14} className="flex-shrink-0" />
+                                    {fieldErrors._general}
+                                </div>
+                            )}
 
                             {/* Save */}
                             <div className="flex justify-end pt-1">
@@ -527,6 +560,14 @@ const Profile = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Error / Success banner */}
+                            {fieldErrors._general && (
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+                                    <AlertTriangle size={14} className="flex-shrink-0" />
+                                    {fieldErrors._general}
+                                </div>
+                            )}
 
                             {/* Save */}
                             <div className="flex justify-end pt-1">
@@ -777,10 +818,10 @@ const Profile = () => {
    Sub-Components
    ══════════════════════════════════════════════ */
 
-const ProfileField = ({ icon: Icon, label, value, onChange, placeholder, type = 'text', maxLength }) => (
+const ProfileField = ({ icon: Icon, label, value, onChange, placeholder, type = 'text', maxLength, error }) => (
     <div>
         <label className="flex items-center gap-2 text-[12px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            <Icon size={12} className="text-slate-400" />
+            <Icon size={12} className={error ? 'text-red-400' : 'text-slate-400'} />
             {label}
         </label>
         <input
@@ -789,8 +830,18 @@ const ProfileField = ({ icon: Icon, label, value, onChange, placeholder, type = 
             onChange={e => onChange(e.target.value)}
             placeholder={placeholder}
             maxLength={maxLength}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-300 focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all duration-300 outline-none"
+            className={`w-full rounded-xl border px-4 py-3 text-sm text-slate-800 placeholder:text-slate-300 transition-all duration-300 outline-none ${
+                error
+                    ? 'border-red-300 bg-red-50/30 focus:border-red-400 focus:ring-4 focus:ring-red-500/10'
+                    : 'border-slate-200 bg-slate-50/30 focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10'
+            }`}
         />
+        {error && (
+            <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                <AlertTriangle size={11} />
+                {error}
+            </p>
+        )}
     </div>
 );
 
