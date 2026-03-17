@@ -937,9 +937,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
 
             {/* Onay / Karar Bilgisi */}
             {(() => {
-              const targetName = request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name;
+              const isHealthType = requestType === 'HEALTH_REPORT' || requestType === 'HOSPITAL_VISIT';
+              const targetName = isHealthType ? 'Muhasebe' : (request.target_approver_name || request.target_approver_detail?.full_name || request.approver_target?.name);
               const approvedByName = request.approved_by_name || request.approved_by_detail?.full_name;
-              const targetDept = request.target_approver_detail?.department_name || request.approver_target?.department;
+              const targetDept = isHealthType ? null : (request.target_approver_detail?.department_name || request.approver_target?.department);
 
               if (!targetName && !approvedByName) return null;
               return (

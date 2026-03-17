@@ -168,6 +168,17 @@ const TimeRange = ({ req }) => {
             );
         }
     }
+    if (req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') {
+        if (req.start_time && req.end_time) {
+            return (
+                <span className="text-xs font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    <Clock size={10} />
+                    {formatTime(req.start_time)} - {formatTime(req.end_time)}
+                </span>
+            );
+        }
+        return <span className="text-xs text-slate-400">Tam gün</span>;
+    }
     if (req.type === 'LEAVE') {
         if (req.start_time && req.end_time) {
             return (
@@ -242,6 +253,12 @@ const DurationCell = ({ req }) => {
     }
     if (req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time) {
         return <span className="text-xs font-bold text-purple-700">{calculateDuration(req.check_in_time, req.check_out_time)}</span>;
+    }
+    if ((req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') && req.start_time && req.end_time) {
+        return <span className="text-xs font-bold text-pink-700">{calculateDuration(req.start_time, req.end_time)}</span>;
+    }
+    if ((req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') && !req.start_time) {
+        return <span className="text-xs font-bold text-red-600">Tam Gün</span>;
     }
     return <span className="text-xs text-slate-400">-</span>;
 };
@@ -393,7 +410,11 @@ const ExpandableRequestRow = ({
                 {mode === 'incoming' && (
                     <td className="px-3 py-3">
                         <div className="flex flex-col gap-0.5">
-                            {req.target_approver_name ? (
+                            {isHealthType ? (
+                                <span className="text-xs font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded">
+                                    Muhasebe
+                                </span>
+                            ) : req.target_approver_name ? (
                                 <span className="text-xs font-medium text-slate-600 truncate max-w-[130px]" title={req.target_approver_name}>
                                     {req.target_approver_name}
                                 </span>
