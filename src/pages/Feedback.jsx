@@ -361,7 +361,10 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     };
 
     // Dosya proxy ile görüntüleme — Cloudinary SSL sorunlarını bypass eder
+    const [downloadingAttId, setDownloadingAttId] = useState(null);
+
     const viewAttachmentProxy = async (feedbackId, attId) => {
+        setDownloadingAttId(attId);
         try {
             const response = await api.get(`/feedback/${feedbackId}/attachments/${attId}/download/`, {
                 responseType: 'blob',
@@ -372,6 +375,8 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
             setTimeout(() => URL.revokeObjectURL(url), 120000);
         } catch {
             alert('Dosya görüntülenemedi.');
+        } finally {
+            setDownloadingAttId(null);
         }
     };
 
@@ -424,12 +429,13 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                                     <button
                                         key={att.id}
                                         onClick={() => viewAttachmentProxy(feedback.id, att.id)}
-                                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 text-sm transition-colors group w-full text-left"
+                                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 text-sm transition-colors group w-full text-left disabled:opacity-50"
+                                        disabled={downloadingAttId === att.id}
                                     >
                                         <FileIcon name={att.file_name} />
                                         <span className="flex-1 truncate text-slate-700 group-hover:text-blue-700">{att.file_name}</span>
                                         <span className="text-xs text-slate-400">{att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ''}</span>
-                                        <Download size={14} className="text-slate-300 group-hover:text-blue-500" />
+                                        {downloadingAttId === att.id ? <Loader2 size={14} className="animate-spin text-blue-500" /> : <Download size={14} className="text-slate-300 group-hover:text-blue-500" />}
                                     </button>
                                 ))}
                             </div>

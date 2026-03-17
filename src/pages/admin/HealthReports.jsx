@@ -9,20 +9,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-// Dosya proxy ile görüntüleme — Cloudinary SSL sorunlarını bypass eder
-const viewDocumentProxy = async (reportId, docId) => {
-    try {
-        const response = await api.get(`/health-reports/${reportId}/documents/${docId}/download/`, {
-            responseType: 'blob',
-        });
-        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 120000);
-    } catch {
-        toast.error('Dosya görüntülenemedi.');
-    }
-};
 
 const STATUS_CONFIG = {
     PENDING: { label: 'Onay Bekliyor', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-400' },
@@ -75,6 +61,26 @@ const HealthReports = () => {
     const [detailModal, setDetailModal] = useState(null);
     const [rejectModal, setRejectModal] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
+
+    // Dosya yükleme durumu
+    const [downloadingDocId, setDownloadingDocId] = useState(null);
+
+    const viewDocumentProxy = async (reportId, docId) => {
+        setDownloadingDocId(docId);
+        try {
+            const response = await api.get(`/health-reports/${reportId}/documents/${docId}/download/`, {
+                responseType: 'blob',
+            });
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 120000);
+        } catch {
+            toast.error('Dosya görüntülenemedi.');
+        } finally {
+            setDownloadingDocId(null);
+        }
+    };
     const [actionLoading, setActionLoading] = useState(false);
 
     // Edit mode
@@ -651,10 +657,11 @@ const HealthReports = () => {
                                                     {doc.file && (
                                                         <button
                                                             onClick={() => viewDocumentProxy(detailModal.id, doc.id)}
-                                                            className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 transition-colors"
+                                                            className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 transition-colors disabled:opacity-50"
                                                             title="Görüntüle"
+                                                            disabled={downloadingDocId === doc.id}
                                                         >
-                                                            <ExternalLink size={14} />
+                                                            {downloadingDocId === doc.id ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
                                                         </button>
                                                     )}
                                                     <button
