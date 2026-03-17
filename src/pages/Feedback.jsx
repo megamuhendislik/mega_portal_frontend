@@ -360,14 +360,18 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
         }
     };
 
-    const getFileUrl = (fileUrl) => {
-        if (!fileUrl) return '#';
-        if (fileUrl.startsWith('http')) return fileUrl;
+    // Dosya proxy ile görüntüleme — Cloudinary SSL sorunlarını bypass eder
+    const viewAttachmentProxy = async (feedbackId, attId) => {
         try {
-            const origin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000').origin;
-            return `${origin}${fileUrl}`;
+            const response = await api.get(`/feedback/${feedbackId}/attachments/${attId}/download/`, {
+                responseType: 'blob',
+            });
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 120000);
         } catch {
-            return fileUrl;
+            alert('Dosya görüntülenemedi.');
         }
     };
 
@@ -417,18 +421,16 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ekler</p>
                             <div className="space-y-1.5">
                                 {feedback.attachments.map(att => (
-                                    <a
+                                    <button
                                         key={att.id}
-                                        href={getFileUrl(att.file)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 text-sm transition-colors group"
+                                        onClick={() => viewAttachmentProxy(feedback.id, att.id)}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 text-sm transition-colors group w-full text-left"
                                     >
                                         <FileIcon name={att.file_name} />
                                         <span className="flex-1 truncate text-slate-700 group-hover:text-blue-700">{att.file_name}</span>
                                         <span className="text-xs text-slate-400">{att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ''}</span>
                                         <Download size={14} className="text-slate-300 group-hover:text-blue-500" />
-                                    </a>
+                                    </button>
                                 ))}
                             </div>
                         </div>

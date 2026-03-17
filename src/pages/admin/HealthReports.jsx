@@ -9,14 +9,18 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const getFileUrl = (fileUrl) => {
-    if (!fileUrl) return '#';
-    if (fileUrl.startsWith('http')) return fileUrl;
+// Dosya proxy ile görüntüleme — Cloudinary SSL sorunlarını bypass eder
+const viewDocumentProxy = async (reportId, docId) => {
     try {
-        const origin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000').origin;
-        return `${origin}${fileUrl}`;
+        const response = await api.get(`/health-reports/${reportId}/documents/${docId}/download/`, {
+            responseType: 'blob',
+        });
+        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 120000);
     } catch {
-        return fileUrl;
+        toast.error('Dosya görüntülenemedi.');
     }
 };
 
@@ -645,15 +649,13 @@ const HealthReports = () => {
                                                 </div>
                                                 <div className="flex items-center gap-1.5 shrink-0">
                                                     {doc.file && (
-                                                        <a
-                                                            href={getFileUrl(doc.file)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                        <button
+                                                            onClick={() => viewDocumentProxy(detailModal.id, doc.id)}
                                                             className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 transition-colors"
                                                             title="Görüntüle"
                                                         >
                                                             <ExternalLink size={14} />
-                                                        </a>
+                                                        </button>
                                                     )}
                                                     <button
                                                         onClick={() => handleDeleteDocument(detailModal.id, doc.id)}
