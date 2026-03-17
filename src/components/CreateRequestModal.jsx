@@ -560,12 +560,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     throw new Error(`${missing} gün için çalışma saatleri girilmemiş. Tüm günler için saat girişi zorunludur.`);
                 }
 
+                // Single-day: copy segment times to root fields for correct partial-day display
+                let rootStartTime = externalDutyForm.start_time || null;
+                let rootEndTime = externalDutyForm.end_time || null;
+                if (!rootStartTime && !rootEndTime && filledSegs.length === 1) {
+                    rootStartTime = filledSegs[0].start_time || null;
+                    rootEndTime = filledSegs[0].end_time || null;
+                }
+
                 response = await api.post('/leave/requests/', {
                     request_type: typeObj.id,
                     start_date: externalDutyForm.start_date,
                     end_date: externalDutyForm.end_date,
-                    start_time: externalDutyForm.start_time || null,
-                    end_time: externalDutyForm.end_time || null,
+                    start_time: rootStartTime,
+                    end_time: rootEndTime,
                     date_segments: filledSegs,
                     reason: externalDutyForm.duty_description || externalDutyForm.reason || 'Şirket dışı görev',
                     destination: externalDutyForm.destination || `${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim(),

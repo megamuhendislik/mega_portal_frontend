@@ -281,21 +281,27 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                         <div className="max-w-[280px] space-y-1">
                                             {/* Type-specific badges */}
                                             <div className="flex flex-wrap items-center gap-1.5">
-                                                {req.type === 'LEAVE' && (
-                                                    <>
+                                                {req.type === 'LEAVE' && (() => {
+                                                    const segs = req.date_segments || req.duty_work_info?.date_segments;
+                                                    const hasTimes = req.start_time && req.end_time;
+                                                    const segSingle = !hasTimes && Array.isArray(segs) && segs.length === 1 && segs[0]?.start_time && segs[0]?.end_time;
+                                                    const st = hasTimes ? req.start_time : segSingle ? segs[0].start_time : null;
+                                                    const et = hasTimes ? req.end_time : segSingle ? segs[0].end_time : null;
+                                                    const isPartial = st && et;
+                                                    return (<>
                                                         <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded">
-                                                            {req.start_time && req.end_time
-                                                                ? calculateDuration(req.start_time, req.end_time)
+                                                            {isPartial
+                                                                ? calculateDuration(st, et)
                                                                 : `${(req.total_days || 1) * 9} Saat`}
-                                                            {(!req.start_time || !req.end_time) && <span className="text-blue-400 font-normal"> (Tam gün)</span>}
+                                                            {!isPartial && <span className="text-blue-400 font-normal"> (Tam gün)</span>}
                                                         </span>
                                                         {req.leave_type_name && (
                                                             <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">
                                                                 {req.leave_type_name}
                                                             </span>
                                                         )}
-                                                    </>
-                                                )}
+                                                    </>);
+                                                })()}
                                                 {req.type === 'OVERTIME' && (
                                                     <>
                                                         {req.total_hours != null && (

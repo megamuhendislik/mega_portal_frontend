@@ -229,9 +229,24 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
             <div className="space-y-3 mb-4 flex-1">
                 <div className="flex items-center gap-2.5 text-sm text-slate-600">
                     <Calendar size={16} className="text-slate-400 shrink-0" />
-                    {type === 'LEAVE' && (
-                        <span className="font-medium">{formatDate(request.start_date)} - {formatDate(request.end_date)} <span className="text-slate-400 font-normal">({(request.total_days || 1) * 9} Saat{!request.start_time && ' - Tam gün'})</span></span>
-                    )}
+                    {type === 'LEAVE' && (() => {
+                        const segs = request.date_segments || request.duty_work_info?.date_segments;
+                        const hasTimes = request.start_time && request.end_time;
+                        const segSingle = !hasTimes && Array.isArray(segs) && segs.length === 1 && segs[0].start_time && segs[0].end_time;
+                        if (hasTimes || segSingle) {
+                            const st = hasTimes ? request.start_time : segs[0].start_time;
+                            const et = hasTimes ? request.end_time : segs[0].end_time;
+                            const [sh, sm] = st.split(':').map(Number);
+                            const [eh, em] = et.split(':').map(Number);
+                            let mins = (eh * 60 + em) - (sh * 60 + sm);
+                            if (mins < 0) mins += 24 * 60;
+                            const hh = Math.floor(mins / 60);
+                            const mm = mins % 60;
+                            const dur = mm > 0 ? `${hh}s ${mm}dk` : `${hh} Saat`;
+                            return <span className="font-medium">{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` - ${formatDate(request.end_date)}` : ''} <span className="text-slate-400 mx-1">•</span> {formatTime(st)} - {formatTime(et)} <span className="text-slate-400 font-normal">({dur})</span></span>;
+                        }
+                        return <span className="font-medium">{formatDate(request.start_date)} - {formatDate(request.end_date)} <span className="text-slate-400 font-normal">({(request.total_days || 1) * 9} Saat - Tam gün)</span></span>;
+                    })()}
                     {type === 'OVERTIME' && (
                         <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.start_time)} - {formatTime(request.end_time)}</span>
                     )}

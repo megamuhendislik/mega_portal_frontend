@@ -31,6 +31,29 @@ const calculateDuration = (startTime, endTime) => {
     return `${hours}s ${mins}dk`;
 };
 
+// Extract time info from date_segments when start_time/end_time are null (External Duty)
+const getSegmentTimes = (req) => {
+    const segs = req.date_segments || req.duty_work_info?.date_segments;
+    if (!Array.isArray(segs) || segs.length === 0) return null;
+    if (segs.length === 1) {
+        const s = segs[0];
+        if (s.start_time && s.end_time) return { start: s.start_time, end: s.end_time };
+    }
+    // Multi-day: calculate total minutes across all segments
+    let totalMin = 0;
+    let allHaveTimes = true;
+    for (const s of segs) {
+        if (!s.start_time || !s.end_time) { allHaveTimes = false; break; }
+        const [sh, sm] = s.start_time.split(':').map(Number);
+        const [eh, em] = s.end_time.split(':').map(Number);
+        let diff = (eh * 60 + em) - (sh * 60 + sm);
+        if (diff < 0) diff += 24 * 60;
+        totalMin += diff;
+    }
+    if (allHaveTimes) return { totalMinutes: totalMin, segmentCount: segs.length };
+    return null;
+};
+
 const getTypeIcon = (type) => {
     switch (type) {
         case 'LEAVE': return <FileText size={16} className="text-blue-600" />;
@@ -153,6 +176,22 @@ const TimeRange = ({ req }) => {
                 </span>
             );
         }
+        // Fallback: check date_segments for External Duty partial-day entries
+        const segTimes = getSegmentTimes(req);
+        if (segTimes?.start && segTimes?.end) {
+            return (
+                <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                    {formatTime(segTimes.start)} - {formatTime(segTimes.end)}
+                </span>
+            );
+        }
+        if (segTimes?.segmentCount > 1) {
+            return (
+                <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                    {segTimes.segmentCount} gün <span className="text-blue-400 font-normal">(parçalı)</span>
+                </span>
+            );
+        }
         const days = req.total_days || 1;
         const totalH = days * 9;
         return (
@@ -181,6 +220,17 @@ const DurationCell = ({ req }) => {
     if (req.type === 'LEAVE') {
         if (req.start_time && req.end_time) {
             return <span className="text-xs font-bold text-blue-700">{calculateDuration(req.start_time, req.end_time)}</span>;
+        }
+        // Fallback: check date_segments for External Duty partial-day entries
+        const segTimes = getSegmentTimes(req);
+        if (segTimes?.start && segTimes?.end) {
+            return <span className="text-xs font-bold text-blue-700">{calculateDuration(segTimes.start, segTimes.end)}</span>;
+        }
+        if (segTimes?.totalMinutes > 0) {
+            const th = Math.floor(segTimes.totalMinutes / 60);
+            const tm = segTimes.totalMinutes % 60;
+            const lbl = tm > 0 ? `${th}s ${tm}dk` : `${th} Saat`;
+            return <span className="text-xs font-bold text-blue-700">{lbl}</span>;
         }
         const days = req.total_days || 1;
         const hours = days * 9;
