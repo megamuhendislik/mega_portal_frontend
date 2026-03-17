@@ -302,11 +302,17 @@ export default function RecalculationAuditTab() {
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                                 a.type === 'MULTI_REQUEST' ? 'bg-red-100 text-red-700' :
-                                                a.type === 'REJECTED_BUT_OT_EXISTS' ? 'bg-amber-100 text-amber-700' :
+                                                a.type === 'REJECTED_BUT_APPROVED_OT' ? 'bg-red-100 text-red-700' :
+                                                a.type === 'APPROVED_BUT_NO_OT' ? 'bg-red-100 text-red-700' :
+                                                a.type === 'OT_DURATION_MISMATCH' ? 'bg-amber-100 text-amber-700' :
+                                                a.type === 'MONTHLY_SUMMARY_MISMATCH' ? 'bg-orange-100 text-orange-700' :
                                                 'bg-gray-100 text-gray-700'
                                             }`}>
                                                 {a.type === 'MULTI_REQUEST' ? 'Coklu Talep' :
-                                                 a.type === 'REJECTED_BUT_OT_EXISTS' ? 'Reddedilmis OT' :
+                                                 a.type === 'REJECTED_BUT_APPROVED_OT' ? 'RED AMA OT Var' :
+                                                 a.type === 'APPROVED_BUT_NO_OT' ? 'Onayli AMA OT Yok' :
+                                                 a.type === 'OT_DURATION_MISMATCH' ? 'OT Sure Uyumsuz' :
+                                                 a.type === 'MONTHLY_SUMMARY_MISMATCH' ? 'Aylik Ozet' :
                                                  a.type === 'NEGATIVE_MISSING' ? 'Negatif Eksik' :
                                                  a.type === 'EXTREME_MISSING' ? 'Asiri Eksik' : a.type}
                                             </span>
