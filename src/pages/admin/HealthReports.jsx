@@ -9,6 +9,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+const getFileUrl = (fileUrl) => {
+    if (!fileUrl) return '#';
+    if (fileUrl.startsWith('http')) return fileUrl;
+    try {
+        const origin = new URL(import.meta.env.VITE_API_URL || 'http://localhost:8000').origin;
+        return `${origin}${fileUrl}`;
+    } catch {
+        return fileUrl;
+    }
+};
+
 const STATUS_CONFIG = {
     PENDING: { label: 'Onay Bekliyor', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-400' },
     APPROVED: { label: 'Onaylandı', bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-500' },
@@ -635,7 +646,7 @@ const HealthReports = () => {
                                                 <div className="flex items-center gap-1.5 shrink-0">
                                                     {doc.file && (
                                                         <a
-                                                            href={doc.file}
+                                                            href={getFileUrl(doc.file)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 transition-colors"
