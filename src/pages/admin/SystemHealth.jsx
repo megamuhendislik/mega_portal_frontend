@@ -54,6 +54,7 @@ import BirthdayTab from './system-health/BirthdayTab';
 import E2ETestTab from './system-health/E2ETestTab';
 import OTAnalysisTab from './system-health/OTAnalysisTab';
 import ErrorLogsTab from './system-health/ErrorLogsTab';
+import RecalculationAuditTab from './system-health/RecalculationAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -135,6 +136,7 @@ export default function SystemHealth() {
                         { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
                         { id: 'ot_analysis_panel', name: 'Ek Mesai Analizi', icon: BoltIcon },
                         { id: 'e2e_tests', name: 'E2E Testleri', icon: BeakerIcon },
+                        { id: 'recalc_audit', name: 'Hesaplama Denetimi', icon: ArrowPathIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -188,6 +190,7 @@ export default function SystemHealth() {
                 {activeTab === 'birthdays' && <BirthdayTab />}
                 {activeTab === 'ot_analysis_panel' && <OTAnalysisTab />}
                 {activeTab === 'e2e_tests' && <E2ETestTab />}
+                {activeTab === 'recalc_audit' && <RecalculationAuditTab />}
             </div>
 
         </div>
