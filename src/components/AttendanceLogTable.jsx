@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, CreditCard, PenLine, HeartPulse, Stethoscope, Briefcase, Timer, Scissors, Settings } from 'lucide-react';
 import { LeaveBadge } from '../pages/attendance-tracking/AttendanceComponents';
 
 const formatTime = (isoString) => {
@@ -10,6 +10,66 @@ const formatTime = (isoString) => {
 const formatDate = (isoString) => {
     if (!isoString) return '-';
     return new Date(isoString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long', timeZone: 'Europe/Istanbul' });
+};
+
+// --- RecordTypeBadge ---
+const RECORD_TYPE_CONFIG = {
+    card:           { icon: CreditCard, label: 'Kart',      bg: 'bg-slate-50',   border: 'border-slate-200', text: 'text-slate-600',   dot: 'bg-slate-400'   },
+    manual:         { icon: PenLine,    label: 'Manuel',     bg: 'bg-blue-50',    border: 'border-blue-200',  text: 'text-blue-600',    dot: 'bg-blue-500'    },
+    health_report:  { icon: HeartPulse, label: 'S. Raporu',  bg: 'bg-red-50',     border: 'border-red-200',   text: 'text-red-600',     dot: 'bg-red-500'     },
+    hospital_visit: { icon: Stethoscope,label: 'Hastane',    bg: 'bg-purple-50',  border: 'border-purple-200',text: 'text-purple-600',  dot: 'bg-purple-500'  },
+    external_duty:  { icon: Briefcase,  label: 'Dış Görev',  bg: 'bg-violet-50',  border: 'border-violet-200',text: 'text-violet-600',  dot: 'bg-violet-500'  },
+    overtime:       { icon: Timer,      label: 'Ek Mesai',   bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-600',dot: 'bg-emerald-500' },
+    split:          { icon: Scissors,   label: 'Bölme',      bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
+    system:         { icon: Settings,   label: 'Sistem',     bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
+};
+
+const OT_SOURCE_CONFIG = {
+    INTENDED:  { label: 'Planlı',    bg: 'bg-cyan-50',   border: 'border-cyan-200',  text: 'text-cyan-700'  },
+    POTENTIAL: { label: 'Algılanan', bg: 'bg-purple-50', border: 'border-purple-200',text: 'text-purple-700'},
+    MANUAL:    { label: 'Manuel',    bg: 'bg-amber-50',  border: 'border-amber-200', text: 'text-amber-700' },
+};
+
+const RecordTypeBadge = ({ log }) => {
+    const type = log.record_type || 'card';
+    const cfg = RECORD_TYPE_CONFIG[type] || RECORD_TYPE_CONFIG.card;
+    const Icon = cfg.icon;
+    const otSrc = log.ot_source_type ? OT_SOURCE_CONFIG[log.ot_source_type] : null;
+
+    return (
+        <div className="flex flex-col items-start gap-0.5">
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+                <Icon size={11} strokeWidth={2.5} />
+                <span className="text-[9px] font-bold uppercase tracking-wide whitespace-nowrap">
+                    {log.record_type_label || cfg.label}
+                </span>
+            </div>
+            {otSrc && (
+                <div className={`flex items-center gap-0.5 px-1.5 py-0 rounded-full border ${otSrc.bg} ${otSrc.border} ${otSrc.text} ml-1`}>
+                    <span className="text-[8px] font-bold uppercase tracking-wide">{otSrc.label}</span>
+                </div>
+            )}
+            {log.related_leave_type_name && type !== 'overtime' && (
+                <span className="text-[8px] text-slate-500 font-medium ml-1 leading-tight">{log.related_leave_type_name}</span>
+            )}
+        </div>
+    );
+};
+
+// --- Mobile RecordTypeBadge (compact, for Durum column) ---
+const RecordTypeBadgeMobile = ({ log }) => {
+    const type = log.record_type || 'card';
+    const cfg = RECORD_TYPE_CONFIG[type] || RECORD_TYPE_CONFIG.card;
+    const Icon = cfg.icon;
+
+    return (
+        <div className={`inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full border ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+            <Icon size={9} strokeWidth={2.5} />
+            <span className="text-[8px] font-bold uppercase tracking-wide whitespace-nowrap">
+                {log.record_type_label || cfg.label}
+            </span>
+        </div>
+    );
 };
 
 const getStatusBadge = (log) => {
@@ -145,6 +205,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] uppercase text-slate-400 font-bold tracking-widest">
                             <th className="p-2 pl-3 md:p-3 md:pl-5 lg:p-5 lg:pl-8">Tarih</th>
+                            <th className="p-2 md:p-3 lg:p-5 hidden md:table-cell">Tür</th>
                             <th className="p-2 md:p-3 lg:p-5">Giriş</th>
                             <th className="p-2 md:p-3 lg:p-5">Çıkış</th>
                             <th className="p-2 md:p-3 lg:p-5">Süre</th>
@@ -179,6 +240,10 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                         </div>
                                     </div>
                                 </td>
+                                {/* Tür sütunu — desktop only */}
+                                <td className="p-2 md:p-3 lg:p-5 hidden md:table-cell">
+                                    <RecordTypeBadge log={log} />
+                                </td>
                                 <td className="p-2 md:p-3 lg:p-5 font-mono text-xs sm:text-sm text-slate-600 font-semibold">{formatTime(log.check_in)}</td>
                                 <td className="p-2 md:p-3 lg:p-5 font-mono text-xs sm:text-sm text-slate-600 font-semibold">{formatTime(log.check_out)}</td>
                                 <td className="p-2 md:p-3 lg:p-5">
@@ -201,6 +266,10 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                 </td>
                                 <td className="p-2 md:p-3 lg:p-5">
                                     <div className="flex flex-col items-start gap-1">
+                                        {/* Mobile: record type badge (hidden on desktop) */}
+                                        <div className="md:hidden">
+                                            <RecordTypeBadgeMobile log={log} />
+                                        </div>
                                         {leaveCoverageMap[log.work_date] && doesCoverageOverlap(leaveCoverageMap[log.work_date], log) && (
                                             <LeaveBadge leave={{ is_on_leave: true, ...leaveCoverageMap[log.work_date] }} size="sm" />
                                         )}
@@ -237,7 +306,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                         ))}
                         {logs.length === 0 && (
                             <tr>
-                                <td colSpan="8" className="p-12 text-center text-slate-400">
+                                <td colSpan="9" className="p-12 text-center text-slate-400">
                                     <div className="flex flex-col items-center gap-3 opacity-50">
                                         <Calendar size={32} />
                                         <span className="text-sm font-medium">Bu aralıkta gösterilecek kayıt bulunamadı.</span>

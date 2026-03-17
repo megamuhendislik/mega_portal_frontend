@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, Clock, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, Clock, Zap, AlertTriangle } from 'lucide-react';
 
 const MONTHS = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -89,8 +89,10 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
 
                     const targetSec = md.target || 0;
                     const completedSec = md.completed || 0;
+                    const missingSec = md.missing || 0;
                     const targetH = (targetSec / 3600).toFixed(1);
                     const completedH = (completedSec / 3600).toFixed(1);
+                    const missingH = (missingSec / 3600).toFixed(1);
 
                     // Bakiye: cari ay past_target_balance, geçmiş ay balance, gelecek null
                     let balanceSec = null;
@@ -178,6 +180,19 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                                             {isFuture ? '—' : <>{completedH}<span className="text-slate-300 ml-0.5 text-[10px]">sa</span></>}
                                         </span>
                                     </div>
+
+                                    {/* Eksik mesai satırı */}
+                                    {!isFuture && missingSec > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                                <AlertTriangle size={11} className="text-rose-400" />
+                                                <span className="text-[11px] font-medium text-rose-500">Eksik</span>
+                                            </div>
+                                            <span className="text-[12px] font-semibold font-mono tabular-nums text-rose-600">
+                                                -{missingH}<span className="text-rose-300 ml-0.5 text-[10px]">sa</span>
+                                            </span>
+                                        </div>
+                                    )}
 
                                     {/* Balance — bottom section with accent background */}
                                     <div className={`-mx-3.5 -mb-3.5 mt-1 px-3.5 py-2.5 rounded-b-xl ${
