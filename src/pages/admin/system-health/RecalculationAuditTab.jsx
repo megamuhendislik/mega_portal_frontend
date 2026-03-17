@@ -93,6 +93,7 @@ export default function RecalculationAuditTab() {
             if (employeeId) body.employee_id = parseInt(employeeId);
             const res = await api.post('/system/health-check/recalculation-audit/', body, {
                 responseType: 'blob',
+                timeout: 300000,
             });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
@@ -319,6 +320,45 @@ export default function RecalculationAuditTab() {
                         </div>
                     )}
 
+                    {/* Monthly Summary Mismatches */}
+                    {result.monthly_summary_mismatches?.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-bold text-orange-800 mb-2 flex items-center gap-1.5">
+                                <ExclamationTriangleIcon className="w-4 h-4" />
+                                Aylik Ozet Uyusmazliklari ({result.monthly_summary_mismatches.length})
+                            </h4>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {result.monthly_summary_mismatches.map((m, i) => (
+                                    <div key={i} className="p-3 border border-orange-200 bg-orange-50 rounded-lg text-xs">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700">
+                                                Aylik Ozet
+                                            </span>
+                                            <span className="font-bold text-gray-700">{m.employee_name}</span>
+                                            <span className="text-gray-500">{m.date}</span>
+                                        </div>
+                                        <p className="text-gray-600">{m.detail}</p>
+                                        {m.diffs?.length > 0 && (
+                                            <div className="mt-2 space-y-0.5">
+                                                {m.diffs.map((d, j) => (
+                                                    <div key={j} className="flex items-center gap-2 text-[11px]">
+                                                        <span className="font-mono text-gray-500 w-40">{d.field}</span>
+                                                        <span className="text-gray-600">{fmtSeconds(d.stored)}</span>
+                                                        <span className="text-gray-400">&rarr;</span>
+                                                        <span className="font-bold text-orange-700">{fmtSeconds(d.fresh)}</span>
+                                                        <span className={`text-[10px] font-bold ${d.diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            ({d.diff > 0 ? '+' : ''}{fmtSeconds(Math.abs(d.diff))})
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Mismatches */}
                     {result.mismatches?.length > 0 && (
                         <div>
@@ -399,7 +439,7 @@ export default function RecalculationAuditTab() {
                                                                     }`}>
                                                                         {r.status}
                                                                     </span>
-                                                                    <span className="text-gray-500">{r.source_type || '-'}</span>
+                                                                    <span className="text-gray-500">{r.assignment_source || '-'}</span>
                                                                     <span className="font-mono text-gray-600">
                                                                         {r.start_time?.slice(0,5) || '-'} - {r.end_time?.slice(0,5) || '-'}
                                                                     </span>
