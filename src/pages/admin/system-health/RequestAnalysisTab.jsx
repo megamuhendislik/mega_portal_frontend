@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench, Users } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight, Wrench, Users, Loader2, RefreshCw } from 'lucide-react';
 import { message } from 'antd';
 import api from '../../../services/api';
 import ModalOverlay from '../../../components/ui/ModalOverlay';
@@ -25,6 +25,10 @@ export default function RequestAnalysisTab() {
     const [lcSearch, setLcSearch] = useState('');
     const [lcExpandedId, setLcExpandedId] = useState(null);
     const [lcExpandAll, setLcExpandAll] = useState(false);
+
+    // OT Fragment fix state'leri
+    const [otFixLoading, setOtFixLoading] = useState({});
+    const [otFixResults, setOtFixResults] = useState({});
 
     // Toplu Düzelt state'leri
     const [bulkFixLoading, setBulkFixLoading] = useState(false);
@@ -108,6 +112,25 @@ export default function RequestAnalysisTab() {
             fetchLifecycle();
         } catch (err) {
             message.error('Yönetici atanamadı');
+        }
+    };
+
+    const handleOtFragmentFix = async (requestId, issueCode) => {
+        setOtFixLoading(prev => ({ ...prev, [requestId]: true }));
+        try {
+            const res = await api.post('/system/health-check/ot-fragment-fix/', {
+                request_id: requestId,
+                issue_code: issueCode,
+            });
+            setOtFixResults(prev => ({ ...prev, [requestId]: res.data }));
+            message.success(
+                res.data?.action_log?.[0]?.message || 'Düzeltildi'
+            );
+            setTimeout(() => fetchLifecycle(), 1000);
+        } catch (err) {
+            message.error(err.response?.data?.error || 'Düzeltme hatası');
+        } finally {
+            setOtFixLoading(prev => ({ ...prev, [requestId]: false }));
         }
     };
 
@@ -618,7 +641,7 @@ export default function RequestAnalysisTab() {
                 {lifecycleData && (
                     <>
                         {/* Özet kartları */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-13 gap-2">
                             <SummaryBadge label="Toplam" count={lifecycleData.summary.total} color="slate" />
                             <SummaryBadge label="Sorunlu" count={lifecycleData.summary.with_issues} color="red" />
                             <SummaryBadge label="Yön. Yok" count={lifecycleData.summary.issue_breakdown.no_approver} color="rose" />
@@ -628,6 +651,10 @@ export default function RequestAnalysisTab() {
                             <SummaryBadge label="Eski PEND" count={lifecycleData.summary.issue_breakdown.stale_pending} color="yellow" />
                             <SummaryBadge label="Hayalet Onay" count={lifecycleData.summary.issue_breakdown.ghost_approval || 0} color="red" />
                             <SummaryBadge label="Duplikat" count={(lifecycleData.summary.issue_breakdown.duplicate_request || 0) + (lifecycleData.summary.issue_breakdown.cross_path_duplicate || 0)} color="rose" />
+                            <SummaryBadge label="Frag. POT" count={lifecycleData.summary.issue_breakdown?.ot_fragment_potential || 0} color="orange" />
+                            <SummaryBadge label="Frag. PEND" count={lifecycleData.summary.issue_breakdown?.ot_fragment_pending || 0} color="red" />
+                            <SummaryBadge label="Frag. APPR" count={lifecycleData.summary.issue_breakdown?.ot_fragment_approved || 0} color="rose" />
+                            <SummaryBadge label="Yanlış Saat" count={lifecycleData.summary.issue_breakdown?.ot_wrong_start_time || 0} color="red" />
                         </div>
 
                         {/* Duplikat Grup Detayı */}
@@ -832,6 +859,14 @@ export default function RequestAnalysisTab() {
                                     {bulkFixLoading ? 'Düzeltiliyor...' : `Toplu Düzelt (${fixableCount})`}
                                 </button>
                             )}
+                            {lifecycleData && Object.keys(otFixResults).length > 0 && (
+                                <button
+                                    onClick={() => { setOtFixResults({}); fetchLifecycle(); }}
+                                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 flex items-center gap-1 whitespace-nowrap"
+                                >
+                                    <RefreshCw size={12} /> Tekrar Denetle
+                                </button>
+                            )}
                         </div>
 
                         {/* Talep Listesi */}
@@ -854,6 +889,9 @@ export default function RequestAnalysisTab() {
                                         selectedFixApprover={selectedFixApprover}
                                         setSelectedFixApprover={setSelectedFixApprover}
                                         handleSingleFix={handleSingleFix}
+                                        otFixLoading={otFixLoading}
+                                        otFixResults={otFixResults}
+                                        handleOtFragmentFix={handleOtFragmentFix}
                                     />
                                 ))
                             }
@@ -1149,12 +1187,15 @@ const STATUS_LABELS = { PENDING: 'Bekliyor', APPROVED: 'Onaylı', REJECTED: 'Red
 const STATUS_COLORS = { PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-emerald-100 text-emerald-700', REJECTED: 'bg-red-100 text-red-700', CANCELLED: 'bg-slate-100 text-slate-500', ESCALATED: 'bg-purple-100 text-purple-700' };
 const SEVERITY_COLORS = { CRITICAL: 'bg-red-600 text-white', HIGH: 'bg-orange-500 text-white', MEDIUM: 'bg-amber-400 text-amber-900', LOW: 'bg-blue-100 text-blue-700' };
 
-function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelectedFixApprover, handleSingleFix }) {
+function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelectedFixApprover, handleSingleFix, otFixLoading, otFixResults, handleOtFragmentFix }) {
     const hasIssues = req.issues && req.issues.length > 0;
-    const borderColor = hasIssues
-        ? (req.issues.some(i => i.severity === 'CRITICAL') ? 'border-l-red-600' :
-           req.issues.some(i => i.severity === 'HIGH') ? 'border-l-orange-500' : 'border-l-amber-400')
-        : 'border-l-emerald-400';
+    const isOtFixed = otFixResults && otFixResults[req.id];
+    const borderColor = isOtFixed
+        ? 'border-l-emerald-500'
+        : hasIssues
+            ? (req.issues.some(i => i.severity === 'CRITICAL') ? 'border-l-red-600' :
+               req.issues.some(i => i.severity === 'HIGH') ? 'border-l-orange-500' : 'border-l-amber-400')
+            : 'border-l-emerald-400';
 
     return (
         <div className={`border rounded-lg border-l-4 ${borderColor} bg-white`}>
@@ -1285,8 +1326,40 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                                         {issue.severity}
                                     </span>
                                     <span className="text-xs">{issue.description}</span>
+                                    {issue.fragment_count && (
+                                        <span className="text-[10px] text-slate-500 ml-2">({issue.fragment_count} ayrı kayıt)</span>
+                                    )}
+                                    {issue.correct_start_time && (
+                                        <span className="text-[10px] text-emerald-600 ml-2">Doğrusu: {issue.correct_start_time}</span>
+                                    )}
                                 </div>
                             ))}
+                            {req.issues?.filter(i => i.code?.startsWith('OT_')).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {req.issues.filter(i => i.code?.startsWith('OT_')).map((issue, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOtFragmentFix(req.id, issue.code);
+                                            }}
+                                            disabled={otFixLoading?.[req.id]}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                        >
+                                            {otFixLoading?.[req.id] ? (
+                                                <span className="flex items-center gap-1">
+                                                    <Loader2 size={12} className="animate-spin" /> Düzeltiliyor...
+                                                </span>
+                                            ) : (
+                                                issue.code === 'OT_FRAGMENT_POTENTIAL' ? 'Birleştir (Recalculate)' :
+                                                issue.code === 'OT_FRAGMENT_PENDING' ? 'İptal Et & Yeniden Hesapla' :
+                                                issue.code === 'OT_FRAGMENT_APPROVED' ? 'Birleştir & Düzelt' :
+                                                issue.code === 'OT_WRONG_START_TIME' ? 'Saati Düzelt' : 'Düzelt'
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
