@@ -641,8 +641,9 @@ export default function RequestAnalysisTab() {
                 {lifecycleData && (
                     <>
                         {/* Özet kartları */}
-                        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-13 gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-14 gap-2">
                             <SummaryBadge label="Toplam" count={lifecycleData.summary.total} color="slate" />
+                            <SummaryBadge label="Potansiyel" count={lifecycleData.summary.by_status?.POTENTIAL || 0} color="purple" />
                             <SummaryBadge label="Sorunlu" count={lifecycleData.summary.with_issues} color="red" />
                             <SummaryBadge label="Yön. Yok" count={lifecycleData.summary.issue_breakdown.no_approver} color="rose" />
                             <SummaryBadge label="Pasif Yön." count={lifecycleData.summary.issue_breakdown.inactive_approver} color="orange" />
@@ -1183,8 +1184,10 @@ function SummaryBadge({ label, count, color }) {
 
 const TYPE_LABELS = { OVERTIME: 'Ek Mesai', LEAVE: 'İzin', CARDLESS_ENTRY: 'Kartsız', HEALTH_REPORT: 'Sağlık R.' };
 const TYPE_COLORS = { OVERTIME: 'bg-violet-100 text-violet-700', LEAVE: 'bg-blue-100 text-blue-700', CARDLESS_ENTRY: 'bg-teal-100 text-teal-700', HEALTH_REPORT: 'bg-pink-100 text-pink-700' };
-const STATUS_LABELS = { PENDING: 'Bekliyor', APPROVED: 'Onaylı', REJECTED: 'Red', CANCELLED: 'İptal', ESCALATED: 'Üst Yön.' };
-const STATUS_COLORS = { PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-emerald-100 text-emerald-700', REJECTED: 'bg-red-100 text-red-700', CANCELLED: 'bg-slate-100 text-slate-500', ESCALATED: 'bg-purple-100 text-purple-700' };
+const STATUS_LABELS = { POTENTIAL: 'Potansiyel', PENDING: 'Bekliyor', APPROVED: 'Onaylı', REJECTED: 'Red', CANCELLED: 'İptal', ESCALATED: 'Üst Yön.' };
+const STATUS_COLORS = { POTENTIAL: 'bg-indigo-100 text-indigo-700', PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-emerald-100 text-emerald-700', REJECTED: 'bg-red-100 text-red-700', CANCELLED: 'bg-slate-100 text-slate-500', ESCALATED: 'bg-purple-100 text-purple-700' };
+const SOURCE_LABELS = { INTENDED: 'Planlı', POTENTIAL: 'Algılanan', MANUAL: 'Manuel' };
+const SOURCE_COLORS = { INTENDED: 'bg-cyan-100 text-cyan-700', POTENTIAL: 'bg-violet-100 text-violet-700', MANUAL: 'bg-slate-100 text-slate-600' };
 const SEVERITY_COLORS = { CRITICAL: 'bg-red-600 text-white', HIGH: 'bg-orange-500 text-white', MEDIUM: 'bg-amber-400 text-amber-900', LOW: 'bg-blue-100 text-blue-700' };
 
 function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelectedFixApprover, handleSingleFix, otFixLoading, otFixResults, handleOtFragmentFix }) {
@@ -1209,6 +1212,14 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[req.status] || ''}`}>
                     {STATUS_LABELS[req.status] || req.status}
                 </span>
+                {req.status === 'POTENTIAL' && req.source_type && (
+                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${SOURCE_COLORS[req.source_type] || 'bg-slate-100 text-slate-600'}`}>
+                        {SOURCE_LABELS[req.source_type] || req.source_type}
+                    </span>
+                )}
+                {req.duration_display && req.status === 'POTENTIAL' && (
+                    <span className="text-[10px] text-slate-500">{req.duration_display}</span>
+                )}
                 {req.target_approver && (
                     <span className="text-[10px] text-slate-500 truncate max-w-[120px]">→ {req.target_approver.name}</span>
                 )}
@@ -1238,7 +1249,13 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                         </div>
                         <div>
                             <span className="text-[10px] text-slate-400 font-bold block">Kaynak</span>
-                            <span className="font-medium">{req.source_type || '-'}</span>
+                            {req.source_type ? (
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${SOURCE_COLORS[req.source_type] || ''}`}>
+                                    {SOURCE_LABELS[req.source_type] || req.source_type}
+                                </span>
+                            ) : (
+                                <span className="font-medium">-</span>
+                            )}
                         </div>
                         <div>
                             <span className="text-[10px] text-slate-400 font-bold block">Oluşturulma</span>
@@ -1247,6 +1264,7 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                     </div>
 
                     {/* Yönetici */}
+                    {req.status !== 'POTENTIAL' && (
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 font-bold">Yönetici:</span>
                         {req.target_approver ? (
@@ -1263,8 +1281,10 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                             <span className="text-red-600 font-bold">ATANMAMIŞ</span>
                         )}
                     </div>
+                    )}
 
-                    {/* Bildirim */}
+                    {/* Bildirim — POTENTIAL için gösterme */}
+                    {req.status !== 'POTENTIAL' && (
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 font-bold">Bildirim:</span>
                         {req.notification?.sent === true ? (
@@ -1281,8 +1301,10 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                             <span className="text-slate-400">—</span>
                         )}
                     </div>
+                    )}
 
-                    {/* Görünürlük */}
+                    {/* Görünürlük — POTENTIAL için gösterme */}
+                    {req.status !== 'POTENTIAL' && (
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 font-bold">Görünürlük:</span>
                         {req.visibility?.in_pending_approvals === true ? (
@@ -1297,6 +1319,7 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                             <span className="text-slate-400">—</span>
                         )}
                     </div>
+                    )}
 
                     {/* Onay bilgisi */}
                     {req.approval_info?.approved_by && (
@@ -1308,6 +1331,33 @@ function LifecycleRow({ req, expanded, onToggle, selectedFixApprover, setSelecte
                             )}
                             {req.approval_info.rejection_reason && (
                                 <span className="text-red-500 ml-1">Sebep: {req.approval_info.rejection_reason}</span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* POTENTIAL OT detayı */}
+                    {req.status === 'POTENTIAL' && req.type === 'OVERTIME' && (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 mt-1">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                                <div>
+                                    <span className="text-indigo-400 font-bold block text-[10px]">Başlangıç</span>
+                                    <span className="font-medium text-indigo-700">{req.start_time || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-indigo-400 font-bold block text-[10px]">Bitiş</span>
+                                    <span className="font-medium text-indigo-700">{req.end_time || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-indigo-400 font-bold block text-[10px]">Süre</span>
+                                    <span className="font-medium text-indigo-700">{req.duration_display || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-indigo-400 font-bold block text-[10px]">Segment</span>
+                                    <span className="font-medium text-indigo-700">{Array.isArray(req.segments) ? req.segments.length : 0} adet</span>
+                                </div>
+                            </div>
+                            {req.group_key && (
+                                <div className="mt-1 text-[10px] text-indigo-500">Group: {req.group_key}</div>
                             )}
                         </div>
                     )}
