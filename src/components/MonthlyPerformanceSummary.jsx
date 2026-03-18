@@ -360,11 +360,17 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 className="absolute z-30 cursor-pointer group"
                                 style={{
                                     left: `${stats.indicatorLeft}%`,
-                                    top: '28px',
+                                    top: '14px',
                                     bottom: '0px',
                                     width: '0px'
                                 }}
                             >
+                                {/* Past target value label above triangle */}
+                                <div className="absolute -top-[22px] left-1/2 whitespace-nowrap pointer-events-none" style={{ transform: `translateX(${stats.indicatorLeft > 90 ? '-80%' : stats.indicatorLeft < 10 ? '-20%' : '-50%'})` }}>
+                                    <span className="text-[10px] font-black text-slate-500 group-hover:text-indigo-600 transition-colors tabular-nums">
+                                        {stats.pastTargetHours} sa
+                                    </span>
+                                </div>
                                 {/* Triangle marker at top */}
                                 <div className="absolute -top-2 left-1/2 -translate-x-1/2">
                                     <svg width="12" height="8" viewBox="0 0 12 8" className="text-slate-500 group-hover:text-indigo-500 transition-colors drop-shadow-sm">
@@ -440,9 +446,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 </Tooltip>
                             )}
                             {/* Eksik — Kırmızı çizgili */}
-                            <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
-                                <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
-                            </div>
+                            {stats.pMissing > 0 && (
+                                <Tooltip title={`Eksik: ${stats.missingHours} sa`}>
+                                    <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
+                                        <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
                             {/* Kalan — Gri */}
                             <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} />
                         </div>
