@@ -96,14 +96,21 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             const lateSec = periodSummary.total_late_seconds || 0;
 
             // Percentages for Normal Work Breakdown (Target Base)
+            // Bar 1: Include leave + report as separate colored segments
             let pCompleted = 0;
             let pMissing = 0;
             let pRemaining = 0;
+            let pLeaveBar1 = 0;
+            let pReportBar1 = 0;
 
             if (targetSec > 0) {
                 pCompleted = Math.min(100, (realizedSec / targetSec) * 100);
+                pLeaveBar1 = (leaveSec / targetSec) * 100;
+                pReportBar1 = (healthReportSec / targetSec) * 100;
                 pMissing = Math.min(100, (missingSec / targetSec) * 100);
-                pRemaining = (remainingSec / targetSec) * 100;
+                // Kalan = hedef - (tamamlanan + izin + rapor + eksik)
+                const adjustedRemainingSec = Math.max(0, targetSec - realizedSec - leaveSec - healthReportSec - missingSec);
+                pRemaining = (adjustedRemainingSec / targetSec) * 100;
             }
 
             // Bar 2: Total Progress (Normal + OT + Leave + Report)
@@ -161,6 +168,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 lateMinutes: Math.floor(lateSec / 60),
 
                 pCompleted,
+                pLeaveBar1,
+                pReportBar1,
                 pMissing,
                 pRemaining,
                 pTotal, pNormal, pOtApproved, pLeave, pHealthReport, // For Bar 2 stacked segments
@@ -191,17 +200,23 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pPending: targetSec > 0 ? Math.min(100 - pTotal, (otPendingSec / targetSec) * 100) : 0,
                 pPotential: targetSec > 0 ? Math.min(100 - Math.min(100, ((totalEforSec + otPendingSec) / targetSec) * 100), (otPotentialSec / targetSec) * 100) : 0,
 
-                // Past target = completed + missing = what should have been done by today
-                pastTargetSec: realizedSec + missingSec,
-                pastTargetHours: ((realizedSec + missingSec) / 3600).toFixed(1),
+                // Past target = completed + missing + leave + report = what should have been accounted for by today
+                pastTargetSec: realizedSec + missingSec + leaveSec + healthReportSec,
+                pastTargetHours: ((realizedSec + missingSec + leaveSec + healthReportSec) / 3600).toFixed(1),
 
-                // Indicator position: past_target as % of full month target
-                indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + missingSec) / targetSec) * 100) : 0,
+                // Adjusted remaining for display
+                adjustedRemainingHours: (Math.max(0, targetSec - realizedSec - leaveSec - healthReportSec - missingSec) / 3600).toFixed(1),
 
-                // Net balance vs past_target (total work vs what should have been done)
-                netBalanceForLabelHours: (Math.abs(netWorkSec - (realizedSec + missingSec)) / 3600).toFixed(1),
-                isNetSurplus: netWorkSec - (realizedSec + missingSec) > 0,
-                isNetNeutral: Math.abs(netWorkSec - (realizedSec + missingSec)) < 360, // ±0.1 sa threshold
+                // Indicator position: past_target (including leave+report credits) as % of full month target
+                indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + missingSec + leaveSec + healthReportSec) / targetSec) * 100) : 0,
+
+                // Net balance vs past_target (total effort including credits vs expected)
+                // totalEffort = normal + OT + leave + report
+                // pastTarget = normal + missing + leave + report
+                // netBalance = OT - missing (leave+report cancel out)
+                netBalanceForLabelHours: (Math.abs(overtimeSec - missingSec) / 3600).toFixed(1),
+                isNetSurplus: overtimeSec - missingSec > 0,
+                isNetNeutral: Math.abs(overtimeSec - missingSec) < 360, // ±0.1 sa threshold
 
                 // Projection: if all remaining hours fully worked
                 projectionIfFullHours: ((netWorkSec + remainingSec) / 3600).toFixed(1),
@@ -388,27 +403,65 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     <div>
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Normal Mesai Dağılımı</span>
-                            <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
+                            <div className="flex gap-3 text-[10px] font-black uppercase tracking-wide flex-wrap">
                                 <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Tamamlanan</span>
+                                {parseFloat(stats.leaveHours) > 0 && (
+                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>İzin</span>
+                                )}
+                                {parseFloat(stats.healthReportHours) > 0 && (
+                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>Rapor</span>
+                                )}
                                 <span className="flex items-center gap-1.5 text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>Eksik</span>
                                 <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
                             </div>
                         </div>
-                        {/* ENHANCED BAR VISUALS */}
+                        {/* ENHANCED BAR VISUALS — with leave + report segments */}
                         <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
-                            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)] relative group" style={{ width: `${stats.pCompleted}%` }}>
-                                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            </div>
+                            {/* Tamamlanan — Mavi */}
+                            <Tooltip title={`Tamamlanan: ${stats.completedHours} sa`}>
+                                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)] relative group" style={{ width: `${stats.pCompleted}%` }}>
+                                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                </div>
+                            </Tooltip>
+                            {/* İzin — Cyan */}
+                            {stats.pLeaveBar1 > 0 && (
+                                <Tooltip title={`İzin: ${stats.leaveHours} sa`}>
+                                    <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(6,182,212,0.4)] relative group" style={{ width: `${stats.pLeaveBar1}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
+                            {/* Rapor — Turuncu */}
+                            {stats.pReportBar1 > 0 && (
+                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportHours} sa`}>
+                                    <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(249,115,22,0.4)] relative group" style={{ width: `${stats.pReportBar1}%` }}>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    </div>
+                                </Tooltip>
+                            )}
+                            {/* Eksik — Kırmızı çizgili */}
                             <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
-                                {/* Striped pattern for Missing */}
                                 <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
                             </div>
+                            {/* Kalan — Gri */}
                             <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} />
                         </div>
-                        <div className="flex justify-between text-xs font-bold text-slate-600 mt-2 px-1">
-                            <span className="text-blue-700">{stats.completedHours} sa</span>
-                            <span className="text-rose-600">{stats.missingHours > 0 ? `-${stats.missingHours} sa` : ''}</span>
-                            <span className="text-slate-400">{stats.remainingHours} sa</span>
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-600 mt-2 px-1">
+                            <div className="flex items-center gap-3 text-[10px] font-bold flex-wrap">
+                                <span className="text-blue-700">{stats.completedHours} sa</span>
+                                {parseFloat(stats.leaveHours) > 0 && (
+                                    <span className="text-cyan-600">+ {stats.leaveHours} sa</span>
+                                )}
+                                {parseFloat(stats.healthReportHours) > 0 && (
+                                    <span className="text-orange-600">+ {stats.healthReportHours} sa</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {parseFloat(stats.missingHours) > 0 && (
+                                    <span className="text-rose-600">-{stats.missingHours} sa</span>
+                                )}
+                                <span className="text-slate-400">{stats.adjustedRemainingHours} sa kalan</span>
+                            </div>
                         </div>
                     </div>
 
