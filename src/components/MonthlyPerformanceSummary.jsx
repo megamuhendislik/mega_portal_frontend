@@ -407,9 +407,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                     {/* Bar 1: Normal Mesai */}
                     <div>
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Normal Mesai Dağılımı</span>
-                            <div className="flex gap-3 text-[10px] font-black uppercase tracking-wide flex-wrap">
+                        <div className="flex flex-wrap justify-between items-center gap-y-1 mb-3">
+                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider shrink-0 mr-4">Normal Mesai Dağılımı</span>
+                            <div className="flex gap-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
                                 <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Tamamlanan</span>
                                 {parseFloat(stats.leaveHours) > 0 && (
                                     <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>İzin</span>
@@ -478,8 +478,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     {/* Bar 2: Toplam Efor */}
                     <div className="pt-6 border-t border-slate-100">
                         {/* Header row */}
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider">
+                        <div className="flex flex-wrap justify-between items-center gap-y-1 mb-3">
+                            <span className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2 tracking-wider shrink-0 mr-4">
                                 Toplam Efor
                                 <Tooltip title="Toplam Efor = Normal Mesai + Onaylı Ek Mesai + İzin Saatleri + Sağlık Raporu saatlerinin toplamıdır." placement="top">
                                     <Info className="w-3.5 h-3.5 text-slate-400 cursor-help" />
@@ -490,7 +490,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </div>
 
                         {/* Legend */}
-                        <div className="flex gap-3 mb-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
+                        <div className="flex gap-2 mb-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
                             <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Normal</span>
                             <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Ek Mesai</span>
                             {parseFloat(stats.leaveHours) > 0 && (
@@ -702,9 +702,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                 {/* A. Chart (Tube) */}
                                 <div className="mb-8">
-                                    <div className="flex justify-between items-end mb-3 px-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">AYLIK PUANTAJ GRAFİĞİ</span>
-                                        <div className="flex flex-wrap gap-3 text-[9px] font-bold uppercase tracking-wide">
+                                    <div className="flex flex-wrap justify-between items-end gap-y-1 mb-3 px-1">
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest shrink-0 mr-4">AYLIK PUANTAJ GRAFİĞİ</span>
+                                        <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wide">
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span><span className="text-slate-500">Normal</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 inline-block"></span><span className="text-slate-500">İzin</span></span>
                                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block"></span><span className="text-slate-500">Onaylı</span></span>
@@ -975,7 +975,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     <th className="px-4 py-4 text-center">Normal Çalışma</th>
                                                     <th className="px-4 py-4 text-center text-rose-500">Eksik</th>
                                                     <th className="px-4 py-4 text-center text-emerald-500">Ek Mesai <span className="text-[8px] text-slate-400 font-normal">(O/B/P)</span></th>
-                                                    <th className="px-4 py-4 text-right">Net Bakiye</th>
+                                                    <th className="px-4 py-4 text-right">Net Fark</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -991,8 +991,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const targetH = (m.target / 3600).toFixed(1);
                                                         const completedH = (m.completed / 3600).toFixed(1);
                                                         const missingH = (m.missing / 3600).toFixed(1);
-                                                        const cumulativeBalanceH = m.cumulativeBalance || '0.0';
-                                                        const isCumulativePositive = m.cumulativeBalance >= 0;
+                                                        // Net Fark: cari ay→past_target_balance (hedefe kadar), geçmiş→tam bakiye
+                                                        const currentFM = stats.cumulative?.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
+                                                        const monthNetSec = m.month === currentFM
+                                                            ? (m.past_target_balance ?? m.balance ?? 0)
+                                                            : (m.balance ?? 0);
+                                                        const monthNetH = (monthNetSec / 3600).toFixed(1);
+                                                        const isMonthNetPositive = monthNetSec >= 0;
 
                                                         return (
                                                             <tr key={m.month} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'}`}>
@@ -1030,8 +1035,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     {isFuture ? (
                                                                         <span className="text-slate-300 text-xs">&mdash;</span>
                                                                     ) : (
-                                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isCumulativePositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
-                                                                            {isCumulativePositive && parseFloat(cumulativeBalanceH) > 0 ? '+' : ''}{cumulativeBalanceH} sa
+                                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isMonthNetPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
+                                                                            {isMonthNetPositive && parseFloat(monthNetH) > 0 ? '+' : ''}{monthNetH} sa
                                                                         </span>
                                                                     )}
                                                                 </td>

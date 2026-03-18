@@ -1119,9 +1119,11 @@ const AssignedOvertimeTab = () => {
                                                     : item.ot_type === 'OFF_DAY' ? 'text-amber-700 bg-amber-50'
                                                     : 'text-slate-700 bg-slate-50';
 
+                                                const subSegments = item.segments || [];
+
                                                 return (
                                                     <label key={item.overtime_request_id}
-                                                        className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                                                        className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
                                                             checked ? 'bg-blue-50/70 border border-blue-200' : 'bg-slate-50/50 border border-transparent hover:bg-slate-100/70'
                                                         }`}>
                                                         <input
@@ -1137,19 +1139,32 @@ const AssignedOvertimeTab = () => {
                                                                     }
                                                                 });
                                                             }}
-                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
                                                         />
-                                                        <div className="flex-1 flex flex-wrap items-center gap-2">
-                                                            <Clock size={12} className="text-slate-400 flex-shrink-0" />
-                                                            <span className="text-sm font-semibold text-slate-700">
-                                                                {item.start_time} – {item.end_time}
-                                                            </span>
-                                                            <span className="text-xs text-slate-500">
-                                                                ({formatDuration(item.actual_overtime_seconds)})
-                                                            </span>
-                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${otTypeColor}`}>
-                                                                {otTypeLabel}
-                                                            </span>
+                                                        <div className="flex-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <Clock size={12} className="text-slate-400 flex-shrink-0" />
+                                                                <span className="text-sm font-semibold text-slate-700">
+                                                                    {item.start_time} – {item.end_time}
+                                                                </span>
+                                                                <span className="text-xs text-slate-500">
+                                                                    ({formatDuration(item.actual_overtime_seconds)})
+                                                                </span>
+                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${otTypeColor}`}>
+                                                                    {otTypeLabel}
+                                                                </span>
+                                                            </div>
+                                                            {/* Alt segmentler (birden fazla giriş/çıkış) */}
+                                                            {subSegments.length > 1 && (
+                                                                <div className="mt-1.5 ml-4 space-y-0.5">
+                                                                    {subSegments.map((seg, idx) => (
+                                                                        <div key={idx} className="text-[11px] text-slate-400 flex items-center gap-1">
+                                                                            <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                                                            {seg.start} – {seg.end}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </label>
                                                 );
