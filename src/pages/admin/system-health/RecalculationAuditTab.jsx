@@ -25,6 +25,18 @@ function fmtSeconds(s) {
     return `${m} dk`;
 }
 
+const ROOT_CAUSE_COLORS = {
+    STALE_CALC: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Eski Hesaplama' },
+    TOLERANCE_DIFF: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Tolerans Farki' },
+    BREAK_DIFF: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Mola Farki' },
+    SPLIT_CHANGE: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Kayit Bolme' },
+    OT_THRESHOLD: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'OT Esik' },
+    DEFICIT_FILL: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Eksik Tamamlama' },
+    STATUS_DRIFT: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Durum Farki' },
+    RECORD_COUNT: { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Kayit Sayisi' },
+    HOSPITAL_VISIT: { bg: 'bg-pink-100', text: 'text-pink-700', label: 'Hastane Ziyareti' },
+};
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function RecalculationAuditTab() {
@@ -388,6 +400,11 @@ export default function RecalculationAuditTab() {
                                                 <span className={`font-bold ${m.fixed ? 'text-green-800' : 'text-red-800'}`}>{m.date}</span>
                                                 <span className="text-gray-700">{m.employee_name}</span>
                                                 <span className="text-gray-400">({m.diffs?.length || 0} fark)</span>
+                                                {m.root_cause && ROOT_CAUSE_COLORS[m.root_cause] && (
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${ROOT_CAUSE_COLORS[m.root_cause].bg} ${ROOT_CAUSE_COLORS[m.root_cause].text}`}>
+                                                        {ROOT_CAUSE_COLORS[m.root_cause].label}
+                                                    </span>
+                                                )}
                                                 {m.fixed && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[9px] font-bold">DUZELTILDI</span>}
                                             </div>
                                             {expandedMismatches.has(i) ?
@@ -454,6 +471,72 @@ export default function RecalculationAuditTab() {
                                                             ))}
                                                         </div>
                                                     </div>
+                                                )}
+
+                                                {/* Simulation Logs */}
+                                                {m.simulation_logs?.length > 0 && (
+                                                    <details className="mt-2">
+                                                        <summary className="text-[10px] font-bold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                                                            Simulasyon Logu ({m.simulation_logs.length} satir)
+                                                        </summary>
+                                                        <pre className="mt-1 p-2 bg-gray-900 text-green-400 text-[10px] rounded max-h-48 overflow-y-auto font-mono leading-relaxed">
+                                                            {m.simulation_logs.join('\n')}
+                                                        </pre>
+                                                    </details>
+                                                )}
+
+                                                {/* Day Rules */}
+                                                {m.day_rules && !m.day_rules.error && (
+                                                    <details className="mt-2">
+                                                        <summary className="text-[10px] font-bold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                                                            Gun Kurallari
+                                                        </summary>
+                                                        <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px] text-gray-600 bg-gray-50 p-2 rounded">
+                                                            <span>Vardiya: {m.day_rules.shift_start} - {m.day_rules.shift_end}</span>
+                                                            <span>Ogle: {m.day_rules.lunch_start} - {m.day_rules.lunch_end}</span>
+                                                            <span>Tolerans: {m.day_rules.tolerance_minutes} dk</span>
+                                                            <span>Servis Tol: {m.day_rules.service_tolerance_minutes} dk</span>
+                                                            <span>Min OT: {m.day_rules.minimum_overtime_minutes} dk</span>
+                                                            <span>Mola Ind: {m.day_rules.daily_break_allowance} dk</span>
+                                                            <span>Hedef: {m.day_rules.target_formatted || '-'}</span>
+                                                            <span>{m.day_rules.is_off_day ? 'TATIL' : 'Is gunu'}</span>
+                                                        </div>
+                                                    </details>
+                                                )}
+
+                                                {/* Leave/Cardless/Meal Requests */}
+                                                {(m.leave_requests?.length > 0 || m.cardless_requests?.length > 0 || m.meal_requests?.length > 0) && (
+                                                    <details className="mt-2">
+                                                        <summary className="text-[10px] font-bold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                                                            Diger Talepler
+                                                        </summary>
+                                                        <div className="mt-1 space-y-1 text-[11px]">
+                                                            {m.leave_requests?.map((r, k) => (
+                                                                <div key={`l${k}`} className="flex items-center gap-2">
+                                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                                        r.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                                                        r.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                                                        'bg-red-100 text-red-700'
+                                                                    }`}>{r.status}</span>
+                                                                    <span className="text-gray-700">{r.request_type__name || 'Izin'}</span>
+                                                                    <span className="text-gray-500">{r.start_date} - {r.end_date}</span>
+                                                                </div>
+                                                            ))}
+                                                            {m.cardless_requests?.map((r, k) => (
+                                                                <div key={`c${k}`} className="flex items-center gap-2">
+                                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                                        r.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                                                        r.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                                                        'bg-red-100 text-red-700'
+                                                                    }`}>{r.status}</span>
+                                                                    <span className="text-gray-700">Kartsiz Giris</span>
+                                                                    <span className="font-mono text-gray-500">
+                                                                        {String(r.check_in_time || '-').slice(0,5)} - {String(r.check_out_time || '-').slice(0,5)}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </details>
                                                 )}
                                             </div>
                                         )}
