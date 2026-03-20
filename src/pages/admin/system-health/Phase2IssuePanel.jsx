@@ -44,25 +44,27 @@ function TypeBadge({ type }) {
 // ─── Category Tabs ─────────────────────────────────────────────────
 function CategoryTabs({ byMatch, active, onSelect }) {
     const tabs = [
-        { key: 'ALL', label: 'Tumu', count: Object.values(byMatch).reduce((s, v) => s + v, 0), color: 'indigo' },
-        { key: 'UYUMSUZ', label: 'Uyumsuz', count: byMatch.UYUMSUZ || 0, color: 'red' },
-        { key: 'KART_YOK', label: 'Kart Yok', count: byMatch.KART_YOK || 0, color: 'gray' },
-        { key: 'KISMEN', label: 'Kismen', count: byMatch.KISMEN || 0, color: 'amber' },
+        { key: 'ALL', label: 'Tumu', count: Object.values(byMatch).reduce((s, v) => s + v, 0),
+          activeClass: 'bg-indigo-600 text-white border-indigo-600',
+          inactiveClass: 'bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50' },
+        { key: 'UYUMSUZ', label: 'Uyumsuz', count: byMatch.UYUMSUZ || 0,
+          activeClass: 'bg-red-600 text-white border-red-600',
+          inactiveClass: 'bg-white text-red-700 border-red-300 hover:bg-red-50' },
+        { key: 'KART_YOK', label: 'Kart Yok', count: byMatch.KART_YOK || 0,
+          activeClass: 'bg-gray-600 text-white border-gray-600',
+          inactiveClass: 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' },
+        { key: 'KISMEN', label: 'Kismen', count: byMatch.KISMEN || 0,
+          activeClass: 'bg-amber-600 text-white border-amber-600',
+          inactiveClass: 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50' },
     ];
     return (
         <div className="flex gap-2 flex-wrap">
-            {tabs.map(t => {
-                const isActive = active === t.key;
-                const base = `px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer`;
-                const activeStyle = isActive
-                    ? `bg-${t.color}-600 text-white border-${t.color}-600`
-                    : `bg-white text-${t.color}-700 border-${t.color}-300 hover:bg-${t.color}-50`;
-                return (
-                    <button key={t.key} onClick={() => onSelect(t.key)} className={`${base} ${activeStyle}`}>
-                        {t.label} ({t.count})
-                    </button>
-                );
-            })}
+            {tabs.map(t => (
+                <button key={t.key} onClick={() => onSelect(t.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${active === t.key ? t.activeClass : t.inactiveClass}`}>
+                    {t.label} ({t.count})
+                </button>
+            ))}
         </div>
     );
 }
