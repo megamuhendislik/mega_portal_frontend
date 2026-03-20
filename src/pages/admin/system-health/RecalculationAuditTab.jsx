@@ -56,6 +56,28 @@ export default function RecalculationAuditTab() {
     const [uniFixing, setUniFixing] = useState(false);
     const [uniResult, setUniResult] = useState(null);
     const [uniError, setUniError] = useState(null);
+    const [uniLogText, setUniLogText] = useState(null);
+    const [uniLogLoading, setUniLogLoading] = useState(false);
+    const [showUniLog, setShowUniLog] = useState(false);
+
+    const fetchUnifiedLogText = async () => {
+        if (uniLogText) { setShowUniLog(!showUniLog); return; }
+        setUniLogLoading(true);
+        try {
+            const body = { date_from: startDate, date_to: endDate, download: true };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/unified-audit/', body, {
+                responseType: 'text',
+                timeout: 300000,
+            });
+            setUniLogText(typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2));
+            setShowUniLog(true);
+        } catch (e) {
+            alert('Log yuklenemedi: ' + (e.message || 'Bilinmeyen hata'));
+        } finally {
+            setUniLogLoading(false);
+        }
+    };
 
     const downloadUnifiedLog = async () => {
         try {
@@ -88,6 +110,8 @@ export default function RecalculationAuditTab() {
         fix ? setUniFixing(true) : setUniLoading(true);
         setUniError(null);
         setUniResult(null);
+        setUniLogText(null);
+        setShowUniLog(false);
         try {
             const body = { date_from: startDate, date_to: endDate, fix };
             if (employeeId) body.employee_id = parseInt(employeeId);
@@ -705,11 +729,23 @@ export default function RecalculationAuditTab() {
                                 </button>
                             )}
                             <button
+                                onClick={fetchUnifiedLogText}
+                                disabled={uniLogLoading}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm border transition-all ${
+                                    showUniLog
+                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                        : 'text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
+                                } active:scale-95`}
+                            >
+                                <MagnifyingGlassIcon className="w-4 h-4" />
+                                {uniLogLoading ? 'Yukleniyor...' : showUniLog ? 'Logu Gizle' : 'Detayli Logu Goster'}
+                            </button>
+                            <button
                                 onClick={downloadUnifiedLog}
                                 className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-emerald-700 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 active:scale-95 transition-all"
                             >
                                 <DocumentArrowDownIcon className="w-4 h-4" />
-                                TXT Log Indir
+                                TXT Indir
                             </button>
                         </div>
                     </div>
@@ -810,6 +846,16 @@ export default function RecalculationAuditTab() {
                                     Tum denetimler basarili - sorun bulunamadi!
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Detayli Log Paneli */}
+                    {showUniLog && uniLogText && (
+                        <div>
+                            <h4 className="text-sm font-bold text-gray-800 mb-2">Detayli Hesaplama Denetim Logu</h4>
+                            <pre className="p-4 bg-gray-900 text-green-400 rounded-lg text-[11px] leading-relaxed overflow-auto max-h-[600px] font-mono whitespace-pre-wrap">
+                                {uniLogText}
+                            </pre>
                         </div>
                     )}
                 </div>
