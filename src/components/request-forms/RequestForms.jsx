@@ -25,10 +25,12 @@ export const LeaveRequestForm = ({
 }) => {
     const balance = leaveBalance;
     const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
-    const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
-    const isExcuseLeave = selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
-    const isBirthdayLeave = selectedTypeObj && selectedTypeObj.code === 'BIRTHDAY_LEAVE';
-    const isInsufficient = isInsufficientBalance;
+    const isSpecialLeave = typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:');
+    const specialLeaveCode = isSpecialLeave ? leaveForm.request_type.split(':')[1] : null;
+    const isAnnualLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
+    const isExcuseLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
+    const isBirthdayLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'BIRTHDAY_LEAVE';
+    const isInsufficient = isSpecialLeave ? false : isInsufficientBalance;
 
     return (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
@@ -323,11 +325,80 @@ export const LeaveRequestForm = ({
                         .map(t => (
                             <option key={t.id} value={t.id}>{t.name}{t.code === 'BIRTHDAY_LEAVE' ? ' 🎂' : ''}</option>
                         ))}
+                    <optgroup label="Özel İzinler">
+                        <option value="SPECIAL:PATERNITY">Babalık İzni (5 gün)</option>
+                        <option value="SPECIAL:BEREAVEMENT">Ölüm İzni (3 gün)</option>
+                        <option value="SPECIAL:UNPAID">Ücretsiz İzin</option>
+                        <option value="SPECIAL:MARRIAGE">Evlilik İzni (3 gün)</option>
+                    </optgroup>
                 </select>
             </div>
 
-            {/* Doğum Günü İzni: Tek tarih, doğum ayı sınırlı */}
-            {isBirthdayLeave ? (
+            {/* Özel İzinler: Babalık/Ölüm/Evlilik/Ücretsiz */}
+            {isSpecialLeave ? (
+                <div className="space-y-4">
+                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        <p className="text-sm font-bold text-indigo-700">
+                            {specialLeaveCode === 'PATERNITY' && 'Babalık İzni — 5 takvim günü'}
+                            {specialLeaveCode === 'BEREAVEMENT' && 'Ölüm İzni — 3 takvim günü'}
+                            {specialLeaveCode === 'MARRIAGE' && 'Evlilik İzni — 3 takvim günü'}
+                            {specialLeaveCode === 'UNPAID' && 'Ücretsiz İzin — başlangıç ve bitiş tarihi girin'}
+                        </p>
+                        <p className="text-xs text-indigo-500 mt-1">Bu izin muhasebe tarafından onaylanacaktır.</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
+                        <input
+                            required
+                            type="date"
+                            value={leaveForm.start_date}
+                            onChange={e => {
+                                const updates = { ...leaveForm, start_date: e.target.value };
+                                if (specialLeaveCode !== 'UNPAID') {
+                                    const durationMap = { PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3 };
+                                    const dur = durationMap[specialLeaveCode] || 3;
+                                    const sd = new Date(e.target.value);
+                                    sd.setDate(sd.getDate() + dur - 1);
+                                    updates.end_date = sd.toISOString().split('T')[0];
+                                }
+                                setLeaveForm(updates);
+                            }}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-medium text-slate-700"
+                        />
+                    </div>
+                    {specialLeaveCode === 'UNPAID' ? (
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
+                            <input
+                                required
+                                type="date"
+                                value={leaveForm.end_date}
+                                min={leaveForm.start_date}
+                                onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
+                                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-medium text-slate-700"
+                            />
+                        </div>
+                    ) : leaveForm.start_date ? (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                            <p className="text-sm text-blue-700">
+                                Bitiş Tarihi: <strong>{new Date(leaveForm.end_date).toLocaleDateString('tr-TR')}</strong>
+                                {' '}({({PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3})[specialLeaveCode]} takvim günü)
+                            </p>
+                        </div>
+                    ) : null}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama</label>
+                        <textarea
+                            value={leaveForm.reason}
+                            onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                            rows={3}
+                            placeholder="Açıklama (opsiyonel)..."
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-medium text-slate-700 resize-none"
+                        />
+                    </div>
+                </div>
+
+            ) : isBirthdayLeave ? (
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
@@ -550,9 +621,9 @@ export const LeaveRequestForm = ({
             </div>
 
 
-            {approverDropdown}
+            {!isSpecialLeave && approverDropdown}
 
-            <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
+            {!isSpecialLeave && <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
                 <input
                     type="checkbox"
                     id="send_to_sub_leave"
@@ -563,7 +634,7 @@ export const LeaveRequestForm = ({
                 <label htmlFor="send_to_sub_leave" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
                     Vekil yöneticiye de gönder
                 </label>
-            </div>
+            </div>}
         </div >
     );
 };
