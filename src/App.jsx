@@ -45,6 +45,7 @@ const DataManagement = lazyRetry(() => import('./pages/admin/DataManagement'));
 const ProgramManagement = lazyRetry(() => import('./pages/admin/ProgramManagement'));
 const Feedback = lazyRetry(() => import('./pages/Feedback'));
 const HealthReports = lazyRetry(() => import('./pages/admin/HealthReports'));
+const SpecialLeaves = lazyRetry(() => import('./pages/admin/SpecialLeaves'));
 const RequestAnalytics = lazyRetry(() => import('./pages/RequestAnalytics'));
 const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));
 
@@ -144,7 +145,8 @@ function App() {
             {/* Health Reports - Requires PAGE_HEALTH_REPORTS */}
             <Route path="health-reports" element={<ProtectedRoute requiredPermission="PAGE_HEALTH_REPORTS"><Suspense fallback={<PageLoader />}><HealthReports /></Suspense></ProtectedRoute>} />
 
-
+            {/* Special Leaves - Requires PAGE_SPECIAL_LEAVES */}
+            <Route path="special-leaves" element={<ProtectedRoute requiredPermission="PAGE_SPECIAL_LEAVES"><Suspense fallback={<PageLoader />}><SpecialLeaves /></Suspense></ProtectedRoute>} />
 
             <Route path="system-data-management" element={<ProtectedRoute requiredPermission="PAGE_DATA_MANAGEMENT"><Suspense fallback={<PageLoader />}><DataManagement /></Suspense></ProtectedRoute>} />
 

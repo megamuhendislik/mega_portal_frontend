@@ -28,7 +28,8 @@ import {
     Coffee,
     AlertTriangle,
     BookOpen,
-    HeartPulse
+    HeartPulse,
+    HeartHandshake
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -162,6 +163,7 @@ const MainLayout = () => {
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_ORDERS' },
         { path: '/health-reports', label: 'Sağlık Raporları', icon: HeartPulse, permission: 'PAGE_HEALTH_REPORTS' },
+        { path: '/special-leaves', label: 'Özel İzinler', icon: HeartHandshake, permission: 'PAGE_SPECIAL_LEAVES' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },

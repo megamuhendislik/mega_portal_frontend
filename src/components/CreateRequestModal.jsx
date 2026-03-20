@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope } from 'lucide-react';
+import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope, HeartHandshake } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
@@ -138,6 +138,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     });
     const [hospitalVisitFiles, setHospitalVisitFiles] = useState([]);
 
+    // Special Leave
+    const [specialLeaveType, setSpecialLeaveType] = useState('');
+    const [specialLeaveForm, setSpecialLeaveForm] = useState({
+        start_date: '', end_date: '', description: ''
+    });
+    const [specialLeaveFiles, setSpecialLeaveFiles] = useState([]);
+
     // Approver selection
     const [availableApprovers, setAvailableApprovers] = useState([]);
     const [selectedApproverId, setSelectedApproverId] = useState(null);
@@ -235,6 +242,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setFifoPreview(null);
             setExcuseBalance(null);
             setApproverSubstitutes([]);
+            setSpecialLeaveType('');
+            setSpecialLeaveForm({ start_date: '', end_date: '', description: '' });
+            setSpecialLeaveFiles([]);
             // Reset forms
             setOvertimeForm({
                 date: getIstanbulToday(),
@@ -248,7 +258,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     // Fetch available approvers when type is selected (not MEAL)
     useEffect(() => {
-        if (!selectedType || selectedType === 'MEAL') {
+        if (!selectedType || selectedType === 'MEAL' || selectedType === 'SPECIAL_LEAVE') {
             setAvailableApprovers([]);
             setSelectedApproverId(null);
             return;
@@ -431,6 +441,17 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
         return () => clearTimeout(timer);
     }, [selectedType, leaveForm.request_type, workingDaysInfo, requestTypes]);
+
+    const calculateSpecialLeaveEndDate = () => {
+        if (!specialLeaveForm.start_date || !specialLeaveType) return '';
+        const durationMap = { PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3 };
+        const duration = durationMap[specialLeaveType];
+        if (!duration) return '';
+        const start = new Date(specialLeaveForm.start_date);
+        const end = new Date(start);
+        end.setDate(end.getDate() + duration - 1);
+        return end.toLocaleDateString('tr-TR');
+    };
 
     const fetchClaimableOvertime = async () => {
         setClaimableLoading(true);
@@ -622,13 +643,43 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 response = await api.post('/health-reports/', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
+            } else if (selectedType === 'SPECIAL_LEAVE') {
+                if (!specialLeaveType) {
+                    setError('İzin türü seçin.');
+                    setLoading(false);
+                    return;
+                }
+                if (!specialLeaveForm.start_date) {
+                    setError('Başlangıç tarihi zorunlu.');
+                    setLoading(false);
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('leave_type', specialLeaveType);
+                formData.append('start_date', specialLeaveForm.start_date);
+                if (specialLeaveType === 'UNPAID') {
+                    if (!specialLeaveForm.end_date) {
+                        setError('Bitiş tarihi zorunlu.');
+                        setLoading(false);
+                        return;
+                    }
+                    formData.append('end_date', specialLeaveForm.end_date);
+                }
+                if (specialLeaveForm.description) formData.append('description', specialLeaveForm.description);
+                specialLeaveFiles.forEach(f => formData.append('files', f));
+                response = await api.post('/special-leaves/', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             }
 
             // Sağlık raporu/hastane ziyareti → muhasebe onayı mesajı
             const isHealthType = selectedType === 'HEALTH_REPORT' || selectedType === 'HOSPITAL_VISIT';
+            const isSpecialLeave = selectedType === 'SPECIAL_LEAVE';
             const approverLabel = isHealthType
                 ? 'Muhasebe tarafından onay verilecektir'
-                : (response?.data?.target_approver_name || null);
+                : isSpecialLeave
+                    ? 'Özel izin talebiniz oluşturuldu'
+                    : (response?.data?.target_approver_name || null);
 
             onSuccess(approverLabel);
             onClose();
@@ -973,6 +1024,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     <ChevronRight size={18} />
                 </div>
             </button>
+
+            <button
+                onClick={() => handleTypeSelect('SPECIAL_LEAVE')}
+                className="group relative p-5 bg-white border border-slate-200 rounded-2xl hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-left flex items-center gap-5"
+            >
+                <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform shrink-0">
+                    <HeartHandshake size={28} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-0.5">Özel İzin</h3>
+                    <p className="text-sm text-slate-500">Babalık, ölüm, evlilik veya ücretsiz izin talebi.</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                    <ChevronRight size={18} />
+                </div>
+            </button>
         </div>
     );
 
@@ -1041,7 +1108,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                             selectedType === 'MEAL' ? 'Yemek Talebi' :
                                                 selectedType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' :
                                                     selectedType === 'HEALTH_REPORT' ? 'Sağlık Raporu' :
-                                                        selectedType === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti' : 'Şirket Dışı Görev'}
+                                                        selectedType === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti' :
+                                                            selectedType === 'SPECIAL_LEAVE' ? 'Özel İzin' : 'Şirket Dışı Görev'}
                             </h2>
                             <p className="text-slate-500 text-xs mt-0.5 font-medium">
                                 {step === 1 ? 'Talep türünü seçiniz' :
@@ -1240,6 +1308,78 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     </div>
                                 </div>
                             )}
+                            {selectedType === 'SPECIAL_LEAVE' && (
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">İzin Türü *</label>
+                                        <select
+                                            value={specialLeaveType}
+                                            onChange={e => setSpecialLeaveType(e.target.value)}
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            required
+                                        >
+                                            <option value="">İzin Türü Seçin</option>
+                                            <option value="PATERNITY">Babalık İzni (5 gün)</option>
+                                            <option value="BEREAVEMENT">Ölüm İzni (3 gün)</option>
+                                            <option value="UNPAID">Ücretsiz İzin</option>
+                                            <option value="MARRIAGE">Evlilik İzni (3 gün)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Tarihi *</label>
+                                        <input type="date" required value={specialLeaveForm.start_date}
+                                            onChange={e => setSpecialLeaveForm(p => ({...p, start_date: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                        />
+                                    </div>
+                                    {specialLeaveType === 'UNPAID' ? (
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş Tarihi *</label>
+                                            <input type="date" required value={specialLeaveForm.end_date}
+                                                onChange={e => setSpecialLeaveForm(p => ({...p, end_date: e.target.value}))}
+                                                min={specialLeaveForm.start_date}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            />
+                                        </div>
+                                    ) : specialLeaveType && specialLeaveForm.start_date ? (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                                            <p className="text-sm text-blue-700">
+                                                Bitiş Tarihi: <strong>{calculateSpecialLeaveEndDate()}</strong>
+                                                {' '}({({PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3})[specialLeaveType]} takvim günü)
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                                        <textarea value={specialLeaveForm.description}
+                                            onChange={e => setSpecialLeaveForm(p => ({...p, description: e.target.value}))}
+                                            rows={3} placeholder="Açıklama (opsiyonel)..."
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Belge (opsiyonel)</label>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.pdf" multiple
+                                            onChange={e => setSpecialLeaveFiles(Array.from(e.target.files))}
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                        />
+                                        <p className="text-xs text-slate-400 mt-1">Max 3 dosya, 10MB, JPG/PNG/PDF</p>
+                                        {specialLeaveFiles.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                {specialLeaveFiles.map((f, i) => (
+                                                    <div key={i} className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg">
+                                                        <span className="truncate flex-1">{f.name}</span>
+                                                        <span className="text-slate-400">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
+                                        <p>Özel izin talebiniz yöneticinize/İK&apos;ya bildirim olarak gönderilecektir.</p>
+                                    </div>
+                                </div>
+                            )}
                         </form>
                     )}
                 </div>
@@ -1257,14 +1397,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         <button
                             form="requestForm"
                             type="submit"
-                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT')}
+                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (selectedType === 'SPECIAL_LEAVE' && (!specialLeaveType || !specialLeaveForm.start_date || (specialLeaveType === 'UNPAID' && !specialLeaveForm.end_date))) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && selectedType !== 'SPECIAL_LEAVE')}
                             className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                 ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                     selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
                                         selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
                                             selectedType === 'CARDLESS_ENTRY' ? 'bg-purple-600 hover:bg-purple-700' :
                                                 selectedType === 'HEALTH_REPORT' || selectedType === 'HOSPITAL_VISIT' ? 'bg-red-600 hover:bg-red-700' :
-                                                    'bg-emerald-600 hover:bg-emerald-700'}
+                                                    selectedType === 'SPECIAL_LEAVE' ? 'bg-indigo-600 hover:bg-indigo-700' :
+                                                        'bg-emerald-600 hover:bg-emerald-700'}
                                 ${(loading || isInsufficientBalance) ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
                             `}
                         >
