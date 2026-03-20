@@ -3,6 +3,7 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import clsx from 'clsx';
+import { getIstanbulTodayDate } from '../utils/dateUtils';
 
 const UpcomingEventsCard = ({ events, loading, embedded }) => {
     if (loading) {
@@ -37,7 +38,7 @@ const UpcomingEventsCard = ({ events, loading, embedded }) => {
                 <div className="space-y-4">
                     {upcomingEvents.map((evt, idx) => {
                         const startDate = new Date(evt.start);
-                        const isToday = isSameDay(startDate, new Date());
+                        const isToday = isSameDay(startDate, getIstanbulTodayDate());
 
                         return (
                             <div key={idx} className="group flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-default">

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, Clock, Zap, AlertTriangle } from 'lucide-react';
+import { getIstanbulMonth } from '../utils/dateUtils';
 
 const MONTHS = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -11,7 +12,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
 
     const breakdown = periodSummary.cumulative.breakdown || [];
     const systemStart = periodSummary.cumulative?.system_start_fiscal_month || 1;
-    const currentFiscalMonth = periodSummary.fiscal_month || new Date().getMonth() + 1;
+    const currentFiscalMonth = periodSummary.fiscal_month || getIstanbulMonth();
 
     // Sistem başlangıcından itibaren ayları filtrele
     const months = useMemo(() =>

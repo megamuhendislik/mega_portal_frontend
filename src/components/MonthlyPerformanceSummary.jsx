@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, Scale, ChevronUp, ChevronDown, Info } from 'lucide-react';
 import { Popover, Tooltip } from 'antd';
+import { getIstanbulMonth, getIstanbulYear } from '../utils/dateUtils';
 
 const EffortDetailPopover = ({ stats }) => {
     if (!stats) return null;
@@ -135,7 +136,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             });
 
             // OT Breakdown from cumulative current month data
-            const _otFm = periodSummary.fiscal_month || (new Date().getMonth() + 1);
+            const _otFm = periodSummary.fiscal_month || getIstanbulMonth();
             const _otBd = (periodSummary.cumulative?.breakdown || []).find(b => b.month === _otFm);
             let otApprovedSec = _otBd?.ot_approved || 0;
             let otPendingSec = _otBd?.ot_pending || 0;
@@ -222,7 +223,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 projectionIfFullHours: ((netWorkSec + remainingSec) / 3600).toFixed(1),
 
                 // Fiscal month from backend (not JS Date)
-                fiscalMonth: periodSummary.fiscal_month || (new Date().getMonth() + 1),
+                fiscalMonth: periodSummary.fiscal_month || getIstanbulMonth(),
 
                 cumulative: periodSummary.cumulative ? {
                     carryOver: periodSummary.cumulative.carry_over_seconds,
@@ -248,7 +249,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     annualTargetHours: ((periodSummary.cumulative.annual_target_seconds || 0) / 3600).toFixed(1),
 
                     // Current fiscal month from backend
-                    currentFiscalMonth: periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || (new Date().getMonth() + 1),
+                    currentFiscalMonth: periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || getIstanbulMonth(),
 
                     // System start fiscal month (months before this should be hidden)
                     systemStartFiscalMonth: periodSummary.cumulative.system_start_fiscal_month || 1,
@@ -257,7 +258,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     // Cari ay: past_target_balance kullan (gerçekleşmemiş kısımlar eksi sayılmaz)
                     // Gelecek aylar: bakiye 0 (henüz gerçekleşmedi)
                     breakdown: (() => {
-                        const cfm = periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || (new Date().getMonth() + 1);
+                        const cfm = periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || getIstanbulMonth();
                         return (periodSummary.cumulative.breakdown || []).reduce((acc, month, idx) => {
                             const prevBalance = idx === 0
                                 ? (periodSummary.cumulative.previous_year_balance_seconds || 0)
@@ -640,7 +641,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <div>
                                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
                                     <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
-                                    {new Date().getFullYear()} Yıllık Performans
+                                    {getIstanbulYear()} Yıllık Performans
                                 </h3>
                                 <p className="text-xs text-slate-400 font-medium pl-3.5 mt-1">Yılbaşından bugüne kümülatif durum.</p>
                             </div>
@@ -715,7 +716,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                     </div>
 
                                     {(() => {
-                                        const currentFiscalIdx = (stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1)) - 1;
+                                        const currentFiscalIdx = (stats.cumulative.currentFiscalMonth || stats.fiscalMonth || getIstanbulMonth()) - 1;
                                         const systemStartIdx = (stats.cumulative.systemStartFiscalMonth || 1) - 1;
                                         // Only show months from system start to current fiscal month
                                         const visibleMonths = stats.cumulative.breakdown.slice(systemStartIdx);
@@ -983,7 +984,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                     .slice(monthScrollIndex, monthScrollIndex + 3)
                                                     .map((m, idx) => {
                                                         const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-                                                        const currentFiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
+                                                        const currentFiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || getIstanbulMonth();
                                                         const isPast = m.month < currentFiscalMonth;
                                                         const isCurrent = m.month === currentFiscalMonth;
                                                         const isFuture = m.month > currentFiscalMonth;
@@ -992,7 +993,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const completedH = (m.completed / 3600).toFixed(1);
                                                         const missingH = (m.missing / 3600).toFixed(1);
                                                         // Net Fark: cari ay→past_target_balance (hedefe kadar), geçmiş→tam bakiye
-                                                        const currentFM = stats.cumulative?.currentFiscalMonth || stats.fiscalMonth || (new Date().getMonth() + 1);
+                                                        const currentFM = stats.cumulative?.currentFiscalMonth || stats.fiscalMonth || getIstanbulMonth();
                                                         const monthNetSec = m.month === currentFM
                                                             ? (m.past_target_balance ?? m.balance ?? 0)
                                                             : (m.balance ?? 0);

@@ -7,6 +7,7 @@ import {
     ReferenceLine
 } from 'recharts';
 import api from '../../services/api';
+import { getIstanbulDay } from '../../utils/dateUtils';
 import {
     TrendingUp, TrendingDown, Award, Clock, AlertTriangle, Users,
     Target, Zap, Minus, ChevronDown, ChevronUp, Shield,
@@ -1202,7 +1203,7 @@ const TeamAnalyticsDashboard = ({ stats = [], year, month, departmentId, relatio
 
         // Work days from backend (accurate fiscal period days) with fallback
         const _sample = primaryStats[0] || allStats[0] || {};
-        const elapsedWorkDays = Math.max(1, _sample.elapsed_work_days || Math.round(new Date().getDate() * 5 / 7));
+        const elapsedWorkDays = Math.max(1, _sample.elapsed_work_days || Math.round(getIstanbulDay() * 5 / 7));
         const totalWorkDaysInMonth = _sample.total_work_days || 22;
         const remainingWorkDays = Math.max(0, _sample.remaining_work_days ?? (totalWorkDaysInMonth - elapsedWorkDays));
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { formatDate } from '../utils/dateUtils';
+import { formatDate, toIstanbulParts } from '../utils/dateUtils';
 import { Activity } from 'lucide-react';
 import useIsMobile from '../hooks/useIsMobile';
 
@@ -8,7 +8,7 @@ const MonthlyTrendChart = ({ logs }) => {
     const isMobile = useIsMobile();
 
     const data = logs.map(log => ({
-        name: new Date(log.work_date).getDate(),
+        name: toIstanbulParts(log.work_date).day,
         fullDate: formatDate(log.work_date),
         normal: (log.normal_seconds || 0) / 3600,
         overtime: (log.overtime_seconds || 0) / 3600,

@@ -3,6 +3,7 @@ import { Search, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronRight,
 import { message } from 'antd';
 import api from '../../../services/api';
 import ModalOverlay from '../../../components/ui/ModalOverlay';
+import { getIstanbulTodayDate, getIstanbulToday } from '../../../utils/dateUtils';
 
 export default function RequestAnalysisTab() {
     const [data, setData] = useState(null);
@@ -16,10 +17,10 @@ export default function RequestAnalysisTab() {
     const [lifecycleLoading, setLifecycleLoading] = useState(false);
     const [lifecycleError, setLifecycleError] = useState(null);
     const [lcDateFrom, setLcDateFrom] = useState(() => {
-        const d = new Date(); d.setDate(d.getDate() - 30);
-        return d.toISOString().split('T')[0];
+        const d = getIstanbulTodayDate(); d.setDate(d.getDate() - 30);
+        return d.toLocaleDateString('en-CA');
     });
-    const [lcDateTo, setLcDateTo] = useState(() => new Date().toISOString().split('T')[0]);
+    const [lcDateTo, setLcDateTo] = useState(() => getIstanbulToday());
     const [lcRequestType, setLcRequestType] = useState('ALL');
     const [lcIssuesOnly, setLcIssuesOnly] = useState(false);
     const [lcSearch, setLcSearch] = useState('');

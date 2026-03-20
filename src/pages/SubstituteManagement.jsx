@@ -8,7 +8,7 @@ import {
 import { Select, Tooltip } from 'antd';
 import StatCard from '../components/StatCard';
 import api from '../services/api';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulNow } from '../utils/dateUtils';
 import ModalOverlay from '../components/ui/ModalOverlay';
 
 const SubstituteManagement = () => {
@@ -132,7 +132,7 @@ const SubstituteManagement = () => {
   const getRemainingDays = (d) => {
     if (getStatus(d) !== 'active') return null;
     const end = new Date(d.valid_to);
-    const now = new Date();
+    const now = getIstanbulNow();
     return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
   };
 
@@ -289,9 +289,9 @@ const SubstituteManagement = () => {
     return (
       <div className="space-y-1.5 min-w-[160px]">
         <div className="text-sm text-slate-600 font-medium">
-          {new Date(delegation.valid_from).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+          {new Date(delegation.valid_from).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', timeZone: 'Europe/Istanbul' })}
           {' — '}
-          {new Date(delegation.valid_to).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {new Date(delegation.valid_to).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Istanbul' })}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -783,7 +783,7 @@ const SubstituteManagement = () => {
                     <div className="space-y-1.5 mb-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500 font-medium">
-                          {new Date(d.valid_from).toLocaleDateString('tr-TR')} — {new Date(d.valid_to).toLocaleDateString('tr-TR')}
+                          {new Date(d.valid_from).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })} — {new Date(d.valid_to).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}
                         </span>
                         <span className="text-[10px] font-bold text-slate-400">{totalDays} gün</span>
                       </div>

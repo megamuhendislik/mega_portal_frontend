@@ -18,6 +18,7 @@ import {
   ShieldExclamationIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
+import { getIstanbulToday } from '../../../utils/dateUtils';
 
 const STATUS_COLORS = {
   POTENTIAL: 'bg-blue-100 text-blue-800',
@@ -418,7 +419,7 @@ export default function OTAnalysisTab() {
     const s = data.summary || {};
     const pad = (str, len) => (str + ' '.repeat(len)).slice(0, len);
     const line = (char = '─', len = 80) => char.repeat(len);
-    const now = new Date().toLocaleString('tr-TR');
+    const now = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
 
     let txt = '';
     txt += `${'═'.repeat(80)}\n`;
@@ -488,7 +489,7 @@ export default function OTAnalysisTab() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = getIstanbulToday();
     a.download = `ek-mesai-analiz-${dateStr}.txt`;
     document.body.appendChild(a);
     a.click();

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import moment from 'moment';
 import api from '../services/api';
 import { Filter, Users } from 'lucide-react';
+import { getIstanbulTodayDate } from '../utils/dateUtils';
 
 const EVENT_COLORS = {
     LEAVE_REQUEST: { bg: 'bg-cyan-400', text: 'text-cyan-900', border: 'border-cyan-500' },
@@ -57,7 +58,7 @@ const TeamTimeline = ({ startDate, endDate }) => {
                 day: current.date(),
                 dayName: current.format('dd'),
                 isWeekend: current.day() === 0 || current.day() === 6,
-                isToday: current.isSame(moment(), 'day'),
+                isToday: current.isSame(moment(getIstanbulTodayDate()), 'day'),
             });
             current.add(1, 'day');
         }

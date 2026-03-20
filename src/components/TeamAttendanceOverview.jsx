@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { User, Users, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, ArrowUpRight, ArrowDownRight, LayoutList, LayoutGrid, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
+import { getIstanbulDay } from '../utils/dateUtils';
 
 const StatusBadge = ({ status, isOnLeave, isOnDuty, leaveStatus }) => {
     if (isOnDuty) {
@@ -80,8 +81,7 @@ const GroupAverageRow = ({ children, depth = 1 }) => {
 
     // Günlük ortalama eksik: aylık ortalama eksik / ayda çalışılan gün
     // Yaklaşık: aylık hedef / 22 iş günü = günlük hedef, missing / geçen iş günü sayısı
-    const today = new Date();
-    const dayOfMonth = today.getDate();
+    const dayOfMonth = getIstanbulDay();
     // Basit yaklaşım: 26-25 mali dönem, geçen iş günü ≈ (gün - hafta sonu sayısı)
     const elapsedWorkDays = Math.max(1, Math.round(dayOfMonth * 5 / 7));
     const dailyAvgMissing = avgMissing / elapsedWorkDays;
@@ -452,7 +452,7 @@ const PerformanceTableView = ({ teamData }) => {
                         const isPos = avgBalance >= 0;
 
                         // Günlük ortalama eksik
-                        const dayOfMonth = new Date().getDate();
+                        const dayOfMonth = getIstanbulDay();
                         const elapsedWorkDays = Math.max(1, Math.round(dayOfMonth * 5 / 7));
                         const dailyAvgMissing = avgMissing / elapsedWorkDays;
 

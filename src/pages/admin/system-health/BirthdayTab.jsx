@@ -7,13 +7,13 @@ import {
     CheckCircleIcon,
     BellIcon,
 } from '@heroicons/react/24/outline';
+import { getIstanbulMonth, getIstanbulYear } from '../../../utils/dateUtils';
 
 const TURKISH_MONTHS = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 export default function BirthdayTab() {
-    const now = new Date();
-    const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-    const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(() => getIstanbulMonth());
+    const [selectedYear, setSelectedYear] = useState(() => getIstanbulYear());
     const [birthdayData, setBirthdayData] = useState(null);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -21,8 +21,8 @@ export default function BirthdayTab() {
     const [notifSending, setNotifSending] = useState(false);
     const [notifResult, setNotifResult] = useState(null);
 
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
+    const currentMonth = getIstanbulMonth();
+    const currentYear = getIstanbulYear();
 
     useEffect(() => {
         fetchBirthdays();

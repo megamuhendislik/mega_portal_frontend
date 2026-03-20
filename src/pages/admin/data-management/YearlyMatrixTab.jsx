@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import api from '../../../services/api';
 import SettlementModal from './SettlementModal';
+import { getIstanbulYear } from '../../../utils/dateUtils';
 
 const MONTH_COLS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const MONTH_NAMES_SHORT = [
@@ -32,7 +33,7 @@ export default function YearlyMatrixTab({ onNavigateToPersonel }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [loadingEmployees, setLoadingEmployees] = useState(false);
 
-    const [listYear, setListYear] = useState(new Date().getFullYear());
+    const [listYear, setListYear] = useState(() => getIstanbulYear());
     const [bulkStats, setBulkStats] = useState({});
     const [loadingStats, setLoadingStats] = useState(false);
 

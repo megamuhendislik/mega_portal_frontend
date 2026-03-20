@@ -3,13 +3,14 @@ import api from '../services/api';
 import moment from 'moment';
 import YearCalendar from '../components/YearCalendar';
 import ModalOverlay from '../components/ui/ModalOverlay';
+import { getIstanbulYear } from '../utils/dateUtils';
 
 const PublicHolidays = () => {
     const [holidays, setHolidays] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [viewYear, setViewYear] = useState(new Date().getFullYear());
+    const [viewYear, setViewYear] = useState(getIstanbulYear());
     const [showCalendar, setShowCalendar] = useState(true);
 
     const [formData, setFormData] = useState({

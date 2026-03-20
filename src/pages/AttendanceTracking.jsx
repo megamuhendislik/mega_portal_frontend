@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import moment from 'moment';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulTodayDate } from '../utils/dateUtils';
 import {
     formatMinutes,
     EmployeeAttendanceRow,
@@ -323,7 +323,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             fiscalStart = moment([year, month - 2, 26]);
             fiscalEnd = moment([year, month - 1, 25]);
         }
-        const today = moment();
+        const today = moment(getIstanbulTodayDate());
         const effectiveEnd = moment.min(today, fiscalEnd);
 
         if (effectiveEnd.isBefore(fiscalStart)) return 1;

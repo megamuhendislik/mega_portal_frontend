@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Select } from 'antd';
 import { Calendar } from 'lucide-react';
 import api from '../services/api';
+import { toIstanbulParts } from '../utils/dateUtils';
 
 const SHORT_MONTHS = {
   1: 'Oca', 2: 'Şub', 3: 'Mar', 4: 'Nis',
@@ -11,9 +12,10 @@ const SHORT_MONTHS = {
 
 function formatDateRange(startDate, endDate) {
   if (!startDate || !endDate) return '';
-  const s = new Date(startDate + 'T00:00:00');
-  const e = new Date(endDate + 'T00:00:00');
-  return `${s.getDate()} ${SHORT_MONTHS[s.getMonth() + 1]} – ${e.getDate()} ${SHORT_MONTHS[e.getMonth() + 1]}`;
+  const s = toIstanbulParts(startDate + 'T00:00:00');
+  const e = toIstanbulParts(endDate + 'T00:00:00');
+  if (!s || !e) return '';
+  return `${s.day} ${SHORT_MONTHS[s.month]} – ${e.day} ${SHORT_MONTHS[e.month]}`;
 }
 
 export default function FiscalMonthPicker({ onDateChange }) {

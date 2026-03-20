@@ -5,6 +5,7 @@ import {
 import { Select, Spin, Empty, Tooltip } from 'antd';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday } from '../../utils/dateUtils';
 import OTDayDetailDrawer from './OTDayDetailDrawer';
 import CreateAssignmentModal from './CreateAssignmentModal';
 
@@ -29,9 +30,9 @@ const STATUS_COLORS = {
 // --- Fiscal Period Helpers ---
 
 function getCurrentFiscalPeriod() {
-  const now = new Date();
-  const istanbulStr = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
-  const [y, m, d] = istanbulStr.split('-').map(Number);
+  const now = getIstanbulTodayDate();
+  const parts = toIstanbulParts(now);
+  const y = parts.year, m = parts.month, d = parts.day;
   if (d >= 26) {
     if (m === 12) return { month: 1, year: y + 1 };
     return { month: m + 1, year: y };
@@ -49,15 +50,16 @@ function generateFiscalDays(fiscalMonth, fiscalYear) {
   }
   const startDate = new Date(startYear, startMonth - 1, 26);
   const endDate = new Date(fiscalYear, fiscalMonth - 1, 25);
-  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+  const todayStr = getIstanbulToday();
   const current = new Date(startDate);
   while (current <= endDate) {
-    const dateStr = current.toLocaleDateString('en-CA');
+    const dateStr = current.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+    const p = toIstanbulParts(current);
     days.push({
       date: dateStr,
-      day: current.getDate(),
-      month: current.getMonth() + 1,
-      year: current.getFullYear(),
+      day: p.day,
+      month: p.month,
+      year: p.year,
       dayOfWeek: (current.getDay() + 6) % 7, // Monday=0
       isToday: dateStr === todayStr,
     });

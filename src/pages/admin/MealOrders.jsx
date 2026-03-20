@@ -134,7 +134,7 @@ const MealOrders = () => {
 
     const formatDate = (dateStr) => {
         const d = new Date(dateStr + 'T00:00:00');
-        return d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        return d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' });
     };
 
     const filteredData = data.filter(item => {

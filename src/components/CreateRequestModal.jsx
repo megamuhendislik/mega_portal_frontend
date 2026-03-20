@@ -203,7 +203,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             const newSegments = [];
             const current = new Date(start);
             while (current <= end) {
-                const dateStr = current.toISOString().split('T')[0];
+                const dateStr = current.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
                 const existing = externalDutyForm.date_segments.find(s => s.date === dateStr);
                 newSegments.push(existing || {
                     date: dateStr,

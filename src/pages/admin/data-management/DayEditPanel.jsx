@@ -12,6 +12,7 @@ import {
     CheckCircleOutlined, CloseCircleOutlined, HistoryOutlined,
     CalendarOutlined, EditOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
+import { getIstanbulYear } from '../../../utils/dateUtils';
 
 const { TextArea } = Input;
 const { Panel } = Collapse;
@@ -1113,7 +1114,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Yıl</label>
                             <InputNumber
                                 value={newYear}
-                                onChange={(val) => setNewYear(val || new Date().getFullYear())}
+                                onChange={(val) => setNewYear(val || getIstanbulYear())}
                                 min={2000}
                                 max={2100}
                                 className="w-full"

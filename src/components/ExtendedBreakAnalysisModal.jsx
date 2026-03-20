@@ -6,6 +6,7 @@ import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
 import ModalOverlay from './ui/ModalOverlay';
+import { getIstanbulTodayDate } from '../utils/dateUtils';
 
 const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, initialViewMode = 'MONTHLY' }) => {
     const isMobile = useIsMobile();
@@ -13,7 +14,7 @@ const ExtendedBreakAnalysisModal = ({ isOpen, onClose, employeeId, initialDate, 
     const [data, setData] = useState([]);
 
     // Internal State
-    const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
+    const [selectedDate, setSelectedDate] = useState(initialDate || getIstanbulTodayDate());
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [showCumulative, setShowCumulative] = useState(false);
 

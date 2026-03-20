@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy } from 'lucide-react';
-import { getIstanbulToday, getIstanbulDateOffset } from '../../utils/dateUtils';
+import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
 
 // ============================================================
 // LeaveRequestForm
@@ -113,7 +113,7 @@ export const LeaveRequestForm = ({
                             {entitlementInfo.hired_date && (
                                 <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
                                     <span className="text-slate-500">İşe Giriş:</span>
-                                    <span className="font-bold text-slate-700">{new Date(entitlementInfo.hired_date).toLocaleDateString('tr-TR')}</span>
+                                    <span className="font-bold text-slate-700">{new Date(entitlementInfo.hired_date).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}</span>
                                 </div>
                             )}
                             <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
@@ -212,7 +212,7 @@ export const LeaveRequestForm = ({
                             <CalendarDays size={12} className="text-orange-500 shrink-0" />
                             <span className="text-slate-500">Son Kullanım:</span>
                             <span className="font-bold text-slate-700">
-                                {new Date(excuseBalance.recent_requests[0].date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                {new Date(excuseBalance.recent_requests[0].date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                             </span>
                             <span className="text-slate-400">
                                 ({excuseBalance.recent_requests[0].hours} sa)
@@ -285,7 +285,7 @@ export const LeaveRequestForm = ({
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
                                     <span className="text-slate-400">
-                                        {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '-'}
+                                        {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }) : '-'}
                                     </span>
                                     <span className="text-slate-500 font-bold">{h.total_days} gün</span>
                                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
@@ -381,7 +381,7 @@ export const LeaveRequestForm = ({
                     ) : leaveForm.start_date ? (
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
                             <p className="text-sm text-blue-700">
-                                Bitiş Tarihi: <strong>{new Date(leaveForm.end_date).toLocaleDateString('tr-TR')}</strong>
+                                Bitiş Tarihi: <strong>{new Date(leaveForm.end_date).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}</strong>
                                 {' '}({({PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3})[specialLeaveCode]} takvim günü)
                             </p>
                         </div>
@@ -670,7 +670,7 @@ export const OvertimeRequestForm = ({
     const hasClaimable = intended.length > 0 || potential.length > 0;
 
     const formatDate = (dateStr) => {
-        return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' });
+        return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Europe/Istanbul' });
     };
 
     const formatDuration = (seconds) => {
@@ -1645,7 +1645,7 @@ export const ExternalDutyForm = ({
                                 }`}>
                                     <div className="w-20">
                                         <span className="font-bold text-slate-700">
-                                            {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                            {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                                         </span>
                                         <span className="block text-[10px] text-slate-400">{day.day_name}</span>
                                     </div>
@@ -1767,9 +1767,9 @@ export const ExternalDutyForm = ({
 
                 <div className="space-y-2">
                     {segments.map((seg, i) => {
-                        const d = new Date(seg.date + 'T00:00:00');
-                        const dayName = DAY_NAMES[d.getDay()];
-                        const dateLabel = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                        const _segP = toIstanbulParts(seg.date + 'T00:00:00');
+                        const dayName = _segP ? DAY_NAMES[_segP.dayOfWeek] : '';
+                        const dateLabel = new Date(seg.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' });
                         const dayPreview = dutyHoursPreview?.days?.find(dp => dp.date === seg.date);
 
                         return (

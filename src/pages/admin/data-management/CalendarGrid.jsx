@@ -1,6 +1,7 @@
 import React from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, format } from 'date-fns';
 import { Spin } from 'antd';
+import { getIstanbulTodayDate } from '../../../utils/dateUtils';
 
 /**
  * Saniye cinsinden sureyi okunabilir formata cevirir.
@@ -87,7 +88,7 @@ export default function CalendarGrid({
     const paddingCount = getMondayBasedIndex(monthStart);
     const paddingArray = Array(paddingCount).fill(null);
 
-    const today = new Date();
+    const today = getIstanbulTodayDate();
 
     return (
         <div>

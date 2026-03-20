@@ -196,7 +196,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     return new Date(dateString).toLocaleDateString('tr-TR', {
       day: 'numeric',
       month: 'long',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'Europe/Istanbul'
     });
   };
 
@@ -437,7 +438,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                   )}
                   {request.employee_annual_leave_balance.last_leave_date && (
                     <span className="text-slate-600">
-                      Son İzin: <span className="font-bold text-slate-800">{new Date(request.employee_annual_leave_balance.last_leave_date).toLocaleDateString('tr-TR')}</span>
+                      Son İzin: <span className="font-bold text-slate-800">{new Date(request.employee_annual_leave_balance.last_leave_date).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}</span>
                     </span>
                   )}
                 </div>
@@ -478,7 +479,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                           {request.duty_work_info.date_segments.map((seg, i) => (
                             <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-purple-100">
                               <span className="text-slate-600 font-medium">
-                                {new Date(seg.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })}
+                                {new Date(seg.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Europe/Istanbul' })}
                               </span>
                               <span className="text-purple-700 font-bold">{seg.start_time} - {seg.end_time}</span>
                             </div>
@@ -493,7 +494,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                         <span className="text-[10px] font-bold text-purple-600 uppercase">Mesai Kayıtları</span>
                         {request.duty_work_info.attendance_records.map((att, i) => (
                           <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-purple-100">
-                            <span className="text-slate-600">{new Date(att.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span>
+                            <span className="text-slate-600">{new Date(att.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}</span>
                             <span className="font-bold text-purple-700">{att.check_in} - {att.check_out}</span>
                             <span className="text-slate-500">{Math.floor(att.duration_minutes / 60)}s {att.duration_minutes % 60}dk</span>
                           </div>
@@ -507,7 +508,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                         <span className="text-[10px] font-bold text-amber-600 uppercase">Ek Mesai Kayıtları</span>
                         {request.duty_work_info.overtime_records.map((ot, i) => (
                           <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-amber-100">
-                            <span className="text-slate-600">{new Date(ot.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span>
+                            <span className="text-slate-600">{new Date(ot.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}</span>
                             <span className="font-bold text-amber-700">{ot.start_time} - {ot.end_time}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-slate-500">{Math.floor(ot.duration_minutes / 60)}s {ot.duration_minutes % 60}dk</span>
@@ -564,7 +565,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                             }`}>
                               <div className="w-20">
                                 <span className="font-bold text-slate-700">
-                                  {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                  {new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                                 </span>
                                 <span className="block text-[10px] text-slate-400">{day.day_name}</span>
                               </div>
@@ -641,7 +642,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
                       <span className="font-medium text-slate-700">{h.leave_type_name || h.request_type_detail?.name || 'İzin'}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-slate-500">
-                          {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                          {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Istanbul' }) : '-'}
                         </span>
                         <span className="font-bold text-slate-700">{h.total_days} gün</span>
                       </div>

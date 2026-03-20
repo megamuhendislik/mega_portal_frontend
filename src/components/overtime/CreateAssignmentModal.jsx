@@ -151,7 +151,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                                 {busyDays.filter(b => b.status !== 'CANCELLED').slice(0, 20).map((b, i) => (
                                     <span key={i} className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded flex items-center gap-1">
                                         <Clock size={9} />
-                                        {new Date(b.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                        {new Date(b.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                                         <span className="text-amber-500 font-medium">({b.manager_name})</span>
                                     </span>
                                 ))}
@@ -202,7 +202,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                             )}
                             {fiscalPeriods && (
                                 <p className="text-[10px] text-slate-400 mt-1">
-                                    {new Date(fiscalPeriods.current.start + 'T00:00:00').toLocaleDateString('tr-TR', {day:'numeric',month:'short'})} — {new Date(fiscalPeriods.next.end + 'T00:00:00').toLocaleDateString('tr-TR', {day:'numeric',month:'short'})}
+                                    {new Date(fiscalPeriods.current.start + 'T00:00:00').toLocaleDateString('tr-TR', {day:'numeric',month:'short',timeZone:'Europe/Istanbul'})} — {new Date(fiscalPeriods.next.end + 'T00:00:00').toLocaleDateString('tr-TR', {day:'numeric',month:'short',timeZone:'Europe/Istanbul'})}
                                 </p>
                             )}
                         </div>

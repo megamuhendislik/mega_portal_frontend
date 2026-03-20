@@ -17,7 +17,7 @@ import Skeleton from '../components/Skeleton';
 import AttendanceTracking from './AttendanceTracking';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
 
 const Attendance = () => {
     const { user, hasPermission } = useAuth();
@@ -375,16 +375,15 @@ const Attendance = () => {
                                     onDateClick={(date) => {
                                         setSelectedDate(date);
                                         // Auto-switch period if outside current range
-                                        const d = new Date(date);
+                                        const dp = toIstanbulParts(date);
                                         // 26-25 rule logic:
                                         // If date is >= 26th of Month M, it belongs to Period M+1
                                         // If date is <= 25th of Month M, it belongs to Period M
-                                        let targetMonth = d.getDate() >= 26 ? d.getMonth() + 1 : d.getMonth();
-                                        let targetYear = d.getFullYear();
+                                        // toIstanbulParts returns 1-indexed month, viewMonth is 0-indexed
+                                        let targetMonth = dp.day >= 26 ? dp.month : dp.month - 1; // 0-indexed
+                                        let targetYear = dp.year;
 
                                         // Year boundary: Dec 26+ -> month becomes 12, wrap to Jan (0) of next year.
-                                        // Reverse boundary (Jan->Dec) is not possible here because
-                                        // getMonth() returns 0 for Jan and getDate() < 26 keeps it at 0.
                                         if (targetMonth > 11) {
                                             targetMonth = 0;
                                             targetYear += 1;

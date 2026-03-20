@@ -6,6 +6,7 @@ import {
 import { Select, Progress, Spin, Empty, Modal, Input, message, Tooltip } from 'antd';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday } from '../../utils/dateUtils';
 import OTDayDetailPanel from './OTDayDetailPanel';
 import OverrideConfirmModal from './OverrideConfirmModal';
 import CreateAssignmentModal from './CreateAssignmentModal';
@@ -19,10 +20,9 @@ const DAY_HEADERS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
 // Get current fiscal period based on today's date
 function getCurrentFiscalPeriod() {
-  const now = new Date();
-  // Use Istanbul timezone
-  const istanbulStr = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
-  const [y, m, d] = istanbulStr.split('-').map(Number);
+  const now = getIstanbulTodayDate();
+  const parts = toIstanbulParts(now);
+  const y = parts.year, m = parts.month, d = parts.day;
 
   // If day >= 26, we're in next month's fiscal period
   if (d >= 26) {
@@ -35,7 +35,7 @@ function getCurrentFiscalPeriod() {
 // Generate days for a fiscal period (26th of prev month to 25th of target month)
 function generateFiscalDays(fiscalMonth, fiscalYear) {
   const days = [];
-  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+  const todayStr = getIstanbulToday();
 
   // Start: 26th of previous month
   let startMonth = fiscalMonth - 1;
@@ -51,14 +51,16 @@ function generateFiscalDays(fiscalMonth, fiscalYear) {
 
   const current = new Date(startDate);
   while (current <= endDate) {
+    const dateStr = current.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+    const p = toIstanbulParts(current);
     days.push({
-      date: current.toLocaleDateString('en-CA'),
-      day: current.getDate(),
-      month: current.getMonth() + 1,
-      year: current.getFullYear(),
+      date: dateStr,
+      day: p.day,
+      month: p.month,
+      year: p.year,
       // Monday=0, Sunday=6
       dayOfWeek: (current.getDay() + 6) % 7,
-      isToday: current.toLocaleDateString('en-CA') === todayStr,
+      isToday: dateStr === todayStr,
     });
     current.setDate(current.getDate() + 1);
   }
@@ -625,8 +627,9 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
           <div className="space-y-2">
             {intendedItems.map((item) => {
               const dateObj = new Date(item.date + 'T00:00:00');
-              const dayName = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][dateObj.getDay()];
-              const dateStr = `${dateObj.getDate()} ${MONTH_NAMES[dateObj.getMonth()]}`;
+              const dp = toIstanbulParts(dateObj);
+              const dayName = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][dp.dayOfWeek];
+              const dateStr = `${dp.day} ${MONTH_NAMES[dp.month - 1]}`;
               return (
                 <div
                   key={item.assignment_id}

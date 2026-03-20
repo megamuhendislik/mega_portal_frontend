@@ -11,7 +11,8 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
         return new Date(dateString).toLocaleDateString('tr-TR', {
             day: 'numeric',
             month: 'long',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: 'Europe/Istanbul'
         });
     };
 
@@ -75,7 +76,7 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                     <div className="min-w-0 flex-1">
                         <h4 className="font-bold text-slate-800 text-lg leading-tight truncate pr-2">{getTitle()}</h4>
                         <p className="text-xs text-slate-400 font-medium mt-1">
-                            {new Date(request.created_at).toLocaleDateString('tr-TR')}
+                            {new Date(request.created_at).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}
                         </p>
                     </div>
                 </div>

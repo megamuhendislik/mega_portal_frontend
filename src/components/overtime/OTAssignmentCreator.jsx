@@ -7,7 +7,7 @@ import {
   CircleCheck, Activity, CircleDot, ArrowRight, UserCheck
 } from 'lucide-react';
 import api from '../../services/api';
-import { getIstanbulToday } from '../../utils/dateUtils';
+import { getIstanbulToday, toIstanbulParts } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import ModalOverlay from '../ui/ModalOverlay';
 
@@ -22,11 +22,12 @@ function generateFiscalDays(startDate, endDate) {
   const todayStr = getIstanbulToday();
 
   while (current <= end) {
-    const dateStr = current.toLocaleDateString('en-CA');
+    const dateStr = current.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+    const p = toIstanbulParts(current);
     days.push({
       date: dateStr,
-      day: current.getDate(),
-      month: current.getMonth() + 1,
+      day: p.day,
+      month: p.month,
       dayOfWeek: (current.getDay() + 6) % 7, // Monday=0, Sunday=6
       isToday: dateStr === todayStr,
       isPast: dateStr < todayStr,
@@ -67,7 +68,7 @@ const DAY_HEADERS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 function formatShortDate(dateStr) {
   try {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' });
   } catch {
     return dateStr;
   }
@@ -1390,12 +1391,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     <div className="flex items-start gap-3 p-3 pb-2">
                       {/* Date pill */}
                       <div className={`w-14 flex-shrink-0 rounded-lg p-1.5 text-center ${isToday ? 'bg-violet-600 text-white' : isPast ? 'bg-slate-100' : 'bg-violet-50'}`}>
-                        <div className={`text-lg font-black leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>{d.getDate()}</div>
+                        <div className={`text-lg font-black leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>{d.toLocaleDateString('tr-TR', { day: 'numeric', timeZone: 'Europe/Istanbul' })}</div>
                         <div className={`text-[9px] font-bold uppercase ${isToday ? 'text-violet-200' : 'text-slate-400'}`}>
-                          {d.toLocaleDateString('tr-TR', { month: 'short' })}
+                          {d.toLocaleDateString('tr-TR', { month: 'short', timeZone: 'Europe/Istanbul' })}
                         </div>
                         <div className={`text-[8px] font-bold ${isToday ? 'text-violet-200' : 'text-slate-300'}`}>
-                          {d.toLocaleDateString('tr-TR', { weekday: 'short' })}
+                          {d.toLocaleDateString('tr-TR', { weekday: 'short', timeZone: 'Europe/Istanbul' })}
                         </div>
                       </div>
 
@@ -1492,13 +1493,13 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           {hasAttendance && rd.check_in && (
                             <span className="inline-flex items-center gap-1 text-slate-600">
                               <ArrowRight size={10} className="text-emerald-500" />
-                              Giriş: <strong>{new Date(rd.check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                              Giriş: <strong>{new Date(rd.check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</strong>
                             </span>
                           )}
                           {hasAttendance && rd.check_out && (
                             <span className="inline-flex items-center gap-1 text-slate-600">
                               <ArrowRight size={10} className="text-red-400 rotate-180" />
-                              Çıkış: <strong>{new Date(rd.check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                              Çıkış: <strong>{new Date(rd.check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</strong>
                             </span>
                           )}
                           {actualHours != null && actualHours > 0 && (
@@ -1574,7 +1575,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     {(() => {
                       try {
                         const d = new Date(detailModal.date + 'T00:00:00');
-                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' });
+                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short', timeZone: 'Europe/Istanbul' });
                       } catch { return detailModal.date; }
                     })()}
                   </div>
@@ -1689,7 +1690,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <div>
                             <span className="text-slate-400">Başlangıç:</span>{' '}
                             <span className="font-bold text-slate-700">
-                              {new Date(detailModal.request_detail.start_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(detailModal.request_detail.start_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                             </span>
                           </div>
                         )}
@@ -1697,7 +1698,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <div>
                             <span className="text-slate-400">Bitiş:</span>{' '}
                             <span className="font-bold text-slate-700">
-                              {new Date(detailModal.request_detail.end_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(detailModal.request_detail.end_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                             </span>
                           </div>
                         )}
@@ -1718,12 +1719,12 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         )}
                         {detailModal.request_detail.approved_at && (
                           <div className="col-span-2 text-[11px] text-emerald-600">
-                            Onaylanma: {new Date(detailModal.request_detail.approved_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            Onaylanma: {new Date(detailModal.request_detail.approved_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                           </div>
                         )}
                         {detailModal.request_detail.rejected_at && (
                           <div className="col-span-2 text-[11px] text-red-600">
-                            Reddedilme: {new Date(detailModal.request_detail.rejected_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            Reddedilme: {new Date(detailModal.request_detail.rejected_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                           </div>
                         )}
                       </div>
@@ -1741,7 +1742,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <div>
                             <span className="text-slate-400">Giriş:</span>{' '}
                             <span className="font-bold text-slate-700">
-                              {new Date(detailModal.request_detail.check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(detailModal.request_detail.check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                             </span>
                           </div>
                         )}
@@ -1749,7 +1750,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <div>
                             <span className="text-slate-400">Çıkış:</span>{' '}
                             <span className="font-bold text-slate-700">
-                              {new Date(detailModal.request_detail.check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(detailModal.request_detail.check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}
                             </span>
                           </div>
                         )}
@@ -1797,10 +1798,10 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               {/* Timestamps */}
               <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-2 border-t border-slate-100">
                 {detailModal.created_at && (
-                  <span>Oluşturulma: {new Date(detailModal.created_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>Oluşturulma: {new Date(detailModal.created_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</span>
                 )}
                 {detailModal.updated_at && (
-                  <span>Güncelleme: {new Date(detailModal.updated_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>Güncelleme: {new Date(detailModal.updated_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })}</span>
                 )}
               </div>
             </div>
@@ -1883,7 +1884,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                 {(() => {
                   try {
                     const d = new Date(editModal.date + 'T00:00:00');
-                    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' });
+                    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short', timeZone: 'Europe/Istanbul' });
                   } catch { return editModal.date; }
                 })()}
               </div>
@@ -1987,7 +1988,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                 <div className="text-sm font-bold text-orange-800">
                   {overrideConfirmModal.employee_name} — {(() => {
                     try {
-                      return new Date(overrideConfirmModal.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+                      return new Date(overrideConfirmModal.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', timeZone: 'Europe/Istanbul' });
                     } catch { return overrideConfirmModal.date; }
                   })()}
                 </div>

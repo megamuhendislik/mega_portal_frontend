@@ -17,7 +17,7 @@ const getRelativeTime = (dateStr) => {
     if (diffMin < 60) return `${diffMin} dk önce`;
     if (diffHour < 24) return `${diffHour} saat önce`;
     if (diffDay < 7) return `${diffDay} gün önce`;
-    return date.toLocaleDateString('tr-TR');
+    return date.toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' });
 };
 
 const NotificationBell = () => {

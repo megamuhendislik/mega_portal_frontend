@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, ChevronDown, ChevronRight, Check, X, XCircle, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key, Calculator, Network } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulYear } from '../utils/dateUtils';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
@@ -677,7 +677,7 @@ const StepLeave = ({ formData, handleChange }) => {
 
     const addYearRow = () => {
         const currentYears = (formData.leave_entitlements || []).map(x => parseInt(x.year));
-        const nextYear = currentYears.length > 0 ? Math.max(...currentYears) + 1 : new Date().getFullYear();
+        const nextYear = currentYears.length > 0 ? Math.max(...currentYears) + 1 : getIstanbulYear();
 
         if (currentYears.includes(nextYear)) {
             toast.error(`${nextYear} yılı zaten mevcut.`);

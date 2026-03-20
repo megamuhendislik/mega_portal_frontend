@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
 import useInterval from '../hooks/useInterval';
 import toast from 'react-hot-toast';
+import { getIstanbulTodayDate, getIstanbulToday } from '../utils/dateUtils';
 import {
     Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight,
     Calendar as CalendarIcon, CalendarCheck, ClipboardList, Heart,
@@ -77,7 +78,7 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
         return map;
     }, [events]);
 
-    const today = moment().format('YYYY-MM-DD');
+    const today = getIstanbulToday();
     const selectedStr = selectedDate ? moment(selectedDate).format('YYYY-MM-DD') : null;
 
     return (
@@ -103,7 +104,7 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                             const isWeekend = d.isoWeekday() >= 6;
                             const isHoliday = holidays.has(dateStr);
                             const isHalfDay = halfDayHolidays.has(dateStr);
-                            const isPast = d.isBefore(moment(), 'day');
+                            const isPast = d.isBefore(moment(getIstanbulTodayDate()), 'day');
                             const dayEvents = eventsByDate[dateStr] || [];
 
                             // Unique event type dots (max 4)
@@ -384,8 +385,8 @@ const CalendarPage = () => {
     const { user } = useAuth();
 
     // Calendar state
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(getIstanbulTodayDate());
+    const [selectedDate, setSelectedDate] = useState(getIstanbulTodayDate());
     const [events, setEvents] = useState([]);
     const [holidays, setHolidays] = useState(new Set());
     const [halfDayHolidays, setHalfDayHolidays] = useState(new Set());
@@ -479,8 +480,8 @@ const CalendarPage = () => {
     // Navigation
     const goToPrevMonth = () => setCurrentDate(moment(currentDate).subtract(1, 'month').toDate());
     const goToNextMonth = () => setCurrentDate(moment(currentDate).add(1, 'month').toDate());
-    const goToToday = () => { setCurrentDate(new Date()); setSelectedDate(new Date()); };
-    const monthTitle = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(currentDate);
+    const goToToday = () => { setCurrentDate(getIstanbulTodayDate()); setSelectedDate(getIstanbulTodayDate()); };
+    const monthTitle = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' }).format(currentDate);
 
     // Event handlers
     const handleEdit = (evt) => {

@@ -183,7 +183,7 @@ export default function DashboardTab({ stats, refresh, loading }) {
                                     <div className="mt-2 flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                         <span className="text-xs font-medium text-green-700">
-                                            Aktif: {new Date(systemSettings.attendance_start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                            Aktif: {new Date(systemSettings.attendance_start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' })}
                                         </span>
                                     </div>
                                 )}

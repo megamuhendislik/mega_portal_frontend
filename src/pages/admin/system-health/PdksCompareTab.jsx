@@ -1014,7 +1014,7 @@ export default function PdksCompareTab() {
                 sessionIdRef.current = sid;
 
                 // Open log modal & reset state
-                setResetLogs([{ time: new Date().toLocaleTimeString('tr-TR'), msg: 'Başlatılıyor...', type: 'step' }]);
+                setResetLogs([{ time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' }), msg: 'Başlatılıyor...', type: 'step' }]);
                 setResetProgress({ status: 'running', current_item: 0, total_items: 0 });
                 setLogModalOpen(true);
                 setExecuting(true);
@@ -1037,7 +1037,7 @@ export default function PdksCompareTab() {
                     setResetLogs((prev) => [
                         ...prev,
                         {
-                            time: new Date().toLocaleTimeString('tr-TR'),
+                            time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' }),
                             msg: `İşlem tamamlandı: ${s.success || 0} başarılı, ${s.skipped || 0} atlandı, ${s.failed || 0} hata`,
                             type: (s.failed || 0) === 0 ? 'done' : 'error',
                         },
@@ -1055,7 +1055,7 @@ export default function PdksCompareTab() {
                         e.message;
                     setResetLogs((prev) => [
                         ...prev,
-                        { time: new Date().toLocaleTimeString('tr-TR'), msg: `HATA: ${errMsg}`, type: 'error' },
+                        { time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' }), msg: `HATA: ${errMsg}`, type: 'error' },
                     ]);
                     setResetProgress((p) => ({ ...p, status: 'error' }));
                     message.error('Tam reset hatası: ' + errMsg);

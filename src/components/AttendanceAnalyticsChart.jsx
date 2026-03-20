@@ -12,7 +12,7 @@ import {
 import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulTodayDate, getIstanbulMonth } from '../utils/dateUtils';
 
 // ─── Weekly View (Günlük) ─────────────────────────────────────────────
 const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
@@ -21,7 +21,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
         if (logs && logs.length > 0) {
             return startOfWeek(new Date(logs[0].work_date), { weekStartsOn: 1 });
         }
-        return startOfWeek(new Date(), { weekStartsOn: 1 });
+        return startOfWeek(getIstanbulTodayDate(), { weekStartsOn: 1 });
     });
 
     const [fetchedLogs, setFetchedLogs] = useState([]);
@@ -495,12 +495,12 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                     const months = res.data.months || res.data;
                     const meta = {
                         systemStartFiscalMonth: res.data.system_start_fiscal_month || 1,
-                        currentFiscalMonth: res.data.current_fiscal_month || new Date().getMonth() + 1,
+                        currentFiscalMonth: res.data.current_fiscal_month || getIstanbulMonth(),
                     };
                     setYearlyData(months.map(m => {
                         const isBeforeStart = m.month < meta.systemStartFiscalMonth;
                         return {
-                            name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short' }),
+                            name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short', timeZone: 'Europe/Istanbul' }),
                             month: m.month,
                             normal: isBeforeStart ? 0 : m.normal_hours,
                             overtime: isBeforeStart ? 0 : m.overtime_hours,

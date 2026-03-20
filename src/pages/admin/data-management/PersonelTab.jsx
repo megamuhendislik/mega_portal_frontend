@@ -7,12 +7,13 @@ import api from '../../../services/api';
 import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
+import { getIstanbulTodayDate, toIstanbulParts } from '../../../utils/dateUtils';
 
 export default function PersonelTab({ initialEmployee }) {
     // ── State ──────────────────────────────────────────────────────
     const [employees, setEmployees] = useState([]);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentMonth, setCurrentMonth] = useState(() => getIstanbulTodayDate());
     const [monthlyData, setMonthlyData] = useState({});
     const [selectedDate, setSelectedDate] = useState(null);
     const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -44,8 +45,7 @@ export default function PersonelTab({ initialEmployee }) {
     const fetchMonthlyData = useCallback(() => {
         if (!selectedEmployee) return;
 
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
+        const { year, month } = toIstanbulParts(currentMonth);
 
         setLoadingCalendar(true);
         api.get('/system-data/get_monthly_summary/', {
@@ -66,8 +66,7 @@ export default function PersonelTab({ initialEmployee }) {
     // ── Bakiye özeti yükle (attendance monthly_summary) ────────────
     const fetchBalanceSummary = useCallback(() => {
         if (!selectedEmployee) return;
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
+        const { year, month } = toIstanbulParts(currentMonth);
         api.get('/attendance/monthly_summary/', {
             params: { employee_id: selectedEmployee.id, year, month }
         })
@@ -107,8 +106,7 @@ export default function PersonelTab({ initialEmployee }) {
     const handleAutoFill = () => {
         if (!selectedEmployee) return;
 
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
+        const { year, month } = toIstanbulParts(currentMonth);
         const monthName = format(currentMonth, 'MMMM yyyy', { locale: tr });
 
         Modal.confirm({
@@ -156,8 +154,9 @@ export default function PersonelTab({ initialEmployee }) {
     const openSettlement = () => {
         if (!selectedEmployee || !balanceSummary) return;
         const netBal = balanceSummary.net_balance_seconds || 0;
-        const fiscalMonth = balanceSummary.fiscal_month || (currentMonth.getMonth() + 1);
-        const fiscalYear = balanceSummary.fiscal_year || currentMonth.getFullYear();
+        const _cmParts = toIstanbulParts(currentMonth);
+        const fiscalMonth = balanceSummary.fiscal_month || _cmParts.month;
+        const fiscalYear = balanceSummary.fiscal_year || _cmParts.year;
         const compensated = balanceSummary.cumulative?.ytd_compensated_seconds || 0;
 
         // Check current month's compensated from breakdown
@@ -301,7 +300,8 @@ export default function PersonelTab({ initialEmployee }) {
                     const netBalance = balanceSummary.past_target_balance_seconds ?? balanceSummary.net_balance_seconds ?? 0;
                     const carryOver = (balanceSummary.cumulative?.carry_over_seconds || 0) + (balanceSummary.cumulative?.previous_year_balance_seconds || 0);
                     const totalCumulative = balanceSummary.cumulative?.total_net_balance_seconds || 0;
-                    const fiscalMonth = balanceSummary.fiscal_month || (currentMonth.getMonth() + 1);
+                    const _renderCmParts = toIstanbulParts(currentMonth);
+                    const fiscalMonth = balanceSummary.fiscal_month || _renderCmParts.month;
                     const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
                     const isSettled = bd && bd.compensated !== 0;
 
@@ -315,7 +315,7 @@ export default function PersonelTab({ initialEmployee }) {
                                 <div className="flex items-center gap-2">
                                     <div className="w-1 h-5 rounded-full bg-indigo-500"></div>
                                     <h3 className="font-bold text-slate-700 text-sm">
-                                        Aylık Bakiye Özeti — {MNAMES[fiscalMonth]} {balanceSummary.fiscal_year || currentMonth.getFullYear()}
+                                        Aylık Bakiye Özeti — {MNAMES[fiscalMonth]} {balanceSummary.fiscal_year || _renderCmParts.year}
                                     </h3>
                                     {isSettled && (
                                         <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import 'moment/locale/tr';
+import { getIstanbulYear, getIstanbulTodayDate } from '../utils/dateUtils';
 
 moment.locale('tr');
 
@@ -21,7 +22,7 @@ const YearCalendar = ({
         'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
     ];
 
-    const currentYear = year || new Date().getFullYear();
+    const currentYear = year || getIstanbulYear();
 
     // Drag Selection State
     const [dragStart, setDragStart] = useState(null);
@@ -121,7 +122,7 @@ const YearCalendar = ({
                                     const dateStr = currentDayDate.format('YYYY-MM-DD');
 
                                     // Optimization: Calculate props efficiently
-                                    const isToday = currentDayDate.isSame(moment(), 'day');
+                                    const isToday = currentDayDate.isSame(moment(getIstanbulTodayDate()), 'day');
                                     const isHoliday = holidays.has(dateStr);
                                     const isSelected = selectedDates.has(dateStr);
                                     const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;

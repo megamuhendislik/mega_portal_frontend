@@ -9,7 +9,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import CreateAssignmentModal from './overtime/CreateAssignmentModal';
 import EditAssignmentModal from './overtime/EditAssignmentModal';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
 import ModalOverlay from './ui/ModalOverlay';
 
 // ═══════════════════════════════════════════════════════════
@@ -21,14 +21,16 @@ const MONTH_NAMES = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Te
 
 function formatDateTurkish(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
-    return `${String(d.getDate()).padStart(2, '0')} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}, ${DAY_NAMES[d.getDay()]}`;
+    const p = toIstanbulParts(dateStr + 'T00:00:00');
+    if (!p) return '';
+    return `${String(p.day).padStart(2, '0')} ${MONTH_NAMES[p.month - 1]} ${p.year}, ${DAY_NAMES[p.dayOfWeek]}`;
 }
 
 function formatDateShort(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
-    return `${String(d.getDate()).padStart(2, '0')} ${MONTH_NAMES[d.getMonth()]}`;
+    const p = toIstanbulParts(dateStr + 'T00:00:00');
+    if (!p) return '';
+    return `${String(p.day).padStart(2, '0')} ${MONTH_NAMES[p.month - 1]}`;
 }
 
 function formatDuration(seconds) {
@@ -133,11 +135,11 @@ const EmptyState = ({ text }) => (
 const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
     const entries = item.entries || [];
     const isOffDay = item.is_off_day;
-    const d = new Date(item.date + 'T00:00:00');
-    const dayName = DAY_NAMES[d.getDay()];
-    const dayNum = String(d.getDate()).padStart(2, '0');
-    const monthName = MONTH_NAMES[d.getMonth()];
-    const year = d.getFullYear();
+    const _p = toIstanbulParts(item.date + 'T00:00:00');
+    const dayName = _p ? DAY_NAMES[_p.dayOfWeek] : '';
+    const dayNum = _p ? String(_p.day).padStart(2, '0') : '';
+    const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
+    const year = _p ? _p.year : '';
 
     return (
         <div className="rounded-xl border border-slate-100 bg-white hover:border-blue-200 transition-all overflow-hidden">
@@ -364,10 +366,10 @@ const GroupAccordion = ({ name, count, children, defaultOpen = true }) => {
 // ═══════════════════════════════════════════════════════════
 
 const RequestCard = ({ req }) => {
-    const d = new Date(req.date + 'T00:00:00');
-    const dayName = DAY_NAMES[d.getDay()];
-    const dayNum = String(d.getDate()).padStart(2, '0');
-    const monthName = MONTH_NAMES[d.getMonth()];
+    const _p = toIstanbulParts(req.date + 'T00:00:00');
+    const dayName = _p ? DAY_NAMES[_p.dayOfWeek] : '';
+    const dayNum = _p ? String(_p.day).padStart(2, '0') : '';
+    const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
     const approverName = ['APPROVED', 'REJECTED'].includes(req.status)
         ? (req.approval_manager_name || req.target_approver_name)
         : req.target_approver_name;
@@ -427,10 +429,10 @@ const RequestCard = ({ req }) => {
 // ═══════════════════════════════════════════════════════════
 
 const AssignmentCard = ({ assignment, onCancel, onEdit }) => {
-    const d = new Date(assignment.date + 'T00:00:00');
-    const dayName = DAY_NAMES[d.getDay()];
-    const dayNum = String(d.getDate()).padStart(2, '0');
-    const monthName = MONTH_NAMES[d.getMonth()];
+    const _p = toIstanbulParts(assignment.date + 'T00:00:00');
+    const dayName = _p ? DAY_NAMES[_p.dayOfWeek] : '';
+    const dayNum = _p ? String(_p.day).padStart(2, '0') : '';
+    const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
 
     return (
         <div className="rounded-xl border border-slate-100 bg-white hover:border-emerald-200 transition-all overflow-hidden">
@@ -484,10 +486,10 @@ const AssignmentCard = ({ assignment, onCancel, onEdit }) => {
 // ═══════════════════════════════════════════════════════════
 
 const TeamItemCard = ({ item, onCancel, onEdit }) => {
-    const d = new Date(item.date + 'T00:00:00');
-    const dayName = DAY_NAMES[d.getDay()];
-    const dayNum = String(d.getDate()).padStart(2, '0');
-    const monthName = MONTH_NAMES[d.getMonth()];
+    const _p = toIstanbulParts(item.date + 'T00:00:00');
+    const dayName = _p ? DAY_NAMES[_p.dayOfWeek] : '';
+    const dayNum = _p ? String(_p.day).padStart(2, '0') : '';
+    const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
 
     return (
         <div className="rounded-lg border border-slate-50 bg-white hover:border-emerald-100 transition-all overflow-hidden">
@@ -1087,11 +1089,11 @@ const AssignedOvertimeTab = () => {
                                     .reduce((sum, i) => sum + (i.actual_overtime_seconds || 0), 0);
                                 const isAboveThreshold = selectedDuration >= 1800;
 
-                                const gd = new Date(group.date + 'T00:00:00');
-                                const dayName = DAY_NAMES[gd.getDay()];
-                                const dayNum = String(gd.getDate()).padStart(2, '0');
-                                const monthName = MONTH_NAMES[gd.getMonth()];
-                                const year = gd.getFullYear();
+                                const _gp = toIstanbulParts(group.date + 'T00:00:00');
+                                const dayName = _gp ? DAY_NAMES[_gp.dayOfWeek] : '';
+                                const dayNum = _gp ? String(_gp.day).padStart(2, '0') : '';
+                                const monthName = _gp ? MONTH_NAMES[_gp.month - 1] : '';
+                                const year = _gp ? _gp.year : '';
 
                                 return (
                                     <div key={group.group_key} className="rounded-xl border border-slate-100 bg-white p-4 mb-3 hover:border-blue-200 transition-all">

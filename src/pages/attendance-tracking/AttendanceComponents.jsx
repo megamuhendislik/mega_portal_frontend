@@ -7,6 +7,7 @@ import {
 import moment from 'moment';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
+import { getIstanbulNow } from '../../utils/dateUtils';
 
 export const formatMinutes = (minutes) => {
     if (!minutes) return '0s 0dk';
@@ -498,7 +499,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                     return d.hours() * 60 + d.minutes();
                                 };
                                 const inMin = getMin(employee.today_check_in);
-                                const outMin = getMin(employee.today_check_out) || (employee.is_online ? moment().hours() * 60 + moment().minutes() : inMin + 60);
+                                const outMin = getMin(employee.today_check_out) || (employee.is_online ? (() => { const _n = getIstanbulNow(); return _n.getHours() * 60 + _n.getMinutes(); })() : inMin + 60);
                                 const barStart = Math.max(0, ((inMin - startMin) / totalRange) * 100);
                                 const barWidth = Math.min(100 - barStart, Math.max(1, ((outMin - inMin) / totalRange) * 100));
 

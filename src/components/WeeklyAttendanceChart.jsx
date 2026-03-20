@@ -4,10 +4,11 @@ import { TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { startOfWeek, endOfWeek, addDays, format, isSameDay, parseISO, isWeekend, isBefore, startOfToday } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import useIsMobile from '../hooks/useIsMobile';
+import { getIstanbulTodayDate } from '../utils/dateUtils';
 
 const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h if not provided
     const isMobile = useIsMobile();
-    const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    const [weekStart, setWeekStart] = useState(startOfWeek(getIstanbulTodayDate(), { weekStartsOn: 1 }));
 
     const weekData = useMemo(() => {
         const days = [];
@@ -92,7 +93,7 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
 
     const handlePrevWeek = () => setWeekStart(prev => addDays(prev, -7));
     const handleNextWeek = () => setWeekStart(prev => addDays(prev, 7));
-    const handleReset = () => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    const handleReset = () => setWeekStart(startOfWeek(getIstanbulTodayDate(), { weekStartsOn: 1 }));
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {

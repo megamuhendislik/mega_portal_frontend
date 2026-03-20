@@ -1,6 +1,6 @@
 import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { formatDate } from '../utils/dateUtils';
+import { formatDate, toIstanbulParts } from '../utils/dateUtils';
 import { BarChart3 } from 'lucide-react';
 import useIsMobile from '../hooks/useIsMobile';
 
@@ -17,20 +17,20 @@ const PersonalAttendanceChart = ({ logs }) => {
             missing: acc.missing + (log.missing_seconds || 0)
         }), { normal: 0, overtime: 0, missing: 0 });
 
-        const date = new Date(dateStr);
+        const dateParts = toIstanbulParts(dateStr);
         const normal = aggregated.normal / 3600;
         const missing = aggregated.missing / 3600;
         const target = normal + missing;
 
         return {
-            name: `${date.getDate()}`,
+            name: `${dateParts.day}`,
             fullDate: formatDate(dateStr),
             normal: normal,
             overtime: aggregated.overtime / 3600,
             break: 0,
             missing: missing > 0.1 ? missing : 0,
             target: target > 0 ? target : null,
-            isWeekend: date.getDay() === 0 || date.getDay() === 6
+            isWeekend: dateParts.dayOfWeek === 0 || dateParts.dayOfWeek === 6
         };
     }).sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); // Ensure sorted order
 

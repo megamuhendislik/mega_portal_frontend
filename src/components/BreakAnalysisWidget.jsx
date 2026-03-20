@@ -6,12 +6,13 @@ import { tr } from 'date-fns/locale';
 import ExtendedBreakAnalysisModal from './ExtendedBreakAnalysisModal';
 import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
+import { getIstanbulTodayDate } from '../utils/dateUtils';
 
 const BreakAnalysisWidget = ({ logs: initialLogs, totalBreakSeconds, startDate, endDate, employeeId }) => {
     const isMobile = useIsMobile();
     const [showExtended, setShowExtended] = useState(false);
     const [viewMode, setViewMode] = useState('MONTHLY'); // 'MONTHLY' | 'YEARLY'
-    const [currentDate, setCurrentDate] = useState(startDate ? parseISO(startDate) : new Date());
+    const [currentDate, setCurrentDate] = useState(startDate ? parseISO(startDate) : getIstanbulTodayDate());
     const [showCumulative, setShowCumulative] = useState(false);
 
     // Data State
