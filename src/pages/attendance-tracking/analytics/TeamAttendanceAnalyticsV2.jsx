@@ -5,16 +5,13 @@ import ComparisonSelector from './shared/ComparisonSelector';
 
 const TeamOverviewKPI = React.lazy(() => import('./sections/TeamOverviewKPI'));
 const EntryExitDistribution = React.lazy(() => import('./sections/EntryExitDistribution'));
-// TODO Task 11: Uncomment when files are created
-// const WorkHoursAnalysis = React.lazy(() => import('./sections/WorkHoursAnalysis'));
-// const OvertimeAnalysis = React.lazy(() => import('./sections/OvertimeAnalysis'));
-// TODO Task 12: Uncomment when files are created
-// const BreakMealAnalysis = React.lazy(() => import('./sections/BreakMealAnalysis'));
-// const AbsenceLeaveAnalysis = React.lazy(() => import('./sections/AbsenceLeaveAnalysis'));
-// TODO Task 13: Uncomment when files are created
-// const TargetComparison = React.lazy(() => import('./sections/TargetComparison'));
-// const EmployeeComparison = React.lazy(() => import('./sections/EmployeeComparison'));
-// const OrgHierarchyTree = React.lazy(() => import('./sections/OrgHierarchyTree'));
+const WorkHoursAnalysis = React.lazy(() => import('./sections/WorkHoursAnalysis'));
+const OvertimeAnalysis = React.lazy(() => import('./sections/OvertimeAnalysis'));
+const BreakMealAnalysis = React.lazy(() => import('./sections/BreakMealAnalysis'));
+const AbsenceLeaveAnalysis = React.lazy(() => import('./sections/AbsenceLeaveAnalysis'));
+const TargetComparison = React.lazy(() => import('./sections/TargetComparison'));
+const EmployeeComparison = React.lazy(() => import('./sections/EmployeeComparison'));
+const OrgHierarchyTree = React.lazy(() => import('./sections/OrgHierarchyTree'));
 
 function SectionSkeleton() {
     return (
@@ -45,21 +42,40 @@ export default function TeamAttendanceAnalyticsV2() {
                     <EntryExitDistribution />
                 </Suspense>
 
-                {/* ─── Future Sections (Tasks 11-13) ── */}
-                {/* TODO Task 11: Work Hours Analysis */}
-                {/* <Suspense fallback={<SectionSkeleton />}><WorkHoursAnalysis /></Suspense> */}
-                {/* TODO Task 11: Overtime Analysis */}
-                {/* <Suspense fallback={<SectionSkeleton />}><OvertimeAnalysis /></Suspense> */}
-                {/* TODO Task 12: Break & Meal Analysis */}
-                {/* <Suspense fallback={<SectionSkeleton />}><BreakMealAnalysis /></Suspense> */}
-                {/* TODO Task 12: Absence & Leave Analysis */}
-                {/* <Suspense fallback={<SectionSkeleton />}><AbsenceLeaveAnalysis /></Suspense> */}
-                {/* TODO Task 13: Target Comparison */}
-                {/* <Suspense fallback={<SectionSkeleton />}><TargetComparison /></Suspense> */}
-                {/* TODO Task 13: Employee Comparison */}
-                {/* <Suspense fallback={<SectionSkeleton />}><EmployeeComparison /></Suspense> */}
-                {/* TODO Task 13: Org Hierarchy Tree */}
-                {/* <Suspense fallback={<SectionSkeleton />}><OrgHierarchyTree /></Suspense> */}
+                {/* ─── Section 3: Work Hours Analysis ── */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <WorkHoursAnalysis />
+                </Suspense>
+
+                {/* ─── Section 4: Overtime Analysis ──── */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <OvertimeAnalysis />
+                </Suspense>
+
+                {/* ─── Section 5: Break & Meal Analysis  */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <BreakMealAnalysis />
+                </Suspense>
+
+                {/* ─── Section 6: Absence & Leave ────── */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <AbsenceLeaveAnalysis />
+                </Suspense>
+
+                {/* ─── Section 7: Target Comparison ──── */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <TargetComparison />
+                </Suspense>
+
+                {/* ─── Section 8: Employee Comparison ── */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <EmployeeComparison />
+                </Suspense>
+
+                {/* ─── Section 9: Org Hierarchy Tree ─── */}
+                <Suspense fallback={<SectionSkeleton />}>
+                    <OrgHierarchyTree />
+                </Suspense>
             </div>
         </AnalyticsFilterProvider>
     );
