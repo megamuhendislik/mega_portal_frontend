@@ -13,6 +13,7 @@ import {
     WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
+import Phase2IssuePanel from './Phase2IssuePanel';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -762,96 +763,8 @@ export default function RecalculationAuditTab() {
                         </div>
                     )}
 
-                    {/* Faz 2: PDKS Dogrulama */}
-                    {uniResult.phase2 && (
-                        <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
-                            <h4 className="font-bold text-purple-800 text-sm">Faz 2: PDKS Dogrulama</h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <SummaryCard
-                                    icon={<ClockIcon className="w-5 h-5 text-purple-500" />}
-                                    label="Kontrol Noktasi" value={uniResult.phase2.total_checks} color="gray"
-                                />
-                                <SummaryCard
-                                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />}
-                                    label="PDKS Sorun" value={uniResult.phase2.total_issues} color={uniResult.phase2.total_issues > 0 ? 'amber' : 'green'}
-                                />
-                            </div>
-                            {/* Match breakdown */}
-                            {uniResult.phase2.by_match && Object.keys(uniResult.phase2.by_match).length > 0 && (
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                    {Object.entries(uniResult.phase2.by_match).map(([match, count]) => {
-                                        const matchColors = {
-                                            UYUMLU: 'bg-green-100 text-green-700 border-green-300',
-                                            KISMEN: 'bg-amber-100 text-amber-700 border-amber-300',
-                                            UYUMSUZ: 'bg-red-100 text-red-700 border-red-300',
-                                            KART_YOK: 'bg-gray-100 text-gray-700 border-gray-300',
-                                        };
-                                        return (
-                                            <span key={match} className={`px-2 py-1 border rounded font-bold ${matchColors[match] || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
-                                                {match}: {count}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                            {/* Type breakdown */}
-                            {uniResult.phase2.by_type && Object.keys(uniResult.phase2.by_type).length > 0 && (
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                    {Object.entries(uniResult.phase2.by_type).map(([type, count]) => (
-                                        <span key={type} className="px-2 py-1 bg-white border border-purple-200 rounded text-purple-700 font-mono">
-                                            {type}: {count}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                            {/* Issue details table */}
-                            {uniResult.phase2.issues?.length > 0 && (
-                                <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                                    <table className="w-full text-xs border-collapse">
-                                        <thead className="sticky top-0 bg-purple-100">
-                                            <tr>
-                                                <th className="text-left p-2 border-b border-purple-200">Calisan</th>
-                                                <th className="text-left p-2 border-b border-purple-200">Tarih</th>
-                                                <th className="text-left p-2 border-b border-purple-200">Tip</th>
-                                                <th className="text-left p-2 border-b border-purple-200">Uyum</th>
-                                                <th className="text-left p-2 border-b border-purple-200">Durum</th>
-                                                <th className="text-left p-2 border-b border-purple-200">Detay</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {uniResult.phase2.issues.map((issue, i) => {
-                                                const matchBg = {
-                                                    UYUMLU: 'bg-green-50',
-                                                    KISMEN: 'bg-amber-50',
-                                                    UYUMSUZ: 'bg-red-50',
-                                                    KART_YOK: 'bg-gray-50',
-                                                };
-                                                return (
-                                                    <tr key={i} className={`${matchBg[issue.match] || ''} hover:bg-gray-100`}>
-                                                        <td className="p-2 border-b border-gray-100 font-medium">{issue.employee_name}</td>
-                                                        <td className="p-2 border-b border-gray-100 whitespace-nowrap">{issue.date}</td>
-                                                        <td className="p-2 border-b border-gray-100">
-                                                            <span className="px-1.5 py-0.5 rounded bg-white border text-[10px] font-bold">{issue.type}</span>
-                                                        </td>
-                                                        <td className="p-2 border-b border-gray-100">
-                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                                                issue.match === 'UYUMLU' ? 'bg-green-200 text-green-800' :
-                                                                issue.match === 'KISMEN' ? 'bg-amber-200 text-amber-800' :
-                                                                issue.match === 'UYUMSUZ' ? 'bg-red-200 text-red-800' :
-                                                                'bg-gray-200 text-gray-800'
-                                                            }`}>{issue.match}</span>
-                                                        </td>
-                                                        <td className="p-2 border-b border-gray-100 text-gray-500">{issue.status}</td>
-                                                        <td className="p-2 border-b border-gray-100 max-w-xs truncate" title={issue.detail}>{issue.detail}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {/* Faz 2: PDKS Dogrulama — Interaktif Panel */}
+                    {uniResult.phase2 && <Phase2IssuePanel phase2={uniResult.phase2} />}
 
                     {/* Faz 3: Butunluk Kontrolu */}
                     {uniResult.phase3 && (
