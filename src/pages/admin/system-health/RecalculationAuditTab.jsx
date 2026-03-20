@@ -251,29 +251,11 @@ export default function RecalculationAuditTab() {
                         onClick={() => runUnifiedAudit(false)}
                         disabled={isProcessing || uniLoading || uniFixing}
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
-                            uniLoading ? 'bg-gray-400 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'
+                            uniLoading || uniFixing ? 'bg-gray-400 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'
                         }`}
                     >
                         <MagnifyingGlassIcon className="w-4 h-4" />
-                        {uniLoading ? 'Tarama...' : 'Birlesik Denetim'}
-                    </button>
-                    <button
-                        onClick={() => runUnifiedAudit(true)}
-                        disabled={isProcessing || uniLoading || uniFixing}
-                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
-                            uniFixing ? 'bg-gray-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 active:scale-95'
-                        }`}
-                    >
-                        <WrenchScrewdriverIcon className="w-4 h-4" />
-                        {uniFixing ? 'Duzeltiliyor...' : 'Birlesik Duzelt'}
-                    </button>
-                    <button
-                        onClick={downloadUnifiedLog}
-                        disabled={isProcessing || uniLoading || uniFixing}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-emerald-700 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 active:scale-95 transition-all"
-                    >
-                        <DocumentArrowDownIcon className="w-4 h-4" />
-                        TXT Log
+                        {uniLoading ? 'Tarama...' : uniFixing ? 'Duzeltiliyor...' : 'Hesaplama Denetimi'}
                     </button>
                 </div>
             </div>
@@ -701,11 +683,34 @@ export default function RecalculationAuditTab() {
 
             {uniResult && (
                 <div className="space-y-6 mt-6 border-t-2 border-emerald-300 pt-6">
-                    <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-800">Birlesik Denetim Sonuclari</h3>
-                            <p className="text-xs text-gray-500">{uniResult.date_range} | Mod: {uniResult.mode}</p>
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                            <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">Hesaplama Denetimi Sonuclari</h3>
+                                <p className="text-xs text-gray-500">{uniResult.date_range} | Mod: {uniResult.mode}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {uniResult.mode === 'dry-run' && (
+                                <button
+                                    onClick={() => runUnifiedAudit(true)}
+                                    disabled={uniFixing}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                                        uniFixing ? 'bg-gray-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 active:scale-95'
+                                    }`}
+                                >
+                                    <WrenchScrewdriverIcon className="w-4 h-4" />
+                                    {uniFixing ? 'Duzeltiliyor...' : 'Tumunu Duzelt'}
+                                </button>
+                            )}
+                            <button
+                                onClick={downloadUnifiedLog}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-emerald-700 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 active:scale-95 transition-all"
+                            >
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                TXT Log Indir
+                            </button>
                         </div>
                     </div>
 
