@@ -763,6 +763,21 @@ export default function RecalculationAuditTab() {
                         </div>
                     )}
 
+                    {/* Veri Butunlugu Fix Sonuclari */}
+                    {uniResult.data_fixes && uniResult.data_fixes.fixes?.length > 0 && (
+                        <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-2">
+                            <h4 className="font-bold text-orange-800 text-sm">Veri Butunlugu Duzeltmeleri ({uniResult.data_fixes.total})</h4>
+                            <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {uniResult.data_fixes.fixes.map((fix, i) => (
+                                    <div key={i} className="flex items-start gap-2 p-2 bg-white rounded border border-orange-100 text-xs">
+                                        <WrenchScrewdriverIcon className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                                        <span>{fix}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Faz 2: PDKS Dogrulama — Interaktif Panel */}
                     {uniResult.phase2 && <Phase2IssuePanel phase2={uniResult.phase2} />}
 
