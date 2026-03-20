@@ -50,6 +50,37 @@ export default function RecalculationAuditTab() {
     const [showLog, setShowLog] = useState(false);
     const [expandedMismatches, setExpandedMismatches] = useState(new Set());
 
+    // Unified audit state
+    const [uniLoading, setUniLoading] = useState(false);
+    const [uniFixing, setUniFixing] = useState(false);
+    const [uniResult, setUniResult] = useState(null);
+    const [uniError, setUniError] = useState(null);
+
+    const runUnifiedAudit = async (fix = false) => {
+        if (fix && !window.confirm(
+            'Birlesik Denetim (FIX modu)\n\n' +
+            'Faz 1: Talep sorunlarini duzeltir (fragment, duplikat, yanlis saat)\n' +
+            'Faz 2: PDKS dogrulama raporu\n' +
+            'Faz 3: Butunluk kontrolu\n\n' +
+            'Devam etmek istiyor musunuz?'
+        )) return;
+
+        fix ? setUniFixing(true) : setUniLoading(true);
+        setUniError(null);
+        setUniResult(null);
+        try {
+            const body = { date_from: startDate, date_to: endDate, fix };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/unified-audit/', body, { timeout: 300000 });
+            setUniResult(res.data);
+        } catch (e) {
+            setUniError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
+        } finally {
+            setUniLoading(false);
+            setUniFixing(false);
+        }
+    };
+
     const runAudit = async () => {
         setLoading(true);
         setError(null);
@@ -194,6 +225,27 @@ export default function RecalculationAuditTab() {
                     >
                         <WrenchScrewdriverIcon className="w-4 h-4" />
                         {fixing ? 'Duzeltiliyor...' : 'Tum Farkliliklari Duzelt'}
+                    </button>
+                    <div className="w-px h-8 bg-gray-300" />
+                    <button
+                        onClick={() => runUnifiedAudit(false)}
+                        disabled={isProcessing || uniLoading || uniFixing}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                            uniLoading ? 'bg-gray-400 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'
+                        }`}
+                    >
+                        <MagnifyingGlassIcon className="w-4 h-4" />
+                        {uniLoading ? 'Tarama...' : 'Birlesik Denetim'}
+                    </button>
+                    <button
+                        onClick={() => runUnifiedAudit(true)}
+                        disabled={isProcessing || uniLoading || uniFixing}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                            uniFixing ? 'bg-gray-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 active:scale-95'
+                        }`}
+                    >
+                        <WrenchScrewdriverIcon className="w-4 h-4" />
+                        {uniFixing ? 'Duzeltiliyor...' : 'Birlesik Duzelt'}
                     </button>
                 </div>
             </div>
@@ -594,6 +646,210 @@ export default function RecalculationAuditTab() {
                             <pre className="p-4 bg-gray-900 text-green-400 rounded-lg text-[11px] leading-relaxed overflow-auto max-h-[600px] font-mono whitespace-pre-wrap">
                                 {result.log_text}
                             </pre>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ══════ Birlesik Denetim Sonuclari ══════ */}
+            {(uniLoading || uniFixing) && (
+                <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                        <ArrowPathIcon className="w-8 h-8 text-emerald-500 animate-spin" />
+                        <p className="text-sm text-gray-500 font-medium">
+                            {uniFixing ? 'Birlesik duzeltme yapiliyor (3 faz)...' : 'Birlesik denetim taramasi (3 faz)...'}
+                        </p>
+                        <p className="text-xs text-gray-400">Bu islem birkac dakika surebilir.</p>
+                    </div>
+                </div>
+            )}
+
+            {uniError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                    <XCircleIcon className="w-5 h-5 shrink-0" />
+                    {uniError}
+                </div>
+            )}
+
+            {uniResult && (
+                <div className="space-y-6 mt-6 border-t-2 border-emerald-300 pt-6">
+                    <div className="flex items-center gap-3">
+                        <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800">Birlesik Denetim Sonuclari</h3>
+                            <p className="text-xs text-gray-500">{uniResult.date_range} | Mod: {uniResult.mode}</p>
+                        </div>
+                    </div>
+
+                    {/* Faz 1: Talep Analizi */}
+                    {uniResult.phase1 && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-3">
+                            <h4 className="font-bold text-blue-800 text-sm">Faz 1: Talep Analizi</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <SummaryCard
+                                    icon={<ClockIcon className="w-5 h-5 text-blue-500" />}
+                                    label="Toplam Talep" value={uniResult.phase1.total} color="gray"
+                                />
+                                <SummaryCard
+                                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />}
+                                    label="Sorunlu" value={uniResult.phase1.with_issues} color={uniResult.phase1.with_issues > 0 ? 'amber' : 'green'}
+                                />
+                                {uniResult.phase1.fixed !== undefined && (
+                                    <SummaryCard
+                                        icon={<CheckCircleIcon className="w-5 h-5 text-green-500" />}
+                                        label="Duzeltildi" value={uniResult.phase1.fixed} color="green"
+                                    />
+                                )}
+                                {uniResult.phase1.failed !== undefined && uniResult.phase1.failed > 0 && (
+                                    <SummaryCard
+                                        icon={<XCircleIcon className="w-5 h-5 text-red-500" />}
+                                        label="Basarisiz" value={uniResult.phase1.failed} color="red"
+                                    />
+                                )}
+                            </div>
+                            {/* Issue breakdown */}
+                            {uniResult.phase1.issue_breakdown && Object.entries(uniResult.phase1.issue_breakdown).some(([,v]) => v > 0) && (
+                                <div className="text-xs space-y-1">
+                                    <p className="font-semibold text-gray-600">Sorun Dagilimi:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Object.entries(uniResult.phase1.issue_breakdown).filter(([,v]) => v > 0).map(([code, count]) => (
+                                            <span key={code} className="px-2 py-1 bg-white border border-blue-200 rounded text-blue-700 font-mono">
+                                                {code}: {count}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {/* Fix log */}
+                            {uniResult.phase1.fix_log?.length > 0 && (
+                                <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
+                                    <p className="font-semibold text-gray-600">Duzeltme Logu:</p>
+                                    {uniResult.phase1.fix_log.map((log, i) => (
+                                        <div key={i} className={`p-2 rounded ${log.fixed ? 'bg-green-50' : 'bg-red-50'} flex gap-2`}>
+                                            {log.fixed ? <CheckCircleIcon className="w-4 h-4 text-green-500 shrink-0 mt-0.5" /> : <XCircleIcon className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />}
+                                            <span>{log.employee_name} {log.date} [{log.issue_code}] -- {log.detail}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Faz 2: PDKS Dogrulama */}
+                    {uniResult.phase2 && (
+                        <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
+                            <h4 className="font-bold text-purple-800 text-sm">Faz 2: PDKS Dogrulama</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <SummaryCard
+                                    icon={<ClockIcon className="w-5 h-5 text-purple-500" />}
+                                    label="Kontrol Noktasi" value={uniResult.phase2.total_checks} color="gray"
+                                />
+                                <SummaryCard
+                                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />}
+                                    label="PDKS Sorun" value={uniResult.phase2.total_issues} color={uniResult.phase2.total_issues > 0 ? 'amber' : 'green'}
+                                />
+                            </div>
+                            {/* Match breakdown */}
+                            {uniResult.phase2.by_match && Object.keys(uniResult.phase2.by_match).length > 0 && (
+                                <div className="flex flex-wrap gap-2 text-xs">
+                                    {Object.entries(uniResult.phase2.by_match).map(([match, count]) => {
+                                        const matchColors = {
+                                            UYUMLU: 'bg-green-100 text-green-700 border-green-300',
+                                            KISMEN: 'bg-amber-100 text-amber-700 border-amber-300',
+                                            UYUMSUZ: 'bg-red-100 text-red-700 border-red-300',
+                                            KART_YOK: 'bg-gray-100 text-gray-700 border-gray-300',
+                                        };
+                                        return (
+                                            <span key={match} className={`px-2 py-1 border rounded font-bold ${matchColors[match] || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                                                {match}: {count}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {/* Type breakdown */}
+                            {uniResult.phase2.by_type && Object.keys(uniResult.phase2.by_type).length > 0 && (
+                                <div className="flex flex-wrap gap-2 text-xs">
+                                    {Object.entries(uniResult.phase2.by_type).map(([type, count]) => (
+                                        <span key={type} className="px-2 py-1 bg-white border border-purple-200 rounded text-purple-700 font-mono">
+                                            {type}: {count}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            {/* Issue details table */}
+                            {uniResult.phase2.issues?.length > 0 && (
+                                <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                                    <table className="w-full text-xs border-collapse">
+                                        <thead className="sticky top-0 bg-purple-100">
+                                            <tr>
+                                                <th className="text-left p-2 border-b border-purple-200">Calisan</th>
+                                                <th className="text-left p-2 border-b border-purple-200">Tarih</th>
+                                                <th className="text-left p-2 border-b border-purple-200">Tip</th>
+                                                <th className="text-left p-2 border-b border-purple-200">Uyum</th>
+                                                <th className="text-left p-2 border-b border-purple-200">Durum</th>
+                                                <th className="text-left p-2 border-b border-purple-200">Detay</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {uniResult.phase2.issues.map((issue, i) => {
+                                                const matchBg = {
+                                                    UYUMLU: 'bg-green-50',
+                                                    KISMEN: 'bg-amber-50',
+                                                    UYUMSUZ: 'bg-red-50',
+                                                    KART_YOK: 'bg-gray-50',
+                                                };
+                                                return (
+                                                    <tr key={i} className={`${matchBg[issue.match] || ''} hover:bg-gray-100`}>
+                                                        <td className="p-2 border-b border-gray-100 font-medium">{issue.employee_name}</td>
+                                                        <td className="p-2 border-b border-gray-100 whitespace-nowrap">{issue.date}</td>
+                                                        <td className="p-2 border-b border-gray-100">
+                                                            <span className="px-1.5 py-0.5 rounded bg-white border text-[10px] font-bold">{issue.type}</span>
+                                                        </td>
+                                                        <td className="p-2 border-b border-gray-100">
+                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                                issue.match === 'UYUMLU' ? 'bg-green-200 text-green-800' :
+                                                                issue.match === 'KISMEN' ? 'bg-amber-200 text-amber-800' :
+                                                                issue.match === 'UYUMSUZ' ? 'bg-red-200 text-red-800' :
+                                                                'bg-gray-200 text-gray-800'
+                                                            }`}>{issue.match}</span>
+                                                        </td>
+                                                        <td className="p-2 border-b border-gray-100 text-gray-500">{issue.status}</td>
+                                                        <td className="p-2 border-b border-gray-100 max-w-xs truncate" title={issue.detail}>{issue.detail}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Faz 3: Butunluk Kontrolu */}
+                    {uniResult.phase3 && (
+                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
+                            <h4 className="font-bold text-emerald-800 text-sm">Faz 3: Butunluk Kontrolu</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <SummaryCard
+                                    icon={<ClockIcon className="w-5 h-5 text-emerald-500" />}
+                                    label="Toplam Talep" value={uniResult.phase3.total} color="gray"
+                                />
+                                <SummaryCard
+                                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />}
+                                    label="Kalan Sorunlu" value={uniResult.phase3.with_issues} color={uniResult.phase3.with_issues > 0 ? 'amber' : 'green'}
+                                />
+                                <SummaryCard
+                                    icon={<WrenchScrewdriverIcon className="w-5 h-5 text-orange-500" />}
+                                    label="Duzeltilebilir" value={uniResult.phase3.fixable_remaining} color={uniResult.phase3.fixable_remaining > 0 ? 'red' : 'green'}
+                                />
+                            </div>
+                            {uniResult.phase3.fixable_remaining === 0 && uniResult.phase3.with_issues === 0 && (
+                                <div className="flex items-center gap-2 p-3 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
+                                    <CheckCircleIcon className="w-5 h-5" />
+                                    Tum denetimler basarili - sorun bulunamadi!
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
